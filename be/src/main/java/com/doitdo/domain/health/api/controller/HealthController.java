@@ -2,6 +2,7 @@ package com.doitdo.domain.health.api.controller;
 
 import java.util.Map;
 
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -9,17 +10,23 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class HealthController {
 
+	private final Environment environment;
 	private final JdbcTemplate jdbcTemplate;
 
-	public HealthController(JdbcTemplate jdbcTemplate) {
+	public HealthController(Environment environment, JdbcTemplate jdbcTemplate) {
+		this.environment = environment;
 		this.jdbcTemplate = jdbcTemplate;
 	}
 
 	@GetMapping("/hello")
-	public Map<String, String> hello() {
+	public Map<String, Object> hello() {
+		String[] activeProfiles = environment.getActiveProfiles();
+		String profile = activeProfiles.length > 0 ? activeProfiles[0] : "default";
+
 		return Map.of(
 			"status", "UP",
-			"service", "doitdo"
+			"service", "doitdo",
+			"profile", profile
 		);
 	}
 
