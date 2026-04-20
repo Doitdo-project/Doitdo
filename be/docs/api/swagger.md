@@ -26,7 +26,7 @@ public class AuthController {
 
     @Operation(summary = "로그인", description = "이메일/비밀번호로 액세스 토큰 발급")
     @ApiErrorCodes({"A00-001", "A00-002"})  // 도메인 비즈니스 에러만 명시
-    @PublicApi                              // 인증 불필요한 endpoint (Option A 머지 후 활성)
+    @PublicApi                              // 인증 불필요한 endpoint (자동 401/403 부착 제외)
     @PostMapping("/login")
     public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
         return GlobalApiResponse.ok(authService.login(req));
@@ -39,7 +39,7 @@ public class AuthController {
 - `@Tag` — Swagger UI 그룹 내부 섹션 표시.
 - `@Operation` — endpoint 요약/설명. 작성 권장.
 - `@ApiErrorCodes({...})` — 도메인 비즈니스 에러 코드 **명시** (자세한 규칙은 §4).
-- `@PublicApi` — 인증 불필요 endpoint 마커. **(Option A 머지 후 활성)**
+- `@PublicApi` — 인증 불필요 endpoint 마커 (자세한 규칙은 §5).
 - 반환 타입은 `GlobalApiResponse<T>` 로 정확히. Swagger 가 200 응답 스키마를 여기서 추론.
 
 ## 3. 자동 부착 응답 표
@@ -49,19 +49,13 @@ public class AuthController {
 | 응답 | 조건 | 작성자 작업 |
 |---|---|---|
 | 200 / 201 | 메서드 반환 타입 (`GlobalApiResponse<T>`) | 자동 |
-| 500 G99-999 | 모든 endpoint | 자동 |
-| **400 G00-001** (TBD: option A) | 모든 endpoint | 자동 |
-| **422 G00-006** (TBD: option A) | `@Valid` / `@Validated` 파라미터 있을 때 | 자동 |
-| **401 G00-002 / 403 G00-003** (TBD: option A) | `@PublicApi` 없을 때 | 자동 |
+| 400 G00-001 | 모든 endpoint | 자동 (`BadRequestAutoCustomizer`) |
+| 401 G00-002 / 403 G00-003 | `@PublicApi` 없을 때 | 자동 (`AuthRequiredAutoCustomizer`) |
+| 422 G00-006 | `@Valid` / `@Validated` 파라미터 있을 때 | 자동 (`ValidationErrorAutoCustomizer`) |
+| 500 G99-999 | 모든 endpoint | 자동 (`InternalServerErrorAutoCustomizer`) |
 | 도메인 비즈니스 에러 (A00-001 등) | 명시 | `@ApiErrorCodes({...})` |
 
-> **TBD 표기 항목**: PR `be/feat/swagger-auto-errors` 머지 후 표에서 TBD 제거 + 동작 활성. 현재는 `@PublicApi` 마커도 미존재 (현재 dev 기준).
-> TBD: option A 머지 후 갱신 (PR be/feat/swagger-auto-errors)
-
-현재 활성된 부분만 정리하면:
-
-- **500 G99-999** 는 모든 endpoint 에 자동 부착됨 (`GlobalApiResponseCustomizer`).
-- **`@ApiErrorCodes`** 로 명시된 코드들은 HTTP status 별로 그룹핑되어 응답 예시가 자동 주입됨 (`ApiErrorCodesCustomizer`).
+`@ApiErrorCodes` 로 명시된 코드들은 HTTP status 별로 그룹핑되어 응답 예시가 자동 주입된다 (`ApiErrorCodesCustomizer`). 같은 status 의 자동 부착 응답이 이미 있으면 `examples` 가 병합된다 (`SwaggerResponseUtils`).
 
 ## 4. `@ApiErrorCodes` 사용 규칙
 
@@ -82,22 +76,20 @@ public class AuthController {
 
 내부 동작: `ApiErrorCodesCustomizer` 가 `ErrorCodeRegistry.find(code)` 로 해석 → HTTP status 별로 그룹핑 → 동일 status 에 여러 코드가 있으면 `examples` 안에 코드별 예시로 표현.
 
-## 5. `@PublicApi` 마커 (TBD: option A)
+## 5. `@PublicApi` 마커
 
-> 현재 dev 에는 `@PublicApi` 클래스가 존재하지 않는다. PR `be/feat/swagger-auto-errors` 머지 후 사용 가능.
+위치: `com.doitdo.global.swagger.PublicApi` — 메서드 또는 클래스 레벨에 부착.
 
-설계:
+규칙:
 
-- 메서드 또는 클래스 레벨에 부착.
 - 인증이 필요 없는 endpoint 임을 표시.
-- 자동 부착되는 `401 G00-002 / 403 G00-003` 응답에서 제외하기 위함.
+- 자동 부착되는 `401 G00-002 / 403 G00-003` 응답에서 제외된다 (`AuthRequiredAutoCustomizer`).
 - `SecurityConfig` 의 `PUBLIC_ENDPOINTS` 와 정합성 유지 책임은 컨트롤러 작성자에게 있다 (마커만 붙이고 SecurityConfig 안 풀면 실제 호출은 401/403 이 됨).
-
-> TBD: option A 머지 후 갱신 (PR be/feat/swagger-auto-errors)
+- 클래스 레벨 1번이면 그 컨트롤러의 모든 endpoint 에 적용 (예: `HealthController`).
 
 ## 6. 흔한 실수
 
-1. **`@PublicApi` 빠뜨림** → 의도와 다른 401/403 응답이 Swagger 에 노출 (마커 활성 후).
+1. **`@PublicApi` 빠뜨림** → 의도와 다른 401/403 응답이 Swagger 에 노출 (또는 SecurityConfig 와 불일치).
 2. **`@ApiErrorCodes` 에 enum 이름** (예: `"LOGIN_FAILED"`) **적음** → 항상 `getCode()` 문자열 (예: `"A00-001"`).
 3. **200 응답 스키마가 비어 보임** → 메서드 반환 타입을 `GlobalApiResponse<T>` 로 정확히 적었는지 확인. 원시 DTO 만 반환하면 표준 포맷이 깨진다.
 4. **dev / local 외 프로파일에서 Swagger 안 뜸** → 의도된 동작 (운영 보안).
