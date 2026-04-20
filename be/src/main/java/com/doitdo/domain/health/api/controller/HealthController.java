@@ -1,7 +1,8 @@
 package com.doitdo.domain.health.api.controller;
 
-import java.util.Map;
-
+import com.doitdo.domain.health.api.dto.resp.DbCheckResp;
+import com.doitdo.domain.health.api.dto.resp.HelloResp;
+import com.doitdo.global.api.response.GlobalApiResponse;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,25 +20,17 @@ public class HealthController {
 	}
 
 	@GetMapping("/hello")
-	public Map<String, Object> hello() {
+	public GlobalApiResponse<HelloResp> hello() {
 		String[] activeProfiles = environment.getActiveProfiles();
 		String profile = activeProfiles.length > 0 ? activeProfiles[0] : "default";
 
-		return Map.of(
-			"status", "UP",
-			"service", "doitdo",
-			"profile", profile
-		);
+		return GlobalApiResponse.ok(new HelloResp("doitdo", profile));
 	}
 
 	@GetMapping("/db-check")
-	public Map<String, Object> dbCheck() {
+	public GlobalApiResponse<DbCheckResp> dbCheck() {
 		Integer result = jdbcTemplate.queryForObject("SELECT 1", Integer.class);
 
-		return Map.of(
-			"status", "UP",
-			"database", "CONNECTED",
-			"result", result
-		);
+		return GlobalApiResponse.ok(new DbCheckResp("CONNECTED", result));
 	}
 }
