@@ -1,4 +1,4 @@
-package com.doitdo.domain.health.api.controller;
+package com.doitdo.global.health;
 
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
