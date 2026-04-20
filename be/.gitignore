@@ -40,6 +40,12 @@ out/
 env/dev.env
 env/prod.env
 
+### Local secrets ###
+secret.txt
+
+### Local docs assets (ERD 등 큰 이미지) ###
+docs/imgs/
+
 ### Runtime logs ###
 *.log
 
