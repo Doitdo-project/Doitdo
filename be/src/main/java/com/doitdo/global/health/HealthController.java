@@ -1,4 +1,4 @@
-package com.doitdo.domain.health.api.controller;
+package com.doitdo.global.health;
 
 import java.util.Map;
 
