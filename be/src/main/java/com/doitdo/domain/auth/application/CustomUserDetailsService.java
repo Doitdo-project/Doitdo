@@ -22,4 +22,11 @@ public class CustomUserDetailsService implements UserDetailsService {
 				.orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다. email=" + email));
 		return new CustomUserDetails(user);
 	}
+
+	@Transactional(readOnly = true)
+	public UserDetails loadUserById(Long userId) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다. userId=" + userId));
+		return new CustomUserDetails(user);
+	}
 }
