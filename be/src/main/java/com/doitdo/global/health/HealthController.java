@@ -1,4 +1,4 @@
-package com.doitdo.domain.health.api.controller;
+package com.doitdo.global.health;
 
 import com.doitdo.domain.health.api.dto.resp.DbCheckResp;
 import com.doitdo.domain.health.api.dto.resp.HelloResp;
