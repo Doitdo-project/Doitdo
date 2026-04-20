@@ -1,0 +1,5 @@
+Jira/.env
+Jira/.venv/
+Jira/__pycache__/
+Jira/**/__pycache__/
+Jira/*.pyc

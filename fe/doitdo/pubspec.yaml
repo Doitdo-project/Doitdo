@@ -1,0 +1,90 @@
+name: doitdo
+description: "다마고치를 키우는 TODO 앱"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.8
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # 상태관리 / MVVM
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # 모델 / 직렬화
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+
+  # 라우팅
+  go_router: ^14.8.1
+
+  # 네트워킹
+  dio: ^5.7.0
+  retrofit: ^4.9.0
+
+  # 푸시 알림
+  firebase_core: ^4.1.1
+  firebase_messaging: ^16.0.1
+  flutter_local_notifications: ^17.2.4
+
+  # 로컬 저장
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  shared_preferences: ^2.3.4
+  path_provider: ^2.1.5
+
+  # 환경변수
+  flutter_dotenv: ^5.2.1
+
+  # 유틸
+  logger: ^2.5.0
+  intl: ^0.20.2
+
+  # 반응형 UI
+  flutter_screenutil: ^5.9.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+  # 코드 생성
+  build_runner: ^2.5.4
+  freezed: ^2.5.8
+  json_serializable: ^6.9.5
+  riverpod_generator: ^2.6.4
+  retrofit_generator: ^9.7.0
+
+  # 테스트
+  mockito: ^5.4.5
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/animations/
+    - assets/mock_api/
+    - assets/seeds/
+    - .env
+
+  # 폰트 파일은 assets/fonts/ 에 아래 파일명과 정확히 일치하도록 배치해야 합니다.
+  # 파일명/family 를 바꿀 때는 lib/core/theme/app_text_styles.dart 의 상수도 함께 수정하세요.
+  fonts:
+    - family: GmarketSansLight
+      fonts:
+        - asset: assets/fonts/GmarketSansLight.ttf
+          weight: 300
+    - family: GmarketSansMedium
+      fonts:
+        - asset: assets/fonts/GmarketSansMedium.ttf
+          weight: 500
+    - family: GmarketSansBold
+      fonts:
+        - asset: assets/fonts/GmarketSansBold.ttf
+          weight: 700
