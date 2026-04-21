@@ -1,4 +1,5 @@
 import 'package:doitdo/core/utils/snap_scroll_physics.dart';
+import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/character_card.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/streak_section.dart';
@@ -10,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 
 /// 다마고치 메인 홈.
 class TamagochiPage extends ConsumerStatefulWidget {
@@ -24,7 +26,6 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   // 수직 padding 16*2 + 타이틀 ~20 + gap 10 + (dot 22 + gap 4 + 날짜 label ~16) ≈ 104
   static const double _streakSectionHeight = 104;
   static const double _streakTopGap = 16;
-  static const double _headerBottomPadding = 16;
 
   /// 헤더가 보이는 상태인지. 상태바 오버레이 + 아이콘 색 전환에만 쓰인다.
   /// 매 스크롤마다 build 가 다시 돌지 않도록 ValueNotifier 로 분리.
@@ -96,9 +97,8 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                 context,
                                 '상점 기능은 아직 준비 중이에요.',
                               ),
-                              onTapCollection: () {
-                                // TODO: 도감 페이지 라우트 연결
-                              },
+                              onTapCollection: () =>
+                                  context.push(AppRoutes.tamagochiCollection),
                             ),
                             SizedBox(height: _streakTopGap),
                             StreakSection(
