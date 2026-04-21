@@ -37,9 +37,9 @@ class DoitdoBottomNav extends StatelessWidget {
   /// 실제 아이콘은 추후 교체. 라벨은 `AppTextStyles.labelSmall` 규격.
   static const List<DoitdoTabItem> defaultItems = [
     DoitdoTabItem(
-      icon: Icons.check_circle_outline,
-      activeIcon: Icons.check_circle,
-      label: '할 일',
+      icon: Icons.calendar_month_outlined,
+      activeIcon: Icons.calendar_month,
+      label: '캘린더',
     ),
     DoitdoTabItem(
       icon: Icons.home_outlined,

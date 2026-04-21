@@ -7,6 +7,7 @@ import 'package:doitdo/app.dart';
 import 'package:doitdo/core/utils/app_env.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
 
+import 'package:intl/date_symbol_data_local.dart';
 // NOTE: Firebase/FCM 초기화는 UI 작업이 끝나고 FCM 연동 단계에서 활성화한다.
 // 활성화 방법:
 //   1) `dart pub global activate flutterfire_cli`
@@ -23,6 +24,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await AppEnv.load();
+  await initializeDateFormatting('ko_KR', null);
   await Hive.initFlutter();
   final prefs = await SharedPreferences.getInstance();
 
