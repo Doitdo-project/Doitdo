@@ -41,4 +41,14 @@ public class User extends BaseTimeEntity {
 
 	@Column(name = "is_deleted", nullable = false)
 	private Boolean isDeleted;
+
+	public static User create(String email, String encodedPassword, String username) {
+		return User.builder()
+				.email(email)
+				.password(encodedPassword)
+				.username(username)
+				.streakCount(0)
+				.isDeleted(false)
+				.build();
+	}
 }

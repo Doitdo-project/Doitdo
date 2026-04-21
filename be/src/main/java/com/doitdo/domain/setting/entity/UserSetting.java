@@ -54,4 +54,16 @@ public class UserSetting extends BaseTimeEntity {
 	@Enumerated(EnumType.STRING)
 	@Column(name = "home_screen_mode", nullable = false, length = 10)
 	private HomeScreenMode homeScreenMode;
+
+	public static UserSetting create(Long userId) {
+		return UserSetting.builder()
+				.userId(userId)
+				.dndEnabled(false)
+				.morningReminderEnabled(false)
+				.morningReminderTime(LocalTime.of(8, 0))
+				.eveningReminderEnabled(false)
+				.eveningReminderTime(LocalTime.of(21, 0))
+				.homeScreenMode(HomeScreenMode.HOME)
+				.build();
+	}
 }
