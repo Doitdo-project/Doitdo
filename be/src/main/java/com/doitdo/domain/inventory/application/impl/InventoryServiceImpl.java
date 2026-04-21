@@ -84,4 +84,26 @@ public class InventoryServiceImpl implements InventoryService {
 			item.getName()
 		);
 	}
+
+	@Override
+	@Transactional
+	public void unequipItem(Long userId, Long tamagotchiId, Long userItemId) {
+		UserCharacter userCharacter = userCharacterRepository
+			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M07_003));
+
+		if (!userCharacter.getUserCharacterId().equals(tamagotchiId)) {
+			throw new CustomException(TamagotchiErrorCode.M07_003);
+		}
+
+		UserItem userItem = userItemRepository.findByUserIdAndUserItemId(userId, userItemId)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M07_002));
+
+		if (userCharacter.getEquipedItemsId() == null
+			|| !userCharacter.getEquipedItemsId().equals(userItem.getUserItemId())) {
+			throw new CustomException(TamagotchiErrorCode.M07_003);
+		}
+
+		userCharacter.unequipItem();
+	}
 }

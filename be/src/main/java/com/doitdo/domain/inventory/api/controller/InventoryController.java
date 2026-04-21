@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,7 +27,7 @@ public class InventoryController {
 
 	private final InventoryService inventoryService;
 
-	@Operation(summary = "내 인벤토리 조회", description = "특정 다마고치 기준으로 보유 아이템과 장착 상태를 조회")
+	@Operation(summary = "인벤토리 조회", description = "특정 다마고치를 기준으로 보유 아이템과 장착 상태를 조회")
 	@ApiErrorCodes({"M08-001", "M08-002", "M08-003"})
 	@GetMapping("/{tamagotchiId}/inventory")
 	public GlobalApiResponse<InventoryResp> getInventory(
@@ -46,5 +47,17 @@ public class InventoryController {
 	) {
 		return GlobalApiResponse.ok("아이템 장착 완료",
 			inventoryService.equipItem(userDetails.getUserId(), tamagotchiId, userItemId));
+	}
+
+	@Operation(summary = "아이템 해제", description = "현재 장착된 아이템을 해제")
+	@ApiErrorCodes({"M07-001", "M07-002", "M07-003", "M07-004"})
+	@DeleteMapping("/{tamagotchiId}/items/{userItemId}")
+	public GlobalApiResponse<Void> unequipItem(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@PathVariable Long tamagotchiId,
+		@PathVariable Long userItemId
+	) {
+		inventoryService.unequipItem(userDetails.getUserId(), tamagotchiId, userItemId);
+		return GlobalApiResponse.noContent("아이템 해제 완료");
 	}
 }

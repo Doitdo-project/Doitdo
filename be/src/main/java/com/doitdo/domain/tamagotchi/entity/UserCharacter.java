@@ -51,4 +51,8 @@ public class UserCharacter extends BaseTimeEntity {
 	public void equipItem(Long userItemId) {
 		this.equipedItemsId = userItemId;
 	}
+
+	public void unequipItem() {
+		this.equipedItemsId = null;
+	}
 }
