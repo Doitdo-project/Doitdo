@@ -5,10 +5,6 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/widgets/common/todo_item_card.dart';
 
-/// 섹션 타이틀 + 우측 액션(선택) + `TodoItemCard` 리스트.
-///
-/// 예) "오늘의 할 일 | 추가하기" 형태의 헤더와 그 아래 카드들.
-/// 여백은 부모에서 준다 (이 위젯은 좌우 패딩을 갖지 않음).
 class TodoSection extends StatelessWidget {
   const TodoSection({
     super.key,
@@ -56,13 +52,13 @@ class TodoSection extends StatelessWidget {
               ),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         for (var i = 0; i < todos.length; i++) ...[
           TodoItemCard(
             todo: todos[i],
             onToggle: () => onToggle(todos[i].id),
           ),
-          if (i != todos.length - 1) const SizedBox(height: 8),
+          if (i != todos.length - 1) const SizedBox(height: 12),
         ],
       ],
     );
