@@ -33,9 +33,9 @@ class AppTextStyles {
 
   /// 툴바 제목 (계정 설정, 알림 설정, 카테고리 설정), 섹션 헤더
   static const TextStyle titleSmall = TextStyle(
-    fontFamily: _bold,
+    fontFamily: _medium,
     fontSize: 16,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w500,
   );
 
   // ── Body ─────────────────────────────────────────────────
