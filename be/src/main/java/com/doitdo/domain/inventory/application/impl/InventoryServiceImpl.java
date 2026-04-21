@@ -5,9 +5,12 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.doitdo.domain.inventory.api.dto.resp.EquipItemResp;
 import com.doitdo.domain.inventory.api.dto.resp.InventoryItemResp;
 import com.doitdo.domain.inventory.api.dto.resp.InventoryResp;
 import com.doitdo.domain.inventory.application.InventoryService;
+import com.doitdo.domain.inventory.entity.Item;
+import com.doitdo.domain.inventory.entity.UserItem;
 import com.doitdo.domain.inventory.repository.ItemRepository;
 import com.doitdo.domain.inventory.repository.UserItemRepository;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
@@ -53,5 +56,32 @@ public class InventoryServiceImpl implements InventoryService {
 			.toList();
 
 		return new InventoryResp(tamagotchiId, userCharacter.getEquipedItemsId(), items);
+	}
+
+	@Override
+	@Transactional
+	public EquipItemResp equipItem(Long userId, Long tamagotchiId, Long userItemId) {
+		UserCharacter userCharacter = userCharacterRepository
+			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M06_003));
+
+		if (!userCharacter.getUserCharacterId().equals(tamagotchiId)) {
+			throw new CustomException(TamagotchiErrorCode.M06_003);
+		}
+
+		UserItem userItem = userItemRepository.findByUserIdAndUserItemId(userId, userItemId)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M06_003));
+
+		Item item = itemRepository.findById(userItem.getItemId())
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M06_002));
+
+		userCharacter.equipItem(userItemId);
+
+		return new EquipItemResp(
+			tamagotchiId,
+			userItemId,
+			item.getItemId(),
+			item.getName()
+		);
 	}
 }

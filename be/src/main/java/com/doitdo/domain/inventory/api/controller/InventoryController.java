@@ -1,6 +1,7 @@
 package com.doitdo.domain.inventory.api.controller;
 
 import com.doitdo.domain.auth.application.CustomUserDetails;
+import com.doitdo.domain.inventory.api.dto.resp.EquipItemResp;
 import com.doitdo.domain.inventory.api.dto.resp.InventoryResp;
 import com.doitdo.domain.inventory.application.InventoryService;
 import com.doitdo.global.api.response.GlobalApiResponse;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -32,5 +34,17 @@ public class InventoryController {
 		@PathVariable Long tamagotchiId
 	) {
 		return GlobalApiResponse.ok(inventoryService.getInventory(userDetails.getUserId(), tamagotchiId));
+	}
+
+	@Operation(summary = "아이템 장착", description = "보유한 아이템을 현재 다마고치에 장착")
+	@ApiErrorCodes({"M06-001", "M06-002", "M06-003", "M06-004"})
+	@PostMapping("/{tamagotchiId}/items/{userItemId}")
+	public GlobalApiResponse<EquipItemResp> equipItem(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@PathVariable Long tamagotchiId,
+		@PathVariable Long userItemId
+	) {
+		return GlobalApiResponse.ok("아이템 장착 완료",
+			inventoryService.equipItem(userDetails.getUserId(), tamagotchiId, userItemId));
 	}
 }

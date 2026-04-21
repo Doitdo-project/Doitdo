@@ -47,4 +47,8 @@ public class UserCharacter extends BaseTimeEntity {
 
 	@Column(name = "is_deleted", nullable = false)
 	private Boolean isDeleted;
+
+	public void equipItem(Long userItemId) {
+		this.equipedItemsId = userItemId;
+	}
 }
