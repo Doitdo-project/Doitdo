@@ -3,14 +3,19 @@ package com.doitdo.domain.tamagotchi.application.impl;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaItemResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
+import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
+import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
+import com.doitdo.global.exception.CustomException;
+import com.doitdo.global.exception.TamagotchiErrorCode;
 
 import lombok.RequiredArgsConstructor;
 
@@ -20,6 +25,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 
 	private final CharacterRepository characterRepository;
 	private final CharacterUnlockRepository characterUnlockRepository;
+	private final UserCharacterRepository userCharacterRepository;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -37,5 +43,25 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 				character.getThumbnailUrl()
 			))
 			.toList());
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public CurrentCharacterResp getCurrentCharacter(Long userId) {
+		UserCharacter userCharacter = userCharacterRepository
+			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
+
+		com.doitdo.domain.tamagotchi.entity.Character character = characterRepository
+			.findById(userCharacter.getCharacterId())
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
+
+		return new CurrentCharacterResp(
+			character.getCharacterId(),
+			userCharacter.getName(),
+			character.getStage().name(),
+			userCharacter.getGrowthPercent(),
+			userCharacter.getEquipedItemsId()
+		);
 	}
 }

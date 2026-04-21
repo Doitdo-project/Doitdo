@@ -15,6 +15,7 @@ import com.doitdo.domain.tamagotchi.entity.Character;
 import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
+import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 
 @ExtendWith(MockitoExtension.class)
 class TamagotchiServiceImplTest {
@@ -25,9 +26,16 @@ class TamagotchiServiceImplTest {
 	@Mock
 	private CharacterUnlockRepository characterUnlockRepository;
 
+	@Mock
+	private UserCharacterRepository userCharacterRepository;
+
 	@Test
 	void getEncyclopediaReturnsAllCharactersWithUnlockedStatus() {
-		TamagotchiServiceImpl service = new TamagotchiServiceImpl(characterRepository, characterUnlockRepository);
+		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
+			characterRepository,
+			characterUnlockRepository,
+			userCharacterRepository
+		);
 		Long userId = 1L;
 
 		Character slime = Character.builder()

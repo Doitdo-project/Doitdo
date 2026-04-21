@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.doitdo.domain.auth.application.CustomUserDetails;
+import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
 import com.doitdo.global.api.response.GlobalApiResponse;
@@ -30,5 +31,14 @@ public class TamagotchiController {
 		@AuthenticationPrincipal CustomUserDetails userDetails
 	) {
 		return GlobalApiResponse.ok(tamagotchiService.getEncyclopedia(userDetails.getUserId()));
+	}
+
+	@Operation(summary = "현재 캐릭터 조회", description = "현재 활성 상태인 캐릭터 정보를 조회")
+	@ApiErrorCodes({"M04-001", "M04-002", "M04-003"})
+	@GetMapping("/me")
+	public GlobalApiResponse<CurrentCharacterResp> getCurrentCharacter(
+		@AuthenticationPrincipal CustomUserDetails userDetails
+	) {
+		return GlobalApiResponse.ok(tamagotchiService.getCurrentCharacter(userDetails.getUserId()));
 	}
 }
