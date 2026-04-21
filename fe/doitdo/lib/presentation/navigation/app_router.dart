@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:doitdo/presentation/pages/collection/collection_page.dart';
 import 'package:doitdo/presentation/pages/setting/setting_page.dart';
 import 'package:doitdo/presentation/pages/splash/splash_page.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_page.dart';
@@ -14,6 +15,7 @@ class AppRoutes {
   static const String splash = '/';
   static const String todo = '/todo';
   static const String tamagochi = '/tamagochi';
+  static const String tamagochiCollection = '/tamagochi/collection';
   static const String setting = '/setting';
 }
 
@@ -53,6 +55,17 @@ final GoRouter appRouter = GoRouter(
             GoRoute(
               path: AppRoutes.tamagochi,
               builder: (context, state) => const TamagochiPage(),
+              routes: [
+                // 상대 경로 'collection' → 절대 경로 '/tamagochi/collection'.
+                // parentNavigatorKey 로 rootNavigator 에 push 되도록 해서
+                // 전체화면(= bottom nav 숨김)으로 열린다. 뒤로가기는 다마고치 홈으로.
+                // 향후 shop 라우트도 동일한 패턴으로 추가.
+                GoRoute(
+                  path: 'collection',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) => const CollectionPage(),
+                ),
+              ],
             ),
           ],
         ),
