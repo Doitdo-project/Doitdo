@@ -4,7 +4,8 @@ class AppEnv {
   AppEnv._();
 
   static Future<void> load() async {
-    await dotenv.load(fileName: '.env');
+    // isOptional: API 연동 전 단계에서 .env 가 비어있어도 앱이 기동되도록 허용
+    await dotenv.load(fileName: '.env', mergeWith: {}, isOptional: true);
   }
 
   static String get(String key) {
