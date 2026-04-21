@@ -38,6 +38,6 @@ public class Character extends BaseTimeEntity {
 	@Column(nullable = false, length = 10)
 	private Stage stage;
 
-	@Column(name = "thumnail_url", nullable = false, length = 500)
-	private String thumnailUrl;
+	@Column(name = "thumbnail_url", nullable = false, length = 500)
+	private String thumbnailUrl;
 }
