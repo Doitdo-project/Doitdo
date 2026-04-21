@@ -1,0 +1,124 @@
+pipeline {
+    agent any
+
+    options {
+        gitLabConnection('ssafy-gitlab')
+    }
+
+    environment {
+        JAVA_HOME = '/opt/java/openjdk'
+        PATH = '/opt/java/openjdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+        PROD_HOST = '140.245.72.85'
+        PROD_APP_PATH = '/home/ubuntu/app'
+        PROD_SSH_USER = 'ubuntu'
+        PROD_SSH_CREDENTIALS = 'oci-ssh'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                updateGitlabCommitStatus name: 'jenkins-prod-release', state: 'running'
+            }
+        }
+
+        stage('Inject prod env') {
+            steps {
+                withCredentials([file(credentialsId: 'prod-env-file', variable: 'PROD_ENV_FILE')]) {
+                    sh 'mkdir -p be/env'
+                    sh 'cp "$PROD_ENV_FILE" be/env/prod.env'
+                    sh 'chmod 600 be/env/prod.env'
+                }
+            }
+        }
+
+        stage('Show Versions') {
+            steps {
+                sh 'git --version'
+                sh 'java -version'
+                dir('be') {
+                    sh 'chmod +x gradlew && ./gradlew --version'
+                }
+            }
+        }
+
+        stage('Build Jar') {
+            steps {
+                dir('be') {
+                    sh 'chmod +x gradlew && ./gradlew bootJar'
+                }
+            }
+        }
+
+        stage('Deploy To Production') {
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: env.PROD_SSH_CREDENTIALS, keyFileVariable: 'PROD_SSH_KEY', usernameVariable: 'PROD_SSH_USER_BOUND')]) {
+                    sh '''
+                        set -eu
+                        JAR_PATH="$(find be/build/libs -maxdepth 1 -type f -name "*.jar" | head -n 1)"
+                        if [ -z "$JAR_PATH" ]; then
+                            echo "Jar file not found in be/build/libs"
+                            exit 1
+                        fi
+
+                        scp -i "$PROD_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$JAR_PATH" "${PROD_SSH_USER}@${PROD_HOST}:${PROD_APP_PATH}/app.jar"
+
+                        ssh -i "$PROD_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PROD_SSH_USER}@${PROD_HOST}" '
+                            set -eu
+                            cd /home/ubuntu/app
+                            sudo docker compose build app
+                            sudo docker rm -f doitdo-app || true
+                            sudo docker compose up -d --no-deps app
+                            sudo docker compose ps
+                        '
+                    '''
+                }
+            }
+        }
+
+        stage('Verify Production') {
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: env.PROD_SSH_CREDENTIALS, keyFileVariable: 'PROD_SSH_KEY', usernameVariable: 'PROD_SSH_USER_BOUND')]) {
+                    sh '''
+                        set -eu
+                        ssh -i "$PROD_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PROD_SSH_USER}@${PROD_HOST}" '
+                            set -eu
+                            for i in $(seq 1 20); do
+                                if curl -fsS http://127.0.0.1:8080/hello > /dev/null; then
+                                    exit 0
+                                fi
+                                sleep 2
+                            done
+                            echo "Local health check failed"
+                            exit 1
+                        '
+
+                        for i in $(seq 1 20); do
+                            if curl -fsS https://api.doitdo.site/hello > /dev/null; then
+                                exit 0
+                            fi
+                            sleep 2
+                        done
+                        echo "External health check failed"
+                        exit 1
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            updateGitlabCommitStatus name: 'jenkins-prod-release', state: 'success'
+        }
+        failure {
+            updateGitlabCommitStatus name: 'jenkins-prod-release', state: 'failed'
+        }
+        aborted {
+            updateGitlabCommitStatus name: 'jenkins-prod-release', state: 'canceled'
+        }
+        always {
+            archiveArtifacts artifacts: 'be/build/libs/*.jar', onlyIfSuccessful: false
+        }
+    }
+}

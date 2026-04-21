@@ -1,0 +1,69 @@
+pipeline {
+    agent any
+
+    options {
+        gitLabConnection('ssafy-gitlab')
+    }
+
+    environment {
+        JAVA_HOME = '/opt/java/openjdk'
+        PATH = '/opt/java/openjdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                updateGitlabCommitStatus name: 'jenkins-main-build-check', state: 'running'
+            }
+        }
+
+        stage('Show Versions') {
+            steps {
+                sh 'git --version'
+                sh 'java -version'
+                dir('be') {
+                    sh 'chmod +x gradlew && ./gradlew --version'
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                dir('be') {
+                    sh 'chmod +x gradlew && ./gradlew clean test'
+                }
+            }
+        }
+
+        stage('Build Jar') {
+            steps {
+                dir('be') {
+                    sh 'chmod +x gradlew && ./gradlew bootJar'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            updateGitlabCommitStatus name: 'jenkins-main-build-check', state: 'success'
+            script {
+                if (env.gitlabActionType == 'PUSH' && env.gitlabBranch == 'main') {
+                    build job: 'doitdo-prod-release', wait: false, propagate: false
+                } else {
+                    echo "Skip prod release. action=${env.gitlabActionType}, branch=${env.gitlabBranch}, target=${env.gitlabTargetBranch}"
+                }
+            }
+        }
+        failure {
+            updateGitlabCommitStatus name: 'jenkins-main-build-check', state: 'failed'
+        }
+        aborted {
+            updateGitlabCommitStatus name: 'jenkins-main-build-check', state: 'canceled'
+        }
+        always {
+            archiveArtifacts artifacts: 'be/build/libs/*.jar', onlyIfSuccessful: false
+        }
+    }
+}
