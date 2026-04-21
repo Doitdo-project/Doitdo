@@ -44,4 +44,12 @@ public class AutoProvider {
 	@CreatedDate
 	@Column(name = "linked_at", nullable = false, updatable = false)
 	private LocalDateTime linkedAt;
+
+	public static AutoProvider create(Long userId, String provider, String providerUid) {
+		return AutoProvider.builder()
+				.userId(userId)
+				.provider(provider)
+				.providerUid(providerUid)
+				.build();
+	}
 }
