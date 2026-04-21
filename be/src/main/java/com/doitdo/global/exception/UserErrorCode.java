@@ -13,6 +13,7 @@ public enum UserErrorCode implements ErrorCode {
 	U00_001("U00-001", HttpStatus.CONFLICT, "이미 사용 중인 이메일"),
 	U00_002("U00-002", HttpStatus.UNPROCESSABLE_ENTITY, "필수 파라미터 누락 또는 형식 오류"),
 	U00_003("U00-003", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
+	U00_004("U00-004", HttpStatus.CONFLICT, "이미 사용 중인 닉네임"),
 
 	// U01 - 내 정보 조회
 	U01_001("U01-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),
