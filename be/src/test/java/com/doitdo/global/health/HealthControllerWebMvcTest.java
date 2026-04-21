@@ -44,7 +44,9 @@ class HealthControllerWebMvcTest {
 			.andExpect(jsonPath("$.status").value(200))
 			.andExpect(jsonPath("$.message").value("OK"))
 			.andExpect(jsonPath("$.data.service").value("doitdo"))
-			.andExpect(jsonPath("$.data.profile").value("dev"));
+			.andExpect(jsonPath("$.data.profile").value("dev"))
+			.andExpect(jsonPath("$.data.status").value("UP"))
+			.andExpect(jsonPath("$.data.startedAt").isNotEmpty());
 	}
 
 	@Test
