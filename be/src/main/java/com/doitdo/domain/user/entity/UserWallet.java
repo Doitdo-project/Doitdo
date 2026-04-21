@@ -32,4 +32,11 @@ public class UserWallet extends BaseTimeEntity {
 
 	@Column(nullable = false)
 	private Integer balance;
+
+	public static UserWallet create(Long userId) {
+		return UserWallet.builder()
+				.userId(userId)
+				.balance(0)
+				.build();
+	}
 }
