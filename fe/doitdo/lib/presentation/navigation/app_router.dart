@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-<<<<<<< Updated upstream
-import 'package:doitdo/presentation/pages/collection/collection_page.dart';
-=======
 import 'package:doitdo/presentation/pages/auth/find_password_page.dart';
 import 'package:doitdo/presentation/pages/auth/login_page.dart';
 import 'package:doitdo/presentation/pages/auth/register_page.dart';
 import 'package:doitdo/presentation/pages/auth/reset_password_page.dart';
 import 'package:doitdo/presentation/pages/auth/welcome_page.dart';
->>>>>>> Stashed changes
+import 'package:doitdo/presentation/pages/collection/collection_page.dart';
 import 'package:doitdo/presentation/pages/setting/setting_page.dart';
 import 'package:doitdo/presentation/pages/splash/splash_page.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_page.dart';
