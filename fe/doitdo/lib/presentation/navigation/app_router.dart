@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+<<<<<<< Updated upstream
 import 'package:doitdo/presentation/pages/collection/collection_page.dart';
+=======
+import 'package:doitdo/presentation/pages/auth/find_password_page.dart';
+import 'package:doitdo/presentation/pages/auth/login_page.dart';
+import 'package:doitdo/presentation/pages/auth/register_page.dart';
+import 'package:doitdo/presentation/pages/auth/reset_password_page.dart';
+import 'package:doitdo/presentation/pages/auth/welcome_page.dart';
+>>>>>>> Stashed changes
 import 'package:doitdo/presentation/pages/setting/setting_page.dart';
 import 'package:doitdo/presentation/pages/splash/splash_page.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_page.dart';
@@ -13,6 +21,11 @@ class AppRoutes {
   AppRoutes._();
 
   static const String splash = '/';
+  static const String welcome = '/welcome';
+  static const String login = '/login';
+  static const String register = '/register';
+  static const String findPassword = '/find-password';
+  static const String resetPassword = '/reset-password';
   static const String todo = '/todo';
   static const String tamagochi = '/tamagochi';
   static const String tamagochiCollection = '/tamagochi/collection';
@@ -32,6 +45,28 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.splash,
       builder: (context, state) => const SplashPage(),
+    ),
+
+    // 인증 플로우 (탭 셸 바깥)
+    GoRoute(
+      path: AppRoutes.welcome,
+      builder: (context, state) => const WelcomePage(),
+    ),
+    GoRoute(
+      path: AppRoutes.login,
+      builder: (context, state) => const LoginPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.register,
+      builder: (context, state) => const RegisterPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.findPassword,
+      builder: (context, state) => const FindPasswordPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.resetPassword,
+      builder: (context, state) => const ResetPasswordPage(),
     ),
 
     // 메인 탭 셸. 각 브랜치가 고유의 네비게이션 스택을 가진다.
