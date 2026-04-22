@@ -27,7 +27,13 @@ cp be/env/dev.env.example be/env/dev.env
 | `env/dev.env` | 로컬 dev 프로파일 실제 값 | X (gitignore) |
 | `env/prod.env.example` | 운영용 템플릿 | O |
 
-로딩 위치: `src/main/resources/application-dev.properties` 의 `spring.config.import` 가 `env/dev.env` 를 읽는다.
+로딩 위치: `src/main/resources/application-dev.yml` 의 `spring.config.import` 가 `env/dev.env` 를 읽는다.
+
+## 2-1. 선택 env 키
+
+| 키 | 기본값 | 허용값 | 용도 |
+|---|---|---|---|
+| `jpa.ddl.auto` | `update` | `validate` / `update` / `create` / `create-drop` / `none` | Hibernate 스키마 전략. 공용 dev DB 에 영향 가므로 개인 환경에선 `validate` 권장. `env/dev.env` 에 지정. |
 
 ## 3. DB 접근 확인
 
