@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- image_picker (카메라 촬영) 용 권한.
+         갤러리 선택은 Android 13+ Photo Picker 로 권한 불필요. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
     <application
         android:label="doitdo"
         android:name="${applicationName}"
