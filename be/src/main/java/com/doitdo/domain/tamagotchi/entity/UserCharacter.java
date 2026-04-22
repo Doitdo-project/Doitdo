@@ -47,4 +47,28 @@ public class UserCharacter extends BaseTimeEntity {
 
 	@Column(name = "is_deleted", nullable = false)
 	private Boolean isDeleted;
+
+	public void equipItem(Long userItemId) {
+		this.equipedItemsId = userItemId;
+	}
+
+	public void unequipItem() {
+		this.equipedItemsId = null;
+	}
+
+	public void deactivate() {
+		this.isActive = false;
+	}
+
+	public void setCharacterId(Long characterId) {
+		this.characterId = characterId;
+	}
+
+	public void setGrowthPercent(Integer growthPercent) {
+		this.growthPercent = growthPercent;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
 }
