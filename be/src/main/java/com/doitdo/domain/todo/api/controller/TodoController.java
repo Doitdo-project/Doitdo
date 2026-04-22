@@ -2,6 +2,7 @@ package com.doitdo.domain.todo.api.controller;
 
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.todo.api.dto.req.TodoCreateReq;
+import com.doitdo.domain.todo.api.dto.req.TodoPriorityChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoStatusChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
@@ -84,5 +85,16 @@ public class TodoController {
 			@Valid @RequestBody TodoStatusChangeReq req) {
 		return GlobalApiResponse.ok("TODO 상태 변경 성공",
 				todoService.changeStatus(userDetails.getUserId(), todoId, req));
+	}
+
+	@Operation(summary = "TODO 우선순위 변경", description = "TODO 의 우선순위 값을 부분 수정한다.")
+	@ApiErrorCodes({"T07-001", "T07-003"})
+	@PatchMapping("/{todoId}/priority")
+	public GlobalApiResponse<TodoDetailResp> changePriority(
+			@AuthenticationPrincipal CustomUserDetails userDetails,
+			@PathVariable Long todoId,
+			@Valid @RequestBody TodoPriorityChangeReq req) {
+		return GlobalApiResponse.ok("TODO 우선순위 변경 성공",
+				todoService.changePriority(userDetails.getUserId(), todoId, req));
 	}
 }

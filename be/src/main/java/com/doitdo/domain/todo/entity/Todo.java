@@ -80,6 +80,10 @@ public class Todo extends BaseTimeEntity {
 		this.status = status;
 	}
 
+	public void changePriority(Integer priority) {
+		this.priority = priority;
+	}
+
 	public void update(
 			String title,
 			String content,

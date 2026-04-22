@@ -1,6 +1,7 @@
 package com.doitdo.domain.todo.application.impl;
 
 import com.doitdo.domain.todo.api.dto.req.TodoCreateReq;
+import com.doitdo.domain.todo.api.dto.req.TodoPriorityChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoStatusChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
@@ -156,6 +157,28 @@ public class TodoServiceImpl implements TodoService {
 		}
 
 		// TODO: DONE 상태 변경 시 Tamagotchi 도메인 경험치 연동 필요 — Tamagotchi 이벤트 발행 추가 예정
+
+		return TodoDetailResp.from(todo, categoryName);
+	}
+
+	@Override
+	@Transactional
+	public TodoDetailResp changePriority(Long userId, Long todoId, TodoPriorityChangeReq req) {
+		Todo todo = todoRepository.findByTodoIdAndIsDeletedFalse(todoId)
+				.orElseThrow(() -> new CustomException(TodoErrorCode.T07_001));
+
+		if (!todo.getUserId().equals(userId)) {
+			throw new CustomException(TodoErrorCode.T07_003);
+		}
+
+		todo.changePriority(req.priority());
+
+		String categoryName = null;
+		if (todo.getCategoryId() != null) {
+			categoryName = categoryRepository.findById(todo.getCategoryId())
+					.map(Category::getCategoryName)
+					.orElse(null);
+		}
 
 		return TodoDetailResp.from(todo, categoryName);
 	}
