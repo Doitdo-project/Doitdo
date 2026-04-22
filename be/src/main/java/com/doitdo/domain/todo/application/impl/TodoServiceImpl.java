@@ -53,7 +53,6 @@ public class TodoServiceImpl implements TodoService {
 	private final TodoRepository todoRepository;
 	private final CategoryRepository categoryRepository;
 	private final SnoozeHistoryRepository snoozeHistoryRepository;
-	private final CalendarOccurrenceGenerator calendarOccurrenceGenerator;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -170,7 +169,7 @@ public class TodoServiceImpl implements TodoService {
 
 		for (Todo master : recurringMasters) {
 			Set<LocalDate> actualizedDates = actualizedOccurrencesByMasterId.getOrDefault(master.getTodoId(), Set.of());
-			for (LocalDate occurrenceDate : calendarOccurrenceGenerator.generate(master, req.from(), req.to())) {
+			for (LocalDate occurrenceDate : CalendarOccurrenceGenerator.generate(master, req.from(), req.to())) {
 				if (actualizedDates.contains(occurrenceDate)) {
 					continue;
 				}
