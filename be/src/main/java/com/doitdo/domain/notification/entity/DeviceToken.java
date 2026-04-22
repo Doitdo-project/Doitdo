@@ -43,4 +43,23 @@ public class DeviceToken extends BaseTimeEntity {
 
 	@Column(name = "is_active", nullable = false)
 	private Boolean isActive;
+
+	public static DeviceToken create(Long userId, String fcmToken, Platform platform) {
+		return DeviceToken.builder()
+				.userId(userId)
+				.fcmToken(fcmToken)
+				.platform(platform)
+				.isActive(true)
+				.build();
+	}
+
+	public void register(Long userId, Platform platform) {
+		this.userId = userId;
+		this.platform = platform;
+		this.isActive = true;
+	}
+
+	public void deactivate() {
+		this.isActive = false;
+	}
 }
