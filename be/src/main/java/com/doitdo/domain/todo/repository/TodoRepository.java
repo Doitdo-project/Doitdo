@@ -14,5 +14,11 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 
 	Optional<Todo> findByUserIdAndTitleAndStartDateAndIsDeletedFalse(Long userId, String title, LocalDate startDate);
 
+	Optional<Todo> findByUserIdAndTitleAndStartDateAndTypeAndIsDeletedFalse(
+			Long userId,
+			String title,
+			LocalDate startDate,
+			TodoType type);
+
 	List<Todo> findAllByUserIdAndTitleAndTypeAndIsDeletedFalse(Long userId, String title, TodoType type);
 }

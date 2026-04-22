@@ -154,6 +154,7 @@ public class TodoServiceImpl implements TodoService {
 				actualizedOccurrencesByMasterId
 						.computeIfAbsent(matchedMaster.getTodoId(), ignored -> new java.util.HashSet<>())
 						.add(originalOccurrenceDate);
+				actualizedOccurrencesByMasterId.get(matchedMaster.getTodoId()).add(actualTodo.getStartDate());
 			}
 
 			CalendarItemResp item = toActualCalendarItem(
@@ -566,7 +567,11 @@ public class TodoServiceImpl implements TodoService {
 			throw new CustomException(TodoErrorCode.T05_004);
 		}
 
-		return todoRepository.findByUserIdAndTitleAndStartDateAndIsDeletedFalse(userId, master.getTitle(), occurrenceDate)
+		return todoRepository.findByUserIdAndTitleAndStartDateAndTypeAndIsDeletedFalse(
+						userId,
+						master.getTitle(),
+						occurrenceDate,
+						TodoType.NORMAL)
 				.orElseGet(() -> findExistingMaterializedInstance(userId, master.getTitle(), occurrenceDate)
 						.orElseGet(() -> todoRepository.save(Todo.createRecurringInstance(master, occurrenceDate))));
 	}
