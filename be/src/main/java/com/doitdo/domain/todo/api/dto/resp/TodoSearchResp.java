@@ -20,7 +20,7 @@ public record TodoSearchResp(
 		List<TodoDetailResp> items = pageResult.getContent().stream()
 				.map(t -> TodoDetailResp.from(
 						t,
-						categoryNameById.get(t.getCategoryId()),
+						t.getCategoryId() != null ? categoryNameById.get(t.getCategoryId()) : null,
 						snoozeCountByTodoId.getOrDefault(t.getTodoId(), 0)
 				))
 				.toList();
