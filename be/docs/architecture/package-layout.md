@@ -92,6 +92,15 @@ global/
 4. `OpenApiConfig` 에 `GroupedOpenApi` 빈 추가 (`packagesToScan` = 새 도메인의 `api.controller`).
 5. ERD/매핑 표 갱신 — [`erd.md`](erd.md).
 
+## todo 도메인 추가 파일 (snooze 이력)
+
+| 종류 | 경로 | 비고 |
+|---|---|---|
+| Entity | `domain/todo/entity/SnoozeHistory.java` | `snooze_history` 테이블 매핑 |
+| Repository | `domain/todo/repository/SnoozeHistoryRepository.java` | `countByTodoId`, `countByTodoIdIn` + `SnoozeCountProjection` |
+
+`todos` 테이블 DDL 변경 없음. `snoozedDays` 는 COUNT 쿼리로 파생.
+
 ## 네이밍/엔티티 규칙
 
 상세는 [`../conventions/naming.md`](../conventions/naming.md). 요약:

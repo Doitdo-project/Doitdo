@@ -43,7 +43,7 @@ public enum TodoErrorCode implements ErrorCode {
 	T05_001("T05-001", HttpStatus.NOT_FOUND, "미루기할 TODO를 찾을 수 없음"),
 	T05_002("T05-002", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),
 	T05_003("T05-003", HttpStatus.FORBIDDEN, "다른 사용자의 TODO 미루기 불가"),
-	T05_004("T05-004", HttpStatus.UNPROCESSABLE_ENTITY, "이미 미루기 처리된 TODO (오늘이 아닌 경우)"),
+	T05_004("T05-004", HttpStatus.UNPROCESSABLE_ENTITY, "반복 TODO 는 현재 미루기 미지원 (인스턴스 설계 후 추가 예정)"),
 
 	// T06 - POST /todos (작성)
 	T06_001("T06-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),

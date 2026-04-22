@@ -13,9 +13,16 @@ public record TodoSearchResp(
 		int totalPages
 ) {
 
-	public static TodoSearchResp from(Page<Todo> pageResult, Map<Long, String> categoryNameById) {
+	public static TodoSearchResp from(
+			Page<Todo> pageResult,
+			Map<Long, String> categoryNameById,
+			Map<Long, Integer> snoozeCountByTodoId) {
 		List<TodoDetailResp> items = pageResult.getContent().stream()
-				.map(t -> TodoDetailResp.from(t, categoryNameById.get(t.getCategoryId())))
+				.map(t -> TodoDetailResp.from(
+						t,
+						categoryNameById.get(t.getCategoryId()),
+						snoozeCountByTodoId.getOrDefault(t.getTodoId(), 0)
+				))
 				.toList();
 		return new TodoSearchResp(
 				items,

@@ -27,4 +27,6 @@ public interface TodoService {
 	TodoDetailResp changePriority(Long userId, Long todoId, TodoPriorityChangeReq req);
 
 	TodoSearchResp search(Long userId, TodoSearchReq req);
+
+	TodoDetailResp snooze(Long userId, Long todoId);
 }

@@ -6,13 +6,17 @@ import java.util.Map;
 
 public record TodoListResp(List<TodoDetailResp> items) {
 
-	public static TodoListResp of(List<Todo> todos, Map<Long, String> categoryNameById) {
+	public static TodoListResp of(
+			List<Todo> todos,
+			Map<Long, String> categoryNameById,
+			Map<Long, Integer> snoozeCountByTodoId) {
 		List<TodoDetailResp> items = todos.stream()
 				.map(todo -> TodoDetailResp.from(
 						todo,
 						todo.getCategoryId() != null
 								? categoryNameById.get(todo.getCategoryId())
-								: null
+								: null,
+						snoozeCountByTodoId.getOrDefault(todo.getTodoId(), 0)
 				))
 				.toList();
 		return new TodoListResp(items);

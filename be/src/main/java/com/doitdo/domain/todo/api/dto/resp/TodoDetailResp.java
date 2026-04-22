@@ -18,10 +18,11 @@ public record TodoDetailResp(
 		LocalDate endDate,
 		Integer period,
 		TodoStatus status,
-		LocalDateTime updatedAt
+		LocalDateTime updatedAt,
+		int snoozedDays
 ) {
 
-	public static TodoDetailResp from(Todo todo, String categoryName) {
+	public static TodoDetailResp from(Todo todo, String categoryName, int snoozedDays) {
 		return new TodoDetailResp(
 				todo.getTodoId(),
 				todo.getTitle(),
@@ -33,7 +34,8 @@ public record TodoDetailResp(
 				todo.getEndDate(),
 				todo.getPeriod(),
 				todo.getStatus(),
-				todo.getUpdatedAt()
+				todo.getUpdatedAt(),
+				snoozedDays
 		);
 	}
 }

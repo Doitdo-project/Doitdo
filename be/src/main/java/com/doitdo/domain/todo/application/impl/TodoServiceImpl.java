@@ -11,10 +11,13 @@ import com.doitdo.domain.todo.api.dto.resp.TodoListResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoSearchResp;
 import com.doitdo.domain.todo.application.TodoService;
 import com.doitdo.domain.todo.entity.Category;
+import com.doitdo.domain.todo.entity.SnoozeHistory;
 import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.entity.Todo.TodoStatus;
 import com.doitdo.domain.todo.entity.Todo.TodoType;
 import com.doitdo.domain.todo.repository.CategoryRepository;
+import com.doitdo.domain.todo.repository.SnoozeHistoryRepository;
+import com.doitdo.domain.todo.repository.SnoozeHistoryRepository.SnoozeCountProjection;
 import com.doitdo.domain.todo.repository.TodoRepository;
 import com.doitdo.domain.todo.repository.TodoSpecifications;
 import com.doitdo.global.exception.CustomException;
@@ -41,6 +44,7 @@ public class TodoServiceImpl implements TodoService {
 
 	private final TodoRepository todoRepository;
 	private final CategoryRepository categoryRepository;
+	private final SnoozeHistoryRepository snoozeHistoryRepository;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -84,7 +88,20 @@ public class TodoServiceImpl implements TodoService {
 				: categoryRepository.findAllById(categoryIds).stream()
 						.collect(Collectors.toMap(Category::getCategoryId, Category::getCategoryName));
 
-		return TodoListResp.of(todos, categoryNameById);
+		// snooze 횟수 벌크 조회
+		Set<Long> todoIds = todos.stream()
+				.map(Todo::getTodoId)
+				.collect(Collectors.toSet());
+
+		Map<Long, Integer> snoozeCountByTodoId = todoIds.isEmpty()
+				? Map.of()
+				: snoozeHistoryRepository.countByTodoIdIn(todoIds).stream()
+						.collect(Collectors.toMap(
+								SnoozeCountProjection::getTodoId,
+								p -> p.getCnt().intValue()
+						));
+
+		return TodoListResp.of(todos, categoryNameById, snoozeCountByTodoId);
 	}
 
 	private Sort resolveSort(String sortParam) {
@@ -115,7 +132,8 @@ public class TodoServiceImpl implements TodoService {
 					.orElse(null);
 		}
 
-		return TodoDetailResp.from(todo, categoryName);
+		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
+		return TodoDetailResp.from(todo, categoryName, count);
 	}
 
 	@Override
@@ -141,7 +159,8 @@ public class TodoServiceImpl implements TodoService {
 						req.type(), priority, req.startDate(), req.endDate(), req.period())
 		);
 
-		return TodoDetailResp.from(todo, categoryName);
+		// 새 TODO 이므로 snooze 이력 없음 — count=0 하드코딩 (DB 조회 불필요)
+		return TodoDetailResp.from(todo, categoryName, 0);
 	}
 
 	@Override
@@ -202,7 +221,8 @@ public class TodoServiceImpl implements TodoService {
 				req.period()
 		);
 
-		return TodoDetailResp.from(todo, categoryName);
+		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
+		return TodoDetailResp.from(todo, categoryName, count);
 	}
 
 	@Override
@@ -230,7 +250,8 @@ public class TodoServiceImpl implements TodoService {
 
 		// TODO: DONE 상태 변경 시 Tamagotchi 도메인 경험치 연동 필요 — Tamagotchi 이벤트 발행 추가 예정
 
-		return TodoDetailResp.from(todo, categoryName);
+		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
+		return TodoDetailResp.from(todo, categoryName, count);
 	}
 
 	@Override
@@ -252,7 +273,8 @@ public class TodoServiceImpl implements TodoService {
 					.orElse(null);
 		}
 
-		return TodoDetailResp.from(todo, categoryName);
+		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
+		return TodoDetailResp.from(todo, categoryName, count);
 	}
 
 	@Override
@@ -284,7 +306,20 @@ public class TodoServiceImpl implements TodoService {
 				: categoryRepository.findAllById(categoryIds).stream()
 						.collect(Collectors.toMap(Category::getCategoryId, Category::getCategoryName));
 
-		return TodoSearchResp.from(pageResult, categoryNameById);
+		// snooze 횟수 벌크 조회
+		Set<Long> todoIds = pageResult.getContent().stream()
+				.map(Todo::getTodoId)
+				.collect(Collectors.toSet());
+
+		Map<Long, Integer> snoozeCountByTodoId = todoIds.isEmpty()
+				? Map.of()
+				: snoozeHistoryRepository.countByTodoIdIn(todoIds).stream()
+						.collect(Collectors.toMap(
+								SnoozeCountProjection::getTodoId,
+								p -> p.getCnt().intValue()
+						));
+
+		return TodoSearchResp.from(pageResult, categoryNameById, snoozeCountByTodoId);
 	}
 
 	private Sort resolveSearchSort(String sortParam) {
@@ -292,5 +327,36 @@ public class TodoServiceImpl implements TodoService {
 			case "category" -> Sort.by(Order.asc("categoryId").nullsLast(), Order.asc("startDate"));
 			default -> Sort.by(Order.asc("startDate"), Order.asc("todoId"));
 		};
+	}
+
+	@Override
+	@Transactional
+	public TodoDetailResp snooze(Long userId, Long todoId) {
+		Todo todo = todoRepository.findByTodoIdAndIsDeletedFalse(todoId)
+				.orElseThrow(() -> new CustomException(TodoErrorCode.T05_001));
+
+		if (!todo.getUserId().equals(userId)) {
+			throw new CustomException(TodoErrorCode.T05_003);
+		}
+
+		if (todo.getType() == TodoType.RECURRING) {
+			// 반복 TODO 마스터는 현재 미지원 (T08 인스턴스 설계 후 추가 예정)
+			throw new CustomException(TodoErrorCode.T05_004);
+		}
+
+		LocalDate fromDate = todo.getStartDate();
+		todo.snooze();  // startDate +=1, endDate +=1 if not null
+
+		snoozeHistoryRepository.save(SnoozeHistory.create(
+				todo.getTodoId(), userId, fromDate, todo.getStartDate()));
+
+		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
+		String categoryName = null;
+		if (todo.getCategoryId() != null) {
+			categoryName = categoryRepository.findById(todo.getCategoryId())
+					.map(Category::getCategoryName)
+					.orElse(null);
+		}
+		return TodoDetailResp.from(todo, categoryName, count);
 	}
 }

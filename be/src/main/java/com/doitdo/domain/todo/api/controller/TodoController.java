@@ -122,4 +122,14 @@ public class TodoController {
 		return GlobalApiResponse.ok("TODO 우선순위 변경 성공",
 				todoService.changePriority(userDetails.getUserId(), todoId, req));
 	}
+
+	@Operation(summary = "TODO 미루기", description = "오늘의 TODO 를 내일로 이동. startDate/endDate +1일, 이력 기록. 반복 TODO 마스터는 현재 미지원.")
+	@ApiErrorCodes({"T05-001", "T05-003", "T05-004"})
+	@PostMapping("/{todoId}/snooze")
+	public GlobalApiResponse<TodoDetailResp> snooze(
+			@AuthenticationPrincipal CustomUserDetails userDetails,
+			@PathVariable Long todoId) {
+		return GlobalApiResponse.ok("TODO 미루기 성공",
+				todoService.snooze(userDetails.getUserId(), todoId));
+	}
 }

@@ -84,6 +84,13 @@ public class Todo extends BaseTimeEntity {
 		this.priority = priority;
 	}
 
+	public void snooze() {
+		this.startDate = this.startDate.plusDays(1);
+		if (this.endDate != null) {
+			this.endDate = this.endDate.plusDays(1);
+		}
+	}
+
 	public void update(
 			String title,
 			String content,
