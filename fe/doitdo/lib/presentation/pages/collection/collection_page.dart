@@ -83,7 +83,7 @@ class CollectionPage extends ConsumerWidget {
         ..hideCurrentSnackBar()
         ..showSnackBar(
           const SnackBar(
-            content: Text('아직 만나지 못한 캐릭터예요. 열심히 TODO 를 해결해 보세요!'),
+            content: Text('아직 만나지 못한 캐릭터예요.'),
             behavior: SnackBarBehavior.floating,
             duration: Duration(seconds: 2),
           ),

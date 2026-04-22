@@ -17,6 +17,7 @@ class CollectionEntry {
     this.unlockedAt,
     this.birthStory = '',
     this.meetCount = 1,
+    this.stageThumbnails = const [],
   });
 
   final int characterId;
@@ -43,6 +44,12 @@ class CollectionEntry {
   /// 이 캐릭터를 지금까지 몇 번 만났는지. 도감 그리드 우상단 `xN` 뱃지에 사용.
   /// 1 이면 뱃지 미표시(기본), 2 이상일 때만 표시한다.
   final int meetCount;
+
+  /// 단계별(baby/teen/adult) 썸네일 경로. 길이 0 또는 3.
+  /// 3개가 들어오면 상세 바텀시트 진화 트리에서 이미 거쳐온 단계에도
+  /// 해당 단계의 이미지를 그대로 보여준다. 비어 있으면 현재 단계에만
+  /// `thumbnailUrl` 을 표시하는 기존 동작으로 폴백한다.
+  final List<String> stageThumbnails;
 
   // ── 상세 화면용 파생 정보 ───────────────────────────────────────────
   // 아래 3개는 UI 시안을 맞추기 위한 임시 파생값이다.
@@ -73,18 +80,24 @@ class CollectionEntry {
       CharacterStage.teen => 1,
       CharacterStage.adult => 2,
     };
+    final hasPerStageThumbs = stageThumbnails.length == 3;
     return [
       for (var i = 0; i < 3; i++)
         EvolutionStep(
           name: i <= currentIndex ? names[i] : '???',
           level: levels[i],
-          // 단계별 썸네일이 추가되기 전까지 현재 단계에만 본인 썸네일을 쓰고
-          // 나머지는 경로를 비워 두고 placeholder 로 대체한다.
-          thumbnailUrl: i == currentIndex ? thumbnailUrl : '',
+          thumbnailUrl: _thumbForStage(i, currentIndex, hasPerStageThumbs),
           isUnlocked: i <= currentIndex,
           isCurrent: i == currentIndex,
         ),
     ];
+  }
+
+  String _thumbForStage(int i, int currentIndex, bool hasPerStageThumbs) {
+    if (i > currentIndex) return '';
+    if (hasPerStageThumbs) return stageThumbnails[i];
+    // 단계별 썸네일이 없으면 현재 단계에만 대표 썸네일을 쓴다.
+    return i == currentIndex ? thumbnailUrl : '';
   }
 }
 
