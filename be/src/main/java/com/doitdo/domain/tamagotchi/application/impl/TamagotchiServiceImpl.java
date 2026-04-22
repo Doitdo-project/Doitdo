@@ -82,12 +82,12 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
 
 		return new CurrentCharacterResp(
-			userCharacter.getUserCharacterId(),
 			character.getCharacterId(),
 			userCharacter.getName(),
 			character.getStage().name(),
 			userCharacter.getGrowthPercent(),
-			userCharacter.getEquipedItemsId()
+			userCharacter.getEquipedItemsId(),
+			userCharacter.getUserCharacterId()
 		);
 	}
 
