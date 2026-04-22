@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
 import com.doitdo.global.api.response.GlobalApiResponse;
 import com.doitdo.global.swagger.ApiErrorCodes;
@@ -46,7 +47,7 @@ public class TamagotchiController {
 	@Operation(summary = "?ㅻ쭏怨좎튂 ?곹깭 ?낅뜲?댄듃", description = "?꾩옱 ?ㅻ쭏怨좎튂瑜?泥??깆옣 ?④퀎濡?遺??")
 	@ApiErrorCodes({"M02-001", "M02-002", "M02-003", "M02-004"})
 	@PostMapping("/me/hatch")
-	public GlobalApiResponse<CurrentCharacterResp> hatch(
+	public GlobalApiResponse<HatchCharacterResp> hatch(
 		@AuthenticationPrincipal CustomUserDetails userDetails
 	) {
 		return GlobalApiResponse.ok(tamagotchiService.hatch(userDetails.getUserId()));

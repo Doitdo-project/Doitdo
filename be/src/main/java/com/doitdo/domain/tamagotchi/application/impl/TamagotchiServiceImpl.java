@@ -5,6 +5,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -68,7 +69,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 
 	@Override
 	@Transactional
-	public CurrentCharacterResp hatch(Long userId) {
+	public HatchCharacterResp hatch(Long userId) {
 		UserCharacter userCharacter = userCharacterRepository
 			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M02_002));
@@ -91,12 +92,10 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		userCharacter.setCharacterId(babyCharacter.getCharacterId());
 		userCharacter.setGrowthPercent(0);
 
-		return new CurrentCharacterResp(
+		return new HatchCharacterResp(
 			babyCharacter.getCharacterId(),
-			userCharacter.getName(),
 			babyCharacter.getStage().name(),
-			userCharacter.getGrowthPercent(),
-			userCharacter.getEquipedItemsId()
+			userCharacter.getName()
 		);
 	}
 }

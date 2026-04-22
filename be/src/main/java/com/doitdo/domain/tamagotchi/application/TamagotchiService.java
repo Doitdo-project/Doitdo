@@ -2,6 +2,7 @@ package com.doitdo.domain.tamagotchi.application;
 
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 
 public interface TamagotchiService {
 
@@ -9,5 +10,5 @@ public interface TamagotchiService {
 
 	CurrentCharacterResp getCurrentCharacter(Long userId);
 
-	CurrentCharacterResp hatch(Long userId);
+	HatchCharacterResp hatch(Long userId);
 }

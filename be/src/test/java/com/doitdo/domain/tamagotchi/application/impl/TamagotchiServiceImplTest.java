@@ -13,8 +13,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
-import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import com.doitdo.domain.tamagotchi.entity.Character;
 import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
@@ -113,12 +113,11 @@ class TamagotchiServiceImplTest {
 		given(characterRepository.findFirstBySpeciesAndStageOrderByCharacterIdAsc("SLIME", Character.Stage.BABY))
 			.willReturn(Optional.of(babyCharacter));
 
-		CurrentCharacterResp resp = service.hatch(userId);
+		HatchCharacterResp resp = service.hatch(userId);
 
 		assertThat(resp.characterId()).isEqualTo(2L);
-		assertThat(resp.name()).isEqualTo("꼬물이");
 		assertThat(resp.stage()).isEqualTo("BABY");
-		assertThat(resp.growthPercent()).isEqualTo(0);
+		assertThat(resp.name()).isEqualTo("꼬물이");
 	}
 
 	@Test

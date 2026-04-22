@@ -14,6 +14,7 @@ import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaItemResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
 import com.doitdo.domain.user.entity.User;
 import com.doitdo.global.api.response.GlobalApiResponse;
@@ -59,11 +60,11 @@ class TamagotchiControllerTest {
 			.streakCount(0)
 			.isDeleted(false)
 			.build());
-		CurrentCharacterResp serviceResp = new CurrentCharacterResp(2L, "SLIME", "BABY", 0, null);
+		HatchCharacterResp serviceResp = new HatchCharacterResp(2L, "BABY", "SLIME");
 
 		given(tamagotchiService.hatch(1L)).willReturn(serviceResp);
 
-		GlobalApiResponse<CurrentCharacterResp> resp = controller.hatch(userDetails);
+		GlobalApiResponse<HatchCharacterResp> resp = controller.hatch(userDetails);
 
 		assertThat(resp.getStatus()).isEqualTo(200);
 		assertThat(resp.getMessage()).isEqualTo("OK");
