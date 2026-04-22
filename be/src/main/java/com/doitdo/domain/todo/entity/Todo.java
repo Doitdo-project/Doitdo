@@ -133,4 +133,21 @@ public class Todo extends BaseTimeEntity {
 				.isDeleted(false)
 				.build();
 	}
+
+	public static Todo createRecurringInstance(Todo master, LocalDate occurrenceDate) {
+		return Todo.builder()
+				.userId(master.getUserId())
+				.categoryId(master.getCategoryId())
+				.title(master.getTitle())
+				.content(master.getContent())
+				.type(TodoType.NORMAL)
+				.status(TodoStatus.TODO)
+				.priority(master.getPriority())
+				.alertTime(master.getAlertTime())
+				.startDate(occurrenceDate)
+				.endDate(null)
+				.period(null)
+				.isDeleted(false)
+				.build();
+	}
 }

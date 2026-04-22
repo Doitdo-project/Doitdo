@@ -2,11 +2,14 @@ package com.doitdo.domain.todo.api.controller;
 
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.todo.api.dto.req.TodoCreateReq;
+import com.doitdo.domain.todo.api.dto.req.TodoCalendarReq;
 import com.doitdo.domain.todo.api.dto.req.TodoListReq;
 import com.doitdo.domain.todo.api.dto.req.TodoPriorityChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoSearchReq;
+import com.doitdo.domain.todo.api.dto.req.TodoSnoozeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoStatusChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
+import com.doitdo.domain.todo.api.dto.resp.TodoCalendarResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoListResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoSearchResp;
@@ -27,6 +30,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -58,14 +62,25 @@ public class TodoController {
 				todoService.search(userDetails.getUserId(), req));
 	}
 
-	@Operation(summary = "TODO 삭제", description = "본인 소유 TODO 를 소프트 삭제(isDeleted=true) 한다.")
+	@Operation(summary = "TODO 캘린더 조회", description = "요청 기간 내 실체 TODO 와 RECURRING 가상 인스턴스를 합성해 조회한다.")
+	@ApiErrorCodes({"T08-002"})
+	@GetMapping("/calendar")
+	public GlobalApiResponse<TodoCalendarResp> calendar(
+			@AuthenticationPrincipal CustomUserDetails userDetails,
+			@ModelAttribute TodoCalendarReq req) {
+		return GlobalApiResponse.ok("TODO 캘린더 조회 성공",
+				todoService.calendar(userDetails.getUserId(), req));
+	}
+
+	@Operation(summary = "TODO 삭제", description = "본인 소유 TODO 를 소프트 삭제(isDeleted=true) 한다. scope=all 이고 RECURRING 마스터면 파생 인스턴스도 함께 삭제한다.")
 	@ApiErrorCodes({"T01-001", "T01-003"})
 	@DeleteMapping("/{todoId}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public GlobalApiResponse<Void> delete(
 			@AuthenticationPrincipal CustomUserDetails userDetails,
-			@PathVariable Long todoId) {
-		todoService.delete(userDetails.getUserId(), todoId);
+			@PathVariable Long todoId,
+			@RequestParam(required = false) String scope) {
+		todoService.delete(userDetails.getUserId(), todoId, scope);
 		return GlobalApiResponse.noContent("삭제 완료");
 	}
 
@@ -123,13 +138,14 @@ public class TodoController {
 				todoService.changePriority(userDetails.getUserId(), todoId, req));
 	}
 
-	@Operation(summary = "TODO 미루기", description = "오늘의 TODO 를 내일로 이동. startDate/endDate +1일, 이력 기록. 반복 TODO 마스터는 현재 미지원.")
+	@Operation(summary = "TODO 미루기", description = "오늘의 TODO 를 내일로 이동. RECURRING 마스터는 occurrenceDate 로 특정 발생일을 지정하면 실체화 후 미룬다.")
 	@ApiErrorCodes({"T05-001", "T05-003", "T05-004"})
 	@PostMapping("/{todoId}/snooze")
 	public GlobalApiResponse<TodoDetailResp> snooze(
 			@AuthenticationPrincipal CustomUserDetails userDetails,
-			@PathVariable Long todoId) {
+			@PathVariable Long todoId,
+			@RequestBody(required = false) TodoSnoozeReq req) {
 		return GlobalApiResponse.ok("TODO 미루기 성공",
-				todoService.snooze(userDetails.getUserId(), todoId));
+				todoService.snooze(userDetails.getUserId(), todoId, req));
 	}
 }

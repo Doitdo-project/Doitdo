@@ -42,9 +42,9 @@ public interface ErrorCode {
 
 각 enum 의 실제 값 (코드/status/메시지) 은 enum 파일 자체가 SSOT.
 
-> **T05-004 재정의 (2026-04-22):** `TodoErrorCode.T05_004` 메시지를  
-> "이미 미루기 처리된 TODO (오늘이 아닌 경우)" → "반복 TODO 는 현재 미루기 미지원 (인스턴스 설계 후 추가 예정)" 으로 변경.  
-> RECURRING 타입 TODO 에 snooze 를 시도하면 422 + T05-004 가 반환된다.
+> **T05-004 재정의 (2026-04-22):** `TodoErrorCode.T05_004` 메시지를
+> "반복 TODO 는 현재 미루기 미지원 (인스턴스 설계 후 추가 예정)" → "반복 TODO 미루기 시 occurrenceDate 필수" 로 변경.
+> RECURRING 타입 TODO 에 snooze 를 시도할 때 `occurrenceDate` 가 없거나 유효한 발생일이 아니면 422 + T05-004 가 반환된다.
 
 대표 예시:
 

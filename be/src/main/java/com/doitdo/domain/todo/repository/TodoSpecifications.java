@@ -75,6 +75,17 @@ public final class TodoSpecifications {
 		return (root, query, cb) -> cb.equal(root.get("type"), type);
 	}
 
+	/** 시작/종료일이 요청 범위와 겹치는 TODO 조회 */
+	public static Specification<Todo> overlappingRange(LocalDate from, LocalDate to) {
+		return (root, query, cb) -> cb.and(
+				cb.lessThanOrEqualTo(root.get("startDate"), to),
+				cb.or(
+						cb.isNull(root.get("endDate")),
+						cb.greaterThanOrEqualTo(root.get("endDate"), from)
+				)
+		);
+	}
+
 	/** 키워드 검색: title LIKE %q% OR content LIKE %q%. null/blank 이면 no-op */
 	public static Specification<Todo> byKeyword(String q) {
 		if (q == null || q.isBlank()) {
