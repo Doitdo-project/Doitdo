@@ -81,7 +81,7 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
             children: [
               // ✏️ 수정: _MascotIcon → 타마고치 이미지
               Image.asset(
-                'assets/images/tamagochi_hanrabong.png',
+                'assets/images/tama_hanrabong.png',
                 width: 36,
                 height: 36,
               ),

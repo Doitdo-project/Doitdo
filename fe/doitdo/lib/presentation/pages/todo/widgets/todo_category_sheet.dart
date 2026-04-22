@@ -145,7 +145,7 @@ class _MascotBubble extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Image.asset('assets/images/tamagochi_hanrabong.png', width: 32, height: 32),
+        Image.asset('assets/images/tama_hanrabong.png', width: 32, height: 32),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
