@@ -33,4 +33,12 @@ public class PaletteColor {
 
 	@Column(name = "color_order", nullable = false)
 	private Integer colorOrder;
+
+	public static PaletteColor create(Long paletteId, String color, Integer colorOrder) {
+		return PaletteColor.builder()
+				.paletteId(paletteId)
+				.color(color)
+				.colorOrder(colorOrder)
+				.build();
+	}
 }

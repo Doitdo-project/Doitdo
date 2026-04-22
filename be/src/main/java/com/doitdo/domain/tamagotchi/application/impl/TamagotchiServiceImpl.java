@@ -86,7 +86,8 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			userCharacter.getName(),
 			character.getStage().name(),
 			userCharacter.getGrowthPercent(),
-			userCharacter.getEquipedItemsId()
+			userCharacter.getEquipedItemsId(),
+			userCharacter.getUserCharacterId()
 		);
 	}
 

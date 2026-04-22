@@ -4,12 +4,12 @@ import com.doitdo.domain.todo.entity.Todo;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import org.springframework.stereotype.Component;
 
-@Component
-public class CalendarOccurrenceGenerator {
+public final class CalendarOccurrenceGenerator {
 
-	public List<LocalDate> generate(Todo master, LocalDate from, LocalDate to) {
+	private CalendarOccurrenceGenerator() {}
+
+	public static List<LocalDate> generate(Todo master, LocalDate from, LocalDate to) {
 		if (master.getPeriod() == null || master.getPeriod() <= 0) {
 			return List.of();
 		}

@@ -118,8 +118,38 @@ global/
 | Request DTO | `domain/todo/api/dto/req/TodoSnoozeReq.java` | RECURRING snooze `occurrenceDate` body |
 | Response DTO | `domain/todo/api/dto/resp/CalendarItemResp.java` | 실체/가상 캘린더 아이템 공통 응답 |
 | Response DTO | `domain/todo/api/dto/resp/TodoCalendarResp.java` | `items[]` 래퍼 |
-| Application util | `domain/todo/application/impl/CalendarOccurrenceGenerator.java` | RECURRING 마스터의 요청 기간 내 발생일 계산 |
+| Application util | `domain/todo/application/impl/CalendarOccurrenceGenerator.java` | RECURRING 마스터의 요청 기간 내 발생일 계산 (static util class, Spring Bean 아님) |
+| Application interface | `domain/todo/application/RecurrenceService.java` | RECURRING TODO 캘린더 합성 + 실체화 인터페이스 |
+| Application impl | `domain/todo/application/impl/RecurrenceServiceImpl.java` | RECURRING TODO 캘린더 합성 + 실체화 구현체 |
 | Repository util | `domain/todo/repository/TodoSpecifications.java` | `overlappingRange(from, to)` 추가 |
+
+`TodoServiceImpl` 은 CRUD + 속성 변경(status/priority/snooze) + 조회(list/search) 책임만 유지. RECURRING 관련 로직(캘린더 합성 + 가상 인스턴스 실체화)은 `RecurrenceService` 에 위임.
+
+## notification 도메인 구현 파일
+
+| 종류 | 경로 | 비고 |
+|---|---|---|
+| Controller | `domain/notification/api/controller/NotificationController.java` | N02~N07 6개 엔드포인트 |
+| Request DTO | `domain/notification/api/dto/req/DeviceTokenRegisterReq.java` | 토큰 등록 요청 |
+| Request DTO | `domain/notification/api/dto/req/DeviceTokenUnregisterReq.java` | 토큰 해제 요청 |
+| Response DTO | `domain/notification/api/dto/resp/DeviceTokenResp.java` | 등록된 디바이스 토큰 응답 |
+| Response DTO | `domain/notification/api/dto/resp/NotificationResp.java` | 단일 알림 응답 |
+| Response DTO | `domain/notification/api/dto/resp/NotificationListResp.java` | 목록 페이지 래퍼 |
+| Response DTO | `domain/notification/api/dto/resp/NotificationReadResp.java` | 단일 읽음 처리 응답 |
+| Response DTO | `domain/notification/api/dto/resp/NotificationReadAllResp.java` | 전체 읽음 처리 결과 |
+| Application interface | `domain/notification/application/NotificationService.java` | 목록/읽음/삭제 인터페이스 |
+| Application interface | `domain/notification/application/DeviceTokenService.java` | 토큰 등록/해제 인터페이스 |
+| Application interface | `domain/notification/application/FcmService.java` | FCM 추상화 인터페이스 |
+| Application impl | `domain/notification/application/impl/NotificationServiceImpl.java` | 알림 목록/읽음/삭제 구현 |
+| Application impl | `domain/notification/application/impl/DeviceTokenServiceImpl.java` | 디바이스 토큰 upsert/비활성화 |
+| Application impl | `domain/notification/application/impl/NoopFcmService.java` | 기본 활성 FCM 스텁 |
+| Application impl | `domain/notification/application/impl/FirebaseFcmService.java` | `firebase.enabled=true` 시 실제 송신 |
+| Scheduler | `domain/notification/application/scheduler/EveningReminderScheduler.java` | `NotificationSettingRepository` 존재 시에만 활성 |
+| Entity | `domain/notification/entity/Notification.java` | `notifications` 테이블 매핑 |
+| Entity | `domain/notification/entity/DeviceToken.java` | 필드 유지, 등록/비활성화 메서드만 추가 |
+| Repository | `domain/notification/repository/NotificationRepository.java` | 목록 조회 + 전체 읽음 벌크 업데이트 |
+| Repository | `domain/notification/repository/DeviceTokenRepository.java` | FCM 토큰 조회 + 활성 토큰 목록 조회 |
+| Config | `global/config/FirebaseConfig.java` | Firebase App/Messaging 조건부 등록 |
 
 ## 네이밍/엔티티 규칙
 
