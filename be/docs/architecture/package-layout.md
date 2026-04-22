@@ -118,8 +118,12 @@ global/
 | Request DTO | `domain/todo/api/dto/req/TodoSnoozeReq.java` | RECURRING snooze `occurrenceDate` body |
 | Response DTO | `domain/todo/api/dto/resp/CalendarItemResp.java` | 실체/가상 캘린더 아이템 공통 응답 |
 | Response DTO | `domain/todo/api/dto/resp/TodoCalendarResp.java` | `items[]` 래퍼 |
-| Application util | `domain/todo/application/impl/CalendarOccurrenceGenerator.java` | RECURRING 마스터의 요청 기간 내 발생일 계산 |
+| Application util | `domain/todo/application/impl/CalendarOccurrenceGenerator.java` | RECURRING 마스터의 요청 기간 내 발생일 계산 (static util class, Spring Bean 아님) |
+| Application interface | `domain/todo/application/RecurrenceService.java` | RECURRING TODO 캘린더 합성 + 실체화 인터페이스 |
+| Application impl | `domain/todo/application/impl/RecurrenceServiceImpl.java` | RECURRING TODO 캘린더 합성 + 실체화 구현체 |
 | Repository util | `domain/todo/repository/TodoSpecifications.java` | `overlappingRange(from, to)` 추가 |
+
+`TodoServiceImpl` 은 CRUD + 속성 변경(status/priority/snooze) + 조회(list/search) 책임만 유지. RECURRING 관련 로직(캘린더 합성 + 가상 인스턴스 실체화)은 `RecurrenceService` 에 위임.
 
 ## 네이밍/엔티티 규칙
 
