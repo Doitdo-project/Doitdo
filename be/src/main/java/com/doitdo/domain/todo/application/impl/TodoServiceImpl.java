@@ -23,6 +23,26 @@ public class TodoServiceImpl implements TodoService {
 	private final CategoryRepository categoryRepository;
 
 	@Override
+	@Transactional(readOnly = true)
+	public TodoDetailResp detail(Long userId, Long todoId) {
+		Todo todo = todoRepository.findByTodoIdAndIsDeletedFalse(todoId)
+				.orElseThrow(() -> new CustomException(TodoErrorCode.T00_001));
+
+		if (!todo.getUserId().equals(userId)) {
+			throw new CustomException(TodoErrorCode.T00_003);
+		}
+
+		String categoryName = null;
+		if (todo.getCategoryId() != null) {
+			categoryName = categoryRepository.findById(todo.getCategoryId())
+					.map(Category::getCategoryName)
+					.orElse(null);
+		}
+
+		return TodoDetailResp.from(todo, categoryName);
+	}
+
+	@Override
 	@Transactional
 	public TodoDetailResp create(Long userId, TodoCreateReq req) {
 		if (req.type() == TodoType.RECURRING && req.period() == null) {
