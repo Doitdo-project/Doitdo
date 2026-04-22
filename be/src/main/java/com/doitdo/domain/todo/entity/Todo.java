@@ -71,4 +71,30 @@ public class Todo extends BaseTimeEntity {
 
 	@Column(name = "is_deleted", nullable = false)
 	private Boolean isDeleted;
+
+	public static Todo create(
+			Long userId,
+			Long categoryId,
+			String title,
+			String content,
+			TodoType type,
+			Integer priority,
+			LocalDate startDate,
+			LocalDate endDate,
+			Integer period) {
+		return Todo.builder()
+				.userId(userId)
+				.categoryId(categoryId)
+				.title(title)
+				.content(content)
+				.type(type)
+				.status(TodoStatus.TODO)
+				.priority(priority)
+				.alertTime(null)
+				.startDate(startDate)
+				.endDate(endDate)
+				.period(period)
+				.isDeleted(false)
+				.build();
+	}
 }
