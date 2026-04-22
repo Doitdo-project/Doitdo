@@ -2,13 +2,15 @@ package com.doitdo.domain.tamagotchi.api.controller;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
 import com.doitdo.global.api.response.GlobalApiResponse;
@@ -44,12 +46,22 @@ public class TamagotchiController {
 		return GlobalApiResponse.ok(tamagotchiService.getCurrentCharacter(userDetails.getUserId()));
 	}
 
-	@Operation(summary = "?ㅻ쭏怨좎튂 ?곹깭 ?낅뜲?댄듃", description = "?꾩옱 ?ㅻ쭏怨좎튂瑜?泥??깆옣 ?④퀎濡?遺??")
+	@Operation(summary = "알 깨기", description = "현재 알 상태의 다마고치를 부화시킨다")
 	@ApiErrorCodes({"M02-001", "M02-002", "M02-003", "M02-004"})
 	@PostMapping("/me/hatch")
 	public GlobalApiResponse<HatchCharacterResp> hatch(
 		@AuthenticationPrincipal CustomUserDetails userDetails
 	) {
 		return GlobalApiResponse.ok(tamagotchiService.hatch(userDetails.getUserId()));
+	}
+
+	@Operation(summary = "다마고치 진화", description = "현재 다마고치의 성장 단계를 다음 단계로 진화시킨다")
+	@ApiErrorCodes({"M05-001", "M05-002", "M05-003", "M05-004", "M05-005"})
+	@PostMapping("/{userCharacterId}/evolution")
+	public GlobalApiResponse<EvolutionResp> evolve(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@PathVariable Long userCharacterId
+	) {
+		return GlobalApiResponse.ok(tamagotchiService.evolve(userDetails.getUserId(), userCharacterId));
 	}
 }

@@ -32,16 +32,17 @@ public enum TamagotchiErrorCode implements ErrorCode {
 	M03_002("M03-002", HttpStatus.NOT_FOUND, "다마고치를 찾을 수 없음"),
 	M03_003("M03-003", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
 
-	// M04 - 다마고치 진화
+	// M04 - 다마고치 조회
 	M04_001("M04-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),
 	M04_002("M04-002", HttpStatus.NOT_FOUND, "다마고치를 찾을 수 없음"),
 	M04_003("M04-003", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
 
-	// M05 - 다마고치 아이템 적용
+	// M05 - 다마고치 진화
 	M05_001("M05-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),
-	M05_002("M05-002", HttpStatus.NOT_FOUND, "다마고치 또는 아이템을 찾을 수 없음"),
-	M05_003("M05-003", HttpStatus.FORBIDDEN, "아이템 사용 권한 없음"),
+	M05_002("M05-002", HttpStatus.NOT_FOUND, "다마고치를 찾을 수 없음"),
+	M05_003("M05-003", HttpStatus.UNPROCESSABLE_ENTITY, "상태가 진화 조건에 맞지 않음"),
 	M05_004("M05-004", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
+	M05_005("M05-005", HttpStatus.CONFLICT, "이미 진화 완료되었거나 추가 진화가 불가함"),
 
 	// M06 - 다마고치 히스토리 조회
 	M06_001("M06-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),
@@ -55,7 +56,7 @@ public enum TamagotchiErrorCode implements ErrorCode {
 	M07_003("M07-003", HttpStatus.FORBIDDEN, "다른 사용자의 다마고치 이름 변경 불가"),
 	M07_004("M07-004", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
 
-	// M08 - 다마고치 삭제
+	// M08 - 다마고치 인벤토리 조회
 	M08_001("M08-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),
 	M08_002("M08-002", HttpStatus.NOT_FOUND, "다마고치를 찾을 수 없음"),
 	M08_003("M08-003", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류");

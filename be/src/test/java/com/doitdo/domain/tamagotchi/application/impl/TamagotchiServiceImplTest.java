@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import com.doitdo.domain.tamagotchi.entity.Character;
 import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
@@ -194,5 +195,53 @@ class TamagotchiServiceImplTest {
 				assertThat(exception.getErrorCode()).isEqualTo(TamagotchiErrorCode.M02_004);
 				assertThat(exception.getErrorCode().getHttpStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 			});
+	}
+
+	@Test
+	void evolveUpdatesBabyToTeenAndReturnsEvolutionResp() {
+		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
+			characterRepository,
+			characterUnlockRepository,
+			userCharacterRepository
+		);
+		Long userId = 1L;
+		UserCharacter userCharacter = UserCharacter.builder()
+			.userCharacterId(20L)
+			.userId(userId)
+			.characterId(2L)
+			.name("꼬물이")
+			.growthPercent(120)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+		Character babyCharacter = Character.builder()
+			.characterId(2L)
+			.species("SLIME")
+			.stage(Character.Stage.BABY)
+			.thumbnailUrl("https://cdn.example.com/slime-baby.png")
+			.build();
+		Character teenCharacter = Character.builder()
+			.characterId(3L)
+			.species("SLIME")
+			.stage(Character.Stage.TEEN)
+			.thumbnailUrl("https://cdn.example.com/slime-teen.png")
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(userCharacter));
+		given(characterRepository.findById(2L)).willReturn(Optional.of(babyCharacter));
+		given(characterRepository.findFirstBySpeciesAndStageOrderByCharacterIdAsc("SLIME", Character.Stage.TEEN))
+			.willReturn(Optional.of(teenCharacter));
+
+		EvolutionResp resp = service.evolve(userId, 20L);
+
+		assertThat(resp.tamagotchiId()).isEqualTo(20L);
+		assertThat(resp.beforeStage()).isEqualTo("BABY");
+		assertThat(resp.afterStage()).isEqualTo("TEEN");
+		assertThat(resp.currentExp()).isEqualTo(0);
+		assertThat(resp.requiredExp()).isEqualTo(100);
+		assertThat(resp.animationUrl()).isEqualTo("https://cdn.example.com/tamagotchi/animations/baby-to-teen");
+		assertThat(resp.characterImageUrl()).isEqualTo("https://cdn.example.com/slime-teen.png");
+		assertThat(resp.evolvedAt()).isNotBlank();
 	}
 }

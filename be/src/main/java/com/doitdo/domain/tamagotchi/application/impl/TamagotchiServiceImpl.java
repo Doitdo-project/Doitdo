@@ -1,10 +1,12 @@
 package com.doitdo.domain.tamagotchi.application.impl;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -97,5 +99,64 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			babyCharacter.getStage().name(),
 			userCharacter.getName()
 		);
+	}
+
+	@Override
+	@Transactional
+	public EvolutionResp evolve(Long userId, Long userCharacterId) {
+		UserCharacter userCharacter = userCharacterRepository
+			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M05_002));
+
+		if (!userCharacterId.equals(userCharacter.getUserCharacterId())) {
+			throw new CustomException(TamagotchiErrorCode.M05_002);
+		}
+
+		com.doitdo.domain.tamagotchi.entity.Character currentCharacter = characterRepository
+			.findById(userCharacter.getCharacterId())
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M05_002));
+
+		com.doitdo.domain.tamagotchi.entity.Character.Stage beforeStage = currentCharacter.getStage();
+		com.doitdo.domain.tamagotchi.entity.Character.Stage afterStage = switch (beforeStage) {
+			case BABY -> com.doitdo.domain.tamagotchi.entity.Character.Stage.TEEN;
+			case TEEN -> com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT;
+			default -> throw new CustomException(TamagotchiErrorCode.M05_003);
+		};
+
+		com.doitdo.domain.tamagotchi.entity.Character nextCharacter = characterRepository
+			.findFirstBySpeciesAndStageOrderByCharacterIdAsc(currentCharacter.getSpecies(), afterStage)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M05_005));
+
+		userCharacter.setCharacterId(nextCharacter.getCharacterId());
+		userCharacter.setGrowthPercent(0);
+
+		return new EvolutionResp(
+			userCharacter.getUserCharacterId(),
+			beforeStage.name(),
+			afterStage.name(),
+			userCharacter.getGrowthPercent(),
+			getRequiredExp(afterStage),
+			buildAnimationUrl(beforeStage, afterStage),
+			nextCharacter.getThumbnailUrl(),
+			Instant.now().toString()
+		);
+	}
+
+	private int getRequiredExp(com.doitdo.domain.tamagotchi.entity.Character.Stage stage) {
+		return switch (stage) {
+			case TEEN -> 100;
+			case ADULT -> 200;
+			default -> 0;
+		};
+	}
+
+	private String buildAnimationUrl(
+		com.doitdo.domain.tamagotchi.entity.Character.Stage beforeStage,
+		com.doitdo.domain.tamagotchi.entity.Character.Stage afterStage
+	) {
+		return "https://cdn.example.com/tamagotchi/animations/"
+			+ beforeStage.name().toLowerCase()
+			+ "-to-"
+			+ afterStage.name().toLowerCase();
 	}
 }

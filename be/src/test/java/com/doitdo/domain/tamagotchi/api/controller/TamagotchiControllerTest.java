@@ -14,6 +14,7 @@ import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaItemResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
 import com.doitdo.domain.user.entity.User;
@@ -65,6 +66,37 @@ class TamagotchiControllerTest {
 		given(tamagotchiService.hatch(1L)).willReturn(serviceResp);
 
 		GlobalApiResponse<HatchCharacterResp> resp = controller.hatch(userDetails);
+
+		assertThat(resp.getStatus()).isEqualTo(200);
+		assertThat(resp.getMessage()).isEqualTo("OK");
+		assertThat(resp.getData()).isEqualTo(serviceResp);
+	}
+
+	@Test
+	void evolveReturnsGlobalApiResponse() {
+		TamagotchiController controller = new TamagotchiController(tamagotchiService);
+		CustomUserDetails userDetails = new CustomUserDetails(User.builder()
+			.userId(1L)
+			.email("user@example.com")
+			.username("user")
+			.password("password")
+			.streakCount(0)
+			.isDeleted(false)
+			.build());
+		EvolutionResp serviceResp = new EvolutionResp(
+			20L,
+			"BABY",
+			"TEEN",
+			120,
+			100,
+			"https://cdn.example.com/tamagotchi/animations/baby-to-teen",
+			"https://cdn.example.com/slime-teen.png",
+			"2026-04-22T10:30:00Z"
+		);
+
+		given(tamagotchiService.evolve(1L, 20L)).willReturn(serviceResp);
+
+		GlobalApiResponse<EvolutionResp> resp = controller.evolve(userDetails, 20L);
 
 		assertThat(resp.getStatus()).isEqualTo(200);
 		assertThat(resp.getMessage()).isEqualTo("OK");
