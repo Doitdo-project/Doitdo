@@ -24,7 +24,7 @@ public enum TamagotchiErrorCode implements ErrorCode {
 	// M02 - 다마고치 상태 업데이트
 	M02_001("M02-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),
 	M02_002("M02-002", HttpStatus.NOT_FOUND, "다마고치를 찾을 수 없음"),
-	M02_003("M02-003", HttpStatus.FORBIDDEN, "다른 사용자의 다마고치 수정 불가"),
+	M02_003("M02-003", HttpStatus.UNPROCESSABLE_ENTITY, "다른 사용자의 다마고치 수정 불가"),
 	M02_004("M02-004", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
 
 	// M03 - 다마고치 먹이 주기

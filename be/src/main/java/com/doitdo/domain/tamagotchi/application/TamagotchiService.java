@@ -8,4 +8,6 @@ public interface TamagotchiService {
 	EncyclopediaResp getEncyclopedia(Long userId);
 
 	CurrentCharacterResp getCurrentCharacter(Long userId);
+
+	CurrentCharacterResp hatch(Long userId);
 }

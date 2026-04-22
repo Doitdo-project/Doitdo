@@ -1,5 +1,6 @@
 package com.doitdo.domain.tamagotchi.application.impl;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -60,6 +61,40 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			character.getCharacterId(),
 			userCharacter.getName(),
 			character.getStage().name(),
+			userCharacter.getGrowthPercent(),
+			userCharacter.getEquipedItemsId()
+		);
+	}
+
+	@Override
+	@Transactional
+	public CurrentCharacterResp hatch(Long userId) {
+		UserCharacter userCharacter = userCharacterRepository
+			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M02_002));
+
+		com.doitdo.domain.tamagotchi.entity.Character eggCharacter = characterRepository
+			.findById(userCharacter.getCharacterId())
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M02_002));
+
+		if (eggCharacter.getStage() != com.doitdo.domain.tamagotchi.entity.Character.Stage.EGG) {
+			throw new CustomException(TamagotchiErrorCode.M02_003);
+		}
+
+		com.doitdo.domain.tamagotchi.entity.Character babyCharacter = characterRepository
+			.findFirstBySpeciesAndStageOrderByCharacterIdAsc(
+				eggCharacter.getSpecies(),
+				com.doitdo.domain.tamagotchi.entity.Character.Stage.BABY
+			)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M02_004));
+
+		userCharacter.setCharacterId(babyCharacter.getCharacterId());
+		userCharacter.setGrowthPercent(0);
+
+		return new CurrentCharacterResp(
+			babyCharacter.getCharacterId(),
+			userCharacter.getName(),
+			babyCharacter.getStage().name(),
 			userCharacter.getGrowthPercent(),
 			userCharacter.getEquipedItemsId()
 		);

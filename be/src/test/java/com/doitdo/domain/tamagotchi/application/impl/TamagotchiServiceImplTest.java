@@ -1,21 +1,28 @@
 package com.doitdo.domain.tamagotchi.application.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 
+import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.entity.Character;
 import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
+import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
+import com.doitdo.global.exception.CustomException;
+import com.doitdo.global.exception.TamagotchiErrorCode;
 
 @ExtendWith(MockitoExtension.class)
 class TamagotchiServiceImplTest {
@@ -68,5 +75,125 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.items().get(0).unlocked()).isTrue();
 		assertThat(resp.items().get(1).characterId()).isEqualTo(2L);
 		assertThat(resp.items().get(1).unlocked()).isFalse();
+	}
+
+	@Test
+	void hatchUpdatesEggToBabyAndReturnsCurrentCharacter() {
+		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
+			characterRepository,
+			characterUnlockRepository,
+			userCharacterRepository
+		);
+		Long userId = 1L;
+		UserCharacter eggUserCharacter = UserCharacter.builder()
+			.userCharacterId(10L)
+			.userId(userId)
+			.characterId(1L)
+			.name("꼬물이")
+			.growthPercent(0)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+		Character eggCharacter = Character.builder()
+			.characterId(1L)
+			.species("SLIME")
+			.stage(Character.Stage.EGG)
+			.thumbnailUrl("https://cdn.example.com/egg.png")
+			.build();
+		Character babyCharacter = Character.builder()
+			.characterId(2L)
+			.species("SLIME")
+			.stage(Character.Stage.BABY)
+			.thumbnailUrl("https://cdn.example.com/slime.png")
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(eggUserCharacter));
+		given(characterRepository.findById(1L)).willReturn(Optional.of(eggCharacter));
+		given(characterRepository.findFirstBySpeciesAndStageOrderByCharacterIdAsc("SLIME", Character.Stage.BABY))
+			.willReturn(Optional.of(babyCharacter));
+
+		CurrentCharacterResp resp = service.hatch(userId);
+
+		assertThat(resp.characterId()).isEqualTo(2L);
+		assertThat(resp.name()).isEqualTo("꼬물이");
+		assertThat(resp.stage()).isEqualTo("BABY");
+		assertThat(resp.growthPercent()).isEqualTo(0);
+	}
+
+	@Test
+	void hatchRejectsNonEggCharacter() {
+		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
+			characterRepository,
+			characterUnlockRepository,
+			userCharacterRepository
+		);
+		Long userId = 1L;
+		UserCharacter userCharacter = UserCharacter.builder()
+			.userCharacterId(10L)
+			.userId(userId)
+			.characterId(1L)
+			.name("SLIME")
+			.growthPercent(0)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+		Character babyCharacter = Character.builder()
+			.characterId(1L)
+			.species("SLIME")
+			.stage(Character.Stage.BABY)
+			.thumbnailUrl("https://cdn.example.com/slime.png")
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(userCharacter));
+		given(characterRepository.findById(1L)).willReturn(Optional.of(babyCharacter));
+
+		assertThatThrownBy(() -> service.hatch(userId))
+			.isInstanceOf(CustomException.class)
+			.satisfies(throwable -> {
+				CustomException exception = (CustomException)throwable;
+				assertThat(exception.getErrorCode()).isEqualTo(TamagotchiErrorCode.M02_003);
+				assertThat(exception.getErrorCode().getHttpStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+			});
+	}
+
+	@Test
+	void hatchFailsWhenBabyCharacterIsMissing() {
+		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
+			characterRepository,
+			characterUnlockRepository,
+			userCharacterRepository
+		);
+		Long userId = 1L;
+		UserCharacter eggUserCharacter = UserCharacter.builder()
+			.userCharacterId(10L)
+			.userId(userId)
+			.characterId(1L)
+			.name(null)
+			.growthPercent(0)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+		Character eggCharacter = Character.builder()
+			.characterId(1L)
+			.species("SLIME")
+			.stage(Character.Stage.EGG)
+			.thumbnailUrl("https://cdn.example.com/egg.png")
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(eggUserCharacter));
+		given(characterRepository.findById(1L)).willReturn(Optional.of(eggCharacter));
+		given(characterRepository.findFirstBySpeciesAndStageOrderByCharacterIdAsc("SLIME", Character.Stage.BABY))
+			.willReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.hatch(userId))
+			.isInstanceOf(CustomException.class)
+			.satisfies(throwable -> {
+				CustomException exception = (CustomException)throwable;
+				assertThat(exception.getErrorCode()).isEqualTo(TamagotchiErrorCode.M02_004);
+				assertThat(exception.getErrorCode().getHttpStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+			});
 	}
 }

@@ -24,7 +24,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Character extends BaseTimeEntity {
 
-	public enum Stage { BABY, TEEN, ADULT }
+	public enum Stage { EGG, BABY, TEEN, ADULT }
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

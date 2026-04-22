@@ -55,4 +55,16 @@ public class UserCharacter extends BaseTimeEntity {
 	public void unequipItem() {
 		this.equipedItemsId = null;
 	}
+
+	public void setCharacterId(Long characterId) {
+		this.characterId = characterId;
+	}
+
+	public void setGrowthPercent(Integer growthPercent) {
+		this.growthPercent = growthPercent;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
 }
