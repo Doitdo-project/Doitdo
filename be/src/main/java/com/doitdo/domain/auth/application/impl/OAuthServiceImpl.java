@@ -14,7 +14,9 @@ import com.doitdo.domain.user.entity.User;
 import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.domain.user.repository.UserWalletRepository;
+import com.doitdo.global.client.GoogleIdTokenVerifierService;
 import com.doitdo.global.client.KakaoOAuthClient;
+import com.doitdo.global.client.dto.GoogleUserInfo;
 import com.doitdo.global.client.dto.KakaoUserResp;
 import com.doitdo.global.exception.AuthErrorCode;
 import com.doitdo.global.exception.CustomException;
@@ -34,6 +36,7 @@ public class OAuthServiceImpl implements OAuthService {
 	private static final int USERNAME_RETRY_LIMIT = 5;
 
 	private final KakaoOAuthClient kakaoOAuthClient;
+	private final GoogleIdTokenVerifierService googleIdTokenVerifierService;
 	private final UserRepository userRepository;
 	private final UserWalletRepository userWalletRepository;
 	private final UserSettingRepository userSettingRepository;
@@ -49,8 +52,7 @@ public class OAuthServiceImpl implements OAuthService {
 	public OAuthLoginResp login(OAuthProvider provider, String accessToken) {
 		return switch (provider) {
 			case KAKAO -> loginWithKakao(accessToken);
-			case GOOGLE -> throw new CustomException(AuthErrorCode.A03_004,
-					"Google 소셜 로그인은 아직 지원되지 않습니다.");
+			case GOOGLE -> loginWithGoogle(accessToken);
 		};
 	}
 
@@ -83,6 +85,44 @@ public class OAuthServiceImpl implements OAuthService {
 		}
 
 		String username = resolveUniqueUsername(kakaoUser.nickname());
+
+		User user = userRepository.save(User.createOAuthUser(email, username));
+		userWalletRepository.save(UserWallet.create(user.getUserId()));
+		userSettingRepository.save(UserSetting.create(user.getUserId()));
+		autoProviderRepository.save(AutoProvider.create(user.getUserId(), providerName, providerUid));
+
+		return issueTokens(user, true);
+	}
+
+	private OAuthLoginResp loginWithGoogle(String idToken) {
+		GoogleUserInfo googleUser = googleIdTokenVerifierService.verify(idToken);
+		String providerName = OAuthProvider.GOOGLE.name();
+		String providerUid = googleUser.sub();
+
+		Optional<AutoProvider> existing = autoProviderRepository
+				.findByProviderAndProviderUid(providerName, providerUid);
+
+		if (existing.isPresent()) {
+			User user = userRepository.findById(existing.get().getUserId())
+					.orElseThrow(() -> new CustomException(AuthErrorCode.A03_004));
+			return issueTokens(user, false);
+		}
+
+		return signupWithGoogle(googleUser, providerName, providerUid);
+	}
+
+	private OAuthLoginResp signupWithGoogle(GoogleUserInfo googleUser, String providerName, String providerUid) {
+		String email = googleUser.email();
+		if (email == null || email.isBlank()) {
+			throw new CustomException(AuthErrorCode.A03_001,
+					"Google 계정 이메일 동의가 필요합니다.");
+		}
+
+		if (userRepository.existsByEmail(email)) {
+			throw new CustomException(AuthErrorCode.A03_003);
+		}
+
+		String username = resolveUniqueUsername(googleUser.name());
 
 		User user = userRepository.save(User.createOAuthUser(email, username));
 		userWalletRepository.save(UserWallet.create(user.getUserId()));
