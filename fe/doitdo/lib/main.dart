@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:kakao_flutter_sdk_common/kakao_flutter_sdk_common.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:doitdo/app.dart';
@@ -25,6 +26,15 @@ Future<void> main() async {
 
   await AppEnv.load();
   await initializeDateFormatting('ko_KR', null);
+
+  // Kakao SDK 는 앱 기동 시 한 번만 초기화해야 한다.
+  // 네이티브 앱 키가 비어있으면 init 을 건너뛴다 — 개발자가 .env 설정 전에도 앱이 기동되도록.
+  // 실제 Kakao 로그인 호출 시점엔 키 없으면 SDK 가 예외 throw 함.
+  final kakaoKey = AppEnv.optional('KAKAO_NATIVE_APP_KEY');
+  if (kakaoKey.isNotEmpty) {
+    KakaoSdk.init(nativeAppKey: kakaoKey);
+  }
+
   await Hive.initFlutter();
   final prefs = await SharedPreferences.getInstance();
 

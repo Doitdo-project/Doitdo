@@ -1,0 +1,7 @@
+spring:
+  config:
+    import: "optional:file:./env/prod.env[.properties]"
+  datasource:
+    url: jdbc:mariadb://${db.host}:${db.port}/${db.name}
+    username: ${db.username}
+    password: ${db.password}

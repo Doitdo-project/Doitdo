@@ -173,7 +173,7 @@ class _CharacterImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Image.asset(
-      'assets/images/tamagochi_hanrabong.png',
+      'assets/images/tama_hanrabong.png',
       height: 100.h,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.medium,

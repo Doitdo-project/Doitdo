@@ -1,0 +1,2 @@
+docs : infra/jenkins SCM 전환 검증 메모 추가
+docs : infra/jenkins SCM 전환 검증 메모 추가

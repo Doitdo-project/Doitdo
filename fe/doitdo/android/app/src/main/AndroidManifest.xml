@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- image_picker (카메라 촬영) 용 권한.
+         갤러리 선택은 Android 13+ Photo Picker 로 권한 불필요. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
     <application
         android:label="doitdo"
         android:name="${applicationName}"
@@ -30,6 +34,20 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Kakao OAuth redirect scheme.
+             로그인 성공 후 "kakao{NATIVE_APP_KEY}://oauth" 로 돌아오는 콜백을 받는 액티비티.
+             android:scheme 의 실제 값은 build.gradle 의 manifestPlaceholders 에서 주입한다. -->
+        <activity
+            android:name="com.kakao.sdk.flutter.AuthCodeCustomTabsActivity"
+            android:exported="true">
+            <intent-filter android:label="flutter_web_auth">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="kakao${kakaoNativeAppKey}" android:host="oauth" />
+            </intent-filter>
+        </activity>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -41,5 +59,8 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Android 11+ (API 30+) 에서 다른 앱 존재 여부를 조회하려면 queries 선언 필수.
+             카카오톡 앱-투-앱 로그인 가능 여부 판별 (isKakaoTalkInstalled) 에 사용됨. -->
+        <package android:name="com.kakao.talk" />
     </queries>
 </manifest>

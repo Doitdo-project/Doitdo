@@ -51,4 +51,14 @@ public class User extends BaseTimeEntity {
 				.isDeleted(false)
 				.build();
 	}
+
+	public static User createOAuthUser(String email, String username) {
+		return User.builder()
+				.email(email)
+				.password(null)
+				.username(username)
+				.streakCount(0)
+				.isDeleted(false)
+				.build();
+	}
 }

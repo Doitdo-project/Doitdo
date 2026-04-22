@@ -28,7 +28,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   Future<void> _bootstrap() async {
     await Future<void>.delayed(const Duration(milliseconds: 1200));
     if (!mounted) return;
-    context.go(AppRoutes.tamagochi);
+    context.go(AppRoutes.welcome);
   }
 
   @override

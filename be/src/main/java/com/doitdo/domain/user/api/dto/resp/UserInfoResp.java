@@ -4,7 +4,7 @@ import com.doitdo.domain.user.entity.User;
 
 public record UserInfoResp(
 
-		Long id,
+		Long userId,
 		String username,
 		String email
 ) {

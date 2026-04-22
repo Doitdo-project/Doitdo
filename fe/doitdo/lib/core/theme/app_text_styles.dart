@@ -56,10 +56,13 @@ class AppTextStyles {
 
   /// 설명 서브텍스트 (두잇두로부터 알림을 수신합니다, 설정한 시간에는 알림이 울리지 않습니다,
   /// 하루의 시작을 돕는 알림, 내일을 위한 기록 리마인드), 유저 이메일 (user@email.com), 아이템 보유 상태 (보유중)
+  ///
+  /// Light 폰트(w300) 는 회색 색상과 만날 때 실기기에서 과하게 흐려 보여
+  /// GmarketSansMedium/w500 으로 변경 (2024-04 가독성 개선).
   static const TextStyle bodySmall = TextStyle(
-    fontFamily: _light,
+    fontFamily: _medium,
     fontSize: 12,
-    fontWeight: FontWeight.w300,
+    fontWeight: FontWeight.w500,
   );
 
   // ── Label ────────────────────────────────────────────────

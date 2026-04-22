@@ -50,6 +50,27 @@ dependencies:
   # 반응형 UI
   flutter_screenutil: ^5.9.3
 
+  # 소셜 로그인 — Apple Sign In (iOS 전용).
+  # Android 에서는 import 해도 빌드 OK. 실제 호출은 Platform.isIOS 로 가드한다.
+  # App Store 심사 규정 4.8 준수를 위해 iOS 에서 Google/Kakao 와 함께 반드시 제공.
+  sign_in_with_apple: ^6.1.0
+  # Google Sign In — Android/iOS 공통.
+  google_sign_in: ^6.2.1
+
+  # Kakao Login — Android/iOS 공식 SDK.
+  # 카카오톡 앱 설치 시 앱-투-앱 로그인, 미설치 시 카카오계정 웹 로그인 폴백.
+  # 실제 호출은 AuthRepositoryImpl.signInWithKakao 가 담당.
+  kakao_flutter_sdk_user: ^1.9.5
+
+  # 토큰 안전 저장 (iOS: Keychain, Android: EncryptedSharedPreferences).
+  # OAuth 로 발급된 access/refresh 토큰은 반드시 이걸로 보관. SharedPreferences 금지.
+  flutter_secure_storage: ^9.2.2
+
+  # 카메라 촬영 / 갤러리 이미지 선택.
+  # Android 13+ 에선 Photo Picker 로 별도 권한 불필요, 카메라 사용 시 CAMERA 권한 필요 (manifest).
+  # iOS 는 Info.plist 에 NSCameraUsageDescription / NSPhotoLibraryUsageDescription 필요 (Mac 빌드 시).
+  image_picker: ^1.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
