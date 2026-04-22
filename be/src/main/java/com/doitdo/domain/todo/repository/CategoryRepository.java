@@ -7,4 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface CategoryRepository extends JpaRepository<Category, Long> {
 
 	Optional<Category> findByCategoryNameAndUserId(String categoryName, Long userId);
+
+	long countByUserId(Long userId);
+
+	boolean existsByCategoryNameAndUserId(String categoryName, Long userId);
 }
