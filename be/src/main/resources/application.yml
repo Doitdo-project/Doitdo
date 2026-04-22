@@ -21,3 +21,8 @@ jwt:
   secret: local-dev-jwt-secret-do-not-use-in-production-must-be-long-enough-for-hmac-sha-256
   access-token-expiration: 1800000
   refresh-token-expiration: 1209600000
+
+google:
+  oauth:
+    client-id: ${google.oauth.client-id:}
+
