@@ -61,6 +61,7 @@ class TamagotchiCurrentCharacterServiceImplTest {
 
 		CurrentCharacterResp resp = service.getCurrentCharacter(userId);
 
+		assertThat(resp.userCharacterId()).isEqualTo(10L);
 		assertThat(resp.characterId()).isEqualTo(2L);
 		assertThat(resp.name()).isEqualTo("saesangi");
 		assertThat(resp.stage()).isEqualTo("BABY");
