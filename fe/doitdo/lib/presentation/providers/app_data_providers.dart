@@ -8,8 +8,11 @@ import 'package:doitdo/core/network/api_client.dart';
 import 'package:doitdo/core/utils/app_env.dart';
 import 'package:doitdo/data/datasources/auth_local_data_source.dart';
 import 'package:doitdo/data/datasources/auth_remote_data_source.dart';
+import 'package:doitdo/data/datasources/user_api.dart';
 import 'package:doitdo/data/repositories/auth_repository_impl.dart';
+import 'package:doitdo/data/repositories/user_repository_impl.dart';
 import 'package:doitdo/domain/repositories/auth_repository.dart';
+import 'package:doitdo/domain/repositories/user_repository.dart';
 
 // 중앙 집중식 DI 선언 파일 (MOA 컨벤션)
 // datasource → repository → service 순서로 Provider 추가.
@@ -73,4 +76,15 @@ final authRepositoryProvider = Provider<AuthRepository>(
     local: ref.watch(authLocalDataSourceProvider),
     googleSignIn: ref.watch(googleSignInProvider),
   ),
+);
+
+// ─── User: retrofit API → Repository ───────────────────────────
+// retrofit 기반 모듈의 레퍼런스 구현. 새 도메인 추가 시 이 2 Provider 쌍을
+// 복제해서 쓰면 된다. (datasource → repository 순)
+final userApiProvider = Provider<UserApi>(
+  (ref) => UserApi(ref.watch(dioProvider)),
+);
+
+final userRepositoryProvider = Provider<UserRepository>(
+  (ref) => UserRepositoryImpl(ref.watch(userApiProvider)),
 );
