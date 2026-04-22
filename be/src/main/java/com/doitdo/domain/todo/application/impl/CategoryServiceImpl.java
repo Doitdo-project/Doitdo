@@ -76,6 +76,11 @@ public class CategoryServiceImpl implements CategoryService {
 			throw new CustomException(TodoErrorCode.T12_002);
 		}
 
+		// 빈 문자열 이름 차단 — null 은 "변경 없음" 을 의미하므로 허용
+		if (req.name() != null && req.name().isBlank()) {
+			throw new CustomException(TodoErrorCode.T12_003);
+		}
+
 		// 이름 변경 시에만 중복 체크 (현재 이름과 동일한 경우 체크 생략)
 		if (req.name() != null && !req.name().equals(category.getCategoryName())) {
 			if (categoryRepository.existsByCategoryNameAndUserId(req.name(), userId)) {

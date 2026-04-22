@@ -6,7 +6,7 @@ import java.util.Map;
 import org.springframework.data.domain.Page;
 
 public record TodoSearchResp(
-		List<TodoDetailResp> content,
+		List<TodoDetailResp> items,
 		int page,
 		int size,
 		long totalElements,

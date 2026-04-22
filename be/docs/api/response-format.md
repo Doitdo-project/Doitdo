@@ -91,7 +91,7 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `updatedAt` | `LocalDateTime` | |
 | `snoozedDays` | `int` | 이 TODO 를 미룬 누적 횟수. `snooze_history` 테이블 COUNT 파생 (todos DDL 변경 없음) |
 
-`TodoListResp.items[]` 와 `TodoSearchResp.content[]` 도 동일한 `TodoDetailResp` 구조를 사용한다.
+`TodoListResp.items[]` 와 `TodoSearchResp.items[]` 도 동일한 `TodoDetailResp` 구조를 사용한다.
 
 ## 7. `TodoCalendarResp` 필드
 
