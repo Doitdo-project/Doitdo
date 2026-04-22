@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -158,5 +159,52 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			+ beforeStage.name().toLowerCase()
 			+ "-to-"
 			+ afterStage.name().toLowerCase();
+	}
+
+	@Override
+	@Transactional
+	public FarewellResp approveIndependence(Long userId, Boolean approved) {
+		UserCharacter adultUserCharacter = userCharacterRepository
+			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M00_002));
+
+		com.doitdo.domain.tamagotchi.entity.Character adultCharacter = characterRepository
+			.findById(adultUserCharacter.getCharacterId())
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M00_002));
+
+		if (adultCharacter.getStage() == com.doitdo.domain.tamagotchi.entity.Character.Stage.EGG) {
+			throw new CustomException(TamagotchiErrorCode.M00_003);
+		}
+		if (adultCharacter.getStage() != com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT) {
+			throw new CustomException(TamagotchiErrorCode.M00_002);
+		}
+		if (!Boolean.TRUE.equals(approved)) {
+			throw new CustomException(TamagotchiErrorCode.M00_003);
+		}
+
+		com.doitdo.domain.tamagotchi.entity.Character eggCharacter = characterRepository
+			.findFirstByStageOrderByCharacterIdAsc(com.doitdo.domain.tamagotchi.entity.Character.Stage.EGG)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M00_004));
+
+		adultUserCharacter.deactivate();
+		userCharacterRepository.save(adultUserCharacter);
+
+		UserCharacter nextEggCharacter = UserCharacter.builder()
+			.userId(userId)
+			.characterId(eggCharacter.getCharacterId())
+			.name(adultUserCharacter.getName())
+			.growthPercent(0)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+		userCharacterRepository.save(nextEggCharacter);
+
+		return new FarewellResp(
+			adultUserCharacter.getUserCharacterId(),
+			true,
+			eggCharacter.getStage().name(),
+			buildAnimationUrl(com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT,
+				com.doitdo.domain.tamagotchi.entity.Character.Stage.EGG)
+		);
 	}
 }

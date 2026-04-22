@@ -5,12 +5,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.doitdo.domain.auth.application.CustomUserDetails;
+import com.doitdo.domain.tamagotchi.api.dto.req.ApproveIndependenceReq;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
 import com.doitdo.global.api.response.GlobalApiResponse;
@@ -63,5 +66,15 @@ public class TamagotchiController {
 		@PathVariable Long userCharacterId
 	) {
 		return GlobalApiResponse.ok(tamagotchiService.evolve(userDetails.getUserId(), userCharacterId));
+	}
+
+	@Operation(summary = "독립 승인", description = "현재 성체 다마고치를 독립 처리하고 다음 알을 배정한다")
+	@ApiErrorCodes({"M00-001", "M00-002", "M00-003", "M00-004"})
+	@PostMapping("/me/farewell")
+	public GlobalApiResponse<FarewellResp> approveIndependence(
+		@AuthenticationPrincipal CustomUserDetails userDetails
+		, @RequestBody ApproveIndependenceReq request
+	) {
+		return GlobalApiResponse.ok(tamagotchiService.approveIndependence(userDetails.getUserId(), request.approved()));
 	}
 }

@@ -11,10 +11,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.doitdo.domain.auth.application.CustomUserDetails;
+import com.doitdo.domain.tamagotchi.api.dto.req.ApproveIndependenceReq;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaItemResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
 import com.doitdo.domain.user.entity.User;
@@ -97,6 +99,33 @@ class TamagotchiControllerTest {
 		given(tamagotchiService.evolve(1L, 20L)).willReturn(serviceResp);
 
 		GlobalApiResponse<EvolutionResp> resp = controller.evolve(userDetails, 20L);
+
+		assertThat(resp.getStatus()).isEqualTo(200);
+		assertThat(resp.getMessage()).isEqualTo("OK");
+		assertThat(resp.getData()).isEqualTo(serviceResp);
+	}
+
+	@Test
+	void approveIndependenceReturnsGlobalApiResponse() {
+		TamagotchiController controller = new TamagotchiController(tamagotchiService);
+		CustomUserDetails userDetails = new CustomUserDetails(User.builder()
+			.userId(1L)
+			.email("user@example.com")
+			.username("user")
+			.password("password")
+			.streakCount(0)
+			.isDeleted(false)
+			.build());
+		FarewellResp serviceResp = new FarewellResp(
+			30L,
+			true,
+			"EGG",
+			"https://cdn.example.com/tamagotchi/animations/adult-to-egg"
+		);
+
+		given(tamagotchiService.approveIndependence(1L, true)).willReturn(serviceResp);
+
+		GlobalApiResponse<FarewellResp> resp = controller.approveIndependence(userDetails, new ApproveIndependenceReq(true));
 
 		assertThat(resp.getStatus()).isEqualTo(200);
 		assertThat(resp.getMessage()).isEqualTo("OK");

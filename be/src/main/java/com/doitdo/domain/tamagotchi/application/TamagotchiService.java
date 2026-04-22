@@ -4,6 +4,7 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
 
 public interface TamagotchiService {
 
@@ -14,4 +15,6 @@ public interface TamagotchiService {
 	HatchCharacterResp hatch(Long userId);
 
 	EvolutionResp evolve(Long userId, Long userCharacterId);
+
+	FarewellResp approveIndependence(Long userId, Boolean approved);
 }

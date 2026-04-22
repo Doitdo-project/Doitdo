@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import com.doitdo.domain.tamagotchi.entity.Character;
 import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
@@ -243,5 +244,123 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.animationUrl()).isEqualTo("https://cdn.example.com/tamagotchi/animations/baby-to-teen");
 		assertThat(resp.characterImageUrl()).isEqualTo("https://cdn.example.com/slime-teen.png");
 		assertThat(resp.evolvedAt()).isNotBlank();
+	}
+
+	@Test
+	void approveIndependenceUpdatesAdultToEggAndReturnsFarewellResp() {
+		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
+			characterRepository,
+			characterUnlockRepository,
+			userCharacterRepository
+		);
+		Long userId = 1L;
+		UserCharacter adultUserCharacter = UserCharacter.builder()
+			.userCharacterId(30L)
+			.userId(userId)
+			.characterId(4L)
+			.name("꼬물이")
+			.growthPercent(0)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+		Character adultCharacter = Character.builder()
+			.characterId(4L)
+			.species("SLIME")
+			.stage(Character.Stage.ADULT)
+			.thumbnailUrl("https://cdn.example.com/slime-adult.png")
+			.build();
+		Character eggCharacter = Character.builder()
+			.characterId(1L)
+			.species("DRAGON")
+			.stage(Character.Stage.EGG)
+			.thumbnailUrl("https://cdn.example.com/slime-egg.png")
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(adultUserCharacter));
+		given(characterRepository.findById(4L)).willReturn(Optional.of(adultCharacter));
+		given(characterRepository.findFirstByStageOrderByCharacterIdAsc(Character.Stage.EGG))
+			.willReturn(Optional.of(eggCharacter));
+
+		FarewellResp resp = service.approveIndependence(userId, true);
+
+		assertThat(resp.farewellId()).isEqualTo(30L);
+		assertThat(resp.nextCharacterAssigned()).isTrue();
+		assertThat(resp.nextCharacterStage()).isEqualTo("EGG");
+		assertThat(resp.animationUrl()).isNotBlank();
+	}
+
+	@Test
+	void approveIndependenceRejectsAlreadyIndependentEggCharacter() {
+		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
+			characterRepository,
+			characterUnlockRepository,
+			userCharacterRepository
+		);
+		Long userId = 1L;
+		UserCharacter eggUserCharacter = UserCharacter.builder()
+			.userCharacterId(30L)
+			.userId(userId)
+			.characterId(1L)
+			.name("SLIME")
+			.growthPercent(0)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+		Character eggCharacter = Character.builder()
+			.characterId(1L)
+			.species("SLIME")
+			.stage(Character.Stage.EGG)
+			.thumbnailUrl("https://cdn.example.com/slime-egg.png")
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(eggUserCharacter));
+		given(characterRepository.findById(1L)).willReturn(Optional.of(eggCharacter));
+
+		assertThatThrownBy(() -> service.approveIndependence(userId, true))
+			.isInstanceOf(CustomException.class)
+			.satisfies(throwable -> {
+				CustomException exception = (CustomException)throwable;
+				assertThat(exception.getErrorCode()).isEqualTo(TamagotchiErrorCode.M00_003);
+				assertThat(exception.getErrorCode().getHttpStatus()).isEqualTo(HttpStatus.CONFLICT);
+			});
+	}
+
+	@Test
+	void approveIndependenceRejectsNonAdultCharacter() {
+		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
+			characterRepository,
+			characterUnlockRepository,
+			userCharacterRepository
+		);
+		Long userId = 1L;
+		UserCharacter teenUserCharacter = UserCharacter.builder()
+			.userCharacterId(30L)
+			.userId(userId)
+			.characterId(1L)
+			.name("SLIME")
+			.growthPercent(0)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+		Character teenCharacter = Character.builder()
+			.characterId(1L)
+			.species("SLIME")
+			.stage(Character.Stage.TEEN)
+			.thumbnailUrl("https://cdn.example.com/slime-teen.png")
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(teenUserCharacter));
+		given(characterRepository.findById(1L)).willReturn(Optional.of(teenCharacter));
+
+		assertThatThrownBy(() -> service.approveIndependence(userId, true))
+			.isInstanceOf(CustomException.class)
+			.satisfies(throwable -> {
+				CustomException exception = (CustomException)throwable;
+				assertThat(exception.getErrorCode()).isEqualTo(TamagotchiErrorCode.M00_002);
+				assertThat(exception.getErrorCode().getHttpStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+			});
 	}
 }
