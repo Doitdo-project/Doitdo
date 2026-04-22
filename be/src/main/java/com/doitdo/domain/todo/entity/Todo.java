@@ -32,8 +32,8 @@ public class Todo extends BaseTimeEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	@Column(name = "tool_id")
-	private Long toolId;
+	@Column(name = "todo_id")
+	private Long todoId;
 
 	@Column(name = "user_id", nullable = false)
 	private Long userId;
