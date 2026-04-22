@@ -72,6 +72,10 @@ public class Todo extends BaseTimeEntity {
 	@Column(name = "is_deleted", nullable = false)
 	private Boolean isDeleted;
 
+	public void softDelete() {
+		this.isDeleted = true;
+	}
+
 	public void update(
 			String title,
 			String content,

@@ -11,4 +11,6 @@ public interface TodoService {
 	TodoDetailResp detail(Long userId, Long todoId);
 
 	TodoDetailResp update(Long userId, Long todoId, TodoUpdateReq req);
+
+	void delete(Long userId, Long todoId);
 }

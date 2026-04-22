@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,6 +30,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class TodoController {
 
 	private final TodoService todoService;
+
+	@Operation(summary = "TODO 삭제", description = "본인 소유 TODO 를 소프트 삭제(isDeleted=true) 한다.")
+	@ApiErrorCodes({"T01-001", "T01-003"})
+	@DeleteMapping("/{todoId}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public GlobalApiResponse<Void> delete(
+			@AuthenticationPrincipal CustomUserDetails userDetails,
+			@PathVariable Long todoId) {
+		todoService.delete(userDetails.getUserId(), todoId);
+		return GlobalApiResponse.noContent("삭제 완료");
+	}
 
 	@Operation(summary = "TODO 상세 조회", description = "단일 TODO 를 조회한다. 본인 소유 TODO 만 조회 가능.")
 	@ApiErrorCodes({"T00-001", "T00-003"})

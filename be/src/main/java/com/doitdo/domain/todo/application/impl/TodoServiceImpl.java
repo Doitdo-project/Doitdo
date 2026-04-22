@@ -72,6 +72,19 @@ public class TodoServiceImpl implements TodoService {
 
 	@Override
 	@Transactional
+	public void delete(Long userId, Long todoId) {
+		Todo todo = todoRepository.findByTodoIdAndIsDeletedFalse(todoId)
+				.orElseThrow(() -> new CustomException(TodoErrorCode.T01_001));
+
+		if (!todo.getUserId().equals(userId)) {
+			throw new CustomException(TodoErrorCode.T01_003);
+		}
+
+		todo.softDelete();
+	}
+
+	@Override
+	@Transactional
 	public TodoDetailResp update(Long userId, Long todoId, TodoUpdateReq req) {
 		Todo todo = todoRepository.findByTodoIdAndIsDeletedFalse(todoId)
 				.orElseThrow(() -> new CustomException(TodoErrorCode.T04_001));
