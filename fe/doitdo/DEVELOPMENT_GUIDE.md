@@ -20,6 +20,7 @@
 9. [네비게이션 (페이지 이동)](#9-네비게이션-페이지-이동)
 10. [네이밍 · 임포트 · 주석 컨벤션](#10-네이밍--임포트--주석-컨벤션)
 11. [자주 나오는 질문](#11-자주-나오는-질문)
+12. [API 연동 가이드](#12-api-연동-가이드)
 
 ---
 
@@ -609,6 +610,176 @@ class TamagochiPage extends ConsumerWidget { ... }
 1. `flutter clean && flutter pub get`
 2. `flutter analyze` 로 에러 메시지 확인
 3. 그래도 안 되면 팀원에게 에러 로그 전체 공유
+
+---
+
+## 12. API 연동 가이드
+
+서버 붙는 순간부터 전 화면이 이 절차를 따라야 한다. 한 엔드포인트 당 **5 파일 + Provider 2개 + 코드젠 1번**이 기본 단위.
+
+### 12.1 전체 구조
+
+```
+data/datasources/{feature}_api.dart        # retrofit 인터페이스 (@RestApi)
+data/datasources/{feature}_api.g.dart      # ← build_runner 산출물
+data/models/{xxx}_dto.dart                 # JSON ↔ DTO (수동 fromJson)
+domain/repositories/{feature}_repository.dart        # abstract
+data/repositories/{feature}_repository_impl.dart     # BaseRepository 상속
+```
+
+공통 인프라는 전부 `core/network/` 아래에 이미 있다 (**건드리지 말 것**):
+- `api_response.dart` — `{status, message, data}` envelope 제네릭
+- `dio_error_mapper.dart` — `DioException` → 타입드 예외 매핑
+- `logging_interceptor.dart` — 디버그 빌드 요청/응답 로깅
+- `base_repository.dart` — `safeApiCall<T>` / `safeApiCallNoData`
+- `api_client.dart` — Dio 팩토리
+
+레퍼런스 구현: `/api/users/check-email` (이메일 중복 체크). 아래 예시는 이 파일들을 보면서 읽는다.
+
+### 12.2 Retrofit 인터페이스
+
+응답은 **무조건 `Future<ApiResponse<XxxDto>>`** 로 선언한다. envelope 을 수동으로 까지 않는다.
+
+```dart
+// data/datasources/user_api.dart
+import 'package:dio/dio.dart';
+import 'package:retrofit/retrofit.dart';
+
+import 'package:doitdo/core/network/api_response.dart';
+import 'package:doitdo/data/models/check_email_response_dto.dart';
+
+part 'user_api.g.dart';
+
+@RestApi()
+abstract class UserApi {
+  factory UserApi(Dio dio, {String baseUrl}) = _UserApi;
+
+  @GET('/api/users/check-email')
+  Future<ApiResponse<CheckEmailResponseDto>> checkEmail(
+    @Query('email') String email,
+  );
+}
+```
+
+새 파일을 만들거나 엔드포인트를 추가한 뒤에는 **반드시**:
+
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
+
+### 12.3 DTO
+
+지금은 수동 `fromJson` 스타일 (auth DTO 와 동일). freezed 전환은 팀 합의 후 일괄로.
+
+```dart
+// data/models/check_email_response_dto.dart
+class CheckEmailResponseDto {
+  const CheckEmailResponseDto({required this.available});
+
+  final bool available;
+
+  factory CheckEmailResponseDto.fromJson(Map<String, dynamic> json) =>
+      CheckEmailResponseDto(available: json['available'] as bool);
+}
+```
+
+도메인 엔티티 매핑이 필요하면 DTO 에 `toEntity()` 메서드를 달아서 RepositoryImpl 에서 호출한다.
+
+### 12.4 Repository (domain 인터페이스 + data 구현)
+
+**추상 인터페이스는 `domain/`, 구현은 `data/`.** 구현체는 **반드시 `BaseRepository` 상속 + `safeApiCall` 로 감싸기.**
+
+```dart
+// domain/repositories/user_repository.dart
+abstract class UserRepository {
+  Future<bool> isEmailAvailable(String email);
+}
+
+// data/repositories/user_repository_impl.dart
+class UserRepositoryImpl extends BaseRepository implements UserRepository {
+  UserRepositoryImpl(this._api);
+  final UserApi _api;
+
+  @override
+  Future<bool> isEmailAvailable(String email) =>
+      safeApiCall(() => _api.checkEmail(email)).then((dto) => dto.available);
+}
+```
+
+여기서 `safeApiCall` 이 해주는 일:
+- `DioException` → `NetworkException / RequestTimeoutException / UnauthorizedException / ServerException / UnknownException` 변환
+- envelope `status != 2xx` → `ServerException` throw (BE 가 보내준 `message` 포함)
+- `data == null` → `ServerException` throw (삭제/로그아웃 등 본문 없는 엔드포인트는 `safeApiCallNoData` 사용)
+
+**RepositoryImpl 에 try/catch 금지.** 추가 처리가 필요하면 그건 ViewModel 이나 공통 처리 훅에서 한다.
+
+### 12.5 DI (Provider)
+
+`presentation/providers/app_data_providers.dart` 에 2개 추가. 다른 파일에 분산 금지 — DI 는 한 곳에서 본다.
+
+```dart
+final userApiProvider = Provider<UserApi>(
+  (ref) => UserApi(ref.watch(dioProvider)),
+);
+
+final userRepositoryProvider = Provider<UserRepository>(
+  (ref) => UserRepositoryImpl(ref.watch(userApiProvider)),
+);
+```
+
+### 12.6 ViewModel — API 붙을 땐 `AsyncNotifier` 를 쓴다
+
+mock 만 보여주는 화면은 기존 `StateNotifier<XxxState>` 로도 충분하지만, **서버를 호출하는 화면은 반드시 `AsyncNotifier` / `AsyncNotifierProvider`** 로 간다. Riverpod 이 loading/data/error 3상태를 자동 관리하고, Repository 가 던진 타입드 예외가 그대로 `AsyncValue.error` 로 흘러들어온다.
+
+```dart
+// presentation/pages/auth/register/email_check_view_model.dart
+class EmailCheckViewModel extends AsyncNotifier<bool?> {
+  @override
+  Future<bool?> build() async => null; // 초기: 아직 검사 안 함
+
+  Future<void> check(String email) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => ref.read(userRepositoryProvider).isEmailAvailable(email),
+    );
+  }
+}
+
+final emailCheckViewModelProvider =
+    AsyncNotifierProvider<EmailCheckViewModel, bool?>(EmailCheckViewModel.new);
+```
+
+View 에서는 `when` 한 번으로 끝:
+
+```dart
+final state = ref.watch(emailCheckViewModelProvider);
+state.when(
+  loading: () => const CircularProgressIndicator(),
+  error: (e, _) => Text(_mapErrorMessage(e)),
+  data: (available) => Text(
+    available == null ? '' : (available ? '사용 가능' : '이미 사용 중'),
+  ),
+);
+
+// 에러 메시지 변환은 화면마다 반복되지 않도록 공용 헬퍼로 추출할 것.
+String _mapErrorMessage(Object e) => switch (e) {
+      UnauthorizedException _ => '다시 로그인해 주세요.',
+      NetworkException _ => '네트워크 연결을 확인해 주세요.',
+      RequestTimeoutException _ => '응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요.',
+      ServerException se => se.message,
+      _ => '알 수 없는 오류가 발생했어요.',
+    };
+```
+
+### 12.7 체크리스트 (한 줄 규칙)
+
+- [ ] `RepositoryImpl` 은 `BaseRepository` 상속 + `safeApiCall` 로 감쌌다
+- [ ] `RepositoryImpl` 안에 `try/catch` 없다
+- [ ] API 호출하는 ViewModel 은 `AsyncNotifier` 다 (StateNotifier 금지)
+- [ ] ViewModel 안에 `try/catch` 없다 — `AsyncValue.guard` 가 대신 잡는다
+- [ ] View 에서 `DioException` 을 import 하지 않았다 (타입드 예외만 본다)
+- [ ] 새 Retrofit 엔드포인트 추가 후 `dart run build_runner build --delete-conflicting-outputs` 실행했다
+- [ ] `.g.dart` 산출물을 함께 커밋했다 (gitignore 에서 제외되지 않은 프로젝트 정책)
 
 ---
 
