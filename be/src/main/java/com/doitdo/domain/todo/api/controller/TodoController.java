@@ -4,10 +4,12 @@ import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.todo.api.dto.req.TodoCreateReq;
 import com.doitdo.domain.todo.api.dto.req.TodoListReq;
 import com.doitdo.domain.todo.api.dto.req.TodoPriorityChangeReq;
+import com.doitdo.domain.todo.api.dto.req.TodoSearchReq;
 import com.doitdo.domain.todo.api.dto.req.TodoStatusChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoListResp;
+import com.doitdo.domain.todo.api.dto.resp.TodoSearchResp;
 import com.doitdo.domain.todo.application.TodoService;
 import com.doitdo.global.api.response.GlobalApiResponse;
 import com.doitdo.global.swagger.ApiErrorCodes;
@@ -44,6 +46,16 @@ public class TodoController {
 			@ModelAttribute TodoListReq req) {
 		return GlobalApiResponse.ok("TODO 목록 조회 성공",
 				todoService.list(userDetails.getUserId(), req));
+	}
+
+	@Operation(summary = "TODO 검색", description = "키워드로 본인 소유 TODO 를 검색한다. 페이지네이션 지원.")
+	@ApiErrorCodes({"T09-002"})
+	@GetMapping("/search")
+	public GlobalApiResponse<TodoSearchResp> search(
+			@AuthenticationPrincipal CustomUserDetails userDetails,
+			@Valid @ModelAttribute TodoSearchReq req) {
+		return GlobalApiResponse.ok("TODO 검색 성공",
+				todoService.search(userDetails.getUserId(), req));
 	}
 
 	@Operation(summary = "TODO 삭제", description = "본인 소유 TODO 를 소프트 삭제(isDeleted=true) 한다.")

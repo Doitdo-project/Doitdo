@@ -3,10 +3,12 @@ package com.doitdo.domain.todo.application;
 import com.doitdo.domain.todo.api.dto.req.TodoCreateReq;
 import com.doitdo.domain.todo.api.dto.req.TodoListReq;
 import com.doitdo.domain.todo.api.dto.req.TodoPriorityChangeReq;
+import com.doitdo.domain.todo.api.dto.req.TodoSearchReq;
 import com.doitdo.domain.todo.api.dto.req.TodoStatusChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoListResp;
+import com.doitdo.domain.todo.api.dto.resp.TodoSearchResp;
 
 public interface TodoService {
 
@@ -23,4 +25,6 @@ public interface TodoService {
 	TodoDetailResp changeStatus(Long userId, Long todoId, TodoStatusChangeReq req);
 
 	TodoDetailResp changePriority(Long userId, Long todoId, TodoPriorityChangeReq req);
+
+	TodoSearchResp search(Long userId, TodoSearchReq req);
 }

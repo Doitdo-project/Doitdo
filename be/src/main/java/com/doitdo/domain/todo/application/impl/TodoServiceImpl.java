@@ -3,10 +3,12 @@ package com.doitdo.domain.todo.application.impl;
 import com.doitdo.domain.todo.api.dto.req.TodoCreateReq;
 import com.doitdo.domain.todo.api.dto.req.TodoListReq;
 import com.doitdo.domain.todo.api.dto.req.TodoPriorityChangeReq;
+import com.doitdo.domain.todo.api.dto.req.TodoSearchReq;
 import com.doitdo.domain.todo.api.dto.req.TodoStatusChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoListResp;
+import com.doitdo.domain.todo.api.dto.resp.TodoSearchResp;
 import com.doitdo.domain.todo.application.TodoService;
 import com.doitdo.domain.todo.entity.Category;
 import com.doitdo.domain.todo.entity.Todo;
@@ -24,7 +26,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Order;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -248,5 +253,44 @@ public class TodoServiceImpl implements TodoService {
 		}
 
 		return TodoDetailResp.from(todo, categoryName);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public TodoSearchResp search(Long userId, TodoSearchReq req) {
+		// 기본값 처리
+		String sortParam = req.sort() != null ? req.sort() : "date";
+		int page = req.page() != null ? req.page() : 0;
+		int size = req.size() != null ? req.size() : 20;
+
+		// Specification 조합: ownerAndActive + byKeyword(q)
+		Specification<Todo> spec = TodoSpecifications.ownerAndActive(userId)
+				.and(TodoSpecifications.byKeyword(req.q()));
+
+		// Sort 결정
+		Sort sort = resolveSearchSort(sortParam);
+
+		// 페이지네이션 조회
+		Page<Todo> pageResult = todoRepository.findAll(spec, PageRequest.of(page, size, sort));
+
+		// 카테고리 벌크 조회 (N+1 방지)
+		Set<Long> categoryIds = pageResult.getContent().stream()
+				.map(Todo::getCategoryId)
+				.filter(id -> id != null)
+				.collect(Collectors.toSet());
+
+		Map<Long, String> categoryNameById = categoryIds.isEmpty()
+				? Map.of()
+				: categoryRepository.findAllById(categoryIds).stream()
+						.collect(Collectors.toMap(Category::getCategoryId, Category::getCategoryName));
+
+		return TodoSearchResp.from(pageResult, categoryNameById);
+	}
+
+	private Sort resolveSearchSort(String sortParam) {
+		return switch (sortParam.toLowerCase()) {
+			case "category" -> Sort.by(Order.asc("categoryId").nullsLast(), Order.asc("startDate"));
+			default -> Sort.by(Order.asc("startDate"), Order.asc("todoId"));
+		};
 	}
 }
