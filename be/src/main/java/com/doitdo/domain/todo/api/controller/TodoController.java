@@ -2,6 +2,7 @@ package com.doitdo.domain.todo.api.controller;
 
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.todo.api.dto.req.TodoCreateReq;
+import com.doitdo.domain.todo.api.dto.req.TodoStatusChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.application.TodoService;
@@ -72,5 +73,16 @@ public class TodoController {
 			@Valid @RequestBody TodoCreateReq req) {
 		return GlobalApiResponse.created("TODO 작성 성공",
 				todoService.create(userDetails.getUserId(), req));
+	}
+
+	@Operation(summary = "TODO 상태 변경", description = "TODO 상태를 TODO/IN_PROGRESS/DONE 로 변경. 반복 TODO 마스터(type=RECURRING) 는 상태 변경 불가.")
+	@ApiErrorCodes({"T03-001", "T03-003", "T03-004"})
+	@PatchMapping("/{todoId}/status")
+	public GlobalApiResponse<TodoDetailResp> changeStatus(
+			@AuthenticationPrincipal CustomUserDetails userDetails,
+			@PathVariable Long todoId,
+			@Valid @RequestBody TodoStatusChangeReq req) {
+		return GlobalApiResponse.ok("TODO 상태 변경 성공",
+				todoService.changeStatus(userDetails.getUserId(), todoId, req));
 	}
 }

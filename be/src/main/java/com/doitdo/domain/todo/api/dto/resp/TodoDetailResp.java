@@ -4,6 +4,7 @@ import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.entity.Todo.TodoStatus;
 import com.doitdo.domain.todo.entity.Todo.TodoType;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public record TodoDetailResp(
 
@@ -16,7 +17,8 @@ public record TodoDetailResp(
 		LocalDate startDate,
 		LocalDate endDate,
 		Integer period,
-		TodoStatus status
+		TodoStatus status,
+		LocalDateTime updatedAt
 ) {
 
 	public static TodoDetailResp from(Todo todo, String categoryName) {
@@ -30,7 +32,8 @@ public record TodoDetailResp(
 				todo.getStartDate(),
 				todo.getEndDate(),
 				todo.getPeriod(),
-				todo.getStatus()
+				todo.getStatus(),
+				todo.getUpdatedAt()
 		);
 	}
 }

@@ -76,6 +76,10 @@ public class Todo extends BaseTimeEntity {
 		this.isDeleted = true;
 	}
 
+	public void changeStatus(TodoStatus status) {
+		this.status = status;
+	}
+
 	public void update(
 			String title,
 			String content,

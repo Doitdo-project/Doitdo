@@ -1,6 +1,7 @@
 package com.doitdo.domain.todo.application.impl;
 
 import com.doitdo.domain.todo.api.dto.req.TodoCreateReq;
+import com.doitdo.domain.todo.api.dto.req.TodoStatusChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.application.TodoService;
@@ -127,6 +128,34 @@ public class TodoServiceImpl implements TodoService {
 				req.endDate(),
 				req.period()
 		);
+
+		return TodoDetailResp.from(todo, categoryName);
+	}
+
+	@Override
+	@Transactional
+	public TodoDetailResp changeStatus(Long userId, Long todoId, TodoStatusChangeReq req) {
+		Todo todo = todoRepository.findByTodoIdAndIsDeletedFalse(todoId)
+				.orElseThrow(() -> new CustomException(TodoErrorCode.T03_001));
+
+		if (!todo.getUserId().equals(userId)) {
+			throw new CustomException(TodoErrorCode.T03_003);
+		}
+
+		if (todo.getType() == TodoType.RECURRING) {
+			throw new CustomException(TodoErrorCode.T03_004);
+		}
+
+		todo.changeStatus(req.status());
+
+		String categoryName = null;
+		if (todo.getCategoryId() != null) {
+			categoryName = categoryRepository.findById(todo.getCategoryId())
+					.map(Category::getCategoryName)
+					.orElse(null);
+		}
+
+		// TODO: DONE 상태 변경 시 Tamagotchi 도메인 경험치 연동 필요 — Tamagotchi 이벤트 발행 추가 예정
 
 		return TodoDetailResp.from(todo, categoryName);
 	}
