@@ -9,6 +9,7 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.UpdateCharacterNameResp;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +49,25 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 				character.getThumbnailUrl()
 			))
 			.toList());
+	}
+
+	@Override
+	@Transactional
+	public UpdateCharacterNameResp updateName(Long userId, String name) {
+		if (name == null || name.isBlank() || name.length() > 20) {
+			throw new CustomException(TamagotchiErrorCode.M01_003);
+		}
+
+		UserCharacter userCharacter = userCharacterRepository
+			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M01_002));
+
+		userCharacter.setName(name);
+
+		return new UpdateCharacterNameResp(
+			userCharacter.getCharacterId(),
+			userCharacter.getName()
+		);
 	}
 
 	@Override

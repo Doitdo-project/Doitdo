@@ -17,6 +17,7 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.UpdateCharacterNameResp;
 import com.doitdo.domain.tamagotchi.entity.Character;
 import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
@@ -37,6 +38,51 @@ class TamagotchiServiceImplTest {
 
 	@Mock
 	private UserCharacterRepository userCharacterRepository;
+
+	@Test
+	void updateNameChangesCurrentUserCharacterName() {
+		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
+			characterRepository,
+			characterUnlockRepository,
+			userCharacterRepository
+		);
+		Long userId = 1L;
+		UserCharacter userCharacter = UserCharacter.builder()
+			.userCharacterId(10L)
+			.userId(userId)
+			.characterId(1L)
+			.name("old")
+			.growthPercent(0)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(userCharacter));
+
+		UpdateCharacterNameResp resp = service.updateName(userId, "rabi");
+
+		assertThat(resp.characterId()).isEqualTo(1L);
+		assertThat(resp.name()).isEqualTo("rabi");
+		assertThat(userCharacter.getName()).isEqualTo("rabi");
+	}
+
+	@Test
+	void updateNameRejectsBlankName() {
+		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
+			characterRepository,
+			characterUnlockRepository,
+			userCharacterRepository
+		);
+
+		assertThatThrownBy(() -> service.updateName(1L, " "))
+			.isInstanceOf(CustomException.class)
+			.satisfies(throwable -> {
+				CustomException exception = (CustomException)throwable;
+				assertThat(exception.getErrorCode()).isEqualTo(TamagotchiErrorCode.M01_003);
+				assertThat(exception.getErrorCode().getHttpStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+			});
+	}
 
 	@Test
 	void getEncyclopediaReturnsAllCharactersWithUnlockedStatus() {

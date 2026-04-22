@@ -12,12 +12,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.tamagotchi.api.dto.req.ApproveIndependenceReq;
+import com.doitdo.domain.tamagotchi.api.dto.req.UpdateCharacterNameReq;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaItemResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.UpdateCharacterNameResp;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
 import com.doitdo.domain.user.entity.User;
 import com.doitdo.global.api.response.GlobalApiResponse;
@@ -27,6 +29,29 @@ class TamagotchiControllerTest {
 
 	@Mock
 	private TamagotchiService tamagotchiService;
+
+	@Test
+	void updateCharacterNameReturnsGlobalApiResponse() {
+		TamagotchiController controller = new TamagotchiController(tamagotchiService);
+		CustomUserDetails userDetails = new CustomUserDetails(User.builder()
+			.userId(1L)
+			.email("user@example.com")
+			.username("user")
+			.password("password")
+			.streakCount(0)
+			.isDeleted(false)
+			.build());
+		UpdateCharacterNameResp serviceResp = new UpdateCharacterNameResp(10L, "rabi");
+
+		given(tamagotchiService.updateName(1L, "rabi")).willReturn(serviceResp);
+
+		GlobalApiResponse<UpdateCharacterNameResp> resp =
+			controller.updateName(userDetails, new UpdateCharacterNameReq("rabi"));
+
+		assertThat(resp.getStatus()).isEqualTo(200);
+		assertThat(resp.getMessage()).isEqualTo("OK");
+		assertThat(resp.getData()).isEqualTo(serviceResp);
+	}
 
 	@Test
 	void getEncyclopediaReturnsGlobalApiResponse() {

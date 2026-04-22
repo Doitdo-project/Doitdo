@@ -5,10 +5,13 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.UpdateCharacterNameResp;
 
 public interface TamagotchiService {
 
 	EncyclopediaResp getEncyclopedia(Long userId);
+
+	UpdateCharacterNameResp updateName(Long userId, String name);
 
 	CurrentCharacterResp getCurrentCharacter(Long userId);
 

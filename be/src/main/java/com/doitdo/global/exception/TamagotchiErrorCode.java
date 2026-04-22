@@ -15,10 +15,10 @@ public enum TamagotchiErrorCode implements ErrorCode {
 	M00_003("M00-003", HttpStatus.CONFLICT, "이미 독립 처리된 캐릭터"),
 	M00_004("M00-004", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
 
-	// M01 - character creation
+	// M01 - character name
 	M01_001("M01-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),
-	M01_002("M01-002", HttpStatus.CONFLICT, "이미 다마고치가 존재함"),
-	M01_003("M01-003", HttpStatus.UNPROCESSABLE_ENTITY, "필수 파라미터 누락 또는 형식 오류"),
+	M01_002("M01-002", HttpStatus.NOT_FOUND, "다마고치를 찾을 수 없음"),
+	M01_003("M01-003", HttpStatus.UNPROCESSABLE_ENTITY, "캐릭터 이름은 1자 이상 20자 이하여야 함"),
 	M01_004("M01-004", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
 
 	// M02 - hatch
