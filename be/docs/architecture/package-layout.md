@@ -101,6 +101,15 @@ global/
 
 `todos` 테이블 DDL 변경 없음. `snoozedDays` 는 COUNT 쿼리로 파생.
 
+## todo 도메인 추가 파일 (카테고리 목록 조회 — T13)
+
+| 종류 | 경로 | 비고 |
+|---|---|---|
+| Response DTO | `domain/todo/api/dto/resp/CategoryListResp.java` | `items[]` 래퍼, `CategoryResp::from` 스트림 |
+| Repository | `domain/todo/repository/CategoryRepository.java` | `findAllByUserIdOrderByCategoryIdAsc(Long userId)` 추가 |
+
+정렬 기준: `categoryId ASC` (JPA 메서드 네이밍 파생 쿼리).
+
 ## todo 도메인 추가 파일 (calendar / recurring MVP)
 
 | 종류 | 경로 | 비고 |

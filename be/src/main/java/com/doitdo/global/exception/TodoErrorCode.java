@@ -83,7 +83,11 @@ public enum TodoErrorCode implements ErrorCode {
 	T12_001("T12-001", HttpStatus.NOT_FOUND, "카테고리를 찾을 수 없음"),
 	T12_002("T12-002", HttpStatus.UNAUTHORIZED, "인증되지 않은 요청"),
 	T12_003("T12-003", HttpStatus.UNPROCESSABLE_ENTITY, "입력값 유효성 검사 실패 (이름 누락 등)"),
-	T12_004("T12-004", HttpStatus.CONFLICT, "중복된 카테고리 이름");
+	T12_004("T12-004", HttpStatus.CONFLICT, "중복된 카테고리 이름"),
+
+	// T13 - GET /categories (카테고리 조회)
+	T13_001("T13-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),
+	T13_002("T13-002", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류");
 
 	private final String code;
 	private final HttpStatus httpStatus;

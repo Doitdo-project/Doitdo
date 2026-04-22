@@ -2,6 +2,7 @@ package com.doitdo.domain.todo.application.impl;
 
 import com.doitdo.domain.todo.api.dto.req.CategoryCreateReq;
 import com.doitdo.domain.todo.api.dto.req.CategoryUpdateReq;
+import com.doitdo.domain.todo.api.dto.resp.CategoryListResp;
 import com.doitdo.domain.todo.api.dto.resp.CategoryResp;
 import com.doitdo.domain.todo.application.CategoryService;
 import com.doitdo.domain.todo.entity.Category;
@@ -84,5 +85,17 @@ public class CategoryServiceImpl implements CategoryService {
 
 		category.update(req.name(), req.colorId());
 		return CategoryResp.from(category);
+	}
+
+	/**
+	 * T13 — 카테고리 전체 목록 조회.
+	 * 본인 소유 카테고리를 categoryId ASC 순으로 반환한다.
+	 */
+	@Override
+	@Transactional(readOnly = true)
+	public CategoryListResp list(Long userId) {
+		return CategoryListResp.from(
+				categoryRepository.findAllByUserIdOrderByCategoryIdAsc(userId)
+		);
 	}
 }

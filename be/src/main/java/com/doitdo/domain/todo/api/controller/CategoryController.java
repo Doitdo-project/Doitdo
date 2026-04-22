@@ -3,6 +3,7 @@ package com.doitdo.domain.todo.api.controller;
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.todo.api.dto.req.CategoryCreateReq;
 import com.doitdo.domain.todo.api.dto.req.CategoryUpdateReq;
+import com.doitdo.domain.todo.api.dto.resp.CategoryListResp;
 import com.doitdo.domain.todo.api.dto.resp.CategoryResp;
 import com.doitdo.domain.todo.application.CategoryService;
 import com.doitdo.global.api.response.GlobalApiResponse;
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,6 +31,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class CategoryController {
 
 	private final CategoryService categoryService;
+
+	@Operation(summary = "카테고리 조회", description = "본인 소유 카테고리 전체 목록 조회.")
+	@ApiErrorCodes({})
+	@GetMapping
+	public GlobalApiResponse<CategoryListResp> list(
+			@AuthenticationPrincipal CustomUserDetails userDetails) {
+		return GlobalApiResponse.ok("카테고리 조회 성공",
+				categoryService.list(userDetails.getUserId()));
+	}
 
 	@Operation(summary = "카테고리 생성", description = "새 카테고리를 생성한다. 사용자당 최대 6개.")
 	@ApiErrorCodes({"T10-003", "T10-004"})
