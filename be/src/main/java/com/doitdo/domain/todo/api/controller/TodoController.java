@@ -2,6 +2,7 @@ package com.doitdo.domain.todo.api.controller;
 
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.todo.api.dto.req.TodoCreateReq;
+import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.application.TodoService;
 import com.doitdo.global.api.response.GlobalApiResponse;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -36,6 +38,17 @@ public class TodoController {
 			@PathVariable Long todoId) {
 		return GlobalApiResponse.ok("TODO 상세 조회 성공",
 				todoService.detail(userDetails.getUserId(), todoId));
+	}
+
+	@Operation(summary = "TODO 수정", description = "TODO 의 내용·일정 정보를 부분 수정한다. 본인 소유 + 'TODO' 상태의 항목만 수정 가능.")
+	@ApiErrorCodes({"T04-001", "T04-003", "T04-004", "T04-005"})
+	@PatchMapping("/{todoId}")
+	public GlobalApiResponse<TodoDetailResp> update(
+			@AuthenticationPrincipal CustomUserDetails userDetails,
+			@PathVariable Long todoId,
+			@RequestBody TodoUpdateReq req) {
+		return GlobalApiResponse.ok("TODO 수정 성공",
+				todoService.update(userDetails.getUserId(), todoId, req));
 	}
 
 	@Operation(summary = "TODO 작성", description = "새로운 TODO 항목을 작성한다")

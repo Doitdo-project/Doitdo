@@ -37,6 +37,7 @@ public enum TodoErrorCode implements ErrorCode {
 	T04_002("T04-002", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),
 	T04_003("T04-003", HttpStatus.FORBIDDEN, "다른 사용자의 TODO 수정 불가"),
 	T04_004("T04-004", HttpStatus.UNPROCESSABLE_ENTITY, "진행 중 또는 완료된 TODO는 수정 불가"),
+	T04_005("T04-005", HttpStatus.UNPROCESSABLE_ENTITY, "유효하지 않은 카테고리 ID 지정"),
 
 	// T05 - POST /todos/{todoId}/snooze (미루기)
 	T05_001("T05-001", HttpStatus.NOT_FOUND, "미루기할 TODO를 찾을 수 없음"),

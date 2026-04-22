@@ -1,10 +1,12 @@
 package com.doitdo.domain.todo.application.impl;
 
 import com.doitdo.domain.todo.api.dto.req.TodoCreateReq;
+import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.application.TodoService;
 import com.doitdo.domain.todo.entity.Category;
 import com.doitdo.domain.todo.entity.Todo;
+import com.doitdo.domain.todo.entity.Todo.TodoStatus;
 import com.doitdo.domain.todo.entity.Todo.TodoType;
 import com.doitdo.domain.todo.repository.CategoryRepository;
 import com.doitdo.domain.todo.repository.TodoRepository;
@@ -63,6 +65,54 @@ public class TodoServiceImpl implements TodoService {
 		Todo todo = todoRepository.save(
 				Todo.create(userId, categoryId, req.title(), req.content(),
 						req.type(), priority, req.startDate(), req.endDate(), req.period())
+		);
+
+		return TodoDetailResp.from(todo, categoryName);
+	}
+
+	@Override
+	@Transactional
+	public TodoDetailResp update(Long userId, Long todoId, TodoUpdateReq req) {
+		Todo todo = todoRepository.findByTodoIdAndIsDeletedFalse(todoId)
+				.orElseThrow(() -> new CustomException(TodoErrorCode.T04_001));
+
+		if (!todo.getUserId().equals(userId)) {
+			throw new CustomException(TodoErrorCode.T04_003);
+		}
+
+		if (todo.getStatus() == TodoStatus.IN_PROGRESS || todo.getStatus() == TodoStatus.DONE) {
+			throw new CustomException(TodoErrorCode.T04_004);
+		}
+
+		Long categoryId = todo.getCategoryId();
+		String categoryName = null;
+		if (req.category() != null && StringUtils.hasText(req.category())) {
+			Category category = categoryRepository.findByCategoryNameAndUserId(req.category(), userId)
+					.orElseThrow(() -> new CustomException(TodoErrorCode.T04_005));
+			categoryId = category.getCategoryId();
+			categoryName = category.getCategoryName();
+		} else {
+			if (todo.getCategoryId() != null) {
+				categoryName = categoryRepository.findById(todo.getCategoryId())
+						.map(Category::getCategoryName)
+						.orElse(null);
+			}
+		}
+
+		TodoType finalType = req.type() != null ? req.type() : todo.getType();
+		Integer finalPeriod = req.period() != null ? req.period() : todo.getPeriod();
+		if (finalType == TodoType.RECURRING && finalPeriod == null) {
+			throw new CustomException(TodoErrorCode.T04_004);
+		}
+
+		todo.update(
+				req.title(),
+				req.content(),
+				categoryId,
+				req.type(),
+				req.startDate(),
+				req.endDate(),
+				req.period()
 		);
 
 		return TodoDetailResp.from(todo, categoryName);

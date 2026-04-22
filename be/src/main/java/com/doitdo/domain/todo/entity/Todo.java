@@ -72,6 +72,23 @@ public class Todo extends BaseTimeEntity {
 	@Column(name = "is_deleted", nullable = false)
 	private Boolean isDeleted;
 
+	public void update(
+			String title,
+			String content,
+			Long categoryId,
+			TodoType type,
+			LocalDate startDate,
+			LocalDate endDate,
+			Integer period) {
+		if (title != null) this.title = title;
+		if (content != null) this.content = content;
+		if (categoryId != null) this.categoryId = categoryId;
+		if (type != null) this.type = type;
+		if (startDate != null) this.startDate = startDate;
+		if (endDate != null) this.endDate = endDate;
+		if (period != null) this.period = period;
+	}
+
 	public static Todo create(
 			Long userId,
 			Long categoryId,
