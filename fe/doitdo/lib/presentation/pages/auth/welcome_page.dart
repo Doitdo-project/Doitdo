@@ -128,10 +128,13 @@ class WelcomePage extends ConsumerWidget {
                               size: 20,
                             ),
                             label: '이메일로 계속하기',
-                            labelStyle: AppTextStyles.bodyLarge.copyWith(
-                              color: Colors.black87,
+                            // Google 로그인 버튼과 동일한 스타일 (Roboto / 16 / w700) 로 통일.
+                            labelStyle: const TextStyle(
+                              fontFamily: 'Roboto',
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
+                              color: Color(0xDD000000),
+                              letterSpacing: 0.25,
                             ),
                             onPressed: () => context.push(AppRoutes.login),
                           ),
