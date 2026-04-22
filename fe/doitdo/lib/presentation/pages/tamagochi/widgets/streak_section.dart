@@ -4,6 +4,9 @@ import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 
+/// 스트릭 시작일(slot[0])부터 7일 단위 블록으로 진행 상황을 표시한다.
+/// 스트릭이 7일을 넘기면 다음 7일 블록으로 통째로 이동하며, 끊어지면
+/// ViewModel 이 시작일을 새로 찍어주는 방식으로 초기화된다.
 class StreakSection extends StatelessWidget {
   const StreakSection({
     super.key,
