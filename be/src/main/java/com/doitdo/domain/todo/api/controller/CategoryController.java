@@ -33,7 +33,6 @@ public class CategoryController {
 	private final CategoryService categoryService;
 
 	@Operation(summary = "카테고리 조회", description = "본인 소유 카테고리 전체 목록 조회.")
-	@ApiErrorCodes({})
 	@GetMapping
 	public GlobalApiResponse<CategoryListResp> list(
 			@AuthenticationPrincipal CustomUserDetails userDetails) {
