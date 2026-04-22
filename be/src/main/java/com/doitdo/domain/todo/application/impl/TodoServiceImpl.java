@@ -159,7 +159,7 @@ public class TodoServiceImpl implements TodoService {
 			CalendarItemResp item = toActualCalendarItem(
 					actualTodo,
 					matchedMaster,
-					categoryNameById.get(actualTodo.getCategoryId()),
+					actualTodo.getCategoryId() != null ? categoryNameById.get(actualTodo.getCategoryId()) : null,
 					snoozeCountByTodoId.getOrDefault(actualTodo.getTodoId(), 0)
 			);
 			if (matchesCalendarFilters(item, req)) {
@@ -176,7 +176,7 @@ public class TodoServiceImpl implements TodoService {
 
 				CalendarItemResp item = CalendarItemResp.fromVirtual(
 						master,
-						categoryNameById.get(master.getCategoryId()),
+						master.getCategoryId() != null ? categoryNameById.get(master.getCategoryId()) : null,
 						occurrenceDate
 				);
 				if (matchesCalendarFilters(item, req)) {
