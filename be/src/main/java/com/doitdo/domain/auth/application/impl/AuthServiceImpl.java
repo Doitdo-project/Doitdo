@@ -12,6 +12,7 @@ import com.doitdo.domain.auth.entity.RefreshToken;
 import com.doitdo.domain.auth.repository.RefreshTokenRepository;
 import com.doitdo.domain.setting.entity.UserSetting;
 import com.doitdo.domain.setting.repository.UserSettingRepository;
+import com.doitdo.domain.todo.application.DefaultCategoryRegistrar;
 import com.doitdo.domain.user.api.dto.resp.UserInfoResp;
 import com.doitdo.domain.user.entity.User;
 import com.doitdo.domain.user.entity.UserWallet;
@@ -43,6 +44,7 @@ public class AuthServiceImpl implements AuthService {
 	private final PasswordEncoder passwordEncoder;
 	private final AuthenticationManager authenticationManager;
 	private final JwtUtil jwtUtil;
+	private final DefaultCategoryRegistrar defaultCategoryRegistrar;
 
 	@Value("${jwt.refresh-token-expiration}")
 	private long refreshTokenExpiration;
@@ -62,6 +64,7 @@ public class AuthServiceImpl implements AuthService {
 
 		userWalletRepository.save(UserWallet.create(user.getUserId()));
 		userSettingRepository.save(UserSetting.create(user.getUserId()));
+		defaultCategoryRegistrar.registerFor(user.getUserId());
 
 		return new SignupResp(user.getUserId(), user.getEmail(), user.getUsername());
 	}
