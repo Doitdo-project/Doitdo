@@ -5,11 +5,25 @@ import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
 
+// ─────────────────────────────────────────────
+// 알림 시트 반환 모델
+// 시간 + 알람 활성화 여부를 함께 반환한다.
+// ─────────────────────────────────────────────
+class TodoAlarmResult {
+  const TodoAlarmResult({
+    required this.time,
+    required this.enabled,
+  });
+  final TimeOfDay time;
+  final bool enabled;
+}
+
 /// 알림 시간 설정 바텀시트.
 class TodoTimeSheet extends StatefulWidget {
-  const TodoTimeSheet({super.key, this.initialTime});
+  const TodoTimeSheet({super.key, this.initialTime, this.initialEnabled = true});
 
   final TimeOfDay? initialTime;
+  final bool initialEnabled;
 
   @override
   State<TodoTimeSheet> createState() => _TodoTimeSheetState();
@@ -19,7 +33,7 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
   late int _selectedHour;
   late int _selectedMinute;
   bool _isAm = false;
-  bool _alarmEnabled = true;
+  late bool _alarmEnabled;
 
   final List<int> _hours = List.generate(12, (i) => i + 1);
   final List<int> _minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
@@ -27,7 +41,8 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
   @override
   void initState() {
     super.initState();
-    final time = widget.initialTime ?? const TimeOfDay(hour: 19, minute: 30);
+    _alarmEnabled = widget.initialEnabled;
+    final time = widget.initialTime ?? const TimeOfDay(hour: 12, minute: 0);
     _isAm = time.hour < 12;
     _selectedHour =
     time.hour == 0 ? 12 : (time.hour > 12 ? time.hour - 12 : time.hour);
@@ -64,7 +79,12 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
           // ── 마스코트 + 안내 문구 + 알림 토글 ──
           Row(
             children: [
-              const _MascotIcon(),
+              // ✏️ 수정: _MascotIcon → 타마고치 이미지
+              Image.asset(
+                'assets/images/tamagochi_hanrabong.png',
+                width: 36,
+                height: 36,
+              ),
               const SizedBox(width: 8),
               Text(
                 '몇시에 알려줄까?',
@@ -121,8 +141,13 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
                     final hour = _isAm
                         ? (_selectedHour == 12 ? 0 : _selectedHour)
                         : (_selectedHour == 12 ? 12 : _selectedHour + 12);
-                    Navigator.of(context)
-                        .pop(TimeOfDay(hour: hour, minute: _selectedMinute));
+                    // ✏️ 수정: TimeOfDay 대신 TodoAlarmResult 반환
+                    Navigator.of(context).pop(
+                      TodoAlarmResult(
+                        time: TimeOfDay(hour: hour, minute: _selectedMinute),
+                        enabled: _alarmEnabled,
+                      ),
+                    );
                   },
                 ),
               ),
@@ -220,33 +245,6 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
   }
 }
 
-// ─────────────────────────────────────────────
-// 마스코트 아이콘 플레이스홀더
-// ─────────────────────────────────────────────
-class _MascotIcon extends StatelessWidget {
-  const _MascotIcon();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: const BoxDecoration(
-        color: AppColors.calendarPoint,
-        shape: BoxShape.circle,
-      ),
-      child: const Icon(
-        Icons.sentiment_satisfied_alt_rounded,
-        color: Colors.white,
-        size: 18,
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────
-// 이전 버튼 (회색 — AppColors.loginBtnOff = 0xFFC5C5C5)
-// ─────────────────────────────────────────────
 class _PrevButton extends StatelessWidget {
   const _PrevButton();
 

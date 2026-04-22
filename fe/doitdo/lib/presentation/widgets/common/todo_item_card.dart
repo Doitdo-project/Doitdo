@@ -5,23 +5,102 @@ import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 
-/// 할 일 한 건을 카드 형태로 표시하는 공통 위젯.
-///
-/// 체크박스(원형 토글) + 제목 + 카테고리 뱃지 구성.
-/// 완료 상태일 때 제목에 취소선이 들어간다.
-class TodoItemCard extends StatelessWidget {
-  const TodoItemCard({
+class SlidableTodoItemCard extends StatefulWidget {
+  const SlidableTodoItemCard({
     super.key,
     required this.todo,
     required this.onToggle,
+    this.onTap,
+    this.index,
+    this.onSnooze,
   });
 
   final Todo todo;
   final VoidCallback onToggle;
+  final VoidCallback? onTap;
+  final int? index;
+  final VoidCallback? onSnooze;
+
+  @override
+  State<SlidableTodoItemCard> createState() => _SlidableTodoItemCardState();
+}
+
+class _SlidableTodoItemCardState extends State<SlidableTodoItemCard> {
+  bool _isOpen = false;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+
+    // ✅ 다른 날짜 클릭 불가 문제 해결: onSnooze가 없을 때도 onTap 이벤트를 감싸줍니다.
+    if (widget.onSnooze == null) {
+      return GestureDetector(
+        onTap: widget.onTap,
+        behavior: HitTestBehavior.opaque,
+        child: _buildCard(colors),
+      );
+    }
+
+    return Stack(
+      children: [
+        // 1. 배경 레이어 (오른쪽에 고정된 미루기 버튼)
+        Positioned.fill(
+          child: Container(
+            alignment: Alignment.centerRight,
+            decoration: BoxDecoration(
+              color: AppColors.homeCalendarSelectedBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: GestureDetector(
+              onTap: () {
+                setState(() => _isOpen = false);
+                widget.onSnooze!();
+              },
+              behavior: HitTestBehavior.opaque,
+              child: SizedBox(
+                width: 80,
+                // ✅ 화살표 제거하고 텍스트만 깔끔하게 중앙 정렬
+                child: Center(
+                  child: Text(
+                    '미루기',
+                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.calendarPoint),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // 2. 전경 레이어 (흰색 Todo 카드)
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutQuart,
+          transform: Matrix4.translationValues(_isOpen ? -80.0 : 0.0, 0.0, 0.0),
+          child: GestureDetector(
+            onHorizontalDragUpdate: (details) {
+              if (details.primaryDelta! < -5 && !_isOpen) {
+                setState(() => _isOpen = true);
+              } else if (details.primaryDelta! > 5 && _isOpen) {
+                setState(() => _isOpen = false);
+              }
+            },
+            onTap: () {
+              if (_isOpen) {
+                setState(() => _isOpen = false);
+              } else {
+                widget.onTap?.call();
+              }
+            },
+            behavior: HitTestBehavior.opaque,
+            child: _buildCard(colors),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 흰색 카드 UI 구성
+  Widget _buildCard(DoitdoColors colors) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
@@ -31,26 +110,38 @@ class TodoItemCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _CheckDot(isDone: todo.isDone, onTap: onToggle),
+          _CheckDot(isDone: widget.todo.isDone, onTap: widget.onToggle),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  todo.title,
+                  widget.todo.title,
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: colors.textPrimary,
                     decoration:
-                        todo.isDone ? TextDecoration.lineThrough : null,
+                    widget.todo.isDone ? TextDecoration.lineThrough : null,
                     decorationColor: colors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 6),
-                _CategoryBadge(category: todo.category),
+                _CategoryBadge(category: widget.todo.category),
               ],
             ),
           ),
+          if (widget.index != null)
+            ReorderableDragStartListener(
+              index: widget.index!,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8.0),
+                child: Icon(
+                  Icons.reorder,
+                  color: colors.textHint,
+                  size: 20,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -88,8 +179,6 @@ class _CheckDot extends StatelessWidget {
   }
 }
 
-/// 카테고리 뱃지. 현재는 Health 만 커스텀 매핑이고 나머지는 중립 컬러.
-/// 카테고리 컬러 시스템이 확정되면 `_resolveColors` 를 채운다.
 class _CategoryBadge extends StatelessWidget {
   const _CategoryBadge({required this.category});
 
@@ -111,15 +200,20 @@ class _CategoryBadge extends StatelessWidget {
     );
   }
 
+  // ✅ 카테고리 색상 실종 문제 해결: 원래 색상값으로 모두 복구
   (Color, Color) _resolveColors(CategoryColorKey key) {
     switch (key) {
       case CategoryColorKey.health:
         return (AppColors.categoryHealth, Colors.white);
       case CategoryColorKey.study:
+        return (AppColors.category1, AppColors.calendarDateText);
+      case CategoryColorKey.exercise:
+        return (AppColors.category2, AppColors.calendarDateText);
       case CategoryColorKey.work:
+        return (AppColors.category3, AppColors.calendarDateText);
       case CategoryColorKey.hobby:
+        return (AppColors.category5, AppColors.calendarDateText);
       case CategoryColorKey.etc:
-        // TODO: 카테고리별 컬러 매핑 확정 후 채움
         return (AppColors.chipUnselectedBg, AppColors.chipUnselectedText);
     }
   }

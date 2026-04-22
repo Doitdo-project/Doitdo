@@ -5,10 +5,8 @@ import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
 
-/// 카테고리 선택 바텀시트.
 class TodoCategorySheet extends StatefulWidget {
   const TodoCategorySheet({super.key, this.selectedCategory});
-
   final String? selectedCategory;
 
   @override
@@ -47,11 +45,9 @@ class _TodoCategorySheetState extends State<TodoCategorySheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── 드래그 핸들 ──
           Center(
             child: Container(
-              width: 40,
-              height: 4,
+              width: 40, height: 4,
               decoration: BoxDecoration(
                 color: colors.border,
                 borderRadius: BorderRadius.circular(2),
@@ -59,22 +55,8 @@ class _TodoCategorySheetState extends State<TodoCategorySheet> {
             ),
           ),
           const SizedBox(height: 16),
-
-          // ── 마스코트 + 안내 문구 ──
-          Row(
-            children: [
-              const _MascotIcon(),
-              const SizedBox(width: 8),
-              Text(
-                '어떤 카테고리야?',
-                style: AppTextStyles.bodyMedium
-                    .copyWith(color: colors.textPrimary),
-              ),
-            ],
-          ),
+          const _MascotBubble(message: '어떤 카테고리야?'),
           const SizedBox(height: 20),
-
-          // ── 카테고리 그리드 ──
           Wrap(
             spacing: 12,
             runSpacing: 12,
@@ -90,29 +72,23 @@ class _TodoCategorySheetState extends State<TodoCategorySheet> {
                     width: chipWidth,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.calendarPoint
-                          : colors.surfaceAlt,
+                      color: isSelected ? AppColors.calendarPoint : colors.surfaceAlt,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          width: 8,
-                          height: 8,
+                          width: 8, height: 8,
                           decoration: BoxDecoration(
                             color: isSelected ? Colors.white70 : dotColor,
                             shape: BoxShape.circle,
                           ),
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          name,
+                        Text(name,
                           style: AppTextStyles.bodyMedium.copyWith(
-                            color: isSelected
-                                ? Colors.white
-                                : colors.textPrimary,
+                            color: isSelected ? Colors.white : colors.textPrimary,
                           ),
                         ),
                       ],
@@ -120,12 +96,8 @@ class _TodoCategorySheetState extends State<TodoCategorySheet> {
                   ),
                 );
               }),
-
-              // ── 추가 버튼 ──
               GestureDetector(
-                onTap: () {
-                  // TODO: 카테고리 추가 화면
-                },
+                onTap: () {},
                 child: Container(
                   width: chipWidth,
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -138,11 +110,7 @@ class _TodoCategorySheetState extends State<TodoCategorySheet> {
                     children: [
                       Icon(Icons.add, size: 16, color: colors.textSecondary),
                       const SizedBox(width: 4),
-                      Text(
-                        '추가',
-                        style: AppTextStyles.bodyMedium
-                            .copyWith(color: colors.textSecondary),
-                      ),
+                      Text('추가', style: AppTextStyles.bodyMedium.copyWith(color: colors.textSecondary)),
                     ],
                   ),
                 ),
@@ -150,8 +118,6 @@ class _TodoCategorySheetState extends State<TodoCategorySheet> {
             ],
           ),
           const SizedBox(height: 24),
-
-          // ── 이전 / 확인 버튼 ──
           Row(
             children: [
               const Expanded(child: _PrevButton()),
@@ -170,36 +136,39 @@ class _TodoCategorySheetState extends State<TodoCategorySheet> {
   }
 }
 
-// ─────────────────────────────────────────────
-// 마스코트 아이콘 플레이스홀더
-// ─────────────────────────────────────────────
-class _MascotIcon extends StatelessWidget {
-  const _MascotIcon();
+class _MascotBubble extends StatelessWidget {
+  const _MascotBubble({required this.message});
+  final String message;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: const BoxDecoration(
-        color: AppColors.calendarPoint,
-        shape: BoxShape.circle,
-      ),
-      child: const Icon(
-        Icons.sentiment_satisfied_alt_rounded,
-        color: Colors.white,
-        size: 18,
-      ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Image.asset('assets/images/tamagochi_hanrabong.png', width: 32, height: 32),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.bubbleBg,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(4),
+              topRight: Radius.circular(12),
+              bottomLeft: Radius.circular(12),
+              bottomRight: Radius.circular(12),
+            ),
+          ),
+          child: Text(message,
+            style: AppTextStyles.bodySmall.copyWith(color: AppColors.calendarDateText),
+          ),
+        ),
+      ],
     );
   }
 }
 
-// ─────────────────────────────────────────────
-// 이전 버튼 (회색 — AppColors.loginBtnOff = 0xFFC5C5C5)
-// ─────────────────────────────────────────────
 class _PrevButton extends StatelessWidget {
   const _PrevButton();
-
   @override
   Widget build(BuildContext context) {
     return ElevatedButton(
@@ -209,14 +178,10 @@ class _PrevButton extends StatelessWidget {
         foregroundColor: Colors.white,
         elevation: 0,
         shadowColor: Colors.transparent,
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(vertical: 14),
       ),
-      child: Text(
-        '이전',
-        style: AppTextStyles.bodyLarge.copyWith(color: Colors.white),
-      ),
+      child: Text('이전', style: AppTextStyles.bodyLarge.copyWith(color: Colors.white)),
     );
   }
 }

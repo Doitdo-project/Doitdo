@@ -4,12 +4,14 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
+import 'package:doitdo/presentation/models/todo.dart'; // ✏️ 추가: TodoDateType 이 todo.dart 로 이동됨
 import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
 
 // ─────────────────────────────────────────────
 // 날짜 선택 결과 모델
 // ─────────────────────────────────────────────
-enum TodoDateType { normal, range, repeat }
+// ✏️ 삭제: enum TodoDateType { normal, range, repeat }
+//         → todo.dart 로 이동. 여기서 정의하면 todo.dart 와 충돌
 
 class TodoDateResult {
   const TodoDateResult({
@@ -23,13 +25,20 @@ class TodoDateResult {
   });
 
   final TodoDateType type;
+
+  // 일반
   final DateTime? date;
+
+  // 기간
   final DateTime? rangeStart;
   final DateTime? rangeEnd;
+
+  // 반복
   final DateTime? repeatStartDate;
   final DateTime? repeatEndDate;
   final String? repeatType;
 
+  /// todo_add_sheet 기간 행에 표시할 텍스트
   String get displayText {
     switch (type) {
       case TodoDateType.normal:
@@ -57,32 +66,11 @@ class TodoDateSheet extends StatefulWidget {
 class _TodoDateSheetState extends State<TodoDateSheet> {
   int _selectedTab = 0;
 
-  // 일반 탭
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-
-  // ─────────────────────────────────────────
-  // 기간 탭 — 직접 구현한 2탭 상태 머신
-  //
-  // RangeSelectionMode.enforced / toggledOn 은 내부 상태를
-  // 자체 관리하기 때문에 외부에서 rangeStartDay를 주입해도
-  // "첫 번째 탭 = 새 시작" 으로 처리되는 버그가 있음.
-  //
-  // 해결책:
-  //   RangeSelectionMode.disabled + onDaySelected 로
-  //   2탭 로직을 직접 제어.
-  //   rangeStartBuilder / rangeEndBuilder 등 시각 렌더러는
-  //   rangeSelectionMode 와 무관하게 rangeStartDay/rangeEndDay
-  //   prop 기반으로 호출되므로 시각적 표현은 동일하게 유지됨.
-  // ─────────────────────────────────────────
   DateTime? _rangeStart;
   DateTime? _rangeEnd;
 
-  /// true  → 시작 확정, 다음 탭 = 종료일 지정
-  /// false → 다음 탭 = 새 시작일 지정
-  bool _isPickingEnd = false;
-
-  // 반복 탭
   String _repeatType = '매주';
   final List<bool> _selectedWeekdays = List.filled(7, false);
   DateTime _repeatStartDate = DateTime.now();
@@ -97,48 +85,13 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
     _selectedDay = widget.initialDate ?? DateTime.now();
     _focusedDay = _selectedDay!;
     _repeatStartDate = _selectedDay!;
-
-    // 기간 탭 초기값: 당일이 시작으로 미리 선택된 상태
+    // 기간 탭 진입 시 당일이 즉시 시작 날짜로 지정
     _rangeStart = _selectedDay;
     _rangeEnd = null;
-    _isPickingEnd = true; // 다음 탭 = 종료일 지정 대기
-
     _selectedWeekdays[DateTime.now().weekday % 7] = true;
   }
 
-  // ── 기간 탭 — 2탭 상태 머신 핸들러 ──────
-  //
-  // 상태 흐름:
-  //   _isPickingEnd = false → 탭 → 시작 확정, _isPickingEnd = true
-  //   _isPickingEnd = true  → 탭(시작 이후) → 종료 확정, _isPickingEnd = false
-  //   _isPickingEnd = true  → 탭(시작 이전) → 시작 리셋, _isPickingEnd = true 유지
-  //   _isPickingEnd = false (range 완성 후) → 탭 → 새 시작 시작
-  void _onRangeDayTapped(DateTime selected, DateTime focused) {
-    setState(() {
-      _focusedDay = focused;
-
-      if (!_isPickingEnd || _rangeStart == null) {
-        // ① 새 시작 선택
-        _rangeStart = selected;
-        _rangeEnd = null;
-        _isPickingEnd = true;
-      } else {
-        // ② 종료일 선택 단계
-        if (!selected.isBefore(_rangeStart!)) {
-          // 시작일 이후(또는 동일) → 종료일 확정
-          _rangeEnd = selected;
-          _isPickingEnd = false;
-        } else {
-          // 시작일 이전 → 시작일 리셋 (종료 대기 유지)
-          _rangeStart = selected;
-          _rangeEnd = null;
-          // _isPickingEnd = true 유지
-        }
-      }
-    });
-  }
-
-  // ── 달력 공통 스타일 (일반 탭) ───────────
+  // ── 달력 공통 스타일 (일반 탭) ─────────────────────
   CalendarStyle _calStyle(BuildContext context) {
     final c = context.colors;
     return CalendarStyle(
@@ -163,10 +116,11 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
     );
   }
 
-  // ── 달력 스타일 (기간 탭) ─────────────────
+  // ── 달력 스타일 (기간 탭) — 오늘 날짜 강조 없음 ─────
   CalendarStyle _rangeCalStyle(BuildContext context) {
     final c = context.colors;
     return CalendarStyle(
+      // 오늘 날짜를 일반 날짜와 동일하게 표시 (강조 없음)
       todayDecoration: const BoxDecoration(
         color: AppColors.homeCalendarSelectedBg,
         shape: BoxShape.circle,
@@ -209,7 +163,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
     );
   }
 
-  // ── 반복 유형 선택 바텀시트 ──────────────
+  // ── 반복 유형 선택 바텀시트 ─────────────
   void _showRepeatTypePicker(BuildContext context) {
     final c = context.colors;
     showModalBottomSheet(
@@ -227,7 +181,8 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
           children: [
             Center(
               child: Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
                     color: c.border, borderRadius: BorderRadius.circular(2)),
               ),
@@ -238,7 +193,8 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
               return ListTile(
                 title: Text(type,
                     style: AppTextStyles.bodyMedium.copyWith(
-                        color: sel ? AppColors.calendarPoint : c.textPrimary)),
+                        color:
+                        sel ? AppColors.calendarPoint : c.textPrimary)),
                 trailing: sel
                     ? const Icon(Icons.check,
                     color: AppColors.calendarPoint, size: 18)
@@ -256,10 +212,11 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
     );
   }
 
-  // ── 종료 날짜 계산 (반복 패턴 기반) ──────
+  // ── 종료 날짜 계산 (반복 패턴 기반) ─────
   List<DateTime> _calcEndDateOptions() {
     final start = _repeatStartDate;
     final result = <DateTime>[];
+
     switch (_repeatType) {
       case '매주':
         final selDays = [
@@ -277,7 +234,10 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
         for (int i = 1; i <= 12; i++) {
           var m = start.month + i;
           var y = start.year;
-          while (m > 12) { m -= 12; y++; }
+          while (m > 12) {
+            m -= 12;
+            y++;
+          }
           final maxDay = DateTime(y, m + 1, 0).day;
           result.add(DateTime(y, m, start.day.clamp(1, maxDay)));
         }
@@ -293,6 +253,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
   void _showEndDateSheet(BuildContext context) {
     final c = context.colors;
     final options = _calcEndDateOptions();
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -311,18 +272,21 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
             const SizedBox(height: 12),
             Center(
               child: Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
                     color: c.border, borderRadius: BorderRadius.circular(2)),
               ),
             ),
             const SizedBox(height: 8),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text('종료 날짜 선택',
-                    style: AppTextStyles.titleSmall.copyWith(color: c.textPrimary)),
+                    style: AppTextStyles.titleSmall
+                        .copyWith(color: c.textPrimary)),
               ),
             ),
             Divider(color: c.divider, height: 1),
@@ -334,7 +298,8 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
                     title: Text('없음',
                         style: AppTextStyles.bodyMedium.copyWith(
                           color: _repeatEndDate == null
-                              ? AppColors.calendarPoint : c.textPrimary,
+                              ? AppColors.calendarPoint
+                              : c.textPrimary,
                         )),
                     trailing: _repeatEndDate == null
                         ? const Icon(Icons.check,
@@ -345,18 +310,23 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
                       Navigator.pop(context);
                     },
                   ),
-                  Divider(color: c.divider, height: 1, indent: 16, endIndent: 16),
+                  Divider(
+                      color: c.divider,
+                      height: 1,
+                      indent: 16,
+                      endIndent: 16),
                   ...options.map((d) {
                     final isSel = _repeatEndDate != null &&
                         isSameDay(_repeatEndDate!, d);
                     final wd = _weekdaysKo[d.weekday % 7];
+                    final label =
+                        '${d.year}년 ${d.month}월 ${d.day}일 ($wd)';
                     return ListTile(
-                      title: Text(
-                        '${d.year}년 ${d.month}월 ${d.day}일 ($wd)',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                            color: isSel
-                                ? AppColors.calendarPoint : c.textPrimary),
-                      ),
+                      title: Text(label,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                              color: isSel
+                                  ? AppColors.calendarPoint
+                                  : c.textPrimary)),
                       trailing: isSel
                           ? const Icon(Icons.check,
                           color: AppColors.calendarPoint, size: 18)
@@ -400,59 +370,56 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
           children: [
             Center(
               child: Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
                     color: c.border, borderRadius: BorderRadius.circular(2)),
               ),
             ),
             const SizedBox(height: 16),
-
-            Row(
-              children: [
-                const _MascotIcon(),
-                const SizedBox(width: 8),
-                Text('언제부터 언제까지 할까?',
-                    style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary)),
-              ],
-            ),
+            const _MascotBubble(message: '언제부터 언제까지 할까?'),
             const SizedBox(height: 16),
 
-            // ── 탭 버튼 ──
+            // 탭 버튼 — Expanded 로 균등 분배
             Row(
               children: [
-                _TabChip(
-                  label: '일반',
-                  selected: _selectedTab == 0,
-                  onTap: () => setState(() => _selectedTab = 0),
+                Expanded(
+                  child: _TabChip(
+                      label: '일반',
+                      selected: _selectedTab == 0,
+                      onTap: () => setState(() => _selectedTab = 0)),
                 ),
                 const SizedBox(width: 8),
-                _TabChip(
-                  label: '기간',
-                  selected: _selectedTab == 1,
-                  onTap: () => setState(() {
-                    _selectedTab = 1;
-                    // 기간 탭 진입: 당일을 시작으로 설정 + 종료 대기 상태
-                    _rangeStart = _selectedDay ?? DateTime.now();
-                    _rangeEnd = null;
-                    _isPickingEnd = true;
-                  }),
+                Expanded(
+                  child: _TabChip(
+                      label: '기간',
+                      selected: _selectedTab == 1,
+                      onTap: () => setState(() {
+                        _selectedTab = 1;
+                        _rangeStart = _selectedDay ?? DateTime.now();
+                        _rangeEnd = null;
+                      })),
                 ),
                 const SizedBox(width: 8),
-                _TabChip(
-                  label: '반복',
-                  selected: _selectedTab == 2,
-                  onTap: () => setState(() => _selectedTab = 2),
+                Expanded(
+                  child: _TabChip(
+                      label: '반복',
+                      selected: _selectedTab == 2,
+                      onTap: () => setState(() => _selectedTab = 2)),
                 ),
               ],
             ),
             const SizedBox(height: 16),
 
-            // ════════════════════════════
+            // ══════════════════════════
             // 일반 탭
-            // ════════════════════════════
+            // ══════════════════════════
             if (_selectedTab == 0) ...[
-              Text('${_focusedDay.month}월',
-                  style: AppTextStyles.titleMedium.copyWith(color: c.textPrimary)),
+              Padding(
+                padding: const EdgeInsets.only(left: 12.0), // 👈 글자만 우측으로 살짝(약 12px) 이동
+                child: Text('${_focusedDay.month}월',
+                    style: AppTextStyles.titleMedium.copyWith(color: c.textPrimary)),
+              ),
               const SizedBox(height: 8),
               TableCalendar(
                 firstDay: DateTime.utc(2020, 1, 1),
@@ -461,7 +428,10 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
                 selectedDayPredicate: (d) => isSameDay(_selectedDay, d),
                 rangeSelectionMode: RangeSelectionMode.disabled,
                 onDaySelected: (sel, foc) =>
-                    setState(() { _selectedDay = sel; _focusedDay = foc; }),
+                    setState(() {
+                      _selectedDay = sel;
+                      _focusedDay = foc;
+                    }),
                 onPageChanged: (foc) => setState(() => _focusedDay = foc),
                 headerVisible: false,
                 availableCalendarFormats: const {CalendarFormat.month: ''},
@@ -470,21 +440,18 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
               ),
             ],
 
-            // ════════════════════════════
-            // 기간 탭
-            //
-            // RangeSelectionMode.disabled + onDaySelected 로
-            // 2탭 상태 머신을 직접 제어.
-            //
-            // [탭 흐름]
-            //   진입 시: 당일 = 시작(오렌지 원 + "시작" 라벨), 종료 대기 중
-            //   탭 1회: 시작 이후 날짜 → 종료 확정 (범위 표시)
-            //           시작 이전 날짜 → 시작 리셋
-            //   범위 완성 후 탭: 새 시작 선택
-            // ════════════════════════════
+            // ══════════════════════════
+            // 기간 탭 — onRangeSelected로 start/end 관리
+            //   진입 시 당일이 시작날짜로 표시됨
+            //   다른 날짜 탭 → 끝 날짜 지정
+            //   끝 지정 후 다시 탭 → start 리셋 (table_calendar 기본 동작)
+            // ══════════════════════════
             if (_selectedTab == 1) ...[
-              Text('${_focusedDay.month}월',
-                  style: AppTextStyles.titleMedium.copyWith(color: c.textPrimary)),
+              Padding(
+                padding: const EdgeInsets.only(left: 12.0), // 👈 글자만 우측으로 살짝(약 12px) 이동
+                child: Text('${_focusedDay.month}월',
+                    style: AppTextStyles.titleMedium.copyWith(color: c.textPrimary)),
+              ),
               const SizedBox(height: 8),
               TableCalendar(
                 firstDay: DateTime.utc(2020, 1, 1),
@@ -493,41 +460,52 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
                 rangeStartDay: _rangeStart,
                 rangeEndDay: _rangeEnd,
                 rowHeight: 54,
-                // ✅ disabled: onDaySelected 로 탭 이벤트 수신
-                //    시각 렌더러(rangeStartBuilder 등)는 rangeStartDay/rangeEndDay
-                //    prop 기반으로 호출되므로 mode와 무관하게 정상 작동
-                rangeSelectionMode: RangeSelectionMode.disabled,
-                onDaySelected: _onRangeDayTapped,
+                // ✅ toggledOn: rangeStartBuilder / rangeEndBuilder / withinRangeBuilder 정상 호출됨
+                rangeSelectionMode: RangeSelectionMode.toggledOn,
+                onRangeSelected: (start, end, focusedDay) {
+                  setState(() {
+                    _rangeStart = start;
+                    _rangeEnd = end;
+                    _focusedDay = focusedDay;
+                  });
+                },
                 onPageChanged: (foc) => setState(() => _focusedDay = foc),
                 headerVisible: false,
                 availableCalendarFormats: const {CalendarFormat.month: ''},
                 daysOfWeekStyle: _dowStyle(context),
+                // ✅ 기간 탭 전용 스타일: 오늘 날짜 강조 없음
                 calendarStyle: _rangeCalStyle(context),
                 calendarBuilders: CalendarBuilders(
+                  // 시작 날짜 셀: '시작' 라벨 + 오렌지 원
                   rangeStartBuilder: (_, day, __) =>
                       _RangeLabelCell(day: day, label: '시작', isStart: true),
+                  // 끝 날짜 셀: '끝' 라벨 + 오렌지 원
                   rangeEndBuilder: (_, day, __) =>
                       _RangeLabelCell(day: day, label: '끝', isStart: false),
+                  // 범위 내 날짜 셀: 연한 배경만
                   withinRangeBuilder: (_, day, __) =>
                       _RangeMiddleCell(day: day),
+                  // table_calendar 우선순위:
+                  //   rangeStart/End > today > withinRange
+                  // 오늘이 range 안에 있으면 todayBuilder가 호출되므로
+                  // 여기서 range 포함 여부를 직접 체크해 분기 처리
                   todayBuilder: (_, day, __) {
-                    // 오늘이 범위 안이면 MiddleCell, 밖이면 연한 원
                     final inRange = _rangeStart != null &&
                         _rangeEnd != null &&
-                        day.isAfter(
-                            _rangeStart!.subtract(const Duration(days: 1))) &&
+                        day.isAfter(_rangeStart!.subtract(const Duration(days: 1))) &&
                         day.isBefore(_rangeEnd!.add(const Duration(days: 1)));
-                    return inRange
-                        ? _RangeMiddleCell(day: day)
-                        : _TodayCell(day: day);
+                    if (inRange) return _RangeMiddleCell(day: day);
+                    // range 밖: 연한 원 (homeCalendarSelectedBg)
+                    return _TodayCell(day: day);
                   },
+
                 ),
               ),
             ],
 
-            // ════════════════════════════
+            // ══════════════════════════
             // 반복 탭
-            // ════════════════════════════
+            // ══════════════════════════
             if (_selectedTab == 2) ...[
               GestureDetector(
                 onTap: () => _showRepeatTypePicker(context),
@@ -535,15 +513,19 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   child: Row(
                     children: [
-                      Icon(Icons.repeat, size: 18, color: AppColors.highlightElement),
+                      Icon(Icons.repeat,
+                          size: 18, color: AppColors.highlightElement),
                       const SizedBox(width: 10),
                       Text('반복 유형',
-                          style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary)),
+                          style: AppTextStyles.bodyMedium
+                              .copyWith(color: c.textPrimary)),
                       const Spacer(),
                       Text(_repeatType,
-                          style: AppTextStyles.bodyMedium.copyWith(color: c.textSecondary)),
+                          style: AppTextStyles.bodyMedium
+                              .copyWith(color: c.textSecondary)),
                       const SizedBox(width: 2),
-                      Icon(Icons.keyboard_arrow_down, size: 16, color: c.textSecondary),
+                      Icon(Icons.keyboard_arrow_down,
+                          size: 16, color: c.textSecondary),
                     ],
                   ),
                 ),
@@ -560,15 +542,19 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
                       onTap: () => setState(
                               () => _selectedWeekdays[i] = !_selectedWeekdays[i]),
                       child: Container(
-                        width: 36, height: 36,
+                        width: 36,
+                        height: 36,
                         decoration: BoxDecoration(
-                          color: sel ? AppColors.calendarPoint : c.surfaceAlt,
+                          color:
+                          sel ? AppColors.calendarPoint : c.surfaceAlt,
                           shape: BoxShape.circle,
                         ),
                         child: Center(
                           child: Text(_weekdaysKo[i],
                               style: AppTextStyles.labelLarge.copyWith(
-                                  color: sel ? Colors.white : c.textPrimary)),
+                                  color: sel
+                                      ? Colors.white
+                                      : c.textPrimary)),
                         ),
                       ),
                     );
@@ -577,7 +563,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
                 const SizedBox(height: 16),
               ],
 
-              // 시작 날짜 (스크롤 피커)
+              // 시작 날짜
               Container(
                 decoration: BoxDecoration(
                   border: Border.all(color: c.border),
@@ -617,7 +603,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
               ),
               const SizedBox(height: 12),
 
-              // 종료 날짜 드롭다운
+              // 종료 날짜 (계산된 날짜 드롭다운)
               GestureDetector(
                 onTap: () => _showEndDateSheet(context),
                 child: Padding(
@@ -635,7 +621,8 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
                           style: AppTextStyles.bodyMedium
                               .copyWith(color: c.textSecondary)),
                       const SizedBox(width: 4),
-                      Icon(Icons.chevron_right, size: 16, color: c.textHint),
+                      Icon(Icons.chevron_right,
+                          size: 16, color: c.textHint),
                     ],
                   ),
                 ),
@@ -687,8 +674,8 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
 }
 
 // ─────────────────────────────────────────────
-// 공통 레이아웃 상수
-// rowHeight=54  라벨=12  gap=2  → 원 top=14  size=36
+// 공통 상수
+// rowHeight=54, 라벨=12, gap=2 → 원 top=14, size=36
 // ─────────────────────────────────────────────
 const double _kLabelH = 12.0;
 const double _kGap = 2.0;
@@ -696,7 +683,8 @@ const double _kCircleTop = _kLabelH + _kGap; // 14.0
 const double _kCircleSize = 36.0;
 
 // ─────────────────────────────────────────────
-// 범위 내 날짜 셀 (가운데 날짜들)
+// 기간 탭: 범위 내 날짜 셀 (가운데 날짜들)
+// withinRangeBuilder에서 호출됨
 // ─────────────────────────────────────────────
 class _RangeMiddleCell extends StatelessWidget {
   const _RangeMiddleCell({required this.day});
@@ -707,19 +695,26 @@ class _RangeMiddleCell extends StatelessWidget {
     final c = context.colors;
     return Stack(
       children: [
+        // 배경: 원의 시작 위치(_kCircleTop)부터 원의 크기(_kCircleSize)만큼만 그림
         Positioned(
           top: _kCircleTop,
-          left: 0, right: 0,
+          left: 0,
+          right: 0,
           height: _kCircleSize,
           child: Container(color: AppColors.homeCalendarSelectedBg),
         ),
+        // 날짜 텍스트: 원 영역 중앙에 배치
         Positioned(
           top: _kCircleTop,
-          left: 0, right: 0,
+          left: 0,
+          right: 0,
           height: _kCircleSize,
           child: Center(
-            child: Text('${day.day}',
-                style: AppTextStyles.labelMedium.copyWith(color: c.textPrimary)),
+            child: Text(
+              '${day.day}',
+              style:
+              AppTextStyles.labelMedium.copyWith(color: c.textPrimary),
+            ),
           ),
         ),
       ],
@@ -728,7 +723,8 @@ class _RangeMiddleCell extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-// 시작·끝 라벨 셀
+// 기간 탭: 시작·끝 라벨 셀
+// rangeStartBuilder / rangeEndBuilder에서 호출됨
 // ─────────────────────────────────────────────
 class _RangeLabelCell extends StatelessWidget {
   const _RangeLabelCell({
@@ -745,9 +741,10 @@ class _RangeLabelCell extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final cellW = constraints.maxWidth;
+
         return Stack(
           children: [
-            // 절반 배경 (MiddleCell 높이와 정확히 일치)
+            // 절반 배경: MiddleCell과 높이(height) 및 시작점(top)을 정확히 일치시킴
             Positioned(
               top: _kCircleTop,
               left: isStart ? cellW / 2 : 0,
@@ -758,20 +755,27 @@ class _RangeLabelCell extends StatelessWidget {
                   color: AppColors.homeCalendarSelectedBg,
                   borderRadius: BorderRadius.only(
                     topLeft: isStart
-                        ? Radius.circular(_kCircleSize / 2) : Radius.zero,
+                        ? Radius.circular(_kCircleSize / 2)
+                        : Radius.zero,
                     bottomLeft: isStart
-                        ? Radius.circular(_kCircleSize / 2) : Radius.zero,
+                        ? Radius.circular(_kCircleSize / 2)
+                        : Radius.zero,
                     topRight: !isStart
-                        ? Radius.circular(_kCircleSize / 2) : Radius.zero,
+                        ? Radius.circular(_kCircleSize / 2)
+                        : Radius.zero,
                     bottomRight: !isStart
-                        ? Radius.circular(_kCircleSize / 2) : Radius.zero,
+                        ? Radius.circular(_kCircleSize / 2)
+                        : Radius.zero,
                   ),
                 ),
               ),
             ),
-            // 라벨 + 오렌지 원
+
+            // 상단 라벨(시작/끝) + 날짜 원
             Positioned(
-              top: 0, left: 0, right: 0,
+              top: 0,
+              left: 0,
+              right: 0,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -785,15 +789,18 @@ class _RangeLabelCell extends StatelessWidget {
                   ),
                   const SizedBox(height: _kGap),
                   Container(
-                    width: _kCircleSize, height: _kCircleSize,
+                    width: _kCircleSize,
+                    height: _kCircleSize,
                     decoration: const BoxDecoration(
                       color: AppColors.calendarPoint,
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
-                    child: Text('${day.day}',
-                        style: AppTextStyles.labelMedium
-                            .copyWith(color: Colors.white)),
+                    child: Text(
+                      '${day.day}',
+                      style: AppTextStyles.labelMedium
+                          .copyWith(color: Colors.white),
+                    ),
                   ),
                 ],
               ),
@@ -806,7 +813,28 @@ class _RangeLabelCell extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-// 기간 탭: 오늘 날짜 셀 (범위 밖일 때)
+// 기간 탭: 오늘 날짜를 일반 날짜처럼 렌더링 (강조 없음)
+// todayBuilder에서 사용 — 오늘이 start/end/within이면 각 builder가 우선
+// ─────────────────────────────────────────────
+class _PlainDayCell extends StatelessWidget {
+  const _PlainDayCell({required this.day});
+  final DateTime day;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Center(
+      child: Text(
+        '${day.day}',
+        style: AppTextStyles.labelMedium.copyWith(color: c.textPrimary),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// 기간 탭: 오늘 날짜 — range 밖일 때 연한 원으로 표시
+// range 안일 때는 todayBuilder에서 _RangeMiddleCell로 분기됨
 // ─────────────────────────────────────────────
 class _TodayCell extends StatelessWidget {
   const _TodayCell({required this.day});
@@ -817,33 +845,59 @@ class _TodayCell extends StatelessWidget {
     final c = context.colors;
     return Center(
       child: Container(
-        width: 38, height: 38,
+        width: 38,
+        height: 38,
         decoration: const BoxDecoration(
           color: AppColors.homeCalendarSelectedBg,
           shape: BoxShape.circle,
         ),
         alignment: Alignment.center,
-        child: Text('${day.day}',
-            style: AppTextStyles.labelMedium.copyWith(color: c.textPrimary)),
+        child: Text(
+          '${day.day}',
+          style: AppTextStyles.labelMedium.copyWith(color: c.textPrimary),
+        ),
       ),
     );
   }
 }
 
-class _MascotIcon extends StatelessWidget {
-  const _MascotIcon();
+class _MascotBubble extends StatelessWidget {
+  const _MascotBubble({required this.message});
+  final String message;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 32, height: 32,
-      decoration: const BoxDecoration(
-          color: AppColors.calendarPoint, shape: BoxShape.circle),
-      child: const Icon(Icons.sentiment_satisfied_alt_rounded,
-          color: Colors.white, size: 18),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Image.asset(
+          'assets/images/tamagochi_hanrabong.png',
+          width: 26,
+          height: 26,
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.bubbleBg,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(4),
+              topRight: Radius.circular(12),
+              bottomLeft: Radius.circular(12),
+              bottomRight: Radius.circular(12),
+            ),
+          ),
+          child: Text(
+            message,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.calendarDateText,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
-
 class _TabChip extends StatelessWidget {
   const _TabChip(
       {required this.label, required this.selected, required this.onTap});
@@ -858,11 +912,13 @@ class _TabChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
           color: selected ? AppColors.calendarPoint : c.surfaceAlt,
           borderRadius: BorderRadius.circular(20),
         ),
+        alignment: Alignment.center,
         child: Text(label,
             style: AppTextStyles.bodyMedium.copyWith(
                 color: selected ? Colors.white : c.textPrimary)),
@@ -880,8 +936,10 @@ class _PrevButton extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.loginBtnOff,
         foregroundColor: Colors.white,
-        elevation: 0, shadowColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(vertical: 14),
       ),
       child: Text('이전',
@@ -911,13 +969,18 @@ class _DateScrollPickerState extends State<_DateScrollPicker> {
   @override
   void initState() {
     super.initState();
-    _sel = widget.initialDate.difference(_origin).inDays
+    _sel = widget.initialDate
+        .difference(_origin)
+        .inDays
         .clamp(0, _totalDays - 1);
     _ctrl = FixedExtentScrollController(initialItem: _sel);
   }
 
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   DateTime _at(int i) => _origin.add(Duration(days: i));
   String _fmt(DateTime d) =>
@@ -944,7 +1007,9 @@ class _DateScrollPickerState extends State<_DateScrollPicker> {
             final s = i == _sel;
             return Center(
               child: Text(_fmt(_at(i)),
-                  style: (s ? AppTextStyles.bodyLarge : AppTextStyles.bodySmall)
+                  style: (s
+                      ? AppTextStyles.bodyLarge
+                      : AppTextStyles.bodySmall)
                       .copyWith(color: s ? c.textPrimary : c.textHint)),
             );
           },
