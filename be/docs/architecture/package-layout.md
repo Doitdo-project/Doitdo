@@ -92,6 +92,35 @@ global/
 4. `OpenApiConfig` 에 `GroupedOpenApi` 빈 추가 (`packagesToScan` = 새 도메인의 `api.controller`).
 5. ERD/매핑 표 갱신 — [`erd.md`](erd.md).
 
+## todo 도메인 추가 파일 (snooze 이력)
+
+| 종류 | 경로 | 비고 |
+|---|---|---|
+| Entity | `domain/todo/entity/SnoozeHistory.java` | `snooze_history` 테이블 매핑 |
+| Repository | `domain/todo/repository/SnoozeHistoryRepository.java` | `countByTodoId`, `countByTodoIdIn` + `SnoozeCountProjection` |
+
+`todos` 테이블 DDL 변경 없음. `snoozedDays` 는 COUNT 쿼리로 파생.
+
+## todo 도메인 추가 파일 (카테고리 목록 조회 — T13)
+
+| 종류 | 경로 | 비고 |
+|---|---|---|
+| Response DTO | `domain/todo/api/dto/resp/CategoryListResp.java` | `items[]` 래퍼, `CategoryResp::from` 스트림 |
+| Repository | `domain/todo/repository/CategoryRepository.java` | `findAllByUserIdOrderByCategoryIdAsc(Long userId)` 추가 |
+
+정렬 기준: `categoryId ASC` (JPA 메서드 네이밍 파생 쿼리).
+
+## todo 도메인 추가 파일 (calendar / recurring MVP)
+
+| 종류 | 경로 | 비고 |
+|---|---|---|
+| Request DTO | `domain/todo/api/dto/req/TodoCalendarReq.java` | `from/to/status/category/type` 캘린더 필터 |
+| Request DTO | `domain/todo/api/dto/req/TodoSnoozeReq.java` | RECURRING snooze `occurrenceDate` body |
+| Response DTO | `domain/todo/api/dto/resp/CalendarItemResp.java` | 실체/가상 캘린더 아이템 공통 응답 |
+| Response DTO | `domain/todo/api/dto/resp/TodoCalendarResp.java` | `items[]` 래퍼 |
+| Application util | `domain/todo/application/impl/CalendarOccurrenceGenerator.java` | RECURRING 마스터의 요청 기간 내 발생일 계산 |
+| Repository util | `domain/todo/repository/TodoSpecifications.java` | `overlappingRange(from, to)` 추가 |
+
 ## 네이밍/엔티티 규칙
 
 상세는 [`../conventions/naming.md`](../conventions/naming.md). 요약:

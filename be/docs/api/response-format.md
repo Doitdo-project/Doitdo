@@ -72,7 +72,65 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 
 (성공 응답에서는 `code` 키가 없다.)
 
-## 6. 관련 문서
+## 6. `TodoDetailResp` 필드 (참고)
+
+모든 TODO 단건/목록/검색 응답 공통 필드:
+
+| 필드 | 타입 | 비고 |
+|---|---|---|
+| `todoId` | `Long` | |
+| `title` | `String` | |
+| `content` | `String` | nullable |
+| `category` | `String` | 카테고리 이름, nullable |
+| `type` | `TodoType` | NORMAL / RECURRING / PERIOD |
+| `priority` | `Integer` | |
+| `startDate` | `LocalDate` | |
+| `endDate` | `LocalDate` | nullable |
+| `period` | `Integer` | nullable |
+| `status` | `TodoStatus` | TODO / IN_PROGRESS / DONE |
+| `updatedAt` | `LocalDateTime` | |
+| `snoozedDays` | `int` | 이 TODO 를 미룬 누적 횟수. `snooze_history` 테이블 COUNT 파생 (todos DDL 변경 없음) |
+
+`TodoListResp.items[]` 와 `TodoSearchResp.items[]` 도 동일한 `TodoDetailResp` 구조를 사용한다.
+
+## 7. `TodoCalendarResp` 필드
+
+`GET /api/todos/calendar` 응답:
+
+```json
+{
+  "items": [
+    {
+      "todoId": 12,
+      "masterTodoId": 3,
+      "occurrenceDate": "2026-04-23",
+      "isVirtual": false
+    }
+  ]
+}
+```
+
+`CalendarItemResp` 필드:
+
+| 필드 | 타입 | 비고 |
+|---|---|---|
+| `todoId` | `Long` | 실체 TODO ID. 가상 인스턴스는 `null` |
+| `masterTodoId` | `Long` | RECURRING 마스터 ID. 일반 NORMAL/PERIOD 는 `null` |
+| `occurrenceDate` | `LocalDate` | RECURRING 발생일. 일반 NORMAL/PERIOD 는 `null` |
+| `isVirtual` | `boolean` | DB row 없는 가상 인스턴스 여부 |
+| `title` | `String` | |
+| `content` | `String` | nullable |
+| `category` | `String` | 카테고리 이름, nullable |
+| `type` | `TodoType` | NORMAL / RECURRING / PERIOD |
+| `priority` | `Integer` | |
+| `startDate` | `LocalDate` | 가상 인스턴스는 occurrenceDate 와 동일 |
+| `endDate` | `LocalDate` | nullable |
+| `period` | `Integer` | nullable. RECURRING 는 마스터 주기 |
+| `status` | `TodoStatus` | 가상 인스턴스는 항상 `TODO` |
+| `updatedAt` | `LocalDateTime` | 가상 인스턴스는 마스터 `updatedAt` |
+| `snoozedDays` | `int` | 가상 인스턴스는 `0` |
+
+## 8. 관련 문서
 
 - 에러 코드 정의/네이밍: [`error-codes.md`](error-codes.md)
 - Swagger 문서화: [`swagger.md`](swagger.md)

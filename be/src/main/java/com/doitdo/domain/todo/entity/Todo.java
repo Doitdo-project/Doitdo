@@ -32,8 +32,8 @@ public class Todo extends BaseTimeEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	@Column(name = "tool_id")
-	private Long toolId;
+	@Column(name = "todo_id")
+	private Long todoId;
 
 	@Column(name = "user_id", nullable = false)
 	private Long userId;
@@ -71,4 +71,83 @@ public class Todo extends BaseTimeEntity {
 
 	@Column(name = "is_deleted", nullable = false)
 	private Boolean isDeleted;
+
+	public void softDelete() {
+		this.isDeleted = true;
+	}
+
+	public void changeStatus(TodoStatus status) {
+		this.status = status;
+	}
+
+	public void changePriority(Integer priority) {
+		this.priority = priority;
+	}
+
+	public void snooze() {
+		this.startDate = this.startDate.plusDays(1);
+		if (this.endDate != null) {
+			this.endDate = this.endDate.plusDays(1);
+		}
+	}
+
+	public void update(
+			String title,
+			String content,
+			Long categoryId,
+			TodoType type,
+			LocalDate startDate,
+			LocalDate endDate,
+			Integer period) {
+		if (title != null) this.title = title;
+		if (content != null) this.content = content;
+		if (categoryId != null) this.categoryId = categoryId;
+		if (type != null) this.type = type;
+		if (startDate != null) this.startDate = startDate;
+		if (endDate != null) this.endDate = endDate;
+		if (period != null) this.period = period;
+	}
+
+	public static Todo create(
+			Long userId,
+			Long categoryId,
+			String title,
+			String content,
+			TodoType type,
+			Integer priority,
+			LocalDate startDate,
+			LocalDate endDate,
+			Integer period) {
+		return Todo.builder()
+				.userId(userId)
+				.categoryId(categoryId)
+				.title(title)
+				.content(content)
+				.type(type)
+				.status(TodoStatus.TODO)
+				.priority(priority)
+				.alertTime(null)
+				.startDate(startDate)
+				.endDate(endDate)
+				.period(period)
+				.isDeleted(false)
+				.build();
+	}
+
+	public static Todo createRecurringInstance(Todo master, LocalDate occurrenceDate) {
+		return Todo.builder()
+				.userId(master.getUserId())
+				.categoryId(master.getCategoryId())
+				.title(master.getTitle())
+				.content(master.getContent())
+				.type(TodoType.NORMAL)
+				.status(TodoStatus.TODO)
+				.priority(master.getPriority())
+				.alertTime(master.getAlertTime())
+				.startDate(occurrenceDate)
+				.endDate(null)
+				.period(null)
+				.isDeleted(false)
+				.build();
+	}
 }

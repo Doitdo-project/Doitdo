@@ -3,6 +3,7 @@ package com.doitdo.global.exception;
 import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -34,6 +35,15 @@ public class GlobalExceptionHandler {
 		return ResponseEntity
 			.status(CommonErrorCode.VALIDATION_FAILED.getHttpStatus())
 			.body(GlobalApiResponse.fail(CommonErrorCode.VALIDATION_FAILED, message));
+	}
+
+	@ExceptionHandler(HttpMessageNotReadableException.class)
+	public ResponseEntity<GlobalApiResponse<Void>> handleHttpMessageNotReadable(
+			HttpMessageNotReadableException e) {
+		return ResponseEntity
+			.status(CommonErrorCode.VALIDATION_FAILED.getHttpStatus())
+			.body(GlobalApiResponse.fail(CommonErrorCode.VALIDATION_FAILED,
+				"요청 본문 형식이 올바르지 않습니다: " + e.getMostSpecificCause().getMessage()));
 	}
 
 	@ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
