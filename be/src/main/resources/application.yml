@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: doitdo
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: ${jpa.ddl.auto:update}
+    show-sql: true
+    properties:
+      hibernate:
+        "[format_sql]": true
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+jwt:
+  secret: local-dev-jwt-secret-do-not-use-in-production-must-be-long-enough-for-hmac-sha-256
+  access-token-expiration: 1800000
+  refresh-token-expiration: 1209600000
