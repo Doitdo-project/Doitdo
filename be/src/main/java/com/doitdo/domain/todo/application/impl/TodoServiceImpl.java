@@ -1,10 +1,12 @@
 package com.doitdo.domain.todo.application.impl;
 
 import com.doitdo.domain.todo.api.dto.req.TodoCreateReq;
+import com.doitdo.domain.todo.api.dto.req.TodoListReq;
 import com.doitdo.domain.todo.api.dto.req.TodoPriorityChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoStatusChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
+import com.doitdo.domain.todo.api.dto.resp.TodoListResp;
 import com.doitdo.domain.todo.application.TodoService;
 import com.doitdo.domain.todo.entity.Category;
 import com.doitdo.domain.todo.entity.Todo;
@@ -12,9 +14,18 @@ import com.doitdo.domain.todo.entity.Todo.TodoStatus;
 import com.doitdo.domain.todo.entity.Todo.TodoType;
 import com.doitdo.domain.todo.repository.CategoryRepository;
 import com.doitdo.domain.todo.repository.TodoRepository;
+import com.doitdo.domain.todo.repository.TodoSpecifications;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TodoErrorCode;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -25,6 +36,62 @@ public class TodoServiceImpl implements TodoService {
 
 	private final TodoRepository todoRepository;
 	private final CategoryRepository categoryRepository;
+
+	@Override
+	@Transactional(readOnly = true)
+	public TodoListResp list(Long userId, TodoListReq req) {
+		// 카테고리 이름 필터: 이름으로 Category 조회, 없으면 빈 결과 반환
+		Long categoryId = null;
+		if (StringUtils.hasText(req.category())) {
+			Optional<Category> categoryOpt =
+					categoryRepository.findByCategoryNameAndUserId(req.category(), userId);
+			if (categoryOpt.isEmpty()) {
+				return new TodoListResp(List.of());
+			}
+			categoryId = categoryOpt.get().getCategoryId();
+		}
+
+		// 기준일: date 파라미터가 있으면 그 날짜, 없으면 오늘
+		LocalDate baseDate = req.date() != null ? req.date() : LocalDate.now();
+
+		// Specification 조합
+		Specification<Todo> spec = TodoSpecifications.ownerAndActive(userId)
+				.and(TodoSpecifications.byView(req.view(), baseDate))
+				.and(TodoSpecifications.byStatus(req.status()))
+				.and(TodoSpecifications.byCategoryId(categoryId))
+				.and(TodoSpecifications.byType(req.type()))
+				.and(TodoSpecifications.byKeyword(req.q()));
+
+		// Sort 결정
+		Sort sort = resolveSort(req.sort());
+
+		// TODO: RECURRING 가상 인스턴스 미지원 — T08 캘린더 설계와 함께 도입 예정
+		List<Todo> todos = todoRepository.findAll(spec, sort);
+
+		// 카테고리 벌크 조회 (N+1 방지)
+		Set<Long> categoryIds = todos.stream()
+				.map(Todo::getCategoryId)
+				.filter(id -> id != null)
+				.collect(Collectors.toSet());
+
+		Map<Long, String> categoryNameById = categoryIds.isEmpty()
+				? Map.of()
+				: categoryRepository.findAllById(categoryIds).stream()
+						.collect(Collectors.toMap(Category::getCategoryId, Category::getCategoryName));
+
+		return TodoListResp.of(todos, categoryNameById);
+	}
+
+	private Sort resolveSort(String sortParam) {
+		if (sortParam == null) {
+			return Sort.by("startDate").ascending().and(Sort.by("todoId").ascending());
+		}
+		return switch (sortParam.toLowerCase()) {
+			case "category" -> Sort.by("categoryId").ascending().and(Sort.by("startDate").ascending());
+			case "priority" -> Sort.by("priority").descending().and(Sort.by("startDate").ascending());
+			default -> Sort.by("startDate").ascending().and(Sort.by("todoId").ascending());
+		};
+	}
 
 	@Override
 	@Transactional(readOnly = true)
