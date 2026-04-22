@@ -8,6 +8,7 @@ import 'package:doitdo/app.dart';
 import 'package:doitdo/core/utils/app_env.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
 
+import 'package:intl/date_symbol_data_local.dart';
 // NOTE: Firebase/FCM 초기화는 UI 작업이 끝나고 FCM 연동 단계에서 활성화한다.
 // 활성화 방법:
 //   1) `dart pub global activate flutterfire_cli`
@@ -24,6 +25,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await AppEnv.load();
+  await initializeDateFormatting('ko_KR', null);
 
   // Kakao SDK 는 앱 기동 시 한 번만 초기화해야 한다.
   // 네이티브 앱 키가 비어있으면 init 을 건너뛴다 — 개발자가 .env 설정 전에도 앱이 기동되도록.
