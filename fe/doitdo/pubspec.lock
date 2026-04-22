@@ -852,10 +852,10 @@ packages:
     dependency: transitive
     description:
       name: matcher
-      sha256: "12956d0ad8390bbcc63ca2e1469c0619946ccb52809807067a7020d57e647aa6"
+      sha256: dc0b7dc7651697ea4ff3e69ef44b0407ea32c487a39fff6a4004fa585e901861
       url: "https://pub.dev"
     source: hosted
-    version: "0.12.18"
+    version: "0.12.19"
   material_color_utilities:
     dependency: transitive
     description:
@@ -1044,10 +1044,10 @@ packages:
     dependency: "direct main"
     description:
       name: retrofit
-      sha256: "0f629ed26b2c48c66fe54bd548313c6fdf7955be18bff37e08a46dd3f97f8eaf"
+      sha256: "7d78824afa6eeeaf6ac58220910ee7a97597b39e93360d4bda230b7c6df45089"
       url: "https://pub.dev"
     source: hosted
-    version: "4.9.2"
+    version: "4.9.0"
   retrofit_generator:
     dependency: "direct dev"
     description:
@@ -1265,10 +1265,10 @@ packages:
     dependency: transitive
     description:
       name: test_api
-      sha256: "93167629bfc610f71560ab9312acdda4959de4df6fac7492c89ff0d3886f6636"
+      sha256: "8161c84903fd860b26bfdefb7963b3f0b68fee7adea0f59ef805ecca346f0c7a"
       url: "https://pub.dev"
     source: hosted
-    version: "0.7.9"
+    version: "0.7.10"
   timezone:
     dependency: transitive
     description:

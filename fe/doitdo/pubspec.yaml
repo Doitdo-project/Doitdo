@@ -24,7 +24,7 @@ dependencies:
 
   # 네트워킹
   dio: ^5.7.0
-  retrofit: ^4.9.0
+  retrofit: 4.9.0
 
   # 푸시 알림
   firebase_core: ^4.1.1
