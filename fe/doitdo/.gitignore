@@ -52,6 +52,9 @@ app.*.map.json
 # 빌드 키
 android/key.properties
 *.jks
+# 공용 debug keystore — git 에 올리지 않고 Slack/Notion 으로 팀 공유.
+# 팀원은 받은 파일을 android/keystore/debug.keystore 에 배치해야 빌드 가능.
+android/keystore/
 
 # Claude Code
 .claude/
