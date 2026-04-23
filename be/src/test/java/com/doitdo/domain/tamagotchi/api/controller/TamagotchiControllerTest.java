@@ -41,7 +41,15 @@ class TamagotchiControllerTest {
 			.streakCount(0)
 			.isDeleted(false)
 			.build());
-		CurrentCharacterResp serviceResp = new CurrentCharacterResp(1L, null, "EGG", 0, null, 10L);
+		CurrentCharacterResp serviceResp = new CurrentCharacterResp(
+			1L,
+			null,
+			"EGG",
+			"https://cdn.example.com/egg.png",
+			0,
+			null,
+			10L
+		);
 
 		given(tamagotchiService.receiveEgg(1L)).willReturn(serviceResp);
 

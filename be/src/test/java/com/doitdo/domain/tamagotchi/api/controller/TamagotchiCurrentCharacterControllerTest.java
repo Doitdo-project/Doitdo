@@ -31,7 +31,15 @@ class TamagotchiCurrentCharacterControllerTest {
 			.streakCount(0)
 			.isDeleted(false)
 			.build());
-		CurrentCharacterResp serviceResp = new CurrentCharacterResp(2L, "새싹이", "BABY", 45, 42L, 10L);
+		CurrentCharacterResp serviceResp = new CurrentCharacterResp(
+			2L,
+			"saesangi",
+			"BABY",
+			"https://cdn.example.com/slime.png",
+			45,
+			42L,
+			10L
+		);
 
 		given(tamagotchiService.getCurrentCharacter(1L)).willReturn(serviceResp);
 
