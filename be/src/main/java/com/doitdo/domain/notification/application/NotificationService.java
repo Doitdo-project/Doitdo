@@ -3,6 +3,7 @@ package com.doitdo.domain.notification.application;
 import com.doitdo.domain.notification.api.dto.resp.NotificationListResp;
 import com.doitdo.domain.notification.api.dto.resp.NotificationReadAllResp;
 import com.doitdo.domain.notification.api.dto.resp.NotificationReadResp;
+import java.time.LocalTime;
 
 public interface NotificationService {
 
@@ -13,4 +14,6 @@ public interface NotificationService {
 	NotificationReadAllResp readAll(Long userId);
 
 	void delete(Long userId, Long notificationId);
+
+	void sendEveningReminder(Long userId, int pendingCount, LocalTime now);
 }
