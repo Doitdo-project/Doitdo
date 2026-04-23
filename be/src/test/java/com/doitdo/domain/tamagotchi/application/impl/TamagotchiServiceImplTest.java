@@ -2,6 +2,7 @@ package com.doitdo.domain.tamagotchi.application.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.never;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,6 +28,8 @@ import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
+import com.doitdo.domain.user.entity.User;
+import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TamagotchiErrorCode;
 
@@ -42,14 +45,30 @@ class TamagotchiServiceImplTest {
 	@Mock
 	private UserCharacterRepository userCharacterRepository;
 
-	@Test
-	void receiveEggCreatesFirstEggWhenUserHasNoActiveCharacter() {
-		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
+	@Mock
+	private UserRepository userRepository;
+
+	private TamagotchiServiceImpl service() {
+		return new TamagotchiServiceImpl(
 			characterRepository,
 			characterUnlockRepository,
-			userCharacterRepository
+			userCharacterRepository,
+			userRepository
 		);
+	}
+
+	@Test
+	void receiveEggCreatesFirstEggWhenUserHasNoActiveCharacter() {
+		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
+		User user = User.builder()
+			.userId(userId)
+			.email("user@example.com")
+			.username("user")
+			.password("password")
+			.streakCount(0)
+			.isDeleted(false)
+			.build();
 		Character eggCharacter = Character.builder()
 			.characterId(1L)
 			.species("SLIME")
@@ -65,6 +84,7 @@ class TamagotchiServiceImplTest {
 			.isDeleted(false)
 			.build();
 
+		given(userRepository.findByIdForUpdate(userId)).willReturn(Optional.of(user));
 		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
 			.willReturn(Optional.empty());
 		given(characterRepository.findFirstByStageOrderByCharacterIdAsc(Character.Stage.EGG))
@@ -82,12 +102,49 @@ class TamagotchiServiceImplTest {
 	}
 
 	@Test
+	void receiveEggReturnsCurrentCharacterWithoutSavingWhenActiveCharacterExists() {
+		TamagotchiServiceImpl service = service();
+		Long userId = 1L;
+		User user = User.builder()
+			.userId(userId)
+			.email("user@example.com")
+			.username("user")
+			.password("password")
+			.streakCount(0)
+			.isDeleted(false)
+			.build();
+		UserCharacter userCharacter = UserCharacter.builder()
+			.userCharacterId(10L)
+			.userId(userId)
+			.characterId(2L)
+			.name("rabi")
+			.growthPercent(20)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+		Character babyCharacter = Character.builder()
+			.characterId(2L)
+			.species("SLIME")
+			.stage(Character.Stage.BABY)
+			.thumbnailUrl("https://cdn.example.com/slime.png")
+			.build();
+
+		given(userRepository.findByIdForUpdate(userId)).willReturn(Optional.of(user));
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(userCharacter));
+		given(characterRepository.findById(2L)).willReturn(Optional.of(babyCharacter));
+
+		CurrentCharacterResp resp = service.receiveEgg(userId);
+
+		assertThat(resp.userCharacterId()).isEqualTo(10L);
+		assertThat(resp.characterId()).isEqualTo(2L);
+		assertThat(resp.stage()).isEqualTo("BABY");
+		then(userCharacterRepository).should(never()).save(any(UserCharacter.class));
+	}
+
+	@Test
 	void updateNameChangesCurrentUserCharacterName() {
-		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
-			characterRepository,
-			characterUnlockRepository,
-			userCharacterRepository
-		);
+		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
 		UserCharacter userCharacter = UserCharacter.builder()
 			.userCharacterId(10L)
@@ -111,11 +168,7 @@ class TamagotchiServiceImplTest {
 
 	@Test
 	void updateNameRejectsBlankName() {
-		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
-			characterRepository,
-			characterUnlockRepository,
-			userCharacterRepository
-		);
+		TamagotchiServiceImpl service = service();
 
 		assertThatThrownBy(() -> service.updateName(1L, " "))
 			.isInstanceOf(CustomException.class)
@@ -128,11 +181,7 @@ class TamagotchiServiceImplTest {
 
 	@Test
 	void getEncyclopediaReturnsAllCharactersWithUnlockedStatus() {
-		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
-			characterRepository,
-			characterUnlockRepository,
-			userCharacterRepository
-		);
+		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
 
 		Character slime = Character.builder()
@@ -169,17 +218,13 @@ class TamagotchiServiceImplTest {
 
 	@Test
 	void hatchUpdatesEggToBabyAndReturnsCurrentCharacter() {
-		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
-			characterRepository,
-			characterUnlockRepository,
-			userCharacterRepository
-		);
+		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
 		UserCharacter eggUserCharacter = UserCharacter.builder()
 			.userCharacterId(10L)
 			.userId(userId)
 			.characterId(1L)
-			.name("꼬물이")
+			.name("꼬물??)
 			.growthPercent(0)
 			.isActive(true)
 			.isDeleted(false)
@@ -207,16 +252,12 @@ class TamagotchiServiceImplTest {
 
 		assertThat(resp.characterId()).isEqualTo(2L);
 		assertThat(resp.stage()).isEqualTo("BABY");
-		assertThat(resp.name()).isEqualTo("꼬물이");
+		assertThat(resp.name()).isEqualTo("꼬물??);
 	}
 
 	@Test
 	void hatchRejectsNonEggCharacter() {
-		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
-			characterRepository,
-			characterUnlockRepository,
-			userCharacterRepository
-		);
+		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
 		UserCharacter userCharacter = UserCharacter.builder()
 			.userCharacterId(10L)
@@ -249,11 +290,7 @@ class TamagotchiServiceImplTest {
 
 	@Test
 	void hatchFailsWhenBabyCharacterIsMissing() {
-		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
-			characterRepository,
-			characterUnlockRepository,
-			userCharacterRepository
-		);
+		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
 		UserCharacter eggUserCharacter = UserCharacter.builder()
 			.userCharacterId(10L)
@@ -288,17 +325,13 @@ class TamagotchiServiceImplTest {
 
 	@Test
 	void evolveUpdatesBabyToTeenAndReturnsEvolutionResp() {
-		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
-			characterRepository,
-			characterUnlockRepository,
-			userCharacterRepository
-		);
+		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
 		UserCharacter userCharacter = UserCharacter.builder()
 			.userCharacterId(20L)
 			.userId(userId)
 			.characterId(2L)
-			.name("꼬물이")
+			.name("꼬물??)
 			.growthPercent(120)
 			.isActive(true)
 			.isDeleted(false)
@@ -336,17 +369,13 @@ class TamagotchiServiceImplTest {
 
 	@Test
 	void approveIndependenceUpdatesAdultToEggAndReturnsFarewellResp() {
-		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
-			characterRepository,
-			characterUnlockRepository,
-			userCharacterRepository
-		);
+		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
 		UserCharacter adultUserCharacter = UserCharacter.builder()
 			.userCharacterId(30L)
 			.userId(userId)
 			.characterId(4L)
-			.name("꼬물이")
+			.name("꼬물??)
 			.growthPercent(0)
 			.isActive(true)
 			.isDeleted(false)
@@ -380,11 +409,7 @@ class TamagotchiServiceImplTest {
 
 	@Test
 	void approveIndependenceRejectsAlreadyIndependentEggCharacter() {
-		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
-			characterRepository,
-			characterUnlockRepository,
-			userCharacterRepository
-		);
+		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
 		UserCharacter eggUserCharacter = UserCharacter.builder()
 			.userCharacterId(30L)
@@ -417,11 +442,7 @@ class TamagotchiServiceImplTest {
 
 	@Test
 	void approveIndependenceRejectsNonAdultCharacter() {
-		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
-			characterRepository,
-			characterUnlockRepository,
-			userCharacterRepository
-		);
+		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
 		UserCharacter teenUserCharacter = UserCharacter.builder()
 			.userCharacterId(30L)

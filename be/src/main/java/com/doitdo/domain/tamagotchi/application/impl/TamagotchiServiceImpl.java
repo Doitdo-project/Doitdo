@@ -20,6 +20,7 @@ import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
+import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TamagotchiErrorCode;
 
@@ -32,10 +33,14 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 	private final CharacterRepository characterRepository;
 	private final CharacterUnlockRepository characterUnlockRepository;
 	private final UserCharacterRepository userCharacterRepository;
+	private final UserRepository userRepository;
 
 	@Override
 	@Transactional
 	public CurrentCharacterResp receiveEgg(Long userId) {
+		userRepository.findByIdForUpdate(userId)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
+
 		Optional<UserCharacter> currentUserCharacter = userCharacterRepository
 			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId);
 
