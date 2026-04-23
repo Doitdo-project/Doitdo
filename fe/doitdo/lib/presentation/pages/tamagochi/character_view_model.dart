@@ -1,0 +1,80 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:doitdo/core/errors/exceptions.dart';
+import 'package:doitdo/core/utils/app_logger.dart';
+import 'package:doitdo/domain/entities/character.dart';
+import 'package:doitdo/domain/repositories/character_repository.dart';
+import 'package:doitdo/presentation/providers/app_data_providers.dart';
+
+/// 현재 사용자의 캐릭터 상태.
+///
+/// `AsyncValue<Character?>` 로 표현:
+/// - `loading`: 조회 중
+/// - `data(null)`: 아직 알을 수령하지 않음 → UI 에서 "알 받기" CTA 노출
+/// - `data(Character)`: 수령 완료 (알/부화 여부는 `character.isEgg`)
+/// - `error`: 복구 불가능한 네트워크/서버 오류 (재시도 UX 대상)
+class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
+  CharacterViewModel(this._repository) : super(const AsyncValue.loading());
+
+  final CharacterRepository _repository;
+
+  /// 현재 캐릭터 조회.
+  ///
+  /// 서버가 "미수령" 상태를 어떤 에러 코드로 내려줄지 명세가 확정되지 않아,
+  /// 여기서는 [ServerException] 전체를 "미수령" 으로 해석한다. 추후 404 코드가
+  /// 확정되면 `e.statusCode == 404` 만 미수령으로 좁히는 게 바람직하다.
+  /// [UnauthorizedException] / 네트워크 타임아웃 등은 진짜 에러로 올린다.
+  Future<void> load() async {
+    state = const AsyncValue.loading();
+    try {
+      final character = await _repository.getMyCharacter();
+      state = AsyncValue.data(character);
+    } on ServerException catch (e) {
+      appLogger.d('character not yet received (server ${e.statusCode})');
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  /// 알 1회 수령. 완료 후 state 는 data(character) 로 전환된다.
+  Future<void> receiveEgg() async {
+    state = const AsyncValue.loading();
+    try {
+      final character = await _repository.receiveEgg();
+      state = AsyncValue.data(character);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  /// 로그인 직후 호출. GET → 미수령이면 POST 로 자동 수령.
+  /// 이미 받은 사용자든 신규든 한 번 부르면 캐릭터가 채워진 상태가 된다.
+  Future<void> ensureCharacter() async {
+    await load();
+    final current = state;
+    final hasNoCharacter =
+        current is AsyncData<Character?> && current.value == null;
+    if (hasNoCharacter) {
+      await receiveEgg();
+    }
+  }
+
+  /// 알 10회 탭 후 호출. 성공하면 true, 실패해도 이전 상태(알)는 유지한다.
+  /// 에러 스낵바는 호출자가 띄운다.
+  Future<bool> hatchEgg() async {
+    try {
+      final character = await _repository.hatchEgg();
+      state = AsyncValue.data(character);
+      return true;
+    } catch (e, st) {
+      appLogger.e('hatch failed', error: e, stackTrace: st);
+      return false;
+    }
+  }
+}
+
+final characterViewModelProvider =
+    StateNotifierProvider<CharacterViewModel, AsyncValue<Character?>>(
+  (ref) => CharacterViewModel(ref.watch(characterRepositoryProvider)),
+);
