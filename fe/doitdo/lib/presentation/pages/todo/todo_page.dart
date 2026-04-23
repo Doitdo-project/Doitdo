@@ -26,14 +26,17 @@ class _TodoPageState extends ConsumerState<TodoPage> {
     Future.microtask(() => ref.read(todoViewModelProvider.notifier).loadDummyTodos());
   }
 
+  /// 캘린더 날짜 아래 점(marker) 색.
+  /// 배경용 파스텔(category1~5) 은 점 크기(5x5) 에선 거의 안 보여서,
+  /// 강조 팔레트(categoryDot1~5) 를 사용.
   static Color _dotColor(CategoryColorKey key) {
     switch (key) {
-      case CategoryColorKey.study:    return AppColors.category1;
-      case CategoryColorKey.exercise: return AppColors.category2;
-      case CategoryColorKey.work:     return AppColors.category3;
-      case CategoryColorKey.health:   return AppColors.category4;
-      case CategoryColorKey.hobby:    return AppColors.category5;
-      case CategoryColorKey.etc:      return AppColors.chipUnselectedBg;
+      case CategoryColorKey.study:    return AppColors.categoryDot1;
+      case CategoryColorKey.exercise: return AppColors.categoryDot2;
+      case CategoryColorKey.work:     return AppColors.categoryDot3;
+      case CategoryColorKey.health:   return AppColors.categoryDot4;
+      case CategoryColorKey.hobby:    return AppColors.categoryDot5;
+      case CategoryColorKey.etc:      return AppColors.textLowIntensity;
     }
   }
 
@@ -154,13 +157,14 @@ class _TodoPageState extends ConsumerState<TodoPage> {
           GestureDetector(
             onVerticalDragEnd: _onCalendarSwipe,
             child: Padding(
-              // ✅ 수정 포인트 1: 캘린더 전체 여백은 원래대로 복구
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              // 페이지 좌우 여백 24px — 홈/설정 탭과 통일 (가이드 §4 DoitdoPaddingLayout 기준).
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
                   Padding(
-                    // ✅ 수정 포인트 2: 헤더 부분에만 왼쪽 여백(left: 12)을 주어 요일('일')과 라인을 맞춥니다.
-                    padding: const EdgeInsets.only(left: 12, top: 12, bottom: 12),
+                    // 헤더 왼쪽 여백(12) 은 아래 TableCalendar 의 요일('일') 컬럼과 라인을 맞추기 위함.
+                    // 아래 여백(20) 은 "4월" 타이틀과 요일 헤더 사이에 숨 쉬는 공간 확보.
+                    padding: const EdgeInsets.only(left: 12, top: 12, bottom: 20),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -169,7 +173,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                           children: [
                             Text('${state.focusedDay.month}월',
                                 style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary)),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 12),
                             GestureDetector(
                               onTap: () => _showFormatDropdown(context, state.calendarFormat),
                               behavior: HitTestBehavior.opaque,
@@ -178,7 +182,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                                 decoration: BoxDecoration(
                                   color: colors.surface,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: colors.border),
+                                  // 시안: 테두리 없음 — 탭 가능 표시는 dropdown 아이콘으로 충분.
                                 ),
                                 child: Row(
                                   children: [
@@ -217,6 +221,8 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                     locale: 'ko_KR',
                     eventLoader: (day) => state.allTodos.where((t) => t.date != null && isSameDay(t.date!, day)).toList(),
                     rowHeight: 52,
+                    // 요일 헤더 ↔ 첫 날짜 행 간격을 날짜 행 간격(rowHeight 기반) 과 맞춤.
+                    daysOfWeekHeight: 40,
                     daysOfWeekStyle: DaysOfWeekStyle(
                       dowTextFormatter: (date, locale) {
                         const days = ['일', '월', '화', '수', '목', '금', '토'];
@@ -234,7 +240,9 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                       defaultTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textPrimary),
                       weekendTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textPrimary),
                       outsideTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textHint),
-                      cellMargin: EdgeInsets.zero,
+                      // cellMargin 을 넉넉히 줘서 원형 decoration 이 숫자를 감쌀 정도 크기로만 렌더.
+                      // (0 이면 셀 전체를 덮어 과도하게 큰 원이 됨)
+                      cellMargin: const EdgeInsets.all(10),
                     ),
                     calendarBuilders: CalendarBuilders(
                       markerBuilder: (context, day, events) {
@@ -272,11 +280,12 @@ class _TodoPageState extends ConsumerState<TodoPage> {
           ),
 
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            // 마스코트 말풍선 위아래로 숨 쉬는 공간 — 캘린더/할 일 섹션과 시각적 분리.
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Image.asset('assets/images/tama_hanrabong.png', width: 26, height: 26),
+                Image.asset('assets/images/Dooit.png', width: 26, height: 26),
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -299,7 +308,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
           Expanded(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+              padding: const EdgeInsets.fromLTRB(24, 4, 24, 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -334,3 +343,4 @@ class _TodoPageState extends ConsumerState<TodoPage> {
     );
   }
 }
+
