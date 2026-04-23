@@ -27,6 +27,7 @@ import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,16 +64,16 @@ public class OAuthServiceImpl implements OAuthService {
 		String providerName = OAuthProvider.KAKAO.name();
 		String providerUid = String.valueOf(kakaoUser.id());
 
-		Optional<AutoProvider> existing = autoProviderRepository
-				.findByProviderAndProviderUid(providerName, providerUid);
-
-		if (existing.isPresent()) {
-			User user = userRepository.findById(existing.get().getUserId())
-					.orElseThrow(() -> new CustomException(AuthErrorCode.A03_004));
-			return issueTokens(user, false);
+		Optional<User> existingUser = findUserByProvider(providerName, providerUid);
+		if (existingUser.isPresent()) {
+			return issueTokens(existingUser.get(), false);
 		}
 
-		return signupWithKakao(kakaoUser, providerName, providerUid);
+		try {
+			return signupWithKakao(kakaoUser, providerName, providerUid);
+		} catch (DataIntegrityViolationException e) {
+			return recoverFromRace(providerName, providerUid);
+		}
 	}
 
 	private OAuthLoginResp signupWithKakao(KakaoUserResp kakaoUser, String providerName, String providerUid) {
@@ -102,16 +103,16 @@ public class OAuthServiceImpl implements OAuthService {
 		String providerName = OAuthProvider.GOOGLE.name();
 		String providerUid = googleUser.sub();
 
-		Optional<AutoProvider> existing = autoProviderRepository
-				.findByProviderAndProviderUid(providerName, providerUid);
-
-		if (existing.isPresent()) {
-			User user = userRepository.findById(existing.get().getUserId())
-					.orElseThrow(() -> new CustomException(AuthErrorCode.A03_004));
-			return issueTokens(user, false);
+		Optional<User> existingUser = findUserByProvider(providerName, providerUid);
+		if (existingUser.isPresent()) {
+			return issueTokens(existingUser.get(), false);
 		}
 
-		return signupWithGoogle(googleUser, providerName, providerUid);
+		try {
+			return signupWithGoogle(googleUser, providerName, providerUid);
+		} catch (DataIntegrityViolationException e) {
+			return recoverFromRace(providerName, providerUid);
+		}
 	}
 
 	private OAuthLoginResp signupWithGoogle(GoogleUserInfo googleUser, String providerName, String providerUid) {
@@ -152,6 +153,33 @@ public class OAuthServiceImpl implements OAuthService {
 			}
 		}
 		throw new CustomException(AuthErrorCode.A03_004, "고유한 username 생성에 실패했습니다.");
+	}
+
+	/**
+	 * provider + providerUid 로 기존 user 를 조회.
+	 *
+	 * <p>{@code findAllBy...} 를 사용해 DB 에 이미 중복 row 가 남아 있어도
+	 * {@code NonUniqueResultException} 을 던지지 않고 첫 번째 winner 를 선택한다.
+	 */
+	private Optional<User> findUserByProvider(String providerName, String providerUid) {
+		return autoProviderRepository
+				.findAllByProviderAndProviderUid(providerName, providerUid)
+				.stream()
+				.findFirst()
+				.map(ap -> userRepository.findById(ap.getUserId())
+						.orElseThrow(() -> new CustomException(AuthErrorCode.A03_004)));
+	}
+
+	/**
+	 * 신규 가입 경로에서 DB UNIQUE 제약 위반이 발생한 경우 복구 처리.
+	 *
+	 * <p>동시 요청 race condition 의 winner row 가 존재하면 해당 user 로 기존 로그인 처리.
+	 * winner 가 없으면(= 진짜 다른 provider 로 이미 가입된 이메일) A03_003 를 그대로 던진다.
+	 */
+	private OAuthLoginResp recoverFromRace(String providerName, String providerUid) {
+		User user = findUserByProvider(providerName, providerUid)
+				.orElseThrow(() -> new CustomException(AuthErrorCode.A03_003));
+		return issueTokens(user, false);
 	}
 
 	private OAuthLoginResp issueTokens(User user, boolean isNewUser) {
