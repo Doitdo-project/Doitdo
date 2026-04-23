@@ -7,8 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
+import 'package:doitdo/core/errors/exceptions.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
+import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/auth/welcome_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/character_view_model.dart';
@@ -23,6 +25,32 @@ class WelcomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
+
+    // AsyncNotifier 상태 변화 감지 — 성공 시 페이지 이동, 에러 시 스낵바.
+    // AuthCanceledException 은 "사용자가 직접 취소" 이므로 메시지 노출 생략.
+    ref.listen<AsyncValue<WelcomeSuccess?>>(welcomeViewModelProvider,
+        (prev, next) {
+      next.whenOrNull(
+        data: (success) {
+          if (success == null) return;
+          if (!context.mounted) return;
+          // 신규 가입자면 알 수령, 기존 유저면 현재 캐릭터 프리로드. 실패해도 홈
+          // 진입 자체는 막지 않는다 (홈 initState 에서 재시도 load() 가 돈다).
+          // TODO: success.isNewUser == true 면 추후 온보딩 라우트로 분기 가능.
+          unawaited(
+            ref.read(characterViewModelProvider.notifier).ensureCharacter(),
+          );
+          context.go(AppRoutes.tamagochi);
+        },
+        error: (error, _) {
+          if (error is AuthCanceledException) return;
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(mapErrorMessage(error))),
+          );
+        },
+      );
+    });
 
     return Scaffold(
       body: Stack(
@@ -96,7 +124,9 @@ class WelcomePage extends ConsumerWidget {
                               color: Color(0xDD000000),
                               letterSpacing: 0.25,
                             ),
-                            onPressed: () => _handleGoogleSignIn(context, ref),
+                            onPressed: () => ref
+                                .read(welcomeViewModelProvider.notifier)
+                                .signInWithGoogle(),
                           ),
                           const SizedBox(height: 10),
                           // Kakao 로그인 — 공식 버튼 이미지(kakao_login_medium_wide.png) 사용.
@@ -114,7 +144,9 @@ class WelcomePage extends ConsumerWidget {
                                 ),
                                 fit: BoxFit.fill,
                                 child: InkWell(
-                                  onTap: () => _handleKakaoSignIn(context, ref),
+                                  onTap: () => ref
+                                      .read(welcomeViewModelProvider.notifier)
+                                      .signInWithKakao(),
                                   splashColor: Colors.black.withOpacity(0.12),
                                   highlightColor: Colors.black.withOpacity(0.06),
                                   child: const SizedBox.expand(),
@@ -151,51 +183,6 @@ class WelcomePage extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Google OAuth 플로우를 시작한다.
-///
-/// ViewModel 에 위임: 성공 시 메인 탭(tamagochi) 으로 이동, 실패 시 스낵바로 에러 표시.
-/// 사용자가 Google 시트에서 취소한 경우엔 state.error 가 null 이라 아무것도 띄우지 않음.
-Future<void> _handleGoogleSignIn(BuildContext context, WidgetRef ref) async {
-  final vm = ref.read(welcomeViewModelProvider.notifier);
-  final ok = await vm.signInWithGoogle();
-  if (!context.mounted) return;
-  if (ok) {
-    // 신규 가입자면 알 수령, 기존 유저면 현재 캐릭터 로딩. 실패해도 홈 진입 자체는
-    // 막지 않는다 (홈 initState 에서 재시도 load() 가 돈다).
-    unawaited(
-      ref.read(characterViewModelProvider.notifier).ensureCharacter(),
-    );
-    context.go(AppRoutes.tamagochi);
-    return;
-  }
-  final error = ref.read(welcomeViewModelProvider).error;
-  if (error != null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(error)),
-    );
-  }
-}
-
-/// Kakao OAuth 플로우. 성공/취소/실패 처리 규약은 [_handleGoogleSignIn] 과 동일.
-Future<void> _handleKakaoSignIn(BuildContext context, WidgetRef ref) async {
-  final vm = ref.read(welcomeViewModelProvider.notifier);
-  final ok = await vm.signInWithKakao();
-  if (!context.mounted) return;
-  if (ok) {
-    unawaited(
-      ref.read(characterViewModelProvider.notifier).ensureCharacter(),
-    );
-    context.go(AppRoutes.tamagochi);
-    return;
-  }
-  final error = ref.read(welcomeViewModelProvider).error;
-  if (error != null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(error)),
     );
   }
 }

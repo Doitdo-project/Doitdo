@@ -3,6 +3,7 @@ import 'package:retrofit/retrofit.dart';
 
 import 'package:doitdo/core/network/api_response.dart';
 import 'package:doitdo/data/models/check_email_response_dto.dart';
+import 'package:doitdo/data/models/check_username_response_dto.dart';
 
 part 'user_api.g.dart';
 
@@ -22,5 +23,11 @@ abstract class UserApi {
   @GET('/api/users/check-email')
   Future<ApiResponse<CheckEmailResponseDto>> checkEmail(
     @Query('email') String email,
+  );
+
+  /// 닉네임(username) 중복 확인. `data.available == true` 면 가입 가능.
+  @GET('/api/users/check-username')
+  Future<ApiResponse<CheckUsernameResponseDto>> checkUsername(
+    @Query('username') String username,
   );
 }

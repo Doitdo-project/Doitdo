@@ -20,6 +20,7 @@ import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
+import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TamagotchiErrorCode;
 
@@ -32,6 +33,44 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 	private final CharacterRepository characterRepository;
 	private final CharacterUnlockRepository characterUnlockRepository;
 	private final UserCharacterRepository userCharacterRepository;
+	private final UserRepository userRepository;
+
+	@Override
+	@Transactional
+	public CurrentCharacterResp receiveEgg(Long userId) {
+		userRepository.findByIdForUpdate(userId)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
+
+		Optional<UserCharacter> currentUserCharacter = userCharacterRepository
+			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId);
+
+		if (currentUserCharacter.isPresent()) {
+			return toCurrentCharacterResp(currentUserCharacter.get(), TamagotchiErrorCode.M04_002);
+		}
+
+		com.doitdo.domain.tamagotchi.entity.Character eggCharacter = characterRepository
+			.findFirstByStageOrderByCharacterIdAsc(com.doitdo.domain.tamagotchi.entity.Character.Stage.EGG)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_003));
+
+		UserCharacter userCharacter = UserCharacter.builder()
+			.userId(userId)
+			.characterId(eggCharacter.getCharacterId())
+			.growthPercent(0)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+		UserCharacter savedUserCharacter = userCharacterRepository.save(userCharacter);
+
+		return new CurrentCharacterResp(
+			eggCharacter.getCharacterId(),
+			savedUserCharacter.getName(),
+			eggCharacter.getStage().name(),
+			eggCharacter.getThumbnailUrl(),
+			savedUserCharacter.getGrowthPercent(),
+			savedUserCharacter.getEquipedItemsId(),
+			savedUserCharacter.getUserCharacterId()
+		);
+	}
 
 	@Override
 	@Transactional(readOnly = true)
@@ -77,14 +116,19 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
 
+		return toCurrentCharacterResp(userCharacter, TamagotchiErrorCode.M04_002);
+	}
+
+	private CurrentCharacterResp toCurrentCharacterResp(UserCharacter userCharacter, TamagotchiErrorCode errorCode) {
 		com.doitdo.domain.tamagotchi.entity.Character character = characterRepository
 			.findById(userCharacter.getCharacterId())
-			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
+			.orElseThrow(() -> new CustomException(errorCode));
 
 		return new CurrentCharacterResp(
 			character.getCharacterId(),
 			userCharacter.getName(),
 			character.getStage().name(),
+			character.getThumbnailUrl(),
 			userCharacter.getGrowthPercent(),
 			userCharacter.getEquipedItemsId(),
 			userCharacter.getUserCharacterId()

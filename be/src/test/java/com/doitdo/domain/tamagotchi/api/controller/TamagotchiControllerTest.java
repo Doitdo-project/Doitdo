@@ -31,6 +31,36 @@ class TamagotchiControllerTest {
 	private TamagotchiService tamagotchiService;
 
 	@Test
+	void receiveEggReturnsGlobalApiResponse() {
+		TamagotchiController controller = new TamagotchiController(tamagotchiService);
+		CustomUserDetails userDetails = new CustomUserDetails(User.builder()
+			.userId(1L)
+			.email("user@example.com")
+			.username("user")
+			.password("password")
+			.streakCount(0)
+			.isDeleted(false)
+			.build());
+		CurrentCharacterResp serviceResp = new CurrentCharacterResp(
+			1L,
+			null,
+			"EGG",
+			"https://cdn.example.com/egg.png",
+			0,
+			null,
+			10L
+		);
+
+		given(tamagotchiService.receiveEgg(1L)).willReturn(serviceResp);
+
+		GlobalApiResponse<CurrentCharacterResp> resp = controller.receiveEgg(userDetails);
+
+		assertThat(resp.getStatus()).isEqualTo(200);
+		assertThat(resp.getMessage()).isEqualTo("OK");
+		assertThat(resp.getData()).isEqualTo(serviceResp);
+	}
+
+	@Test
 	void updateCharacterNameReturnsGlobalApiResponse() {
 		TamagotchiController controller = new TamagotchiController(tamagotchiService);
 		CustomUserDetails userDetails = new CustomUserDetails(User.builder()

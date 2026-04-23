@@ -1,70 +1,55 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:doitdo/core/errors/exceptions.dart';
-import 'package:doitdo/domain/repositories/auth_repository.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
 
-/// Welcome 페이지의 소셜 로그인 동작을 관리하는 ViewModel.
+/// 소셜 로그인 성공 시 전달되는 요약 데이터.
 ///
-/// View 는 이 ViewModel 의 메서드만 호출하고, 성공/실패 결과에 따라 라우팅만 결정한다.
-class WelcomeState {
-  const WelcomeState({this.isLoading = false, this.error});
-
-  final bool isLoading;
-  final String? error;
-
-  WelcomeState copyWith({bool? isLoading, String? error}) => WelcomeState(
-        isLoading: isLoading ?? this.isLoading,
-        error: error,
-      );
+/// View 에서 이 값을 보고:
+/// - `isNewUser == true` → 온보딩/추가 정보 입력 화면으로
+/// - `isNewUser == false` → 메인 탭으로
+/// 분기할 수 있도록 한다.
+class WelcomeSuccess {
+  const WelcomeSuccess({required this.isNewUser});
+  final bool isNewUser;
 }
 
-class WelcomeViewModel extends StateNotifier<WelcomeState> {
-  WelcomeViewModel(this._authRepository) : super(const WelcomeState());
+/// Welcome 페이지의 소셜 로그인 ViewModel.
+///
+/// DEVELOPMENT_GUIDE §12.6 에 따라 서버 호출이 있는 ViewModel 은 `AsyncNotifier`.
+/// Repository 가 throw 하는 타입드 예외는 [AsyncValue.guard] 가 그대로 잡아
+/// `state.error` 로 흘려보내고, View 는 `ref.listen` 으로 성공/에러 부수효과만 처리.
+///
+/// - 초기 상태: `AsyncData(null)` — 아직 로그인 시도 없음
+/// - 로딩: `AsyncLoading()`
+/// - 성공: `AsyncData(WelcomeSuccess)` — 자동으로 메인 화면으로 라우팅
+/// - 실패: `AsyncError` — 화면에서 스낵바
+class WelcomeViewModel
+    extends AutoDisposeAsyncNotifier<WelcomeSuccess?> {
+  @override
+  Future<WelcomeSuccess?> build() async => null;
 
-  final AuthRepository _authRepository;
-
-  /// Google 로그인 수행.
-  /// - 성공: true 반환, View 가 메인 화면으로 이동.
-  /// - 사용자 취소: false 반환, state.error 는 null (조용히 처리).
-  /// - 실패: false 반환, state.error 에 사용자에게 보여줄 메시지.
-  Future<bool> signInWithGoogle() {
-    return _runSocialSignIn(_authRepository.signInWithGoogle);
+  /// Google OAuth 수행. 결과는 state 로만 노출 (반환값 없음).
+  Future<void> signInWithGoogle() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final repo = ref.read(authRepositoryProvider);
+      final (_, __, isNewUser) = await repo.signInWithGoogle();
+      return WelcomeSuccess(isNewUser: isNewUser);
+    });
   }
 
-  /// Kakao 로그인 수행. 반환/상태 규약은 [signInWithGoogle] 과 동일.
-  Future<bool> signInWithKakao() {
-    return _runSocialSignIn(_authRepository.signInWithKakao);
-  }
-
-  /// Google/Kakao 모두 상태 머신(로딩 → 성공/취소/실패) 이 동일하므로 한 곳으로 모은다.
-  /// provider 별로 달라지는 건 실제로 호출하는 Repository 메서드 뿐.
-  Future<bool> _runSocialSignIn(Future<Object?> Function() signIn) async {
-    if (state.isLoading) return false;
-    state = state.copyWith(isLoading: true, error: null);
-
-    try {
-      await signIn();
-      state = state.copyWith(isLoading: false);
-      return true;
-    } on AuthCanceledException {
-      // 사용자가 시트를 닫은 경우엔 에러 메시지 안 띄움.
-      state = state.copyWith(isLoading: false);
-      return false;
-    } on AuthException catch (e) {
-      state = state.copyWith(isLoading: false, error: e.message);
-      return false;
-    } catch (_) {
-      state = state.copyWith(
-        isLoading: false,
-        error: '로그인 중 알 수 없는 오류가 발생했어요.',
-      );
-      return false;
-    }
+  /// Kakao OAuth 수행. 규약은 [signInWithGoogle] 과 동일.
+  Future<void> signInWithKakao() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final repo = ref.read(authRepositoryProvider);
+      final (_, __, isNewUser) = await repo.signInWithKakao();
+      return WelcomeSuccess(isNewUser: isNewUser);
+    });
   }
 }
 
 final welcomeViewModelProvider =
-    StateNotifierProvider.autoDispose<WelcomeViewModel, WelcomeState>(
-  (ref) => WelcomeViewModel(ref.watch(authRepositoryProvider)),
+    AsyncNotifierProvider.autoDispose<WelcomeViewModel, WelcomeSuccess?>(
+  WelcomeViewModel.new,
 );

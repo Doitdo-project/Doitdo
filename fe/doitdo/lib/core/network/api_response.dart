@@ -19,11 +19,17 @@ class ApiResponse<T> {
   const ApiResponse({
     required this.status,
     required this.message,
+    this.code,
     this.data,
   });
 
   /// HTTP status mirror. 보통 200/201 이 성공, 4xx/5xx 가 실패.
   final int status;
+
+  /// 서버 정의 에러/성공 코드 문자열. 스펙상 envelope 에 함께 내려오며
+  /// 화면별 예외 분기(예: "EMAIL_ALREADY_EXISTS") 에 쓰일 수 있어 보존.
+  /// 현재 UI 에선 사용하지 않지만, 스펙 일치 + 향후 확장 대비.
+  final String? code;
 
   /// 사람이 읽는 메시지. 실패 시 토스트/다이얼로그에 노출해도 되는 문구.
   final String message;
@@ -43,6 +49,7 @@ class ApiResponse<T> {
     final rawData = json['data'];
     return ApiResponse<T>(
       status: json['status'] as int,
+      code: json['code'] as String?,
       message: (json['message'] as String?) ?? '',
       data: rawData == null ? null : fromJsonT(rawData),
     );

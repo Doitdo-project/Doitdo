@@ -117,10 +117,10 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
   }
 
   // ── 달력 스타일 (기간 탭) — 오늘 날짜 강조 없음 ─────
-  // ── 달력 스타일 (기간 탭) — 오늘 날짜 강조 없음 ─────
   CalendarStyle _rangeCalStyle(BuildContext context) {
     final c = context.colors;
     return CalendarStyle(
+      // 오늘 날짜를 일반 날짜와 동일하게 표시 (강조 없음)
       todayDecoration: const BoxDecoration(
         color: AppColors.homeCalendarSelectedBg,
         shape: BoxShape.circle,
@@ -877,7 +877,7 @@ class _MascotBubble extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Image.asset(
-          'assets/images/tama_hanrabong.png',
+          'assets/images/Dooit.png',
           width: 26,
           height: 26,
         ),

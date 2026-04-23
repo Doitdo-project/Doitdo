@@ -44,7 +44,7 @@ class AppColors {
   static const Color toggleOff = Color(0xFFDFE3E4);
   static const Color timeCardBg = Color(0xFFA5A5A5);
 
-  // 6. 카테고리별 컬러 (1~8)
+  // 6. 카테고리별 컬러 (1~8) — 뱃지/칩 배경 전용 파스텔 팔레트.
   static const Color category1 = Color(0xFFE1F7E7);
   static const Color category2 = Color(0xFFFFEED6);
   static const Color category3 = Color(0xFFFADBDE);
@@ -53,6 +53,14 @@ class AppColors {
   static const Color category6 = Color(0xFFE0EBF5);
   static const Color category7 = Color(0xFFC3D6F2);
   static const Color category8 = Color(0xFF789CCE);
+
+  // 6-b. 카테고리 "점(dot)" 강조용 진한 톤 — 시안 기준.
+  //      category1~5 파스텔이 작은 점 영역에서 흐리게 보여 별도 팔레트로 분리.
+  static const Color categoryDot1 = Color(0xFF4A90E2); // 공부 — 파랑
+  static const Color categoryDot2 = Color(0xFFE2782B); // 운동 — 주황
+  static const Color categoryDot3 = Color(0xFFE04A5A); // 업무 — 빨강
+  static const Color categoryDot4 = Color(0xFFE75B85); // 건강 — 핑크
+  static const Color categoryDot5 = Color(0xFF4ABFBF); // 취미 — 청록
 
   // 리스트로 관리하면 인덱스로 접근하기 편합니다 (예: 카테고리 색상 불러오기)
   static const List<Color> categories = [

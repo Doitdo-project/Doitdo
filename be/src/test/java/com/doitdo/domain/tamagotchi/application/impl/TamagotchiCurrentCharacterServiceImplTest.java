@@ -16,6 +16,7 @@ import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
+import com.doitdo.domain.user.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 class TamagotchiCurrentCharacterServiceImplTest {
@@ -29,12 +30,16 @@ class TamagotchiCurrentCharacterServiceImplTest {
 	@Mock
 	private CharacterUnlockRepository characterUnlockRepository;
 
+	@Mock
+	private UserRepository userRepository;
+
 	@Test
 	void getCurrentCharacterReturnsActiveCharacterState() {
 		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
 			characterRepository,
 			characterUnlockRepository,
-			userCharacterRepository
+			userCharacterRepository,
+			userRepository
 		);
 
 		Long userId = 1L;
@@ -65,6 +70,7 @@ class TamagotchiCurrentCharacterServiceImplTest {
 		assertThat(resp.characterId()).isEqualTo(2L);
 		assertThat(resp.name()).isEqualTo("saesangi");
 		assertThat(resp.stage()).isEqualTo("BABY");
+		assertThat(resp.thumbnailUrl()).isEqualTo("https://cdn.example.com/slime.png");
 		assertThat(resp.growthPercent()).isEqualTo(45);
 		assertThat(resp.equippedUserItemId()).isEqualTo(42L);
 	}

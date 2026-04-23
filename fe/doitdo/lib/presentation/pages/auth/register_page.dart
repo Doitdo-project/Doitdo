@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,10 @@ import 'package:go_router/go_router.dart';
 
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
+import 'package:doitdo/core/utils/error_message_mapper.dart';
+import 'package:doitdo/domain/entities/user.dart';
+import 'package:doitdo/presentation/navigation/app_router.dart';
+import 'package:doitdo/presentation/pages/auth/register_view_model.dart';
 import 'package:doitdo/presentation/pages/auth/widgets/auth_text_field.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
 
@@ -36,19 +41,19 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   bool _passwordTouched = false;
   bool _confirmTouched = false;
 
+  // 중복체크 디바운스용 타이머. 사용자가 타이핑 멈추고 400ms 뒤 서버에 check 요청.
+  // 타이핑 중에는 매 글자마다 호출하지 않음 — 네트워크/할당량 낭비 방지.
+  Timer? _emailDebounce;
+  Timer? _userIdDebounce;
+  static const _debounceDelay = Duration(milliseconds: 400);
+
   static final _emailRegex = RegExp(r'^[\w.+-]+@[\w-]+\.[\w.-]+$');
 
   @override
   void initState() {
     super.initState();
-    _emailCtrl.addListener(() {
-      if (!_emailTouched) _emailTouched = true;
-      setState(() {});
-    });
-    _userIdCtrl.addListener(() {
-      if (!_userIdTouched) _userIdTouched = true;
-      setState(() {});
-    });
+    _emailCtrl.addListener(_onEmailChanged);
+    _userIdCtrl.addListener(_onUserIdChanged);
     _passwordCtrl.addListener(() {
       if (!_passwordTouched) _passwordTouched = true;
       setState(() {});
@@ -59,8 +64,41 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     });
   }
 
+  void _onEmailChanged() {
+    if (!_emailTouched) _emailTouched = true;
+    setState(() {});
+    _emailDebounce?.cancel();
+    final v = _emailCtrl.text.trim();
+    // 형식 유효하지 않은 값은 서버에 보내지 않음 — 기존 check 결과만 초기화.
+    if (v.isEmpty || !_emailRegex.hasMatch(v)) {
+      ref.read(emailAvailabilityProvider.notifier).clear();
+      return;
+    }
+    _emailDebounce = Timer(_debounceDelay, () {
+      if (!mounted) return;
+      ref.read(emailAvailabilityProvider.notifier).check(v);
+    });
+  }
+
+  void _onUserIdChanged() {
+    if (!_userIdTouched) _userIdTouched = true;
+    setState(() {});
+    _userIdDebounce?.cancel();
+    final v = _userIdCtrl.text.trim();
+    if (v.length < 4) {
+      ref.read(usernameAvailabilityProvider.notifier).clear();
+      return;
+    }
+    _userIdDebounce = Timer(_debounceDelay, () {
+      if (!mounted) return;
+      ref.read(usernameAvailabilityProvider.notifier).check(v);
+    });
+  }
+
   @override
   void dispose() {
+    _emailDebounce?.cancel();
+    _userIdDebounce?.cancel();
     _emailCtrl.dispose();
     _userIdCtrl.dispose();
     _passwordCtrl.dispose();
@@ -74,6 +112,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     final v = _emailCtrl.text.trim();
     if (v.isEmpty) return '이메일을 입력해주세요';
     if (!_emailRegex.hasMatch(v)) return '올바른 이메일 형식이 아닙니다';
+    // 서버 중복체크 결과가 false 이면 에러 노출. 로딩/에러 상태는 에러로 표시하지 않음.
+    final avail = ref.read(emailAvailabilityProvider).valueOrNull;
+    if (avail == false) return '이미 사용 중인 이메일입니다';
     return null;
   }
 
@@ -82,6 +123,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     final v = _userIdCtrl.text.trim();
     if (v.isEmpty) return '아이디를 입력해주세요';
     if (v.length < 4) return '아이디는 4자 이상이어야 합니다';
+    final avail = ref.read(usernameAvailabilityProvider).valueOrNull;
+    if (avail == false) return '이미 사용 중인 아이디입니다';
     return null;
   }
 
@@ -104,12 +147,17 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       _passwordCtrl.text.isNotEmpty &&
       _passwordCtrl.text == _confirmCtrl.text;
 
-  bool get _isFormValid =>
-      _emailCtrl.text.trim().isNotEmpty &&
-      _emailRegex.hasMatch(_emailCtrl.text.trim()) &&
-      _userIdCtrl.text.trim().length >= 4 &&
-      _passwordCtrl.text.length >= 8 &&
-      _passwordCtrl.text == _confirmCtrl.text;
+  bool get _isFormValid {
+    if (_emailCtrl.text.trim().isEmpty) return false;
+    if (!_emailRegex.hasMatch(_emailCtrl.text.trim())) return false;
+    if (_userIdCtrl.text.trim().length < 4) return false;
+    if (_passwordCtrl.text.length < 8) return false;
+    if (_passwordCtrl.text != _confirmCtrl.text) return false;
+    // 중복체크 서버 결과 — 명시적으로 "사용 가능(true)" 이 확인돼야 제출 허용.
+    if (ref.read(emailAvailabilityProvider).valueOrNull != true) return false;
+    if (ref.read(usernameAvailabilityProvider).valueOrNull != true) return false;
+    return true;
+  }
 
   void _submit() {
     // 버튼은 항상 활성화돼 있지만, 제출 시점에 유효성 검증.
@@ -123,13 +171,49 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       });
       return;
     }
-    // TODO: 회원가입 API 호출
-    context.pop();
+    FocusManager.instance.primaryFocus?.unfocus();
+    ref.read(registerViewModelProvider.notifier).submit(
+          email: _emailCtrl.text.trim(),
+          password: _passwordCtrl.text,
+          username: _userIdCtrl.text.trim(),
+        );
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    // 중복체크 결과도 구독해 "사용 가능" 체크 아이콘·에러 메시지가 실시간 갱신되게.
+    ref.watch(emailAvailabilityProvider);
+    ref.watch(usernameAvailabilityProvider);
+    final registerState = ref.watch(registerViewModelProvider);
+
+    // 회원가입 성공/실패 부수효과.
+    // 자동 로그인은 하지 않고, 사용자가 직접 로그인 화면에서 입력하도록 돌려보낸다.
+    ref.listen<AsyncValue<User?>>(registerViewModelProvider, (prev, next) {
+      next.whenOrNull(
+        data: (user) {
+          if (user == null) return;
+          if (!context.mounted) return;
+          // 스택에 login 이 남아있을 테니 pop 으로 돌아가고, 없으면 go 로 대체.
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go(AppRoutes.login);
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('가입이 완료됐어요. 방금 만든 계정으로 로그인해 주세요.'),
+            ),
+          );
+        },
+        error: (error, _) {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(mapErrorMessage(error))),
+          );
+        },
+      );
+    });
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -176,13 +260,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                         const SizedBox(height: 32),
 
                         // ── 필드 4개 (아이디 → 이메일 → 비밀번호 → 확인) ──
+                        // showSuccess: 서버 중복체크까지 "true(가능)" 확인된 경우만 초록 체크.
                         AuthTextField(
                           controller: _userIdCtrl,
                           hint: '아이디',
                           textInputAction: TextInputAction.next,
                           errorText: _userIdError,
                           showSuccess: _userIdError == null &&
-                              _userIdCtrl.text.trim().length >= 4,
+                              _userIdCtrl.text.trim().length >= 4 &&
+                              ref
+                                      .read(usernameAvailabilityProvider)
+                                      .valueOrNull ==
+                                  true,
                         ),
                         const SizedBox(height: 4),
                         AuthTextField(
@@ -192,7 +281,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                           textInputAction: TextInputAction.next,
                           errorText: _emailError,
                           showSuccess: _emailError == null &&
-                              _emailCtrl.text.trim().isNotEmpty,
+                              _emailCtrl.text.trim().isNotEmpty &&
+                              ref
+                                      .read(emailAvailabilityProvider)
+                                      .valueOrNull ==
+                                  true,
                         ),
                         const SizedBox(height: 4),
                         AuthTextField(
@@ -217,9 +310,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
                         // ── 버튼 ──
                         DoitdoPrimaryButton(
-                          label: '회원가입 완료',
+                          label: registerState.isLoading
+                              ? '가입 중…'
+                              : '회원가입 완료',
                           height: 48,
-                          onPressed: _submit,
+                          onPressed: registerState.isLoading ? null : _submit,
                         ),
                         const SizedBox(height: 16),
 

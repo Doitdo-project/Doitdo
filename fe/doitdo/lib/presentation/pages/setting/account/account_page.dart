@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
+import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/setting/account/account_view_model.dart';
 import 'package:doitdo/presentation/pages/setting/account/widgets/password_change_dialog.dart';
@@ -36,6 +37,21 @@ class _AccountPageState extends ConsumerState<AccountPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 로그아웃 결과 부수효과 — 로딩 → 완료 전이만 감지해서 처리한다.
+    // prev==Loading && next==Data 이면 성공, next.hasError 면 스낵바.
+    // (AsyncNotifier 패턴 + ref.listen — 가이드 §6, §12.6)
+    ref.listen<AsyncValue<void>>(accountViewModelProvider, (prev, next) {
+      if (prev == null || !prev.isLoading) return;
+      if (!context.mounted) return;
+      if (next.hasError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(mapErrorMessage(next.error!))),
+        );
+      } else if (!next.isLoading) {
+        context.go(AppRoutes.welcome);
+      }
+    });
+
     return DoitdoScaffold(
       topBar: const DoitdoTopBar(title: '계정 설정'),
       body: DoitdoPaddingLayout(
@@ -118,19 +134,9 @@ Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
   );
   if (ok != true) return;
 
-  final success = await ref.read(accountViewModelProvider.notifier).signOut();
-  if (!context.mounted) return;
-
-  if (success) {
-    context.go(AppRoutes.welcome);
-    return;
-  }
-  final error = ref.read(accountViewModelProvider).error;
-  if (error != null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(error)),
-    );
-  }
+  // signOut 시작만 알리고 결과는 View 의 ref.listen 이 처리.
+  // (성공 시 웰컴으로 이동, 실패 시 스낵바)
+  ref.read(accountViewModelProvider.notifier).signOut();
 }
 
 // ─────────────────────────────────────────────────────────────────

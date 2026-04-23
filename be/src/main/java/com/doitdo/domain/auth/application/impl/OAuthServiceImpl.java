@@ -27,6 +27,7 @@ import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,27 +64,31 @@ public class OAuthServiceImpl implements OAuthService {
 		String providerName = OAuthProvider.KAKAO.name();
 		String providerUid = String.valueOf(kakaoUser.id());
 
-		Optional<AutoProvider> existing = autoProviderRepository
-				.findByProviderAndProviderUid(providerName, providerUid);
-
-		if (existing.isPresent()) {
-			User user = userRepository.findById(existing.get().getUserId())
-					.orElseThrow(() -> new CustomException(AuthErrorCode.A03_004));
-			return issueTokens(user, false);
+		Optional<User> existingUser = findUserByProvider(providerName, providerUid);
+		if (existingUser.isPresent()) {
+			return issueTokens(existingUser.get(), false);
 		}
 
-		return signupWithKakao(kakaoUser, providerName, providerUid);
+		try {
+			return signupWithKakao(kakaoUser, providerName, providerUid);
+		} catch (DataIntegrityViolationException e) {
+			return recoverFromRace(providerName, providerUid);
+		}
 	}
 
 	private OAuthLoginResp signupWithKakao(KakaoUserResp kakaoUser, String providerName, String providerUid) {
+		if (!kakaoUser.isEmailTrusted()) {
+			throw new CustomException(AuthErrorCode.A03_005);
+		}
 		String email = kakaoUser.email();
 		if (email == null || email.isBlank()) {
 			throw new CustomException(AuthErrorCode.A03_001,
 					"카카오 계정 이메일 동의가 필요합니다.");
 		}
 
-		if (userRepository.existsByEmail(email)) {
-			throw new CustomException(AuthErrorCode.A03_003);
+		Optional<OAuthLoginResp> linked = tryLinkExistingAccount(email, providerName, providerUid);
+		if (linked.isPresent()) {
+			return linked.get();
 		}
 
 		String username = resolveUniqueUsername(kakaoUser.nickname());
@@ -102,27 +107,31 @@ public class OAuthServiceImpl implements OAuthService {
 		String providerName = OAuthProvider.GOOGLE.name();
 		String providerUid = googleUser.sub();
 
-		Optional<AutoProvider> existing = autoProviderRepository
-				.findByProviderAndProviderUid(providerName, providerUid);
-
-		if (existing.isPresent()) {
-			User user = userRepository.findById(existing.get().getUserId())
-					.orElseThrow(() -> new CustomException(AuthErrorCode.A03_004));
-			return issueTokens(user, false);
+		Optional<User> existingUser = findUserByProvider(providerName, providerUid);
+		if (existingUser.isPresent()) {
+			return issueTokens(existingUser.get(), false);
 		}
 
-		return signupWithGoogle(googleUser, providerName, providerUid);
+		try {
+			return signupWithGoogle(googleUser, providerName, providerUid);
+		} catch (DataIntegrityViolationException e) {
+			return recoverFromRace(providerName, providerUid);
+		}
 	}
 
 	private OAuthLoginResp signupWithGoogle(GoogleUserInfo googleUser, String providerName, String providerUid) {
+		if (!Boolean.TRUE.equals(googleUser.emailVerified())) {
+			throw new CustomException(AuthErrorCode.A03_005);
+		}
 		String email = googleUser.email();
 		if (email == null || email.isBlank()) {
 			throw new CustomException(AuthErrorCode.A03_001,
 					"Google 계정 이메일 동의가 필요합니다.");
 		}
 
-		if (userRepository.existsByEmail(email)) {
-			throw new CustomException(AuthErrorCode.A03_003);
+		Optional<OAuthLoginResp> linked = tryLinkExistingAccount(email, providerName, providerUid);
+		if (linked.isPresent()) {
+			return linked.get();
 		}
 
 		String username = resolveUniqueUsername(googleUser.name());
@@ -152,6 +161,61 @@ public class OAuthServiceImpl implements OAuthService {
 			}
 		}
 		throw new CustomException(AuthErrorCode.A03_004, "고유한 username 생성에 실패했습니다.");
+	}
+
+	/**
+	 * 이미 같은 이메일로 가입된 user 가 있으면 정책에 따라 연결 처리.
+	 *
+	 * <ul>
+	 *   <li>기존 user 가 소셜 가입자({@code password == null}): 현재 provider 의 {@link AutoProvider}
+	 *       를 추가 연결하고 기존 user 로 로그인 처리 → {@code Optional<OAuthLoginResp>} 반환</li>
+	 *   <li>기존 user 가 일반 회원가입자({@code password != null}): 자동 연결 거부 →
+	 *       {@link AuthErrorCode#A03_006} 예외 throw (비밀번호 우회 방지)</li>
+	 *   <li>기존 user 없음: {@link Optional#empty()} 반환 → 호출자가 신규 가입 계속 진행</li>
+	 * </ul>
+	 *
+	 * <p>호출 전 반드시 이메일이 Provider 에 의해 검증됐음(email_verified=true)을 확인해야 한다.
+	 */
+	private Optional<OAuthLoginResp> tryLinkExistingAccount(
+			String email, String providerName, String providerUid
+	) {
+		Optional<User> existing = userRepository.findByEmail(email);
+		if (existing.isEmpty()) {
+			return Optional.empty();
+		}
+		User user = existing.get();
+		if (user.getPassword() != null) {
+			throw new CustomException(AuthErrorCode.A03_006);
+		}
+		autoProviderRepository.save(AutoProvider.create(user.getUserId(), providerName, providerUid));
+		return Optional.of(issueTokens(user, false));
+	}
+
+	/**
+	 * provider + providerUid 로 기존 user 를 조회.
+	 *
+	 * <p>{@code findAllBy...} 를 사용해 DB 에 이미 중복 row 가 남아 있어도
+	 * {@code NonUniqueResultException} 을 던지지 않고 첫 번째 winner 를 선택한다.
+	 */
+	private Optional<User> findUserByProvider(String providerName, String providerUid) {
+		return autoProviderRepository
+				.findAllByProviderAndProviderUid(providerName, providerUid)
+				.stream()
+				.findFirst()
+				.map(ap -> userRepository.findById(ap.getUserId())
+						.orElseThrow(() -> new CustomException(AuthErrorCode.A03_004)));
+	}
+
+	/**
+	 * 신규 가입 경로에서 DB UNIQUE 제약 위반이 발생한 경우 복구 처리.
+	 *
+	 * <p>동시 요청 race condition 의 winner row 가 존재하면 해당 user 로 기존 로그인 처리.
+	 * winner 가 없으면(= 진짜 다른 provider 로 이미 가입된 이메일) A03_003 를 그대로 던진다.
+	 */
+	private OAuthLoginResp recoverFromRace(String providerName, String providerUid) {
+		User user = findUserByProvider(providerName, providerUid)
+				.orElseThrow(() -> new CustomException(AuthErrorCode.A03_003));
+		return issueTokens(user, false);
 	}
 
 	private OAuthLoginResp issueTokens(User user, boolean isNewUser) {

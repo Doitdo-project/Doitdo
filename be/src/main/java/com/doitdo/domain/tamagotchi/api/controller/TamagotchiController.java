@@ -34,6 +34,15 @@ public class TamagotchiController {
 
 	private final TamagotchiService tamagotchiService;
 
+	@Operation(summary = "알 받기", description = "현재 다마고치가 없는 사용자에게 첫 알을 배정")
+	@ApiErrorCodes({"M04-001", "M04-002", "M04-003"})
+	@PostMapping("/me/egg")
+	public GlobalApiResponse<CurrentCharacterResp> receiveEgg(
+		@AuthenticationPrincipal CustomUserDetails userDetails
+	) {
+		return GlobalApiResponse.ok(tamagotchiService.receiveEgg(userDetails.getUserId()));
+	}
+
 	@Operation(summary = "도감 조회", description = "사용자의 캐릭터 도감 목록과 해금 여부를 조회")
 	@ApiErrorCodes({"M03-001", "M03-002", "M03-003"})
 	@GetMapping("/encyclopedia")
