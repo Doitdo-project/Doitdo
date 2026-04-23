@@ -77,14 +77,18 @@ public class OAuthServiceImpl implements OAuthService {
 	}
 
 	private OAuthLoginResp signupWithKakao(KakaoUserResp kakaoUser, String providerName, String providerUid) {
+		if (!kakaoUser.isEmailTrusted()) {
+			throw new CustomException(AuthErrorCode.A03_005);
+		}
 		String email = kakaoUser.email();
 		if (email == null || email.isBlank()) {
 			throw new CustomException(AuthErrorCode.A03_001,
 					"카카오 계정 이메일 동의가 필요합니다.");
 		}
 
-		if (userRepository.existsByEmail(email)) {
-			throw new CustomException(AuthErrorCode.A03_003);
+		Optional<OAuthLoginResp> linked = tryLinkExistingAccount(email, providerName, providerUid);
+		if (linked.isPresent()) {
+			return linked.get();
 		}
 
 		String username = resolveUniqueUsername(kakaoUser.nickname());
@@ -116,14 +120,18 @@ public class OAuthServiceImpl implements OAuthService {
 	}
 
 	private OAuthLoginResp signupWithGoogle(GoogleUserInfo googleUser, String providerName, String providerUid) {
+		if (!Boolean.TRUE.equals(googleUser.emailVerified())) {
+			throw new CustomException(AuthErrorCode.A03_005);
+		}
 		String email = googleUser.email();
 		if (email == null || email.isBlank()) {
 			throw new CustomException(AuthErrorCode.A03_001,
 					"Google 계정 이메일 동의가 필요합니다.");
 		}
 
-		if (userRepository.existsByEmail(email)) {
-			throw new CustomException(AuthErrorCode.A03_003);
+		Optional<OAuthLoginResp> linked = tryLinkExistingAccount(email, providerName, providerUid);
+		if (linked.isPresent()) {
+			return linked.get();
 		}
 
 		String username = resolveUniqueUsername(googleUser.name());
@@ -153,6 +161,34 @@ public class OAuthServiceImpl implements OAuthService {
 			}
 		}
 		throw new CustomException(AuthErrorCode.A03_004, "고유한 username 생성에 실패했습니다.");
+	}
+
+	/**
+	 * 이미 같은 이메일로 가입된 user 가 있으면 정책에 따라 연결 처리.
+	 *
+	 * <ul>
+	 *   <li>기존 user 가 소셜 가입자({@code password == null}): 현재 provider 의 {@link AutoProvider}
+	 *       를 추가 연결하고 기존 user 로 로그인 처리 → {@code Optional<OAuthLoginResp>} 반환</li>
+	 *   <li>기존 user 가 일반 회원가입자({@code password != null}): 자동 연결 거부 →
+	 *       {@link AuthErrorCode#A03_006} 예외 throw (비밀번호 우회 방지)</li>
+	 *   <li>기존 user 없음: {@link Optional#empty()} 반환 → 호출자가 신규 가입 계속 진행</li>
+	 * </ul>
+	 *
+	 * <p>호출 전 반드시 이메일이 Provider 에 의해 검증됐음(email_verified=true)을 확인해야 한다.
+	 */
+	private Optional<OAuthLoginResp> tryLinkExistingAccount(
+			String email, String providerName, String providerUid
+	) {
+		Optional<User> existing = userRepository.findByEmail(email);
+		if (existing.isEmpty()) {
+			return Optional.empty();
+		}
+		User user = existing.get();
+		if (user.getPassword() != null) {
+			throw new CustomException(AuthErrorCode.A03_006);
+		}
+		autoProviderRepository.save(AutoProvider.create(user.getUserId(), providerName, providerUid));
+		return Optional.of(issueTokens(user, false));
 	}
 
 	/**
