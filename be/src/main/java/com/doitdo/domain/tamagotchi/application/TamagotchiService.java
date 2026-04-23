@@ -9,6 +9,8 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.UpdateCharacterNameResp;
 
 public interface TamagotchiService {
 
+	CurrentCharacterResp receiveEgg(Long userId);
+
 	EncyclopediaResp getEncyclopedia(Long userId);
 
 	UpdateCharacterNameResp updateName(Long userId, String name);
