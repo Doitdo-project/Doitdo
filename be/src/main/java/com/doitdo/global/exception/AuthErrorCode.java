@@ -30,7 +30,9 @@ public enum AuthErrorCode implements ErrorCode {
 	A03_001("A03-001", HttpStatus.UNAUTHORIZED, "소셜 액세스 토큰이 유효하지 않음"),
 	A03_002("A03-002", HttpStatus.UNPROCESSABLE_ENTITY, "필수 파라미터 누락 (provider 또는 accessToken)"),
 	A03_003("A03-003", HttpStatus.CONFLICT, "이미 가입된 소셜 계정"),
-	A03_004("A03-004", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류");
+	A03_004("A03-004", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
+	A03_005("A03-005", HttpStatus.UNAUTHORIZED, "소셜 계정의 이메일이 검증되지 않았습니다."),
+	A03_006("A03-006", HttpStatus.CONFLICT, "이미 일반 계정으로 가입된 이메일입니다. 아이디/비밀번호로 로그인해주세요.");
 
 	private final String code;
 	private final HttpStatus httpStatus;

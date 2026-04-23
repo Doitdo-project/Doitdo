@@ -49,8 +49,9 @@ public class GoogleIdTokenVerifierService {
 			String email = payload.getEmail();
 			Object nameObj = payload.get("name");
 			String name = nameObj == null ? null : nameObj.toString();
+			Boolean emailVerified = payload.getEmailVerified();
 
-			return new GoogleUserInfo(sub, email, name);
+			return new GoogleUserInfo(sub, email, name, emailVerified);
 		} catch (IllegalArgumentException e) {
 			log.warn("Google ID token format invalid: {}", e.getMessage());
 			throw new CustomException(AuthErrorCode.A03_001);
