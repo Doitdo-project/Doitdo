@@ -42,6 +42,7 @@ env/prod.env
 
 ### Local secrets ###
 secret.txt
+secrets/
 
 ### Local docs assets (ERD 등 큰 이미지) ###
 docs/imgs/
