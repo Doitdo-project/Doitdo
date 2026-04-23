@@ -261,6 +261,7 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.characterId()).isEqualTo(2L);
 		assertThat(resp.stage()).isEqualTo("BABY");
 		assertThat(resp.name()).isEqualTo("꼬물이");
+		assertThat(resp.thumbnailUrl()).isEqualTo("https://cdn.example.com/slime.png");
 	}
 
 	@Test

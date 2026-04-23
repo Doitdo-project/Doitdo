@@ -164,7 +164,8 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		return new HatchCharacterResp(
 			babyCharacter.getCharacterId(),
 			babyCharacter.getStage().name(),
-			userCharacter.getName()
+			userCharacter.getName(),
+			babyCharacter.getThumbnailUrl()
 		);
 	}
 
