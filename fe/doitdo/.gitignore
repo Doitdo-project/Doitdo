@@ -60,3 +60,4 @@ android/keystore/
 .claude/
 CLAUDE.md
 AGENTS.md
+android/build/
