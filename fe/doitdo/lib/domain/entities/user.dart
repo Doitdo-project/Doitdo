@@ -2,20 +2,27 @@
 ///
 /// 소셜 로그인 종류/플랫폼과 무관하게 프레젠테이션 레이어는 이 모델만 본다.
 /// 서버 응답이나 OAuth 원본 토큰은 여기 들어오지 않는다 — 그건 data 레이어 DTO 영역.
+///
+/// 필드명은 백엔드 스펙(`userId`, `username`) 과 동일하게 유지한다.
 class User {
   const User({
-    required this.id,
-    required this.nickname,
+    required this.userId,
+    required this.username,
     required this.email,
   });
 
-  final int id;
-  final String nickname;
+  /// 서버 PK (`userId`).
+  final int userId;
+
+  /// 로그인 계정명 겸 표시용 닉네임 (`username`).
+  final String username;
+
+  /// 이메일 주소.
   final String email;
 
-  User copyWith({int? id, String? nickname, String? email}) => User(
-        id: id ?? this.id,
-        nickname: nickname ?? this.nickname,
+  User copyWith({int? userId, String? username, String? email}) => User(
+        userId: userId ?? this.userId,
+        username: username ?? this.username,
         email: email ?? this.email,
       );
 
@@ -24,10 +31,10 @@ class User {
       identical(this, other) ||
       other is User &&
           runtimeType == other.runtimeType &&
-          id == other.id &&
-          nickname == other.nickname &&
+          userId == other.userId &&
+          username == other.username &&
           email == other.email;
 
   @override
-  int get hashCode => Object.hash(id, nickname, email);
+  int get hashCode => Object.hash(userId, username, email);
 }

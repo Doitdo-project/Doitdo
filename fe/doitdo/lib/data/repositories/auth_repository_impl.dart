@@ -1,12 +1,17 @@
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:google_sign_in/google_sign_in.dart';
-// Kakao SDK 의 `User` 모델은 우리 도메인의 [User] 엔티티와 이름이 겹치므로 hide.
-// 실제로 우리가 Kakao SDK 에서 사용하는 건 UserApi / OAuthToken / isKakaoTalkInstalled 뿐.
-import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' hide User;
+// Kakao SDK 는 우리 프로젝트의 `User` / `UserApi` 와 이름이 모두 겹치므로 별칭(kakao)으로 분리.
+// 도메인 User 엔티티, 우리 UserApi 클래스는 아래 package:doitdo/... import 를 통해 사용.
+import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 
 import 'package:doitdo/core/errors/exceptions.dart';
+import 'package:doitdo/core/network/base_repository.dart';
+import 'package:doitdo/data/datasources/auth_api.dart';
 import 'package:doitdo/data/datasources/auth_local_data_source.dart';
-import 'package:doitdo/data/datasources/auth_remote_data_source.dart';
+import 'package:doitdo/data/models/login_request_dto.dart';
+import 'package:doitdo/data/models/refresh_request_dto.dart';
+import 'package:doitdo/data/models/signup_request_dto.dart';
+import 'package:doitdo/data/models/social_login_request_dto.dart';
 import 'package:doitdo/domain/entities/auth_tokens.dart';
 import 'package:doitdo/domain/entities/user.dart';
 import 'package:doitdo/domain/repositories/auth_repository.dart';
@@ -15,64 +20,101 @@ import 'package:doitdo/domain/repositories/auth_repository.dart';
 ///
 /// presentation 레이어(ViewModel)에서는 [AuthRepository] 인터페이스에만 의존하고,
 /// 이 구현체는 DI (app_data_providers.dart) 에서 주입된다.
-class AuthRepositoryImpl implements AuthRepository {
+///
+/// 이 레이어에서는 **try/catch 금지** — [safeApiCall] 이 DioException 을 NetworkException /
+/// ServerException / UnauthorizedException 등 타입드 예외로 이미 변환한다.
+/// 단, OAuth SDK 단계는 예외 — 사용자 취소를 [AuthCanceledException] 으로 변환하기
+/// 위해 플랫폼 채널 예외를 별도로 처리한다.
+class AuthRepositoryImpl extends BaseRepository implements AuthRepository {
   AuthRepositoryImpl({
-    required this.remote,
+    required this.authApi,
     required this.local,
     required this.googleSignIn,
   });
 
-  final AuthRemoteDataSource remote;
+  final AuthApi authApi;
   final AuthLocalDataSource local;
   final GoogleSignIn googleSignIn;
 
+  // ── 이메일 계정 ───────────────────────────────────────────────
+
   @override
-  Future<(User, AuthTokens)> signInWithGoogle() async {
-    // 1. Google 네이티브 로그인 시트 호출
-    final account = await googleSignIn.signIn();
-    if (account == null) {
-      // 사용자가 취소한 케이스 — ViewModel 에서 에러 메시지 없이 조용히 return 처리용.
-      throw const AuthCanceledException();
-    }
-
-    final auth = await account.authentication;
-    // 백엔드 스펙상 accessToken 을 사용한다 (Kakao 와 통일).
-    // 서버가 이 토큰으로 Google userinfo API 를 호출해서 유저 정보를 조회함.
-    final accessToken = auth.accessToken;
-    if (accessToken == null) {
-      throw const AuthException('Google Access Token 을 받지 못했습니다.');
-    }
-
-    // 2. 서버에 access token 전달 → 우리 서비스 세션 발급
-    final dto = await remote.loginWithGoogle(accessToken: accessToken);
-
-    // 3. 토큰 로컬 저장
+  Future<(User, AuthTokens)> signInWithEmail({
+    required String username,
+    required String password,
+  }) async {
+    final dto = await safeApiCall(
+      () => authApi.login(
+        LoginRequestDto(username: username, password: password),
+      ),
+    );
     await local.save(dto.tokens);
-
     return (dto.user.toEntity(), dto.tokens);
   }
 
   @override
-  Future<(User, AuthTokens)> signInWithKakao() async {
-    // 1. Kakao 네이티브 로그인.
-    //    카카오톡 앱이 설치돼 있으면 앱-투-앱으로 먼저 시도하고,
-    //    디바이스 권한 화면에서 사용자가 취소했거나 연결된 카카오계정이 없으면
-    //    카카오계정 웹 로그인으로 폴백하는 게 Kakao 공식 권장 플로우.
-    OAuthToken token;
+  Future<User> signUp({
+    required String email,
+    required String password,
+    required String username,
+  }) async {
+    // 회원가입은 토큰을 발급하지 않음 — 성공 시 도메인 User 만 반환하고,
+    // 호출측 ViewModel 이 이어서 signInWithEmail 을 호출해 세션을 얻게 한다.
+    final dto = await safeApiCall(
+      () => authApi.signUp(
+        SignUpRequestDto(
+          email: email,
+          password: password,
+          username: username,
+        ),
+      ),
+    );
+    return dto.toEntity();
+  }
+
+  // ── 소셜 로그인 ───────────────────────────────────────────────
+
+  @override
+  Future<(User, AuthTokens, bool isNewUser)> signInWithGoogle() async {
+    // 1. Google 네이티브 로그인 시트
+    final account = await googleSignIn.signIn();
+    if (account == null) {
+      // 사용자가 취소한 케이스.
+      throw const AuthCanceledException();
+    }
+    final auth = await account.authentication;
+    // ⚠️ 백엔드는 Google **ID Token**(JWT) 을 넘겨받아 aud 검증을 한다.
+    //   access_token 이 아니라 id_token 을 보내야 함. 스펙상 body 필드명은
+    //   카카오와 통일을 위해 `accessToken` 이지만 담는 값은 ID Token.
+    //   (id_token 을 받기 위해 GoogleSignIn 생성자에 serverClientId 지정 필수)
+    final idToken = auth.idToken;
+    if (idToken == null) {
+      throw const AuthException(
+        'Google ID Token 을 받지 못했습니다. serverClientId 설정을 확인하세요.',
+      );
+    }
+
+    // 2. 서버에 ID Token 전달 → 우리 서비스 세션 발급
+    return _completeSocialLogin(provider: 'GOOGLE', providerToken: idToken);
+  }
+
+  @override
+  Future<(User, AuthTokens, bool isNewUser)> signInWithKakao() async {
+    // 1. Kakao 네이티브 로그인 (앱/계정 폴백).
+    kakao.OAuthToken token;
     try {
-      if (await isKakaoTalkInstalled()) {
+      if (await kakao.isKakaoTalkInstalled()) {
         try {
-          token = await UserApi.instance.loginWithKakaoTalk();
+          token = await kakao.UserApi.instance.loginWithKakaoTalk();
         } on PlatformException catch (e) {
-          // 'CANCELED' 는 사용자가 명시적으로 취소 버튼을 누른 경우 — 폴백 없이 중단.
           if (e.code == 'CANCELED') {
             throw const AuthCanceledException();
           }
-          // 그 외 (카카오톡에 연결된 계정 없음 등) → 카카오계정 웹 로그인 폴백.
-          token = await UserApi.instance.loginWithKakaoAccount();
+          // 카카오톡에 연결된 계정 없음 등 → 계정 웹 로그인 폴백.
+          token = await kakao.UserApi.instance.loginWithKakaoAccount();
         }
       } else {
-        token = await UserApi.instance.loginWithKakaoAccount();
+        token = await kakao.UserApi.instance.loginWithKakaoAccount();
       }
     } on AuthCanceledException {
       rethrow;
@@ -86,44 +128,79 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     // 2. 서버에 access token 전달 → 우리 서비스 세션 발급
-    final dto = await remote.loginWithKakao(accessToken: token.accessToken);
-
-    // 3. 토큰 로컬 저장
-    await local.save(dto.tokens);
-
-    return (dto.user.toEntity(), dto.tokens);
+    return _completeSocialLogin(
+      provider: 'KAKAO',
+      providerToken: token.accessToken,
+    );
   }
+
+  /// Google/Kakao 공통 마지막 단계 — 서버 교환 + 토큰 저장.
+  Future<(User, AuthTokens, bool isNewUser)> _completeSocialLogin({
+    required String provider,
+    required String providerToken,
+  }) async {
+    final dto = await safeApiCall(
+      () => authApi.socialLogin(
+        provider,
+        SocialLoginRequestDto(accessToken: providerToken),
+      ),
+    );
+    await local.save(dto.tokens);
+    return (dto.user.toEntity(), dto.tokens, dto.isNewUser ?? false);
+  }
+
+  // ── 세션 관리 ─────────────────────────────────────────────────
 
   @override
   Future<User?> restoreSession() async {
     final tokens = await local.read();
     if (tokens == null) return null;
-    // TODO: 백엔드에 `GET /api/auth/me` 엔드포인트가 생기면 그걸로 토큰 유효성 + 유저 정보 확인.
-    //       현재는 토큰이 있으면 "일단 유효" 로 간주하고 null 반환 (= 재로그인 요구).
-    //       스펙 확정 후 활성화.
+    // TODO: `GET /api/auth/me` 또는 유사 엔드포인트가 생기면 그걸로 토큰 유효성 + 유저 정보 확인.
+    //       현재는 토큰이 있어도 null 반환 → 재로그인 요구. 스펙 확정 후 활성화.
     return null;
   }
 
   @override
+  Future<AuthTokens> refreshTokens() async {
+    final stored = await local.read();
+    if (stored == null) {
+      throw const UnauthorizedException('저장된 리프레시 토큰이 없습니다.');
+    }
+    final dto = await safeApiCall(
+      () => authApi.refresh(
+        RefreshRequestDto(refreshToken: stored.refreshToken),
+      ),
+    );
+    final newTokens = dto.toEntity();
+    await local.save(newTokens);
+    return newTokens;
+  }
+
+  @override
   Future<void> signOut() async {
-    // 서버 세션 종료는 실패해도 로컬은 반드시 정리한다.
+    // 서버 세션 종료는 실패해도 로컬 정리는 반드시 수행.
+    // safeApiCallNoData 는 DioException 을 타입드 예외로 변환하지만, 여기서는
+    // 네트워크 실패에도 로컬만 비워주는 게 UX 상 자연스러워 try 로 감싼다.
     try {
-      await remote.logout();
+      await safeApiCallNoData(() => authApi.logout());
     } catch (_) {
-      // no-op
+      // no-op — 로컬 정리는 아래에서 계속 진행.
     }
     await local.clear();
+
     // 어느 provider 로 로그인했는지 추적하지 않으므로 두 SDK 모두 안전하게 로그아웃 시도.
-    // 각 SDK 는 "세션 없음" 을 예외로 던질 수 있어 try 로 감싼다.
     try {
       await googleSignIn.signOut();
     } catch (_) {
-      // Google 로그아웃 실패해도 앱 로그아웃 자체엔 영향 없음.
+      // Google 세션 없음 → 무시.
     }
     try {
-      await UserApi.instance.logout();
+      await kakao.UserApi.instance.logout();
     } catch (_) {
-      // Kakao 세션이 없거나 만료돼도 무시.
+      // Kakao 세션 없음/만료 → 무시.
     }
   }
+
+  // 이메일/닉네임 중복체크는 UserRepository 가 담당. AuthRepository 는
+  // 순수한 인증/세션 관리에만 집중한다.
 }
