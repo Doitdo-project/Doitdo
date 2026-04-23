@@ -3,6 +3,8 @@ package com.doitdo.domain.tamagotchi.application.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.ArgumentMatchers.any;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +19,7 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.UpdateCharacterNameResp;
 import com.doitdo.domain.tamagotchi.entity.Character;
 import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
@@ -38,6 +41,45 @@ class TamagotchiServiceImplTest {
 
 	@Mock
 	private UserCharacterRepository userCharacterRepository;
+
+	@Test
+	void receiveEggCreatesFirstEggWhenUserHasNoActiveCharacter() {
+		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
+			characterRepository,
+			characterUnlockRepository,
+			userCharacterRepository
+		);
+		Long userId = 1L;
+		Character eggCharacter = Character.builder()
+			.characterId(1L)
+			.species("SLIME")
+			.stage(Character.Stage.EGG)
+			.thumbnailUrl("https://cdn.example.com/egg.png")
+			.build();
+		UserCharacter savedUserCharacter = UserCharacter.builder()
+			.userCharacterId(10L)
+			.userId(userId)
+			.characterId(1L)
+			.growthPercent(0)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.empty());
+		given(characterRepository.findFirstByStageOrderByCharacterIdAsc(Character.Stage.EGG))
+			.willReturn(Optional.of(eggCharacter));
+		given(userCharacterRepository.save(any(UserCharacter.class))).willReturn(savedUserCharacter);
+
+		CurrentCharacterResp resp = service.receiveEgg(userId);
+
+		assertThat(resp.userCharacterId()).isEqualTo(10L);
+		assertThat(resp.characterId()).isEqualTo(1L);
+		assertThat(resp.stage()).isEqualTo("EGG");
+		assertThat(resp.growthPercent()).isEqualTo(0);
+		assertThat(resp.equippedUserItemId()).isNull();
+		then(userCharacterRepository).should().save(any(UserCharacter.class));
+	}
 
 	@Test
 	void updateNameChangesCurrentUserCharacterName() {
