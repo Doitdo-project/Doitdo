@@ -34,6 +34,39 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 	private final UserCharacterRepository userCharacterRepository;
 
 	@Override
+	@Transactional
+	public CurrentCharacterResp receiveEgg(Long userId) {
+		Optional<UserCharacter> currentUserCharacter = userCharacterRepository
+			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId);
+
+		if (currentUserCharacter.isPresent()) {
+			return toCurrentCharacterResp(currentUserCharacter.get(), TamagotchiErrorCode.M04_002);
+		}
+
+		com.doitdo.domain.tamagotchi.entity.Character eggCharacter = characterRepository
+			.findFirstByStageOrderByCharacterIdAsc(com.doitdo.domain.tamagotchi.entity.Character.Stage.EGG)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_003));
+
+		UserCharacter userCharacter = UserCharacter.builder()
+			.userId(userId)
+			.characterId(eggCharacter.getCharacterId())
+			.growthPercent(0)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+		UserCharacter savedUserCharacter = userCharacterRepository.save(userCharacter);
+
+		return new CurrentCharacterResp(
+			eggCharacter.getCharacterId(),
+			savedUserCharacter.getName(),
+			eggCharacter.getStage().name(),
+			savedUserCharacter.getGrowthPercent(),
+			savedUserCharacter.getEquipedItemsId(),
+			savedUserCharacter.getUserCharacterId()
+		);
+	}
+
+	@Override
 	@Transactional(readOnly = true)
 	public EncyclopediaResp getEncyclopedia(Long userId) {
 		Set<Long> unlockedCharacterIds = characterUnlockRepository.findByUserId(userId).stream()
@@ -77,9 +110,13 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
 
+		return toCurrentCharacterResp(userCharacter, TamagotchiErrorCode.M04_002);
+	}
+
+	private CurrentCharacterResp toCurrentCharacterResp(UserCharacter userCharacter, TamagotchiErrorCode errorCode) {
 		com.doitdo.domain.tamagotchi.entity.Character character = characterRepository
 			.findById(userCharacter.getCharacterId())
-			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
+			.orElseThrow(() -> new CustomException(errorCode));
 
 		return new CurrentCharacterResp(
 			character.getCharacterId(),
