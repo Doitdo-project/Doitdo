@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:kakao_flutter_sdk_common/kakao_flutter_sdk_common.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:doitdo/app.dart';
-import 'package:doitdo/core/utils/app_env.dart';
-import 'package:doitdo/presentation/providers/app_data_providers.dart';
-
-import 'package:intl/date_symbol_data_local.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:doitdo/core/notifications/fcm_service.dart';
+import 'package:doitdo/core/utils/app_env.dart';
 import 'package:doitdo/core/utils/app_logger.dart';
 import 'package:doitdo/firebase_options.dart';
+import 'package:doitdo/presentation/providers/app_data_providers.dart';
+
+import 'package:firebase_core/firebase_core.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

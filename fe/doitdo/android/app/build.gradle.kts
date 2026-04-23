@@ -9,6 +9,9 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    // Firebase — google-services.json 을 빌드 타임에 읽어 리소스로 주입.
+    // settings.gradle.kts 에서 버전 선언한 플러그인을 여기서 실제 적용.
+    id("com.google.gms.google-services")
 }
 
 // Kakao 네이티브 앱 키는 AndroidManifest 의 redirect scheme(kakao{KEY}://oauth) 에

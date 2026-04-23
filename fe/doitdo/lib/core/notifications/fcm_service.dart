@@ -32,6 +32,13 @@ class FcmService {
     }
 
     FirebaseMessaging.onMessage.listen(_handleForeground);
+
+    // 개발 편의 — 디버그 빌드에서는 FCM 토큰을 로그로 노출해 테스트 푸시 보낼 때 사용.
+    // 릴리즈 빌드에서는 보안상 출력하지 않는다.
+    if (kDebugMode) {
+      final token = await FirebaseMessaging.instance.getToken();
+      appLogger.i('[FCM] 디바이스 토큰: $token');
+    }
   }
 
   static Future<String?> getToken() => FirebaseMessaging.instance.getToken();
