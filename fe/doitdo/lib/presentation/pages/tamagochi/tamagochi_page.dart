@@ -1,5 +1,7 @@
 import 'package:doitdo/core/utils/snap_scroll_physics.dart';
+import 'package:doitdo/domain/entities/character.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
+import 'package:doitdo/presentation/pages/tamagochi/character_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/character_card.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/streak_section.dart';
@@ -32,15 +34,57 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   final ValueNotifier<bool> _headerVisible = ValueNotifier<bool>(true);
 
   @override
+  void initState() {
+    super.initState();
+    // 진입 시 캐릭터 조회 1회. 이미 로그인 플로우에서 ensureCharacter() 로 채워져
+    // 있으면 load() 가 같은 값을 덮어쓸 뿐이라 부작용 없음.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(characterViewModelProvider.notifier).load();
+    });
+  }
+
+  @override
   void dispose() {
     _headerVisible.dispose();
     super.dispose();
+  }
+
+  /// 알 10회 탭이 완료된 시점에 호출된다.
+  /// 1) `/api/characters/me/hatch` 호출
+  /// 2) 성공 시 이름짓기 페이지로 push
+  /// 3) pop 후 캐릭터 재조회 (이름이 서버에 반영되어 내려오길 기대)
+  Future<void> _handleHatch() async {
+    final vm = ref.read(characterViewModelProvider.notifier);
+    final ok = await vm.hatchEgg();
+    if (!mounted) return;
+    if (!ok) {
+      _showComingSoon(context, '알을 깨우는 중에 문제가 발생했어요. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+    await context.push(AppRoutes.tamagochiNaming);
+    if (!mounted) return;
+    // 이름 저장 API 가 붙기 전까진 로컬 변경이 없으므로 재조회가 현재 상태를
+    // 그대로 되돌려받는 안전한 액션이다.
+    ref.read(characterViewModelProvider.notifier).load();
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(tamagochiViewModelProvider);
     final vm = ref.read(tamagochiViewModelProvider.notifier);
+    final characterAsync = ref.watch(characterViewModelProvider);
+
+    // 에러 상태는 스낵바로 한 번만 노출하고 조용히 지나간다.
+    ref.listen<AsyncValue<Character?>>(characterViewModelProvider,
+        (prev, next) {
+      next.whenOrNull(error: (err, _) {
+        if (!mounted) return;
+        _showComingSoon(context, '캐릭터 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
+      });
+    });
+
+    final character = characterAsync.valueOrNull;
+    final isCharacterLoading = characterAsync.isLoading;
     final topInset = MediaQuery.paddingOf(context).top;
 
     final double headerHeight = 200.h +
@@ -93,12 +137,15 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                           children: [
                             CharacterCard(
                               state: state,
+                              character: character,
+                              isCharacterLoading: isCharacterLoading,
                               onTapShop: () => _showComingSoon(
                                 context,
                                 '상점 기능은 아직 준비 중이에요.',
                               ),
                               onTapCollection: () =>
                                   context.push(AppRoutes.tamagochiCollection),
+                              onHatch: _handleHatch,
                             ),
                             SizedBox(height: _streakTopGap),
                             StreakSection(

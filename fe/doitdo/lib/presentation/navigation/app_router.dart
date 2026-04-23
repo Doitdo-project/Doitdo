@@ -12,6 +12,7 @@ import 'package:doitdo/presentation/pages/auth/welcome_page.dart';
 import 'package:doitdo/presentation/pages/collection/collection_page.dart';
 import 'package:doitdo/presentation/pages/setting/setting_page.dart';
 import 'package:doitdo/presentation/pages/splash/splash_page.dart';
+import 'package:doitdo/presentation/pages/tamagochi/character_naming_page.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_page.dart';
 import 'package:doitdo/presentation/pages/todo/todo_page.dart';
 import 'package:doitdo/presentation/widgets/shell/doitdo_shell.dart';
@@ -29,6 +30,7 @@ class AppRoutes {
   static const String todo = '/todo';
   static const String tamagochi = '/tamagochi';
   static const String tamagochiCollection = '/tamagochi/collection';
+  static const String tamagochiNaming = '/tamagochi/naming';
   static const String setting = '/setting';
   static const String account = '/setting/account';
   static const String category = '/setting/category';
@@ -102,6 +104,12 @@ final GoRouter appRouter = GoRouter(
                   path: 'collection',
                   parentNavigatorKey: _rootNavigatorKey,
                   builder: (context, state) => const CollectionPage(),
+                ),
+                // '/tamagochi/naming' — 알 부화 직후 이름 짓기 전체 화면.
+                GoRoute(
+                  path: 'naming',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) => const CharacterNamingPage(),
                 ),
               ],
             ),
