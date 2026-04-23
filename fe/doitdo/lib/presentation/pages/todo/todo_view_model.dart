@@ -4,10 +4,17 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/pages/todo/todo_state.dart';
 
-class TodoViewModel extends StateNotifier<TodoState> {
-  TodoViewModel() : super(TodoState());
+// [추가] 서버 통신을 위해 레포지토리와 프로바이더 파일 임포트
+import 'package:doitdo/domain/repositories/todo_repository.dart';
+import 'package:doitdo/presentation/providers/app_data_providers.dart';
 
-  // ✅ 핵심: 현재 필터(currentFilter)와 선택된 날짜에 맞춰 목록을 갱신하는 함수
+class TodoViewModel extends StateNotifier<TodoState> {
+  // [수정] 생성자에서 서버와 통신할 repository를 주입받도록 변경
+  TodoViewModel(this._repository) : super(TodoState());
+
+  final TodoRepository _repository; // 레포지토리 저장용 변수
+
+  // 핵심: 현재 필터(currentFilter)와 선택된 날짜에 맞춰 목록을 갱신하는 함수
   void _updateDisplayedTodos() {
     final filter = state.currentFilter;
     final selectedDay = state.selectedDay;
@@ -69,10 +76,23 @@ class TodoViewModel extends StateNotifier<TodoState> {
     _updateDisplayedTodos();
   }
 
-  void toggleTodo(String id) {
+  // [핵심 수정] 서버 통신 API 호출이 추가된 토글 함수!
+  Future<void> toggleTodo(String id) async {
+    // 1. 현재 투두 찾기
+    final targetIdx = state.allTodos.indexWhere((t) => t.id == id);
+    if (targetIdx == -1) return;
+
+    // 2. 바뀔 상태 결정 (DONE ↔ TODO)
+    final targetTodo = state.allTodos[targetIdx];
+    final newStatus = targetTodo.isDone ? 'TODO' : 'DONE';
+
+    // 3. 로컬 화면 먼저 재빠르게 변경 (Optimistic UI 업데이트)
     final newAll = state.allTodos.map((t) => t.id == id ? t.copyWith(isDone: !t.isDone) : t).toList();
     state = state.copyWith(allTodos: newAll);
     _updateDisplayedTodos();
+
+    // 4. 백엔드 서버로 실제 통신 날리기! (팀 가이드라인에 따라 try-catch 대신 guard 사용)
+    await AsyncValue.guard(() => _repository.updateTodoStatus(id, newStatus));
   }
 
   void deleteTodo(String id) {
@@ -101,10 +121,20 @@ class TodoViewModel extends StateNotifier<TodoState> {
     _updateDisplayedTodos();
   }
 
-  void toggleSomedayTodo(String id) {
+  // [핵심 수정] 언제가 할 일도 동일하게 서버 통신 추가!
+  Future<void> toggleSomedayTodo(String id) async {
+    final targetIdx = state.allSomedayTodos.indexWhere((t) => t.id == id);
+    if (targetIdx == -1) return;
+
+    final targetTodo = state.allSomedayTodos[targetIdx];
+    final newStatus = targetTodo.isDone ? 'TODO' : 'DONE';
+
     final updated = state.allSomedayTodos.map((t) => t.id == id ? t.copyWith(isDone: !t.isDone) : t).toList();
     state = state.copyWith(allSomedayTodos: updated);
     _updateDisplayedTodos();
+
+    // 백엔드 서버로 실제 통신 날리기!
+    await AsyncValue.guard(() => _repository.updateTodoStatus(id, newStatus));
   }
 
   void deleteSomedayTodo(String id) {
@@ -178,4 +208,8 @@ class TodoViewModel extends StateNotifier<TodoState> {
   }
 }
 
-final todoViewModelProvider = StateNotifierProvider.autoDispose<TodoViewModel, TodoState>((ref) => TodoViewModel());
+// [수정] Provider가 생성될 때 repository를 주입해서 넘겨주도록 변경!
+final todoViewModelProvider = StateNotifierProvider.autoDispose<TodoViewModel, TodoState>((ref) {
+  final repository = ref.read(todoRepositoryProvider);
+  return TodoViewModel(repository);
+});
