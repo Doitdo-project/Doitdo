@@ -65,6 +65,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			eggCharacter.getCharacterId(),
 			savedUserCharacter.getName(),
 			eggCharacter.getStage().name(),
+			eggCharacter.getThumbnailUrl(),
 			savedUserCharacter.getGrowthPercent(),
 			savedUserCharacter.getEquipedItemsId(),
 			savedUserCharacter.getUserCharacterId()
@@ -127,6 +128,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			character.getCharacterId(),
 			userCharacter.getName(),
 			character.getStage().name(),
+			character.getThumbnailUrl(),
 			userCharacter.getGrowthPercent(),
 			userCharacter.getEquipedItemsId(),
 			userCharacter.getUserCharacterId()

@@ -96,6 +96,7 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.userCharacterId()).isEqualTo(10L);
 		assertThat(resp.characterId()).isEqualTo(1L);
 		assertThat(resp.stage()).isEqualTo("EGG");
+		assertThat(resp.thumbnailUrl()).isEqualTo("https://cdn.example.com/egg.png");
 		assertThat(resp.growthPercent()).isEqualTo(0);
 		assertThat(resp.equippedUserItemId()).isNull();
 		then(userCharacterRepository).should().save(any(UserCharacter.class));
@@ -139,6 +140,7 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.userCharacterId()).isEqualTo(10L);
 		assertThat(resp.characterId()).isEqualTo(2L);
 		assertThat(resp.stage()).isEqualTo("BABY");
+		assertThat(resp.thumbnailUrl()).isEqualTo("https://cdn.example.com/slime.png");
 		then(userCharacterRepository).should(never()).save(any(UserCharacter.class));
 	}
 
@@ -224,7 +226,7 @@ class TamagotchiServiceImplTest {
 			.userCharacterId(10L)
 			.userId(userId)
 			.characterId(1L)
-			.name("꼬물??)
+			.name("꼬물이")
 			.growthPercent(0)
 			.isActive(true)
 			.isDeleted(false)
@@ -252,7 +254,7 @@ class TamagotchiServiceImplTest {
 
 		assertThat(resp.characterId()).isEqualTo(2L);
 		assertThat(resp.stage()).isEqualTo("BABY");
-		assertThat(resp.name()).isEqualTo("꼬물??);
+		assertThat(resp.name()).isEqualTo("꼬물이");
 	}
 
 	@Test
@@ -331,7 +333,7 @@ class TamagotchiServiceImplTest {
 			.userCharacterId(20L)
 			.userId(userId)
 			.characterId(2L)
-			.name("꼬물??)
+			.name("꼬물이")
 			.growthPercent(120)
 			.isActive(true)
 			.isDeleted(false)
@@ -375,7 +377,7 @@ class TamagotchiServiceImplTest {
 			.userCharacterId(30L)
 			.userId(userId)
 			.characterId(4L)
-			.name("꼬물??)
+			.name("꼬물이")
 			.growthPercent(0)
 			.isActive(true)
 			.isDeleted(false)

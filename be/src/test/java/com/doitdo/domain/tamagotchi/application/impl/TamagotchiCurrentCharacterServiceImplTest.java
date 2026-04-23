@@ -70,6 +70,7 @@ class TamagotchiCurrentCharacterServiceImplTest {
 		assertThat(resp.characterId()).isEqualTo(2L);
 		assertThat(resp.name()).isEqualTo("saesangi");
 		assertThat(resp.stage()).isEqualTo("BABY");
+		assertThat(resp.thumbnailUrl()).isEqualTo("https://cdn.example.com/slime.png");
 		assertThat(resp.growthPercent()).isEqualTo(45);
 		assertThat(resp.equippedUserItemId()).isEqualTo(42L);
 	}
