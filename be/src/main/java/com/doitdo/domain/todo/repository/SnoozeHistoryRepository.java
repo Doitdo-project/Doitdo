@@ -26,4 +26,6 @@ public interface SnoozeHistoryRepository extends JpaRepository<SnoozeHistory, Lo
 		Long getTodoId();
 		java.time.LocalDate getFromDate();
 	}
+
+	void deleteAllByUserId(Long userId);
 }

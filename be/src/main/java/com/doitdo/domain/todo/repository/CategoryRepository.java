@@ -14,4 +14,6 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 	boolean existsByCategoryNameAndUserId(String categoryName, Long userId);
 
 	List<Category> findAllByUserIdOrderByCategoryIdAsc(Long userId);
+
+	void deleteAllByUserId(Long userId);
 }

@@ -1,6 +1,7 @@
 package com.doitdo.domain.user.application;
 
 import com.doitdo.domain.user.api.dto.req.PasswordChangeReq;
+import com.doitdo.domain.user.api.dto.req.WithdrawReq;
 import com.doitdo.domain.user.api.dto.resp.CheckDuplicateResp;
 import com.doitdo.domain.user.api.dto.resp.UserInfoResp;
 
@@ -13,4 +14,6 @@ public interface UserService {
 	UserInfoResp getMyInfo(Long userId);
 
 	void changePassword(Long userId, PasswordChangeReq req);
+
+	void withdraw(Long userId, WithdrawReq req);
 }

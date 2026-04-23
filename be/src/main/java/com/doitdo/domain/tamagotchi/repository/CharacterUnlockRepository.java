@@ -10,4 +10,6 @@ import com.doitdo.domain.tamagotchi.entity.CharacterUnlockId;
 public interface CharacterUnlockRepository extends JpaRepository<CharacterUnlock, CharacterUnlockId> {
 
 	List<CharacterUnlock> findByUserId(Long userId);
+
+	void deleteAllByUserId(Long userId);
 }
