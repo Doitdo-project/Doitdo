@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -10,6 +11,7 @@ import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/auth/welcome_view_model.dart';
+import 'package:doitdo/presentation/pages/tamagochi/character_view_model.dart';
 
 /// 앱 진입 후 최초로 보이는 로그인 선택 화면.
 ///
@@ -162,6 +164,11 @@ Future<void> _handleGoogleSignIn(BuildContext context, WidgetRef ref) async {
   final ok = await vm.signInWithGoogle();
   if (!context.mounted) return;
   if (ok) {
+    // 신규 가입자면 알 수령, 기존 유저면 현재 캐릭터 로딩. 실패해도 홈 진입 자체는
+    // 막지 않는다 (홈 initState 에서 재시도 load() 가 돈다).
+    unawaited(
+      ref.read(characterViewModelProvider.notifier).ensureCharacter(),
+    );
     context.go(AppRoutes.tamagochi);
     return;
   }
@@ -179,6 +186,9 @@ Future<void> _handleKakaoSignIn(BuildContext context, WidgetRef ref) async {
   final ok = await vm.signInWithKakao();
   if (!context.mounted) return;
   if (ok) {
+    unawaited(
+      ref.read(characterViewModelProvider.notifier).ensureCharacter(),
+    );
     context.go(AppRoutes.tamagochi);
     return;
   }
