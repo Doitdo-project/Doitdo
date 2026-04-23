@@ -1,12 +1,14 @@
 import 'package:doitdo/core/network/base_repository.dart';
 import 'package:doitdo/data/datasources/todo_api.dart';
+import 'package:doitdo/domain/repositories/todo_repository.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 
-class TodoRepositoryImpl extends BaseRepository {
-  final TodoApi _todoApi;
-
+class TodoRepositoryImpl extends BaseRepository implements TodoRepository {
   TodoRepositoryImpl(this._todoApi);
 
+  final TodoApi _todoApi;
+
+  @override
   Future<void> createTodo(Todo todo) async {
     // 1. 날짜 포맷팅 (YYYY-MM-DD)
     final startDateStr = todo.date?.toIso8601String().split('T')[0] ??
@@ -33,7 +35,7 @@ class TodoRepositoryImpl extends BaseRepository {
       if (periodDays != null) 'period': periodDays,
     };
 
-    // 4. safeApiCall 적용
-    await safeApiCall(() => _todoApi.createTodo(body));
+    // ✅ 가이드라인 적용: 응답 데이터(Data)가 없는 API이므로 safeApiCallNoData 사용
+    await safeApiCallNoData(() => _todoApi.createTodo(body));
   }
 }

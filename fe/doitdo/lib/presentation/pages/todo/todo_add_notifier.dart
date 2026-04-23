@@ -1,35 +1,9 @@
 import 'dart:async';
 
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:doitdo/presentation/models/todo.dart';
-import 'package:doitdo/data/datasources/todo_api.dart';
-import 'package:doitdo/data/repositories/todo_repository_impl.dart';
-
-// ============================================================================
-// [의존성 주입(DI) Providers]
-// 에러가 났던 "Provider가 없다"는 문제를 해결하기 위한 세팅입니다.
-// ※ 주의: 프로젝트 내에 이미 공통으로 사용하는 Dio Provider나
-// Network Provider가 있다면 그것으로 교체하는 것이 좋습니다.
-// ============================================================================
-
-final dioProvider = Provider<Dio>((ref) {
-  final dio = Dio();
-  // .env에 설정한 BASE_URL이 있다면 여기서 적용할 수 있습니다.
-  // 예: dio.options.baseUrl = AppEnv.optional('BASE_URL');
-  return dio;
-});
-
-final todoApiProvider = Provider<TodoApi>((ref) {
-  final dio = ref.watch(dioProvider);
-  return TodoApi(dio);
-});
-
-final todoRepositoryProvider = Provider<TodoRepositoryImpl>((ref) {
-  final api = ref.watch(todoApiProvider);
-  return TodoRepositoryImpl(api);
-});
+import 'package:doitdo/presentation/providers/app_data_providers.dart'; // ✅ 중앙 DI 파일 임포트
 
 // ============================================================================
 // [상태 관리 Notifier]
@@ -49,6 +23,7 @@ class TodoAddNotifier extends AsyncNotifier<void> {
 
     // 2. API 호출 및 예외 처리 자동화 (guard)
     state = await AsyncValue.guard(() async {
+      // ✅ 중앙에 등록된 '진짜' 통신 Provider 호출!
       final repository = ref.read(todoRepositoryProvider);
 
       // 서버로 데이터 전송

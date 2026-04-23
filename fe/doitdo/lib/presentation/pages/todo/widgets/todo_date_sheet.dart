@@ -729,10 +729,6 @@ class _RangeMiddleCell extends StatelessWidget {
 // 기간 탭: 시작·끝 라벨 셀
 // rangeStartBuilder / rangeEndBuilder에서 호출됨
 // ─────────────────────────────────────────────
-// ─────────────────────────────────────────────
-// 기간 탭: 시작·끝 라벨 셀
-// rangeStartBuilder / rangeEndBuilder에서 호출됨
-// ─────────────────────────────────────────────
 class _RangeLabelCell extends StatelessWidget {
   const _RangeLabelCell({
     required this.day,

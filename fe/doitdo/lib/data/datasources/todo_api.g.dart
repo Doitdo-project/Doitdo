@@ -18,15 +18,13 @@ class _TodoApi implements TodoApi {
   final ParseErrorLogger? errorLogger;
 
   @override
-  Future<ApiResponse<TodoResponseDto>> createTodo(
-    Map<String, dynamic> body,
-  ) async {
+  Future<ApiResponse<dynamic>> createTodo(Map<String, dynamic> body) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     final _data = <String, dynamic>{};
     _data.addAll(body);
-    final _options = _setStreamType<ApiResponse<TodoResponseDto>>(
+    final _options = _setStreamType<ApiResponse<dynamic>>(
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -37,11 +35,11 @@ class _TodoApi implements TodoApi {
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late ApiResponse<TodoResponseDto> _value;
+    late ApiResponse<dynamic> _value;
     try {
-      _value = ApiResponse<TodoResponseDto>.fromJson(
+      _value = ApiResponse<dynamic>.fromJson(
         _result.data!,
-        (json) => TodoResponseDto.fromJson(json as Map<String, dynamic>),
+        (json) => json as dynamic,
       );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options);

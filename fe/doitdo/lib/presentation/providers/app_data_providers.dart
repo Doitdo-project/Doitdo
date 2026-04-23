@@ -13,6 +13,9 @@ import 'package:doitdo/data/repositories/auth_repository_impl.dart';
 import 'package:doitdo/data/repositories/user_repository_impl.dart';
 import 'package:doitdo/domain/repositories/auth_repository.dart';
 import 'package:doitdo/domain/repositories/user_repository.dart';
+import 'package:doitdo/data/datasources/todo_api.dart';
+import 'package:doitdo/data/repositories/todo_repository_impl.dart';
+import 'package:doitdo/domain/repositories/todo_repository.dart';
 
 // 중앙 집중식 DI 선언 파일 (MOA 컨벤션)
 // datasource → repository → service 순서로 Provider 추가.
@@ -87,4 +90,13 @@ final userApiProvider = Provider<UserApi>(
 
 final userRepositoryProvider = Provider<UserRepository>(
   (ref) => UserRepositoryImpl(ref.watch(userApiProvider)),
+);
+
+// ─── Todo: retrofit API → Repository ───────────────────────────
+final todoApiProvider = Provider<TodoApi>(
+      (ref) => TodoApi(ref.watch(dioProvider)), // 진짜 서버 주소와 토큰이 들어간 dio 적용
+);
+
+final todoRepositoryProvider = Provider<TodoRepository>(
+      (ref) => TodoRepositoryImpl(ref.watch(todoApiProvider)),
 );
