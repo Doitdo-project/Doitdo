@@ -4,13 +4,18 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/pages/todo/todo_state.dart';
 
-// [추가] 서버 통신을 위해 레포지토리와 프로바이더 파일 임포트
+// 서버 통신을 위해 레포지토리와 프로바이더 파일 임포트
 import 'package:doitdo/domain/repositories/todo_repository.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
 
+// ✅ [추가] Request DTO 임포트 (경로는 프로젝트 구조에 맞게 수정될 수 있습니다)
+import 'package:doitdo/data/models/todo_update_request_dto.dart';
+
 class TodoViewModel extends StateNotifier<TodoState> {
-  // [수정] 생성자에서 서버와 통신할 repository를 주입받도록 변경
-  TodoViewModel(this._repository) : super(TodoState());
+  // 생성자에서 서버와 통신할 repository를 주입받도록 변경
+  TodoViewModel(this._repository) : super(TodoState()){
+    fetchCalendarData();
+  }
 
   final TodoRepository _repository; // 레포지토리 저장용 변수
 
@@ -76,7 +81,7 @@ class TodoViewModel extends StateNotifier<TodoState> {
     _updateDisplayedTodos();
   }
 
-  // [핵심 수정] 서버 통신 API 호출이 추가된 토글 함수!
+  // 서버 통신 API 호출이 추가된 토글 함수!
   Future<void> toggleTodo(String id) async {
     // 1. 현재 투두 찾기
     final targetIdx = state.allTodos.indexWhere((t) => t.id == id);
@@ -101,10 +106,35 @@ class TodoViewModel extends StateNotifier<TodoState> {
     _updateDisplayedTodos();
   }
 
-  void updateTodo(Todo updated) {
+  // ✅ [핵심 수정] T04 API를 호출하는 비동기 updateTodo
+  Future<void> updateTodo(Todo updated) async {
+    // 1. 로컬 화면 먼저 빠르게 변경 (Optimistic UI)
     final newAll = state.allTodos.map((t) => t.id == updated.id ? updated : t).toList();
     state = state.copyWith(allTodos: newAll);
     _updateDisplayedTodos();
+
+    // 2. 서버로 보낼 날짜 포맷팅 (YYYY-MM-DD 형식 맞추기)
+    final startDateStr = updated.date != null
+        ? updated.date!.toIso8601String().split('T')[0]
+        : DateTime.now().toIso8601String().split('T')[0];
+
+    final endDateStr = updated.rangeEnd != null
+        ? updated.rangeEnd!.toIso8601String().split('T')[0]
+        : null;
+
+    // 3. Request DTO 조립
+    final requestDto = TodoUpdateRequestDto(
+      title: updated.title,
+      // content: updated.content, // Todo 모델에 내용(content) 필드가 있다면 주석 해제하세요!
+      category: updated.category.name,
+      type: updated.dateType == TodoDateType.normal ? 'NORMAL' : 'PERIOD',
+      startDate: startDateStr,
+      endDate: endDateStr,
+      // period: updated.period, // 반복 주기가 있다면 주석 해제하세요!
+    );
+
+    // 4. 백엔드 서버로 실제 수정 요청 날리기
+    await AsyncValue.guard(() => _repository.updateTodo(updated.id, requestDto));
   }
 
   void reorderTodo(int oldIndex, int newIndex) {
@@ -121,7 +151,7 @@ class TodoViewModel extends StateNotifier<TodoState> {
     _updateDisplayedTodos();
   }
 
-  // [핵심 수정] 언제가 할 일도 동일하게 서버 통신 추가!
+  // 언제가 할 일도 동일하게 서버 통신 추가!
   Future<void> toggleSomedayTodo(String id) async {
     final targetIdx = state.allSomedayTodos.indexWhere((t) => t.id == id);
     if (targetIdx == -1) return;
@@ -142,10 +172,55 @@ class TodoViewModel extends StateNotifier<TodoState> {
     _updateDisplayedTodos();
   }
 
-  void updateSomedayTodo(Todo updated) {
+  // [핵심 수정] 언제가 할 일 수정 API 연동
+  Future<void> updateSomedayTodo(Todo updated) async {
+    // 1. 로컬 상태 변경
     final list = state.allSomedayTodos.map((t) => t.id == updated.id ? updated : t).toList();
     state = state.copyWith(allSomedayTodos: list);
     _updateDisplayedTodos();
+
+    // 2. 서버로 보낼 임시 시작 날짜 (언제가 할 일은 날짜가 없으므로 오늘 날짜로 대체)
+    final startDateStr = DateTime.now().toIso8601String().split('T')[0];
+
+    // 3. Request DTO 조립
+    final requestDto = TodoUpdateRequestDto(
+      title: updated.title,
+      category: updated.category.name,
+      type: 'NORMAL',
+      startDate: startDateStr,
+    );
+
+    // 4. 백엔드 서버로 실제 수정 요청 날리기
+    await AsyncValue.guard(() => _repository.updateTodo(updated.id, requestDto));
+  }
+
+  // [추가] T08 API 호출: 캘린더 데이터 조회
+  Future<void> fetchCalendarData() async {
+    // 1. 현재 보고 있는 달력의 연/월을 기준으로 from, to 날짜 구하기
+    final focusedDay = state.focusedDay;
+
+    // 이번 달의 1일
+    final firstDay = DateTime(focusedDay.year, focusedDay.month, 1);
+    // 이번 달의 마지막 날 (다음 달 1일에서 하루 뺌)
+    final lastDay = DateTime(focusedDay.year, focusedDay.month + 1, 0);
+
+    final fromStr = firstDay.toIso8601String().split('T')[0];
+    final toStr = lastDay.toIso8601String().split('T')[0];
+
+    // 2. 백엔드 통신
+    // 필터(상태, 카테고리 등)가 필요하다면 state에서 읽어와 파라미터로 넘길 수 있습니다.
+    final result = await AsyncValue.guard(
+          () => _repository.getCalendarTodos(from: fromStr, to: toStr),
+    );
+
+    if (result.hasValue) {
+      print('📅 캘린더 조회 성공! 받아온 데이터 개수: ${result.value?.selectedDateItems.length}');
+    } else if (result.hasError) {
+      // ✅ 에러가 났다면 앱을 끄지 말고 조용히 로그만 남깁니다.
+      print('❌ 캘린더 조회 실패: ${result.error}');
+    }    // 프론트엔드의 state.allTodos 와 달력 마커 상태에 맞게 변환해서 넣어주어야 합니다.
+    // 임시로 디버그 로그만 찍어볼 수 있습니다.
+    // print('조회 완료! 일정 개수: ${result?.selectedDateItems.length}');
   }
 
   void reorderSomedayTodo(int oldIndex, int newIndex) {
@@ -208,7 +283,7 @@ class TodoViewModel extends StateNotifier<TodoState> {
   }
 }
 
-// [수정] Provider가 생성될 때 repository를 주입해서 넘겨주도록 변경!
+// Provider가 생성될 때 repository를 주입해서 넘겨주도록 변경!
 final todoViewModelProvider = StateNotifierProvider.autoDispose<TodoViewModel, TodoState>((ref) {
   final repository = ref.read(todoRepositoryProvider);
   return TodoViewModel(repository);

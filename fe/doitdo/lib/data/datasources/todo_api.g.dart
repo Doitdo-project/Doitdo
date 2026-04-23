@@ -81,6 +81,83 @@ class _TodoApi implements TodoApi {
     return _value;
   }
 
+  @override
+  Future<ApiResponse<TodoUpdateResponseDto>> updateTodo(
+    int todoId,
+    TodoUpdateRequestDto request,
+  ) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = request;
+    final _options = _setStreamType<ApiResponse<TodoUpdateResponseDto>>(
+      Options(method: 'PATCH', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/todos/${todoId}',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
+    late ApiResponse<TodoUpdateResponseDto> _value;
+    try {
+      _value = ApiResponse<TodoUpdateResponseDto>.fromJson(
+        _result.data!,
+        (json) => TodoUpdateResponseDto.fromJson(json as Map<String, dynamic>),
+      );
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<ApiResponse<TodoCalendarResponseDto>> getCalendar(
+    String from,
+    String to,
+    String? status,
+    String? category,
+    String? type,
+  ) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'from': from,
+      r'to': to,
+      r'status': status,
+      r'category': category,
+      r'type': type,
+    };
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<ApiResponse<TodoCalendarResponseDto>>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/todos/calendar',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
+    late ApiResponse<TodoCalendarResponseDto> _value;
+    try {
+      _value = ApiResponse<TodoCalendarResponseDto>.fromJson(
+        _result.data!,
+        (json) =>
+            TodoCalendarResponseDto.fromJson(json as Map<String, dynamic>),
+      );
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options);
+      rethrow;
+    }
+    return _value;
+  }
+
   RequestOptions _setStreamType<T>(RequestOptions requestOptions) {
     if (T != dynamic &&
         !(requestOptions.responseType == ResponseType.bytes ||
