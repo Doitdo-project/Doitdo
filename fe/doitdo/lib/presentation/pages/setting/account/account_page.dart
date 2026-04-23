@@ -37,19 +37,23 @@ class _AccountPageState extends ConsumerState<AccountPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 로그아웃 결과 부수효과 — 로딩 → 완료 전이만 감지해서 처리한다.
-    // prev==Loading && next==Data 이면 성공, next.hasError 면 스낵바.
-    // (AsyncNotifier 패턴 + ref.listen — 가이드 §6, §12.6)
-    ref.listen<AsyncValue<void>>(accountViewModelProvider, (prev, next) {
-      if (prev == null || !prev.isLoading) return;
-      if (!context.mounted) return;
-      if (next.hasError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(mapErrorMessage(next.error!))),
-        );
-      } else if (!next.isLoading) {
-        context.go(AppRoutes.welcome);
-      }
+    // 로그아웃 결과 부수효과.
+    // state 가 `bool?` 이라 data 가 `true` 인 경우만 "signOut 성공" 으로 판단한다.
+    // `null` 은 초기 진입이라 무시 — void 로 두면 초기 build 전이도 성공으로 오인됨.
+    ref.listen<AsyncValue<bool?>>(accountViewModelProvider, (prev, next) {
+      next.whenOrNull(
+        data: (success) {
+          if (success != true) return;
+          if (!context.mounted) return;
+          context.go(AppRoutes.welcome);
+        },
+        error: (error, _) {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(mapErrorMessage(error))),
+          );
+        },
+      );
     });
 
     return DoitdoScaffold(
