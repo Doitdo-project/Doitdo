@@ -12,6 +12,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,7 +21,15 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Table(name = "auto_providers")
+@Table(
+	name = "auto_providers",
+	uniqueConstraints = {
+		@UniqueConstraint(
+			name = "uk_provider_uid",
+			columnNames = {"provider", "provider_uid"}
+		)
+	}
+)
 @EntityListeners(AuditingEntityListener.class)
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
