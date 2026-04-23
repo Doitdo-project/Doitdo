@@ -5,13 +5,12 @@ import 'package:doitdo/presentation/providers/app_data_providers.dart';
 
 /// 회원가입 플로우 ViewModel.
 ///
-/// `POST /api/auth/signup` 성공 후 **자동 로그인하지 않고** 로그인 화면으로
-/// 돌아간다. 사용자에게 "가입됐으니 이제 로그인하세요" 라는 명시적인 단계를
-/// 거치게 해서 실수로 잘못된 계정이 자동 로그인되는 일을 방지.
+/// `POST /api/auth/signup` 은 토큰을 반환하지 않기 때문에, 성공 직후 곧바로
+/// `POST /api/auth/login` 을 이어서 호출해 세션을 얻는다. View 는 최종적으로
+/// 발급된 [User] 만 보면 된다.
 ///
 /// - 초기 상태: `AsyncData(null)` — 아직 제출 안 함
-/// - 성공: `AsyncData(User)` — 서버가 돌려준 신규 유저 정보 (토큰 없음).
-///   View 는 이 값으로 로그인 화면에 이메일/아이디를 미리 채우거나, 스낵바 문구에 사용.
+/// - 성공: `AsyncData(User)` — 가입 + 로그인 완료, View 가 메인 탭으로 이동
 /// - 실패: `AsyncError` — 스낵바
 class RegisterViewModel extends AutoDisposeAsyncNotifier<User?> {
   @override
@@ -25,11 +24,15 @@ class RegisterViewModel extends AutoDisposeAsyncNotifier<User?> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final repo = ref.read(authRepositoryProvider);
-      return repo.signUp(
-        email: email,
-        password: password,
+      // 1) 회원가입 — 응답에 토큰 없음 (스펙상 userId/username/email 만).
+      await repo.signUp(email: email, password: password, username: username);
+      // 2) 이어서 바로 로그인 → access/refresh 토큰 발급 + secure storage 저장.
+      //    가입 직후 같은 자격증명으로 로그인하므로 서버가 거부할 이유 없음.
+      final (user, _) = await repo.signInWithEmail(
         username: username,
+        password: password,
       );
+      return user;
     });
   }
 }
