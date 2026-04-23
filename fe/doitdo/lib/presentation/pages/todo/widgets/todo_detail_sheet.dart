@@ -81,7 +81,7 @@ class TodoDetailSheet extends ConsumerWidget {
             Row(
               children: [
                 Image.asset(
-                  'assets/images/tamagochi_hanrabong.png',
+                  'assets/images/tama_hanrabong.png',
                   width: 36, height: 36,
                 ),
                 const SizedBox(width: 8),
@@ -407,7 +407,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Image.asset(
-                    'assets/images/tamagochi_hanrabong.png',
+                    'assets/images/tama_hanrabong.png',
                     width: 36, height: 36,
                   ),
                   const SizedBox(width: 8),

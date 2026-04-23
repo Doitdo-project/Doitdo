@@ -117,10 +117,10 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
   }
 
   // ── 달력 스타일 (기간 탭) — 오늘 날짜 강조 없음 ─────
+  // ── 달력 스타일 (기간 탭) — 오늘 날짜 강조 없음 ─────
   CalendarStyle _rangeCalStyle(BuildContext context) {
     final c = context.colors;
     return CalendarStyle(
-      // 오늘 날짜를 일반 날짜와 동일하게 표시 (강조 없음)
       todayDecoration: const BoxDecoration(
         color: AppColors.homeCalendarSelectedBg,
         shape: BoxShape.circle,
@@ -139,7 +139,10 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
       ),
       rangeEndTextStyle:
       AppTextStyles.labelMedium.copyWith(color: Colors.white),
-      rangeHighlightColor: AppColors.homeCalendarSelectedBg,
+
+      // ✅ [수정 1] 여기를 반드시 투명색으로 바꿔야 달력 패키지의 기본 형광펜이 꺼집니다!
+      rangeHighlightColor: Colors.transparent,
+
       rangeHighlightScale: 0.70,
       withinRangeTextStyle:
       AppTextStyles.labelMedium.copyWith(color: c.textPrimary),
@@ -478,7 +481,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
                 calendarBuilders: CalendarBuilders(
                   // 시작 날짜 셀: '시작' 라벨 + 오렌지 원
                   rangeStartBuilder: (_, day, __) =>
-                      _RangeLabelCell(day: day, label: '시작', isStart: true),
+                      _RangeLabelCell(day: day, label: '시작', isStart: true,showTail: _rangeEnd != null,),
                   // 끝 날짜 셀: '끝' 라벨 + 오렌지 원
                   rangeEndBuilder: (_, day, __) =>
                       _RangeLabelCell(day: day, label: '끝', isStart: false),
@@ -731,10 +734,12 @@ class _RangeLabelCell extends StatelessWidget {
     required this.day,
     required this.label,
     required this.isStart,
+    this.showTail = true,
   });
   final DateTime day;
   final String label;
   final bool isStart;
+  final bool showTail;
 
   @override
   Widget build(BuildContext context) {
@@ -744,32 +749,33 @@ class _RangeLabelCell extends StatelessWidget {
 
         return Stack(
           children: [
-            // 절반 배경: MiddleCell과 높이(height) 및 시작점(top)을 정확히 일치시킴
-            Positioned(
-              top: _kCircleTop,
-              left: isStart ? cellW / 2 : 0,
-              right: isStart ? 0 : cellW / 2,
-              height: _kCircleSize,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.homeCalendarSelectedBg,
-                  borderRadius: BorderRadius.only(
-                    topLeft: isStart
-                        ? Radius.circular(_kCircleSize / 2)
-                        : Radius.zero,
-                    bottomLeft: isStart
-                        ? Radius.circular(_kCircleSize / 2)
-                        : Radius.zero,
-                    topRight: !isStart
-                        ? Radius.circular(_kCircleSize / 2)
-                        : Radius.zero,
-                    bottomRight: !isStart
-                        ? Radius.circular(_kCircleSize / 2)
-                        : Radius.zero,
+            // ✅ [수정 2] 핵심! showTail이 true일 때만 절반 배경(꼬리)을 그립니다!
+            if (showTail)
+              Positioned(
+                top: _kCircleTop,
+                left: isStart ? cellW / 2 : 0,
+                right: isStart ? 0 : cellW / 2,
+                height: _kCircleSize,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.homeCalendarSelectedBg,
+                    borderRadius: BorderRadius.only(
+                      topLeft: isStart
+                          ? Radius.circular(_kCircleSize / 2)
+                          : Radius.zero,
+                      bottomLeft: isStart
+                          ? Radius.circular(_kCircleSize / 2)
+                          : Radius.zero,
+                      topRight: !isStart
+                          ? Radius.circular(_kCircleSize / 2)
+                          : Radius.zero,
+                      bottomRight: !isStart
+                          ? Radius.circular(_kCircleSize / 2)
+                          : Radius.zero,
+                    ),
                   ),
                 ),
               ),
-            ),
 
             // 상단 라벨(시작/끝) + 날짜 원
             Positioned(
@@ -871,7 +877,7 @@ class _MascotBubble extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Image.asset(
-          'assets/images/tamagochi_hanrabong.png',
+          'assets/images/tama_hanrabong.png',
           width: 26,
           height: 26,
         ),

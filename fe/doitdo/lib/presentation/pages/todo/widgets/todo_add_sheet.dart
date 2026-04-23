@@ -6,6 +6,8 @@ import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
+// ✅ [수정된 부분] 우리가 새로 만든 API Notifier 파일 import 추가
+import 'package:doitdo/presentation/pages/todo/todo_add_notifier.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_category_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_date_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_time_sheet.dart';
@@ -54,8 +56,9 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
     return '$period $display:$m';
   }
 
+  // ✅ [수정된 부분] 서버와 통신해야 하므로 함수를 비동기(async)로 변경합니다.
   // ── 저장하기 ──────────────────────────────
-  void _onSave(BuildContext context) {
+  Future<void> _onSave(BuildContext context) async {
     final title = _titleController.text.trim();
 
     if (title.isEmpty) {
@@ -94,12 +97,37 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
       repeatEndDate:   r?.repeatEndDate,
     );
 
+    // 1. 서버로 전송 요청!
+    await ref.read(todoAddNotifierProvider.notifier).createTodo(todo);
+
+    // ✅ 2. 전송 결과 확인하기 (성공했는지 에러 났는지)
+    final resultState = ref.read(todoAddNotifierProvider);
+
+    // 🚨 에러가 발생했다면? (서버에 안 넘어감)
+    if (resultState.hasError) {
+      print('서버 통신 실패: ${resultState.error}'); // 콘솔창에 진짜 에러 원인 출력
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('서버 저장 실패: ${resultState.error}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return; // ❌ 화면에 추가하지 않고, 바텀시트도 닫지 않고 여기서 멈춤!
+    }
+
+    // ✅ 3. 에러가 없다면(통신 성공) 비로소 로컬 화면(UI)에 추가
     final vm = ref.read(todoViewModelProvider.notifier);
     widget.initialDate == null
         ? vm.addSomedayTodo(todo)
         : vm.addTodo(todo);
 
-    Navigator.of(context).pop();
+    // 창 닫기
+    if (context.mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -216,7 +244,6 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
             Divider(color: c.divider),
 
             // ── 알림 — 시간 탭으로 TodoTimeSheet 열기 ──
-            // 스위치는 TodoTimeSheet 안에만 존재
             GestureDetector(
               onTap: () async {
                 final result = await showModalBottomSheet<TodoAlarmResult>(
@@ -244,7 +271,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
             ),
             Divider(color: c.divider),
 
-            // 메모 (5줄 기본, 무제한 확장)
+            // 메모
             const SizedBox(height: 16),
             TextField(
               controller: _memoController,
@@ -319,7 +346,7 @@ class _MascotBubble extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Image.asset(
-          'assets/images/tamagochi_hanrabong.png',
+          'assets/images/tama_hanrabong.png',
           width: 36,
           height: 36,
         ),
