@@ -19,4 +19,8 @@ class UserRepositoryImpl extends BaseRepository implements UserRepository {
   @override
   Future<bool> isEmailAvailable(String email) =>
       safeApiCall(() => _api.checkEmail(email)).then((dto) => dto.available);
+
+  @override
+  Future<bool> isUsernameAvailable(String username) =>
+      safeApiCall(() => _api.checkUsername(username)).then((dto) => dto.available);
 }

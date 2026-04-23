@@ -45,5 +45,21 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!--
+	  Google Sign-In reversed client ID URL scheme.
+	  GoogleService-Info.plist 의 REVERSED_CLIENT_ID 값과 동일해야 한다.
+	  Google 로그인 성공 후 앱으로 리다이렉트될 때 이 scheme 으로 복귀.
+	-->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.733189444569-ja6ti0dpmutgrmjmnbjtbsfjbqmshn9o</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
