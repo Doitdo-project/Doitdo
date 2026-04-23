@@ -35,6 +35,51 @@ cp be/env/dev.env.example be/env/dev.env
 |---|---|---|---|
 | `jpa.ddl.auto` | `update` | `validate` / `update` / `create` / `create-drop` / `none` | Hibernate 스키마 전략. 공용 dev DB 에 영향 가므로 개인 환경에선 `validate` 권장. `env/dev.env` 에 지정. |
 
+## 2-2. Firebase (FCM push) 설정
+
+알림 송신(저녁 리마인더, TODO 잠금해제 등)은 Firebase Admin SDK 로 FCM 을 호출한다. `firebase.enabled=false` 면 `NoopFcmService` 가 주입되어 로그만 찍고 실제 발송은 스킵된다.
+
+### 서비스 계정 키 배치
+
+`be/secrets/firebase-service-account-dev.json` 에 Firebase Console 에서 발급한 서비스 계정 JSON 을 놓는다. `be/secrets/` 는 gitignore 에 등록되어 있다.
+
+```bash
+mkdir -p be/secrets
+# Firebase Console > 프로젝트 설정 > 서비스 계정 > 새 비공개 키 생성
+# 다운받은 JSON 을 be/secrets/firebase-service-account-dev.json 로 저장
+chmod 600 be/secrets/firebase-service-account-dev.json
+```
+
+### env 설정
+
+로컬 (`be/env/dev.env`, kebab-case dot 포맷):
+
+```properties
+firebase.enabled=true
+firebase.service-account-path=/absolute/path/to/be/secrets/firebase-service-account-dev.json
+firebase.project-id=doitdo-c3fcd
+```
+
+운영/테스트 서버의 Docker env_file (`/home/ubuntu/app/env/dev.env`, env var 포맷 — relaxed binding 으로 동일 key 에 매핑됨):
+
+```properties
+FIREBASE_ENABLED=true
+FIREBASE_SERVICE_ACCOUNT_PATH=/app/secrets/firebase-service-account.json
+FIREBASE_PROJECT_ID=doitdo-c3fcd
+```
+
+Docker 배포 시에는 서비스 계정 JSON 을 호스트 `/home/ubuntu/app/secrets/` 에 두고 `docker-compose.yml` volume 으로 `/app/secrets` 에 읽기 전용 마운트한다.
+
+### 검증
+
+부팅 로그에 아래가 보이면 Firebase 모드 활성:
+
+```
+c.d.d.n.a.impl.FirebaseFcmService  : [fcm] FirebaseFcmService is active.
+```
+
+비활성(Noop) 상태라면 `NoopFcmService` 초기화 로그가 대신 나온다.
+
 ## 3. DB 접근 확인
 
 dev 프로파일은 원격 테스트 DB(`168.107.48.80`)에 붙는다. VPN/방화벽 정책으로 접근이 막혀 있으면 부팅 실패하니 사전에 확인할 것.

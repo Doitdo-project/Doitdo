@@ -60,7 +60,8 @@ class TodoDetailSheet extends ConsumerWidget {
         color: c.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      // add sheet 과 동일한 좌우 24 / 하단 32.
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -75,13 +76,13 @@ class TodoDetailSheet extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(2)),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 32),
 
             // ── 헤더: 마스코트 말풍선 + 수정 버튼 ──
             Row(
               children: [
                 Image.asset(
-                  'assets/images/tama_hanrabong.png',
+                  'assets/images/Dooit.png',
                   width: 36, height: 36,
                 ),
                 const SizedBox(width: 8),
@@ -129,37 +130,40 @@ class TodoDetailSheet extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 32),
 
-            // ── 제목 ──
-            Text(
-              todo.title,
-              style: AppTextStyles.titleSmall.copyWith(
-                color: todo.isDone ? c.textHint : c.textPrimary,
-                decoration:
-                todo.isDone ? TextDecoration.lineThrough : null,
-                decorationColor: c.textHint,
+            // ── 제목 ── add sheet 과 동일한 titleLarge(20) + Medium 가중치.
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Text(
+                todo.title,
+                style: AppTextStyles.titleLarge.copyWith(
+                  fontFamily: 'GmarketSansMedium',
+                  fontWeight: FontWeight.w500,
+                  color: todo.isDone ? c.textHint : c.textPrimary,
+                  decoration:
+                  todo.isDone ? TextDecoration.lineThrough : null,
+                  decorationColor: c.textHint,
+                ),
               ),
             ),
-            const SizedBox(height: 16),
-            Divider(color: c.divider),
+            const SizedBox(height: 32),
 
-            // ✅ 상세 페이지 내의 복잡했던 미루기 버튼 제거
             // ── 기간 ──
             _InfoRow(
               icon: Icons.calendar_today_outlined,
               label: '기간',
               value: todo.dateDisplayText,
             ),
-            Divider(color: c.divider),
+            Divider(color: c.divider, height: 1, thickness: 1),
 
             // ── 카테고리 ──
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              padding: const EdgeInsets.fromLTRB(8, 20, 0, 20),
               child: Row(
                 children: [
-                  Icon(Icons.category_outlined,
-                      size: 18, color: c.textSecondary),
+                  const Icon(Icons.category_outlined,
+                      size: 18, color: Color(0xFFC8966E)),
                   const SizedBox(width: 12),
                   Text('카테고리',
                       style: AppTextStyles.bodyMedium
@@ -179,20 +183,20 @@ class TodoDetailSheet extends ConsumerWidget {
                 ],
               ),
             ),
-            Divider(color: c.divider),
 
-            // ── 알림 ──
+            // ── 알림 ── (카테고리 ↔ 알림 사이 divider 제거)
             _InfoRow(
               icon: Icons.notifications_outlined,
               label: '알림',
               value: todo.alarmDisplayText,
             ),
+            Divider(color: c.divider, height: 1, thickness: 1),
 
             // ── 메모 (있을 때만) ──
             if (todo.memo != null && todo.memo!.isNotEmpty) ...[
-              Divider(color: c.divider),
+              const SizedBox(height: 24),
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.only(left: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -208,7 +212,7 @@ class TodoDetailSheet extends ConsumerWidget {
               ),
             ],
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
 
             // ── 버튼 ──
             Row(
@@ -327,6 +331,18 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
     return '$period $display:$m';
   }
 
+  /// 카테고리 이름 → 점(dot) 색 매핑. add sheet 의 _dotColorOf 와 동일.
+  Color _dotColorOf(String name) {
+    switch (TodoCategory.fromName(name).colorKey) {
+      case CategoryColorKey.study:    return AppColors.categoryDot1;
+      case CategoryColorKey.exercise: return AppColors.categoryDot2;
+      case CategoryColorKey.work:     return AppColors.categoryDot3;
+      case CategoryColorKey.health:   return AppColors.categoryDot4;
+      case CategoryColorKey.hobby:    return AppColors.categoryDot5;
+      case CategoryColorKey.etc:      return AppColors.chipUnselectedBg;
+    }
+  }
+
   void _onSave(BuildContext context) {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
@@ -385,7 +401,8 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
           borderRadius:
           const BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        // add sheet 과 동일한 좌우 24 / 하단 32 / 상단 12(드래그 핸들 영역).
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -400,14 +417,14 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
                       borderRadius: BorderRadius.circular(2)),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 32),
 
               // 마스코트 말풍선
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Image.asset(
-                    'assets/images/tama_hanrabong.png',
+                    'assets/images/Dooit.png',
                     width: 36, height: 36,
                   ),
                   const SizedBox(width: 8),
@@ -429,25 +446,34 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              // 할 일 입력
-              TextField(
-                controller: _titleController,
-                focusNode: _titleFocusNode,
-                style: AppTextStyles.titleMedium.copyWith(color: c.textPrimary),
-                decoration: InputDecoration(
-                  hintText: '할 일을 입력해주세요.',
-                  hintStyle: AppTextStyles.titleMedium
-                      .copyWith(color: c.textHint),
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
+              // 할 일 입력 — add sheet 과 동일한 titleLarge(20) + Medium 가중치 + 힌트 #D6D3D1.
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: TextField(
+                  controller: _titleController,
+                  focusNode: _titleFocusNode,
+                  style: AppTextStyles.titleLarge.copyWith(
+                    fontFamily: 'GmarketSansMedium',
+                    fontWeight: FontWeight.w500,
+                    color: c.textPrimary,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: '할 일을 입력해주세요.',
+                    hintStyle: AppTextStyles.titleLarge.copyWith(
+                      fontFamily: 'GmarketSansMedium',
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFFD6D3D1),
+                    ),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Divider(color: c.divider),
-              const SizedBox(height: 4),
+              // 타이틀 밑 divider 없이 공백만 (add sheet 과 동일).
+              const SizedBox(height: 32),
 
               // 기간
               GestureDetector(
@@ -468,9 +494,9 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
                   colors: c,
                 ),
               ),
-              Divider(color: c.divider),
+              Divider(color: c.divider, height: 1, thickness: 1),
 
-              // 카테고리
+              // 카테고리 — 점 색은 선택된 카테고리 실제 색(categoryDot1~5) 동적 반영.
               GestureDetector(
                 onTap: () async {
                   final result = await showModalBottomSheet<String>(
@@ -480,15 +506,16 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
                     builder: (_) => TodoCategorySheet(
                         selectedCategory: _selectedCategory),
                   );
-                  if (result != null)
+                  if (result != null) {
                     setState(() => _selectedCategory = result);
+                  }
                 },
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.fromLTRB(8, 20, 0, 20),
                   child: Row(
                     children: [
-                      Icon(Icons.category_outlined,
-                          size: 18, color: c.textSecondary),
+                      const Icon(Icons.category_outlined,
+                          size: 18, color: Color(0xFFC8966E)),
                       const SizedBox(width: 12),
                       Text('카테고리',
                           style: AppTextStyles.bodyMedium
@@ -496,8 +523,8 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
                       const Spacer(),
                       Container(
                         width: 8, height: 8,
-                        decoration: const BoxDecoration(
-                            color: AppColors.calendarPoint,
+                        decoration: BoxDecoration(
+                            color: _dotColorOf(_selectedCategory),
                             shape: BoxShape.circle),
                       ),
                       const SizedBox(width: 6),
@@ -510,7 +537,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
                   ),
                 ),
               ),
-              Divider(color: c.divider),
+              // 카테고리 ↔ 알림 사이 divider 없음 (add sheet 과 동일).
 
               // 알림
               GestureDetector(
@@ -535,29 +562,32 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
                 child: _OptionRow(
                   icon: Icons.notifications_outlined,
                   label: '알림',
-                  valueText:
-                  _alarmEnabled ? _formatTime(_selectedTime) : '없음',
+                  // off 일 때도 선택된 시간 미리보기 (add sheet 과 동일).
+                  valueText: _formatTime(_selectedTime),
                   colors: c,
                 ),
               ),
-              Divider(color: c.divider),
+              Divider(color: c.divider, height: 1, thickness: 1),
 
               // 메모
               const SizedBox(height: 16),
-              TextField(
-                controller: _memoController,
-                minLines: 5,
-                maxLines: null,
-                keyboardType: TextInputType.multiline,
-                style:
-                AppTextStyles.bodyMedium.copyWith(color: c.textPrimary),
-                decoration: InputDecoration(
-                  hintText: '메모를 입력해 보세요.',
-                  hintStyle: AppTextStyles.bodyMedium
-                      .copyWith(color: c.textHint),
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: TextField(
+                  controller: _memoController,
+                  minLines: 5,
+                  maxLines: null,
+                  keyboardType: TextInputType.multiline,
+                  style:
+                  AppTextStyles.bodyMedium.copyWith(color: c.textPrimary),
+                  decoration: InputDecoration(
+                    hintText: '메모를 입력해 보세요.',
+                    hintStyle: AppTextStyles.bodyMedium
+                        .copyWith(color: c.textHint),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -588,11 +618,12 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    // add sheet 의 _OptionRow 와 동일한 스타일 — 좌측 8 오프셋, 상하 20, 아이콘 #C8966E.
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+      padding: const EdgeInsets.fromLTRB(8, 20, 0, 20),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: c.textSecondary),
+          Icon(icon, size: 18, color: const Color(0xFFC8966E)),
           const SizedBox(width: 12),
           Text(label,
               style: AppTextStyles.bodyMedium.copyWith(color: c.textSecondary)),
@@ -620,11 +651,12 @@ class _OptionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // add sheet 의 _OptionRow 와 동일 — 좌측 8 오프셋, 상하 20, 아이콘 #C8966E.
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+      padding: const EdgeInsets.fromLTRB(8, 20, 0, 20),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: colors.textSecondary),
+          Icon(icon, size: 18, color: const Color(0xFFC8966E)),
           const SizedBox(width: 12),
           Text(label,
               style: AppTextStyles.bodyMedium

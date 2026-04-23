@@ -56,7 +56,6 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
     return '$period $display:$m';
   }
 
-  // ✅ [수정된 부분] 서버와 통신해야 하므로 함수를 비동기(async)로 변경합니다.
   // ── 저장하기 ──────────────────────────────
   Future<void> _onSave(BuildContext context) async {
     final title = _titleController.text.trim();
@@ -141,7 +140,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           color: c.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -154,7 +153,8 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                     color: c.border, borderRadius: BorderRadius.circular(2)),
               ),
             ),
-            const SizedBox(height: 16),
+            // 시안: 드래그 핸들 아래 마스코트 말풍선이 뜰 공간.
+            const SizedBox(height: 32),
 
             // 마스코트 말풍선
             _MascotBubble(
@@ -164,22 +164,33 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
             ),
             const SizedBox(height: 16),
 
-            // 할 일 입력
-            TextField(
-              controller: _titleController,
-              focusNode: _titleFocusNode,
-              style: AppTextStyles.titleMedium.copyWith(color: c.textPrimary),
-              decoration: InputDecoration(
-                hintText: '할 일을 입력해주세요.',
-                hintStyle: AppTextStyles.titleMedium.copyWith(color: c.textHint),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
+            // 할 일 입력 — 시안: 20pt / Medium(w500) / 힌트 #D6D3D1.
+            // 본문·옵션 텍스트는 마스코트 "가시 영역" 과 맞추기 위해 좌측 8 오프셋.
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: TextField(
+                controller: _titleController,
+                focusNode: _titleFocusNode,
+                style: AppTextStyles.titleLarge.copyWith(
+                  fontFamily: 'GmarketSansMedium',
+                  fontWeight: FontWeight.w500,
+                  color: c.textPrimary,
+                ),
+                decoration: InputDecoration(
+                  hintText: '할 일을 입력해주세요.',
+                  hintStyle: AppTextStyles.titleLarge.copyWith(
+                    fontFamily: 'GmarketSansMedium',
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFFD6D3D1),
+                  ),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
               ),
             ),
-            const SizedBox(height: 8),
-            Divider(color: c.divider),
-            const SizedBox(height: 4),
+            // 시안: 타이틀 밑 divider 없이 공백만 두고 옵션 영역 시작.
+            const SizedBox(height: 32),
 
             // 기간
             GestureDetector(
@@ -200,9 +211,9 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                 colors: c,
               ),
             ),
-            Divider(color: c.divider),
+            Divider(color: c.divider, height: 1, thickness: 1),
 
-            // 카테고리
+            // 카테고리 — 점 색은 선택된 카테고리 실제 색(category1~5) 을 동적으로 반영.
             GestureDetector(
               onTap: () async {
                 final result = await showModalBottomSheet<String>(
@@ -215,11 +226,13 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                 if (result != null) setState(() => _selectedCategory = result);
               },
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                // 마스코트 가시 영역과 수평 정렬을 위해 좌측 8 오프셋.
+                padding: const EdgeInsets.fromLTRB(8, 20, 0, 20),
                 child: Row(
                   children: [
-                    Icon(Icons.category_outlined,
-                        size: 18, color: c.textSecondary),
+                    // 시안 지정 아이콘 브랜드 컬러 (#C8966E — muted brown-orange).
+                    const Icon(Icons.category_outlined,
+                        size: 18, color: Color(0xFFC8966E)),
                     const SizedBox(width: 12),
                     Text('카테고리',
                         style: AppTextStyles.bodyMedium
@@ -241,7 +254,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                 ),
               ),
             ),
-            Divider(color: c.divider),
+            // 시안: 카테고리 ↔ 알림 사이 divider 없음.
 
             // ── 알림 — 시간 탭으로 TodoTimeSheet 열기 ──
             GestureDetector(
@@ -265,26 +278,33 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
               child: _OptionRow(
                 icon: Icons.notifications_outlined,
                 label: '알림',
-                valueText: _alarmEnabled ? _formatTime(_selectedTime) : '없음',
+                // 시안: 알림 off 일 때도 선택된 시간을 미리 보여줌(설정값 확인용).
+                valueText: _formatTime(_selectedTime),
                 colors: c,
               ),
             ),
-            Divider(color: c.divider),
+            Divider(color: c.divider, height: 1, thickness: 1),
 
-            // 메모
+            // 메모 (5줄 기본, 무제한 확장)
             const SizedBox(height: 16),
-            TextField(
-              controller: _memoController,
-              minLines: 5,
-              maxLines: null,
-              keyboardType: TextInputType.multiline,
-              style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary),
-              decoration: InputDecoration(
-                hintText: '메모를 입력해 보세요.',
-                hintStyle: AppTextStyles.bodyMedium.copyWith(color: c.textHint),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
+            Padding(
+              // 메모 텍스트도 타이틀/옵션 행과 동일한 좌측 8 오프셋.
+              padding: const EdgeInsets.only(left: 8),
+              child: TextField(
+                controller: _memoController,
+                minLines: 5,
+                maxLines: null,
+                keyboardType: TextInputType.multiline,
+                style:
+                    AppTextStyles.bodyMedium.copyWith(color: c.textPrimary),
+                decoration: InputDecoration(
+                  hintText: '메모를 입력해 보세요.',
+                  hintStyle:
+                      AppTextStyles.bodyMedium.copyWith(color: c.textHint),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -316,10 +336,13 @@ class _OptionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+      // 시안상 옵션 행 높이 ≈ 66~70px. 아이콘 18 + 상하 여백 20 씩.
+      // 좌측 8 은 마스코트 가시 영역과 수평 정렬을 맞추기 위함.
+      padding: const EdgeInsets.fromLTRB(8, 20, 0, 20),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: colors.textSecondary),
+          // 시안 지정 아이콘 브랜드 컬러 (#C8966E — muted brown-orange).
+          Icon(icon, size: 18, color: const Color(0xFFC8966E)),
           const SizedBox(width: 12),
           Text(label,
               style: AppTextStyles.bodyMedium
@@ -346,7 +369,7 @@ class _MascotBubble extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Image.asset(
-          'assets/images/tama_hanrabong.png',
+          'assets/images/Dooit.png',
           width: 36,
           height: 36,
         ),

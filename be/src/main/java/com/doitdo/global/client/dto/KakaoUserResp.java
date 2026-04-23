@@ -28,8 +28,25 @@ public record KakaoUserResp(
 		return null;
 	}
 
+	/**
+	 * Kakao 가 이메일 소유권을 검증했는지 여부.
+	 * has_email / is_email_valid / is_email_verified 가 모두 true 일 때만 신뢰.
+	 * 자동 계정 연결의 보안 전제.
+	 */
+	public boolean isEmailTrusted() {
+		if (kakaoAccount == null) {
+			return false;
+		}
+		return Boolean.TRUE.equals(kakaoAccount.hasEmail())
+				&& Boolean.TRUE.equals(kakaoAccount.isEmailValid())
+				&& Boolean.TRUE.equals(kakaoAccount.isEmailVerified());
+	}
+
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	public record KakaoAccount(
+			@JsonProperty("has_email") Boolean hasEmail,
+			@JsonProperty("is_email_valid") Boolean isEmailValid,
+			@JsonProperty("is_email_verified") Boolean isEmailVerified,
 			String email,
 			Profile profile
 	) {

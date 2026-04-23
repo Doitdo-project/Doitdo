@@ -27,6 +27,6 @@ google:
     client-id: ${google.oauth.client-id:}
 
 firebase:
-  enabled: false
+  enabled: ${FIREBASE_ENABLED:false}
   service-account-path: ${FIREBASE_SERVICE_ACCOUNT_PATH:}
   project-id: ${FIREBASE_PROJECT_ID:}

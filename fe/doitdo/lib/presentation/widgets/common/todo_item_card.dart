@@ -130,18 +130,8 @@ class _SlidableTodoItemCardState extends State<SlidableTodoItemCard> {
               ],
             ),
           ),
-          if (widget.index != null)
-            ReorderableDragStartListener(
-              index: widget.index!,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 8.0),
-                child: Icon(
-                  Icons.reorder,
-                  color: colors.textHint,
-                  size: 20,
-                ),
-              ),
-            ),
+          // 드래그 핸들(삼단 햄버거) 제거 — 모바일 ReorderableListView 기본
+          // long-press 제스처로 재정렬. 첫 진입 시 안내 툴팁으로 discoverability 보완.
         ],
       ),
     );
