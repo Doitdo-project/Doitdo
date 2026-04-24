@@ -67,7 +67,17 @@ com.doitdo
 
 ## 알림 플로우
 
-저녁 리마인더 — 매분 cron `EveningReminderScheduler` 가 `UserSetting.eveningReminderTime` 일치 유저를 조회, 미완료 TODO > 0 이면 `NotificationService.sendEveningReminder` 로 `Notification` 저장 + (DND 구간이 아니면) FCM 발송. 플래그: `notification.evening-reminder.enabled`.
+모든 알림은 `NotificationService` 를 통해 `Notification` 테이블 저장 후 (DND 구간이 아니면) FCM 발송한다.
+이벤트 기반 트리거는 `@TransactionalEventListener(AFTER_COMMIT)` + `@Transactional(REQUIRES_NEW)` 패턴으로 격리한다.
+
+| 트리거 | NotificationType | 발화 위치 | referenceId | 비고 |
+|---|---|---|---|---|
+| 저녁 미완료 리마인더 | `REMINDER_EVENING` | `EveningReminderScheduler` → `NotificationService.sendEveningReminder` | null | 매분 cron, `UserSetting.eveningReminderTime` 일치 유저 대상, 미완료 TODO > 0 조건. 플래그: `notification.evening-reminder.enabled` |
+| TODO 완료 | `TODO_DONE` | `TodoServiceImpl.changeStatus()` → `TodoCompletedEvent` → `TodoCompletedNotificationListener` | todoId | DONE 전이 시 1회 발행. 기존 `TodoCompletionExpListener` 와 분리 |
+| TODO 알림 시각 | `TODO_REMINDER` | `TodoAlertScheduler` → `NotificationService.sendTodoAlert` | todoId | 매분 cron, `Todo.alertTime` 일치 + 당일 대상. 기존 FCM 직접 호출을 NotificationService 경유로 교체 (DB 저장 추가) |
+| TODO 미루기 | `TODO_SNOOZED` | `TodoServiceImpl.snooze()` → `TodoSnoozedEvent` → `TodoSnoozedNotificationListener` | todoId | snoozeHistory 저장 직후 발행 |
+| 다마고치 이별 | `TAMAGOTCHI_FAREWELL` | `TamagotchiServiceImpl.approveIndependence()` → `TamagotchiFarewellEvent` → `TamagotchiFarewellNotificationListener` | afterUserCharacterId (새 EGG) | approved==true 경로에서만 발행. 알림 본문엔 작별한 캐릭터 이름 표시 |
+| 다마고치 성장 | `TAMAGOTCHI_GROWTH` | `TamagotchiServiceImpl.hatch()` / `evolve()` → `TamagotchiGrowthEvent` → `TamagotchiGrowthNotificationListener` | userCharacterId | HATCHED/EVOLVED 를 단일 리스너로 통합 처리 |
 
 ## 데이터 모델
 

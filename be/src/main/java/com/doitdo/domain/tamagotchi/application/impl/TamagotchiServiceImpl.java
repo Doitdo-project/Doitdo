@@ -14,6 +14,9 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.UpdateCharacterNameResp;
+import com.doitdo.domain.tamagotchi.event.TamagotchiFarewellEvent;
+import com.doitdo.domain.tamagotchi.event.TamagotchiGrowthEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +47,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 	private final UserCharacterHistoryRepository userCharacterHistoryRepository;
 	private final CharacterSpeciesBackgroundRepository characterSpeciesBackgroundRepository;
 	private final UserRepository userRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Override
 	@Transactional
@@ -247,6 +251,9 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			beforeCharacterId, babyCharacter.getCharacterId(), beforeName, userCharacter.getName(), beforeExp,
 			userCharacter.getCurrentExp(), UserCharacterHistory.ActorType.USER, userId, "egg hatched");
 
+		eventPublisher.publishEvent(new TamagotchiGrowthEvent(
+			userId, userCharacter.getUserCharacterId(), "EGG", "BABY", userCharacter.getName()));
+
 		return new HatchCharacterResp(
 			babyCharacter.getCharacterId(),
 			babyCharacter.getStage().name(),
@@ -300,6 +307,9 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		saveHistory(userCharacter.getUserCharacterId(), userId, UserCharacterHistory.EventType.EVOLVED,
 			beforeCharacterId, nextCharacter.getCharacterId(), beforeName, userCharacter.getName(), beforeExp,
 			userCharacter.getCurrentExp(), UserCharacterHistory.ActorType.USER, userId, "evolved");
+
+		eventPublisher.publishEvent(new TamagotchiGrowthEvent(
+			userId, userCharacter.getUserCharacterId(), beforeStage.name(), afterStage.name(), userCharacter.getName()));
 
 		return new EvolutionResp(
 			userCharacter.getUserCharacterId(),
@@ -383,6 +393,10 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			adultCharacter.getCharacterId(), eggCharacter.getCharacterId(), adultUserCharacter.getName(),
 			savedNextEggCharacter.getName(), adultUserCharacter.getCurrentExp(), savedNextEggCharacter.getCurrentExp(),
 			UserCharacterHistory.ActorType.USER, userId, "independence approved");
+
+		eventPublisher.publishEvent(new TamagotchiFarewellEvent(
+			userId, adultUserCharacter.getUserCharacterId(),
+			savedNextEggCharacter.getUserCharacterId(), adultUserCharacter.getName()));
 
 		return new FarewellResp(
 			adultUserCharacter.getUserCharacterId(),
