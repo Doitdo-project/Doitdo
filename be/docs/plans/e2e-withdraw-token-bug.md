@@ -39,10 +39,36 @@
 
 ### 재현 불가 확인
 
-H2 인메모리 DB 기반 `@SpringBootTest` 에서  
-`withdraw_isDeletedTrue_persistedToDB` 테스트가 `saveAndFlush` 없이 실행하면  
-`is_deleted = false` 가 반환되어 테스트가 FAIL 하는 것으로 버그 재현 가능.  
+**자동 검증 (regression 테스트)**:  
+H2 인메모리 DB 기반 `@SpringBootTest` 에서 `saveAndFlush` 라인 주석 시 테스트 FAIL 확인:
+
+```
+UserServiceImplWithdrawTest > withdraw_isDeletedTrue_persistedToDB() FAILED
+    org.opentest4j.AssertionFailedError at UserServiceImplWithdrawTest.java:70
+```
+
 수정 후 PASS 확인 완료.
+
+**수동 curl 검증 (로컬 Docker)**:  
+컨테이너 재빌드 후 실행 결과 (user_id=24):
+
+```
+# 탈퇴 응답
+status=204
+
+# DB 상태 (SELECT user_id, email, username, is_deleted+0, password IS NULL)
+user_id | email                                   | username               | deleted | pw_null
+24      | deleted_24_1777005332799@deleted.local   | deleted_24_1777005332799 | 1      | 1
+
+# 잔여 토큰으로 GET /api/users/me 재호출
+{"status":401,"code":"G00-002","message":"인증이 필요합니다.","data":null}
+status=401
+```
+
+- `is_deleted = 1` (true) — 버그 픽스 확인
+- email / username 익명화(`deleted_` prefix) — 정상
+- password = NULL — 정상
+- 잔여 access token → 401 — 잔여 토큰 차단 확인
 
 ### run.py step_withdraw 강화
 
