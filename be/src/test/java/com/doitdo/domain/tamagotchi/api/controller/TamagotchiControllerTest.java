@@ -47,6 +47,10 @@ class TamagotchiControllerTest {
 			"EGG",
 			"https://cdn.example.com/egg.png",
 			0,
+			0,
+			0,
+			false,
+			false,
 			null,
 			10L
 		);
