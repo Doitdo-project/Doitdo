@@ -28,7 +28,6 @@ class TamagotchiCurrentCharacterControllerTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build());
 		CurrentCharacterResp serviceResp = new CurrentCharacterResp(
@@ -37,6 +36,10 @@ class TamagotchiCurrentCharacterControllerTest {
 			"BABY",
 			"https://cdn.example.com/slime.png",
 			45,
+			45,
+			100,
+			false,
+			false,
 			42L,
 			10L
 		);

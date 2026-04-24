@@ -25,7 +25,6 @@ class InventoryUnequipItemControllerTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build());
 

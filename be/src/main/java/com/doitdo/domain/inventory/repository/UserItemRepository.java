@@ -12,4 +12,6 @@ public interface UserItemRepository extends JpaRepository<UserItem, Long> {
 	List<UserItem> findAllByUserId(Long userId);
 
 	Optional<UserItem> findByUserIdAndUserItemId(Long userId, Long userItemId);
+
+	void deleteAllByUserId(Long userId);
 }

@@ -14,6 +14,7 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.entity.Character;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
+import com.doitdo.domain.tamagotchi.repository.CharacterSpeciesBackgroundRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.user.repository.UserRepository;
@@ -33,12 +34,16 @@ class TamagotchiCurrentCharacterServiceImplTest {
 	@Mock
 	private UserRepository userRepository;
 
+	@Mock
+	private CharacterSpeciesBackgroundRepository characterSpeciesBackgroundRepository;
+
 	@Test
 	void getCurrentCharacterReturnsActiveCharacterState() {
 		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
 			characterRepository,
 			characterUnlockRepository,
 			userCharacterRepository,
+			characterSpeciesBackgroundRepository,
 			userRepository
 		);
 
@@ -48,7 +53,7 @@ class TamagotchiCurrentCharacterServiceImplTest {
 			.userId(userId)
 			.characterId(2L)
 			.name("saesangi")
-			.growthPercent(45)
+			.currentExp(45)
 			.equipedItemsId(42L)
 			.isActive(true)
 			.isDeleted(false)
@@ -57,6 +62,7 @@ class TamagotchiCurrentCharacterServiceImplTest {
 			.characterId(2L)
 			.species("SLIME")
 			.stage(Character.Stage.BABY)
+			.requiredExp(100)
 			.thumbnailUrl("https://cdn.example.com/slime.png")
 			.build();
 
@@ -71,7 +77,11 @@ class TamagotchiCurrentCharacterServiceImplTest {
 		assertThat(resp.name()).isEqualTo("saesangi");
 		assertThat(resp.stage()).isEqualTo("BABY");
 		assertThat(resp.thumbnailUrl()).isEqualTo("https://cdn.example.com/slime.png");
-		assertThat(resp.growthPercent()).isEqualTo(45);
+		assertThat(resp.growthPercent()).isEqualTo(45); // 45/100 * 100 = 45
+		assertThat(resp.currentExp()).isEqualTo(45);
+		assertThat(resp.requiredExp()).isEqualTo(100);
+		assertThat(resp.canEvolve()).isFalse(); // 45 < 100
+		assertThat(resp.canFarewell()).isFalse();
 		assertThat(resp.equippedUserItemId()).isEqualTo(42L);
 	}
 }

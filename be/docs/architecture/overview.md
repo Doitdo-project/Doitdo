@@ -65,6 +65,10 @@ com.doitdo
 - 에러 코드: 9개 도메인 enum + `ErrorCodeRegistry` 인덱스 ([`../api/error-codes.md`](../api/error-codes.md))
 - 컨트롤러 작성: [`../api/swagger.md`](../api/swagger.md)
 
+## 알림 플로우
+
+저녁 리마인더 — 매분 cron `EveningReminderScheduler` 가 `UserSetting.eveningReminderTime` 일치 유저를 조회, 미완료 TODO > 0 이면 `NotificationService.sendEveningReminder` 로 `Notification` 저장 + (DND 구간이 아니면) FCM 발송. 플래그: `notification.evening-reminder.enabled`.
+
 ## 데이터 모델
 
 - ERD 원본/도메인 매핑: [`erd.md`](erd.md)

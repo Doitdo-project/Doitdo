@@ -89,16 +89,11 @@ class _Thumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final image = Image.asset(
-      entry.thumbnailUrl,
-      fit: BoxFit.contain,
-      filterQuality: FilterQuality.none,
-    );
+    final image = _buildImage(entry.thumbnailUrl);
 
     if (entry.isUnlocked) return Center(child: image);
 
     // 미해금: 같은 썸네일을 검정으로 덮어 실루엣 표현.
-    // 썸네일 asset 이 종별로 확정되면 per-character silhouette 로 교체해도 된다.
     return Center(
       child: ColorFiltered(
         colorFilter: const ColorFilter.mode(
@@ -107,6 +102,29 @@ class _Thumbnail extends StatelessWidget {
         ),
         child: image,
       ),
+    );
+  }
+
+  Widget _buildImage(String url) {
+    if (url.isEmpty) return const _ThumbnailFallback();
+    return Image.network(
+      url,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.medium,
+      errorBuilder: (_, _, _) => const _ThumbnailFallback(),
+    );
+  }
+}
+
+class _ThumbnailFallback extends StatelessWidget {
+  const _ThumbnailFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Icon(
+      Icons.pets,
+      size: 40.sp,
+      color: context.colors.textHint,
     );
   }
 }

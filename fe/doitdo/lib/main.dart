@@ -1,4 +1,3 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -12,6 +11,8 @@ import 'package:doitdo/core/utils/app_env.dart';
 import 'package:doitdo/core/utils/app_logger.dart';
 import 'package:doitdo/firebase_options.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
+
+import 'package:firebase_core/firebase_core.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,9 +31,6 @@ Future<void> main() async {
   await Hive.initFlutter();
   final prefs = await SharedPreferences.getInstance();
 
-  // Firebase 초기화 — flutterfire_cli 가 생성한 DefaultFirebaseOptions 를 주입.
-  // 네이티브 config 파일(`google-services.json` / `GoogleService-Info.plist`) 과
-  // 값이 일치해야 하며, CLI 실행 시 자동으로 맞춰진다.
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,

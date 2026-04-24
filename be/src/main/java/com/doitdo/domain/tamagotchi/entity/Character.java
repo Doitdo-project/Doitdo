@@ -34,9 +34,15 @@ public class Character extends BaseTimeEntity {
 	@Column(nullable = false, length = 20)
 	private String species;
 
+	@Column(nullable = false, length = 20)
+	private String name;
+
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 10)
 	private Stage stage;
+
+	@Column(name = "required_exp", nullable = true)
+	private Integer requiredExp;
 
 	@Column(name = "thumbnail_url", nullable = false, length = 500)
 	private String thumbnailUrl;

@@ -8,6 +8,7 @@ import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/setting/account/account_view_model.dart';
 import 'package:doitdo/presentation/pages/setting/account/widgets/password_change_dialog.dart';
+import 'package:doitdo/presentation/providers/current_user_provider.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_dialog.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_top_bar.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_padding_layout.dart';
@@ -67,9 +68,15 @@ class _AccountPageState extends ConsumerState<AccountPage> {
             const SizedBox(height: 8),
             _AccountCard(
               children: [
-                const _EmailRow(
-                  // TODO: currentUserProvider 연결 시 실제 사용자 이메일로 교체.
-                  email: 'ateliers@example.com',
+                _EmailRow(
+                  // 전역 currentUserProvider 구독 — 로그인 상태의 실제 이메일 표시.
+                  // 로딩 중엔 빈 문자열, 에러면 "-" 로 페일세이프 (계정 화면에서
+                  // 에러 메시지까지 노출하면 본질이 흐려지므로 축약).
+                  email: ref.watch(currentUserProvider).when(
+                        data: (user) => user?.email ?? '',
+                        loading: () => '',
+                        error: (_, __) => '-',
+                      ),
                 ),
                 const _CardDivider(),
                 _ChevronTile(
