@@ -13,7 +13,7 @@ _$TodoUpdateRequestDtoImpl _$$TodoUpdateRequestDtoImplFromJson(
   content: json['content'] as String?,
   category: json['category'] as String?,
   type: json['type'] as String,
-  startDate: json['startDate'] as String,
+  startDate: json['startDate'] as String?,
   endDate: json['endDate'] as String?,
   period: (json['period'] as num?)?.toInt(),
 );

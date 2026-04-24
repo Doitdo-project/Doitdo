@@ -10,7 +10,7 @@ class TodoUpdateRequestDto with _$TodoUpdateRequestDto {
     String? content,
     String? category,
     required String type, // NORMAL, RECURRING, PERIOD
-    required String startDate, // YYYY-MM-DD 형식
+    required String? startDate, // YYYY-MM-DD 형식
     String? endDate, // YYYY-MM-DD 형식
     int? period,
   }) = _TodoUpdateRequestDto;

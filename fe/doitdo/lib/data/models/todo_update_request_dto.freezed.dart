@@ -26,7 +26,7 @@ mixin _$TodoUpdateRequestDto {
   String? get category => throw _privateConstructorUsedError;
   String get type =>
       throw _privateConstructorUsedError; // NORMAL, RECURRING, PERIOD
-  String get startDate => throw _privateConstructorUsedError; // YYYY-MM-DD 형식
+  String? get startDate => throw _privateConstructorUsedError; // YYYY-MM-DD 형식
   String? get endDate => throw _privateConstructorUsedError; // YYYY-MM-DD 형식
   int? get period => throw _privateConstructorUsedError;
 
@@ -52,7 +52,7 @@ abstract class $TodoUpdateRequestDtoCopyWith<$Res> {
     String? content,
     String? category,
     String type,
-    String startDate,
+    String? startDate,
     String? endDate,
     int? period,
   });
@@ -80,7 +80,7 @@ class _$TodoUpdateRequestDtoCopyWithImpl<
     Object? content = freezed,
     Object? category = freezed,
     Object? type = null,
-    Object? startDate = null,
+    Object? startDate = freezed,
     Object? endDate = freezed,
     Object? period = freezed,
   }) {
@@ -102,10 +102,10 @@ class _$TodoUpdateRequestDtoCopyWithImpl<
                 ? _value.type
                 : type // ignore: cast_nullable_to_non_nullable
                       as String,
-            startDate: null == startDate
+            startDate: freezed == startDate
                 ? _value.startDate
                 : startDate // ignore: cast_nullable_to_non_nullable
-                      as String,
+                      as String?,
             endDate: freezed == endDate
                 ? _value.endDate
                 : endDate // ignore: cast_nullable_to_non_nullable
@@ -134,7 +134,7 @@ abstract class _$$TodoUpdateRequestDtoImplCopyWith<$Res>
     String? content,
     String? category,
     String type,
-    String startDate,
+    String? startDate,
     String? endDate,
     int? period,
   });
@@ -158,7 +158,7 @@ class __$$TodoUpdateRequestDtoImplCopyWithImpl<$Res>
     Object? content = freezed,
     Object? category = freezed,
     Object? type = null,
-    Object? startDate = null,
+    Object? startDate = freezed,
     Object? endDate = freezed,
     Object? period = freezed,
   }) {
@@ -180,10 +180,10 @@ class __$$TodoUpdateRequestDtoImplCopyWithImpl<$Res>
             ? _value.type
             : type // ignore: cast_nullable_to_non_nullable
                   as String,
-        startDate: null == startDate
+        startDate: freezed == startDate
             ? _value.startDate
             : startDate // ignore: cast_nullable_to_non_nullable
-                  as String,
+                  as String?,
         endDate: freezed == endDate
             ? _value.endDate
             : endDate // ignore: cast_nullable_to_non_nullable
@@ -223,7 +223,7 @@ class _$TodoUpdateRequestDtoImpl implements _TodoUpdateRequestDto {
   final String type;
   // NORMAL, RECURRING, PERIOD
   @override
-  final String startDate;
+  final String? startDate;
   // YYYY-MM-DD 형식
   @override
   final String? endDate;
@@ -289,7 +289,7 @@ abstract class _TodoUpdateRequestDto implements TodoUpdateRequestDto {
     final String? content,
     final String? category,
     required final String type,
-    required final String startDate,
+    required final String? startDate,
     final String? endDate,
     final int? period,
   }) = _$TodoUpdateRequestDtoImpl;
@@ -306,7 +306,7 @@ abstract class _TodoUpdateRequestDto implements TodoUpdateRequestDto {
   @override
   String get type; // NORMAL, RECURRING, PERIOD
   @override
-  String get startDate; // YYYY-MM-DD 형식
+  String? get startDate; // YYYY-MM-DD 형식
   @override
   String? get endDate; // YYYY-MM-DD 형식
   @override

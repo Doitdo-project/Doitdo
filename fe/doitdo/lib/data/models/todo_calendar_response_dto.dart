@@ -7,8 +7,8 @@ part 'todo_calendar_response_dto.g.dart';
 @freezed
 class TodoCalendarResponseDto with _$TodoCalendarResponseDto {
   const factory TodoCalendarResponseDto({
-    required List<CalendarSummaryDto> calendar,
-    required List<CalendarTodoItemDto> selectedDateItems,
+    // ✅ 서버 로그에 맞춰 selectedDateItems 대신 items로 변경
+    required List<CalendarTodoItemDto> items,
   }) = _TodoCalendarResponseDto;
 
   factory TodoCalendarResponseDto.fromJson(Map<String, dynamic> json) =>

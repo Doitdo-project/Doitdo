@@ -9,20 +9,14 @@ part of 'todo_calendar_response_dto.dart';
 _$TodoCalendarResponseDtoImpl _$$TodoCalendarResponseDtoImplFromJson(
   Map<String, dynamic> json,
 ) => _$TodoCalendarResponseDtoImpl(
-  calendar: (json['calendar'] as List<dynamic>)
-      .map((e) => CalendarSummaryDto.fromJson(e as Map<String, dynamic>))
-      .toList(),
-  selectedDateItems: (json['selectedDateItems'] as List<dynamic>)
+  items: (json['items'] as List<dynamic>)
       .map((e) => CalendarTodoItemDto.fromJson(e as Map<String, dynamic>))
       .toList(),
 );
 
 Map<String, dynamic> _$$TodoCalendarResponseDtoImplToJson(
   _$TodoCalendarResponseDtoImpl instance,
-) => <String, dynamic>{
-  'calendar': instance.calendar,
-  'selectedDateItems': instance.selectedDateItems,
-};
+) => <String, dynamic>{'items': instance.items};
 
 _$CalendarSummaryDtoImpl _$$CalendarSummaryDtoImplFromJson(
   Map<String, dynamic> json,

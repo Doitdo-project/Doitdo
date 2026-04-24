@@ -2,6 +2,8 @@ import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/data/models/todo_update_request_dto.dart';
 import 'package:doitdo/data/models/todo_update_response_dto.dart';
 import 'package:doitdo/data/models/todo_calendar_response_dto.dart';
+import 'package:doitdo/data/models/todo_list_response_dto.dart';
+import 'package:doitdo/data/models/todo_detail_response_dto.dart';
 
 abstract class TodoRepository {
   Future<void> createTodo(Todo todo);
@@ -20,4 +22,20 @@ abstract class TodoRepository {
     String? category,
     String? type,
   });
+
+  Future<TodoListResponseDto> getTodos({String? view, String? date});
+
+  // TODO 상세 조회
+  Future<TodoDetailResponseDto> getTodoDetail(String id);
+
+  // TODO 삭제
+  Future<void> deleteTodo(String id, {String? scope});
+
+  // 우선순위 변경
+  Future<void> updateTodoPriority(String todoId, int priority);
+
+  // TODO 미루기
+  Future<void> snoozeTodo(String todoId);
+
+
 }

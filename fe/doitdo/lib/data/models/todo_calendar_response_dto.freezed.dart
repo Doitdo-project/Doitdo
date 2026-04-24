@@ -23,9 +23,8 @@ TodoCalendarResponseDto _$TodoCalendarResponseDtoFromJson(
 
 /// @nodoc
 mixin _$TodoCalendarResponseDto {
-  List<CalendarSummaryDto> get calendar => throw _privateConstructorUsedError;
-  List<CalendarTodoItemDto> get selectedDateItems =>
-      throw _privateConstructorUsedError;
+  // ✅ 서버 로그에 맞춰 selectedDateItems 대신 items로 변경
+  List<CalendarTodoItemDto> get items => throw _privateConstructorUsedError;
 
   /// Serializes this TodoCalendarResponseDto to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -44,10 +43,7 @@ abstract class $TodoCalendarResponseDtoCopyWith<$Res> {
     $Res Function(TodoCalendarResponseDto) then,
   ) = _$TodoCalendarResponseDtoCopyWithImpl<$Res, TodoCalendarResponseDto>;
   @useResult
-  $Res call({
-    List<CalendarSummaryDto> calendar,
-    List<CalendarTodoItemDto> selectedDateItems,
-  });
+  $Res call({List<CalendarTodoItemDto> items});
 }
 
 /// @nodoc
@@ -67,16 +63,12 @@ class _$TodoCalendarResponseDtoCopyWithImpl<
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
-  $Res call({Object? calendar = null, Object? selectedDateItems = null}) {
+  $Res call({Object? items = null}) {
     return _then(
       _value.copyWith(
-            calendar: null == calendar
-                ? _value.calendar
-                : calendar // ignore: cast_nullable_to_non_nullable
-                      as List<CalendarSummaryDto>,
-            selectedDateItems: null == selectedDateItems
-                ? _value.selectedDateItems
-                : selectedDateItems // ignore: cast_nullable_to_non_nullable
+            items: null == items
+                ? _value.items
+                : items // ignore: cast_nullable_to_non_nullable
                       as List<CalendarTodoItemDto>,
           )
           as $Val,
@@ -93,10 +85,7 @@ abstract class _$$TodoCalendarResponseDtoImplCopyWith<$Res>
   ) = __$$TodoCalendarResponseDtoImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({
-    List<CalendarSummaryDto> calendar,
-    List<CalendarTodoItemDto> selectedDateItems,
-  });
+  $Res call({List<CalendarTodoItemDto> items});
 }
 
 /// @nodoc
@@ -116,16 +105,12 @@ class __$$TodoCalendarResponseDtoImplCopyWithImpl<$Res>
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
-  $Res call({Object? calendar = null, Object? selectedDateItems = null}) {
+  $Res call({Object? items = null}) {
     return _then(
       _$TodoCalendarResponseDtoImpl(
-        calendar: null == calendar
-            ? _value._calendar
-            : calendar // ignore: cast_nullable_to_non_nullable
-                  as List<CalendarSummaryDto>,
-        selectedDateItems: null == selectedDateItems
-            ? _value._selectedDateItems
-            : selectedDateItems // ignore: cast_nullable_to_non_nullable
+        items: null == items
+            ? _value._items
+            : items // ignore: cast_nullable_to_non_nullable
                   as List<CalendarTodoItemDto>,
       ),
     );
@@ -136,34 +121,25 @@ class __$$TodoCalendarResponseDtoImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$TodoCalendarResponseDtoImpl implements _TodoCalendarResponseDto {
   const _$TodoCalendarResponseDtoImpl({
-    required final List<CalendarSummaryDto> calendar,
-    required final List<CalendarTodoItemDto> selectedDateItems,
-  }) : _calendar = calendar,
-       _selectedDateItems = selectedDateItems;
+    required final List<CalendarTodoItemDto> items,
+  }) : _items = items;
 
   factory _$TodoCalendarResponseDtoImpl.fromJson(Map<String, dynamic> json) =>
       _$$TodoCalendarResponseDtoImplFromJson(json);
 
-  final List<CalendarSummaryDto> _calendar;
+  // ✅ 서버 로그에 맞춰 selectedDateItems 대신 items로 변경
+  final List<CalendarTodoItemDto> _items;
+  // ✅ 서버 로그에 맞춰 selectedDateItems 대신 items로 변경
   @override
-  List<CalendarSummaryDto> get calendar {
-    if (_calendar is EqualUnmodifiableListView) return _calendar;
+  List<CalendarTodoItemDto> get items {
+    if (_items is EqualUnmodifiableListView) return _items;
     // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_calendar);
-  }
-
-  final List<CalendarTodoItemDto> _selectedDateItems;
-  @override
-  List<CalendarTodoItemDto> get selectedDateItems {
-    if (_selectedDateItems is EqualUnmodifiableListView)
-      return _selectedDateItems;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_selectedDateItems);
+    return EqualUnmodifiableListView(_items);
   }
 
   @override
   String toString() {
-    return 'TodoCalendarResponseDto(calendar: $calendar, selectedDateItems: $selectedDateItems)';
+    return 'TodoCalendarResponseDto(items: $items)';
   }
 
   @override
@@ -171,20 +147,13 @@ class _$TodoCalendarResponseDtoImpl implements _TodoCalendarResponseDto {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$TodoCalendarResponseDtoImpl &&
-            const DeepCollectionEquality().equals(other._calendar, _calendar) &&
-            const DeepCollectionEquality().equals(
-              other._selectedDateItems,
-              _selectedDateItems,
-            ));
+            const DeepCollectionEquality().equals(other._items, _items));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-    runtimeType,
-    const DeepCollectionEquality().hash(_calendar),
-    const DeepCollectionEquality().hash(_selectedDateItems),
-  );
+  int get hashCode =>
+      Object.hash(runtimeType, const DeepCollectionEquality().hash(_items));
 
   /// Create a copy of TodoCalendarResponseDto
   /// with the given fields replaced by the non-null parameter values.
@@ -205,17 +174,15 @@ class _$TodoCalendarResponseDtoImpl implements _TodoCalendarResponseDto {
 
 abstract class _TodoCalendarResponseDto implements TodoCalendarResponseDto {
   const factory _TodoCalendarResponseDto({
-    required final List<CalendarSummaryDto> calendar,
-    required final List<CalendarTodoItemDto> selectedDateItems,
+    required final List<CalendarTodoItemDto> items,
   }) = _$TodoCalendarResponseDtoImpl;
 
   factory _TodoCalendarResponseDto.fromJson(Map<String, dynamic> json) =
       _$TodoCalendarResponseDtoImpl.fromJson;
 
+  // ✅ 서버 로그에 맞춰 selectedDateItems 대신 items로 변경
   @override
-  List<CalendarSummaryDto> get calendar;
-  @override
-  List<CalendarTodoItemDto> get selectedDateItems;
+  List<CalendarTodoItemDto> get items;
 
   /// Create a copy of TodoCalendarResponseDto
   /// with the given fields replaced by the non-null parameter values.

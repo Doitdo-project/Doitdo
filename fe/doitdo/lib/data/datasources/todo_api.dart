@@ -6,45 +6,82 @@ import 'package:doitdo/data/models/todo_status_response_dto.dart';
 import 'package:doitdo/data/models/todo_update_request_dto.dart';
 import 'package:doitdo/data/models/todo_update_response_dto.dart';
 import 'package:doitdo/data/models/todo_calendar_response_dto.dart';
+import 'package:doitdo/data/models/todo_list_response_dto.dart';
+import 'package:doitdo/data/models/todo_detail_response_dto.dart';
+import 'package:doitdo/data/models/todo_priority_response_dto.dart';
+import 'package:doitdo/data/models/todo_snooze_response_dto.dart';
 
 part 'todo_api.g.dart';
-
 
 @RestApi()
 abstract class TodoApi {
   factory TodoApi(Dio dio, {String baseUrl}) = _TodoApi;
 
-  // [T06] 일반/반복/기간 TODO 생성
-  @POST('/todos')
+  // [수정] /todos -> /api/todos 로 변경
+  @POST('/api/todos')
   Future<ApiResponse<dynamic>> createTodo(
       @Body() Map<String, dynamic> body,
       );
 
-  // [T03] TODO 상태 변경 (추가)
-  // URL: /todos/{todoId}/status?status=DONE
-  @PATCH('/todos/{todoId}/status')
-  Future<ApiResponse<TodoStatusResponseDto>> updateTodoStatus(
+  // [수정] /todos -> /api/todos 로 변경
+  @PATCH('/api/todos/{todoId}/status')
+  Future<ApiResponse<dynamic>> changeTodoStatus(
       @Path('todoId') int todoId,
-      @Query('status') String status,
+      @Body() Map<String, dynamic> body,
       );
 
-  // [수정 완료] T04: TODO 수정
-  // 1. {todoId}와 @Path('todoId') 이름을 일치시킴
-  // 2. ID 타입을 int로 변경하여 서버 스펙 준수
-  // 3. ApiResponse로 다시 감싸서 safeApiCall과의 호환성 해결
-  @PATCH('/todos/{todoId}')
+  // [수정] /todos -> /api/todos 로 변경
+  @PATCH('/api/todos/{todoId}')
   Future<ApiResponse<TodoUpdateResponseDto>> updateTodo(
       @Path('todoId') int todoId,
       @Body() TodoUpdateRequestDto request,
       );
 
-  // [추가] T08: TODO 캘린더 조회
-  @GET('/todos/calendar')
+  // [수정] /todos -> /api/todos 로 변경
+  @GET('/api/todos/calendar')
   Future<ApiResponse<TodoCalendarResponseDto>> getCalendar(
       @Query('from') String from,
       @Query('to') String to,
       @Query('status') String? status,
       @Query('category') String? category,
       @Query('type') String? type,
+      );
+
+  // [T02] TODO 목록 조회
+  @GET('/api/todos')
+  Future<ApiResponse<TodoListResponseDto>> getTodoList({
+    @Query('view') String? view,
+    @Query('status') String? status,
+    @Query('category') String? category,
+    @Query('type') String? type,
+    @Query('date') String? date,
+    @Query('q') String? q,
+    @Query('sort') String? sort,
+  });
+
+  // TODO 상세 조회
+  @GET('/api/todos/{todoId}')
+  Future<ApiResponse<TodoDetailResponseDto>> getTodoDetail(
+      @Path('todoId') int todoId,
+      );
+
+  // TODO 삭제
+  @DELETE('/api/todos/{todoId}')
+  Future<void> deleteTodo(
+      @Path('todoId') int todoId,
+      @Query('scope') String? scope,
+      );
+
+  // TODO 우선순위 변경
+  @PATCH('/api/todos/{todoId}/priority')
+  Future<ApiResponse<TodoPriorityResponseDto>> updateTodoPriority(
+      @Path('todoId') int todoId,
+      @Body() Map<String, dynamic> body,
+      );
+
+  // TODO 미루기
+  @POST('/api/todos/{todoId}/snooze')
+  Future<ApiResponse<TodoSnoozeResponseDto>> snoozeTodo(
+      @Path('todoId') int todoId,
       );
 }
