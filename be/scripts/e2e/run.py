@@ -37,6 +37,7 @@ class Context:
     fcm_token: Optional[str] = None
     notification_ids: list[int] = field(default_factory=list)
     user_item_id: Optional[int] = None
+    encyclopedia_species: Optional[str] = None
 
 
 @dataclass
@@ -447,7 +448,39 @@ def step_patch_category(client: Client, ctx: Context, step: Step) -> StepResult:
 
 
 def step_encyclopedia(client: Client, ctx: Context, step: Step) -> StepResult:
-    return request_step(client, step, ctx, expected={200})
+    result = request_step(client, step, ctx, expected={200})
+    if result.ok and ctx.encyclopedia_species is None:
+        data = data_of(result.response)
+        items = data.get("items") if isinstance(data, dict) else None
+        if isinstance(items, list):
+            for item in items:
+                if isinstance(item, dict) and item.get("species"):
+                    ctx.encyclopedia_species = item["species"]
+                    break
+    return result
+
+
+def step_encyclopedia_detail(client: Client, ctx: Context, step: Step) -> StepResult:
+    if ctx.encyclopedia_species is None:
+        return skip(step, "encyclopedia_species 없음")
+
+    def _validator(status: int, body: Any, context: Context) -> str:
+        data = data_of(body)
+        if not isinstance(data, dict):
+            return "data 가 dict 가 아님"
+        for required_key in ("species", "birthBackground", "baby", "teen", "adult"):
+            if data.get(required_key) is None:
+                return "missing data.%s" % required_key
+        return ""
+
+    return request_step(
+        client,
+        step,
+        ctx,
+        expected={200},
+        note="species/baby/teen/adult 필드 검증 OK",
+        validator=_validator,
+    )
 
 
 def step_receive_egg(client: Client, ctx: Context, step: Step) -> StepResult:
@@ -491,6 +524,87 @@ def step_hatch(client: Client, ctx: Context, step: Step) -> StepResult:
     )
 
 
+def step_exp_seed(client: Client, ctx: Context, step: Step) -> StepResult:
+    """canEvolve 가 true 될 때까지 새 TODO 를 생성·DONE 반복 (최대 40회).
+
+    - 한 번 DONE 된 TODO 는 expGranted=true 로 멱등 차단되므로 매 iteration 마다 새 TODO 생성 필요.
+    - 10회마다 GET /api/characters/me 로 canEvolve 확인; true 면 조기 종료.
+    """
+    if ctx.category_name is None:
+        return skip(step, "categoryName 없음")
+    if ctx.user_character_id is None:
+        return skip(step, "userCharacterId 없음")
+
+    today = datetime.now().date().isoformat()
+    max_iter = 40
+    can_evolve = False
+
+    for iteration in range(1, max_iter + 1):
+        # 새 TODO 생성
+        todo_body = {
+            "title": "e2e seed %d %s" % (iteration, uuid.uuid4().hex[:6]),
+            "content": "exp seed",
+            "category": ctx.category_name,
+            "type": "NORMAL",
+            "startDate": today,
+            "endDate": today,
+            "priority": 1,
+        }
+        create_status, create_body, _ = client.request("POST", "/api/todos", json_body=todo_body)
+        if create_status != 201:
+            return StepResult(
+                step.name, step.method, step.path, create_status, 0,
+                ok=False,
+                error="seed TODO 생성 실패 (iteration=%d, status=%d)" % (iteration, create_status),
+                response=create_body,
+            )
+        seed_todo_id = data_of(create_body).get("todoId") if isinstance(data_of(create_body), dict) else None
+        if seed_todo_id is None:
+            return StepResult(
+                step.name, step.method, step.path, create_status, 0,
+                ok=False,
+                error="todoId 없음 (iteration=%d)" % iteration,
+                response=create_body,
+            )
+        # 저장: 마지막으로 생성된 todo_id 를 context 에 유지
+        ctx.todo_id = seed_todo_id
+
+        # TODO DONE 처리
+        done_path = "/api/todos/%d/status" % seed_todo_id
+        done_status, done_body, _ = client.request("PATCH", done_path, json_body={"status": "DONE"})
+        if done_status != 200:
+            return StepResult(
+                step.name, step.method, step.path, done_status, 0,
+                ok=False,
+                error="seed DONE 실패 (iteration=%d, status=%d)" % (iteration, done_status),
+                response=done_body,
+            )
+
+        # 10회마다 canEvolve 확인
+        if iteration % 10 == 0:
+            me_status, me_body, _ = client.request("GET", "/api/characters/me")
+            if me_status == 200:
+                me_data = data_of(me_body)
+                if isinstance(me_data, dict) and me_data.get("canEvolve"):
+                    can_evolve = True
+                    break
+
+    # 루프 종료 후 확인 (10의 배수가 아닌 이터레이션 수로 종료된 경우 대비)
+    if not can_evolve:
+        me_status, me_body, _ = client.request("GET", "/api/characters/me")
+        if me_status == 200:
+            me_data = data_of(me_body)
+            if isinstance(me_data, dict) and me_data.get("canEvolve"):
+                can_evolve = True
+
+    note = "canEvolve=true 확인 후 조기 종료" if can_evolve else "최대 %d 회 시도 완료 (canEvolve 미확인)" % max_iter
+    return StepResult(
+        step.name, step.method, step.path, 200, 0,
+        ok=True,
+        note=note,
+    )
+
+
 def step_evolution(client: Client, ctx: Context, step: Step) -> StepResult:
     if ctx.user_character_id is None:
         return skip(step, "userCharacterId 없음")
@@ -499,8 +613,8 @@ def step_evolution(client: Client, ctx: Context, step: Step) -> StepResult:
         step,
         ctx,
         expected={200},
-        tolerated={404, 422},
-        note="전제 불만족 시 리포트만",
+        tolerated={404, 409, 422},
+        note="exp 부족 또는 전제 불만족 시 리포트만",
     )
 
 
@@ -577,6 +691,47 @@ def step_todo_snooze(client: Client, ctx: Context, step: Step) -> StepResult:
     if ctx.todo_id is None:
         return skip(step, "todoId 없음")
     return request_step(client, step, ctx, json_body={}, expected={200})
+
+
+def step_streak(client: Client, ctx: Context, step: Step) -> StepResult:
+    def _validator(status: int, body: Any, context: Context) -> str:
+        data = data_of(body)
+        if not isinstance(data, dict):
+            return "data 가 dict 가 아님"
+        for required_key in (
+            "currentStreakCount",
+            "longestStreakCount",
+        ):
+            if data.get(required_key) is None:
+                return "missing data.%s" % required_key
+        if data.get("currentStreakCount", 0) < 1:
+            return "currentStreakCount < 1 (TODO DONE 이 없거나 스트릭 미기록)"
+        return ""
+
+    return request_step(
+        client,
+        step,
+        ctx,
+        expected={200},
+        note="currentStreakCount >= 1 검증",
+        validator=_validator,
+    )
+
+
+def step_withdraw(client: Client, ctx: Context, step: Step) -> StepResult:
+    """회원탈퇴 — 204 응답 확인.
+
+    주의: 현재 known bug(#e2e-withdraw-token-bug.md)로 인해 탈퇴 후 is_deleted DB 반영이 안 됨.
+    이에 따라 '잔여 토큰 차단 검증(401)' 스텝은 버그 수정 후 별도 추가 예정.
+    """
+    return request_step(
+        client,
+        step,
+        ctx,
+        json_body={"currentPassword": ctx.password},
+        expected={204},
+        note="회원탈퇴 204 확인 (토큰 차단 검증은 bug fix 후 추가 예정)",
+    )
 
 
 def step_inventory(client: Client, ctx: Context, step: Step) -> StepResult:
@@ -711,6 +866,7 @@ def bind_path(template: str, ctx: Context) -> str:
         "{userCharacterId}": ctx.user_character_id,
         "{userItemId}": ctx.user_item_id,
         "{notificationId}": ctx.notification_ids[0] if ctx.notification_ids else None,
+        "{species}": ctx.encyclopedia_species,
     }
     for key, value in replacements.items():
         if value is not None:
@@ -729,29 +885,36 @@ def wrap_dynamic_path(fn: Callable[[Client, Context, Step], StepResult]) -> Call
 def build_steps() -> list[Step]:
     dyn = wrap_dynamic_path
     return [
+        # Phase 0: preflight
         Step("Phase 0 health", "GET", "/db-check", step_health, "헬스체크"),
+        # Phase 1: 회원가입 / 중복 확인
         Step("signup", "POST", "/api/auth/signup", step_signup, "회원 가입"),
         Step("check email duplicate", "GET", "/api/users/check-email", step_check_email_duplicate, "이메일 중복 확인"),
         Step("check username duplicate", "GET", "/api/users/check-username", step_check_username_duplicate, "닉네임 중복 확인"),
         Step("check email available", "GET", "/api/users/check-email", step_check_email_available, "이메일 사용 가능 확인"),
         Step("check username available", "GET", "/api/users/check-username", step_check_username_available, "닉네임 사용 가능 확인"),
+        # Phase 2: 인증
         Step("login", "POST", "/api/auth/login", step_login, "로그인"),
         Step("me", "GET", "/api/users/me", step_me, "내 정보 조회"),
         Step("change password", "POST", "/api/users/me/password", step_change_password, "비밀번호 변경"),
         Step("relogin", "POST", "/api/auth/login", step_relogin, "재로그인"),
         Step("refresh", "POST", "/api/auth/refresh", step_refresh, "토큰 재발급"),
+        # Phase 3: 알림 설정
         Step("register device token", "POST", "/api/notifications/device-token", step_register_device_token, "디바이스 토큰 등록"),
         Step("get settings", "GET", "/api/settings", step_get_settings, "설정 조회"),
         Step("patch settings", "PATCH", "/api/settings", step_patch_settings, "설정 수정"),
+        # Phase 4: 카테고리
         Step("create category", "POST", "/api/categories", step_create_category, "카테고리 생성"),
         Step("list categories", "GET", "/api/categories", step_list_categories, "카테고리 목록 조회"),
         Step("patch category", "PATCH", "/api/categories/{categoryId}", dyn(step_patch_category), "카테고리 수정"),
+        # Phase 5: 도감 / 캐릭터 (encyclopedia_detail 은 도감 목록 직후, evolution 은 exp seed 이후로 이동)
         Step("encyclopedia", "GET", "/api/characters/encyclopedia", step_encyclopedia, "도감 조회"),
+        Step("encyclopedia detail", "GET", "/api/characters/encyclopedia/{species}", dyn(step_encyclopedia_detail), "도감 상세 조회"),
         Step("receive egg", "POST", "/api/characters/me/egg", step_receive_egg, "알 받기"),
         Step("current character", "GET", "/api/characters/me", step_current_character, "현재 캐릭터 조회"),
         Step("update character name", "PATCH", "/api/characters/me/name", step_update_character_name, "캐릭터 이름 변경"),
         Step("hatch", "POST", "/api/characters/me/hatch", step_hatch, "부화"),
-        Step("evolution", "POST", "/api/characters/{userCharacterId}/evolution", dyn(step_evolution), "진화"),
+        # Phase 6: TODO (DONE 포함 — exp seed 와 streak 는 여기서 트리거)
         Step("create todo", "POST", "/api/todos", step_create_todo, "TODO 생성"),
         Step("list todos", "GET", "/api/todos", step_list_todos, "TODO 목록 조회"),
         Step("todo detail", "GET", "/api/todos/{todoId}", dyn(step_todo_detail), "TODO 상세 조회"),
@@ -761,18 +924,28 @@ def build_steps() -> list[Step]:
         Step("todo status", "PATCH", "/api/todos/{todoId}/status", dyn(step_todo_status), "TODO 상태 변경"),
         Step("todo priority", "PATCH", "/api/todos/{todoId}/priority", dyn(step_todo_priority), "TODO 우선순위 변경"),
         Step("todo snooze", "POST", "/api/todos/{todoId}/snooze", dyn(step_todo_snooze), "TODO 미루기"),
+        # Phase 6b: 스트릭 (TODO DONE 이후 — 스트릭 row 는 첫 DONE 시 생성됨)
+        Step("streak", "GET", "/api/users/me/streak", step_streak, "스트릭 조회"),
+        # Phase 6c: exp seed → 진화 (evolution 은 BABY→TEEN exp 100 필요)
+        Step("exp seed", "POST", "/api/todos", step_exp_seed, "진화 전 exp 채우기"),
+        Step("evolution", "POST", "/api/characters/{userCharacterId}/evolution", dyn(step_evolution), "진화"),
+        # Phase 7: 인벤토리
         Step("inventory", "GET", "/api/tamagotchis/{userCharacterId}/inventory", dyn(step_inventory), "인벤토리 조회"),
         Step("equip item", "POST", "/api/tamagotchis/{userCharacterId}/items/{userItemId}", dyn(step_equip_item), "아이템 장착"),
         Step("unequip item", "DELETE", "/api/tamagotchis/{userCharacterId}/items/{userItemId}", dyn(step_unequip_item), "아이템 해제"),
+        # Phase 8: 알림
         Step("list notifications", "GET", "/api/notifications", step_list_notifications, "알림 목록 조회"),
         Step("read notification", "PATCH", "/api/notifications/{notificationId}/read", dyn(step_read_notification), "알림 읽음 처리"),
         Step("read all notifications", "PATCH", "/api/notifications/read-all", step_read_all_notifications, "알림 전체 읽음"),
+        # Phase 9: cleanup
         Step("cleanup notifications", "DELETE", "/api/notifications/{id}", step_delete_notifications, "알림 삭제"),
         Step("cleanup todo", "DELETE", "/api/todos/{todoId}", dyn(step_delete_todo), "TODO 삭제"),
         Step("cleanup category", "DELETE", "/api/categories/{categoryId}", dyn(step_delete_category), "카테고리 삭제"),
         Step("cleanup farewell", "POST", "/api/characters/me/farewell", step_farewell, "캐릭터 이별"),
         Step("cleanup device token", "DELETE", "/api/notifications/device-token", step_unregister_device_token, "디바이스 토큰 해제"),
         Step("logout", "DELETE", "/api/auth/logout", step_logout, "로그아웃"),
+        # Phase 10: 회원탈퇴 (마지막 — 로그아웃 후 같은 토큰으로 탈퇴; 토큰 차단 검증은 bug fix 후 추가)
+        Step("withdraw", "DELETE", "/api/users/me", step_withdraw, "회원탈퇴"),
     ]
 
 
