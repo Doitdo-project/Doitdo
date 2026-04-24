@@ -110,7 +110,8 @@ public class Todo extends BaseTimeEntity {
 			TodoType type,
 			LocalDate startDate,
 			LocalDate endDate,
-			Integer period) {
+			Integer period,
+			String alertTime) {
 		if (title != null) this.title = title;
 		if (content != null) this.content = content;
 		if (categoryId != null) this.categoryId = categoryId;
@@ -118,6 +119,7 @@ public class Todo extends BaseTimeEntity {
 		if (startDate != null) this.startDate = startDate;
 		if (endDate != null) this.endDate = endDate;
 		if (period != null) this.period = period;
+		if (alertTime != null) this.alertTime = alertTime;
 	}
 
 	public static Todo create(
@@ -127,6 +129,7 @@ public class Todo extends BaseTimeEntity {
 			String content,
 			TodoType type,
 			Integer priority,
+			String alertTime,
 			LocalDate startDate,
 			LocalDate endDate,
 			Integer period) {
@@ -138,7 +141,7 @@ public class Todo extends BaseTimeEntity {
 				.type(type)
 				.status(TodoStatus.TODO)
 				.priority(priority)
-				.alertTime(null)
+				.alertTime(alertTime)
 				.startDate(startDate)
 				.endDate(endDate)
 				.period(period)
