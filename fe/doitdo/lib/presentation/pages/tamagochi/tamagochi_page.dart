@@ -226,11 +226,10 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
         body: DoitdoFullLayout(
           child: Stack(
             children: [
-              // 1. 스크롤 본문. 상태바 영역은 피해 topInset 아래에서 시작한다.
-              //    스크롤 중에도 이 패딩은 상수 — 울렁임의 원천(가변 패딩)을 제거.
-              Padding(
-                padding: EdgeInsets.only(top: topInset),
-                child: NotificationListener<ScrollNotification>(
+              // 1. 스크롤 본문. 캐릭터 카드가 상태바 영역까지 배경(grass)을 확장하므로
+              //    여기서는 top padding 을 주지 않고 Card 내부에서 topSafePadding
+              //    으로 content 만 밀어낸다. 상태바는 AnnotatedRegion 으로 투명 처리.
+              NotificationListener<ScrollNotification>(
                   onNotification: (notification) {
                     if (notification.metrics.axis != Axis.vertical) return false;
                     final nowVisible =
@@ -251,6 +250,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                               state: state,
                               character: character,
                               isCharacterLoading: isCharacterLoading,
+                              topSafePadding: topInset,
                               onTapShop: () => _showComingSoon(
                                 context,
                                 '상점 기능은 아직 준비 중이에요.',
@@ -319,17 +319,17 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                     ],
                   ),
                 ),
-              ),
 
-              // 2. 상단 시스템바 오버레이.
-              //    Mode 1 (헤더 보임) → grass 이미지 노출: 캐릭터 카드가 상태바까지 이어진 인상.
-              //    Mode 2 (헤더 사라짐) → scaffold 배경색: 할 일 리스트가 상태바와 겹치는 것을 차단.
+              // 2. 헤더가 스크롤로 사라졌을 때만 뜨는 상태바 scrim.
+              //    헤더가 보이는 동안은 완전 투명 — 캐릭터 카드의 grass 배경이
+              //    그대로 상태바까지 이어져 보이게 한다. 스크롤되어 투두 리스트가
+              //    상태바 위로 올라올 때만 scaffold 배경색으로 덮는다.
               Positioned(
                 top: 0,
                 left: 0,
                 right: 0,
                 height: topInset,
-                child: _StatusBarTint(visible: _headerVisible),
+                child: _StatusBarScrim(visible: _headerVisible),
               ),
             ],
           ),
@@ -386,34 +386,27 @@ void _showComingSoon(BuildContext context, String message) {
     );
 }
 
-/// 상태바 영역을 덮는 고정 오버레이.
-class _StatusBarTint extends StatelessWidget {
-  const _StatusBarTint({required this.visible});
+/// 스크롤되어 헤더(캐릭터 카드 + 스트릭) 가 사라졌을 때만 상태바 영역에 올라오는
+/// scaffold 색 scrim. 헤더가 보이는 동안은 opacity 0 이라 투명하고, 그때는 캐릭터
+/// 카드의 grass 배경이 상태바까지 그대로 이어져 보인다.
+class _StatusBarScrim extends StatelessWidget {
+  const _StatusBarScrim({required this.visible});
 
+  /// 헤더가 "보이는" 상태인지. true 일수록 scrim 을 가린다 (투명).
   final ValueListenable<bool> visible;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        ColoredBox(color: Theme.of(context).scaffoldBackgroundColor),
-        ValueListenableBuilder<bool>(
-          valueListenable: visible,
-          builder: (context, isVisible, _) {
-            return AnimatedOpacity(
-              duration: const Duration(milliseconds: 200),
-              opacity: isVisible ? 1.0 : 0.0,
-              child: Image.asset(
-                'assets/images/bg_grass.png',
-                fit: BoxFit.cover,
-                alignment: Alignment.topCenter,
-                filterQuality: FilterQuality.none,
-              ),
-            );
-          },
-        ),
-      ],
+    final bg = Theme.of(context).scaffoldBackgroundColor;
+    return ValueListenableBuilder<bool>(
+      valueListenable: visible,
+      builder: (context, isVisible, _) {
+        return AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: isVisible ? 0.0 : 1.0,
+          child: ColoredBox(color: bg),
+        );
+      },
     );
   }
 }

@@ -24,6 +24,7 @@ class CharacterCard extends StatelessWidget {
     this.onTapShop,
     this.onTapCollection,
     this.onEggTap,
+    this.topSafePadding = 0,
   });
 
   final TamagochiState state;
@@ -38,6 +39,11 @@ class CharacterCard extends StatelessWidget {
   /// 알을 탭했을 때 호출. 부화 페이지로 이동 + 복귀 시 재조회는 부모가 담당.
   final VoidCallback? onEggTap;
 
+  /// 카드가 상태바 영역까지 확장될 때 content 가 상태바 아이콘과 겹치지 않도록
+  /// 밀어낼 상단 여백. 배경(grass) 은 이 영역까지 그대로 이어지고, 내부 content
+  /// 좌표만 이 값만큼 내려간다.
+  final double topSafePadding;
+
   // 카드 배경이 테마와 무관하게 고정이라 DoitdoColors 가 아닌 로컬 상수.
   static const Color _expBarBg = Color(0xFF3F4A3A);
   static const Color _expBarFill = Color(0xFFF5D33C);
@@ -48,7 +54,7 @@ class CharacterCard extends StatelessWidget {
     final hideChrome = character == null || character!.isEgg;
 
     return SizedBox(
-      height: 200.h,
+      height: 200.h + topSafePadding,
       child: Stack(
         children: [
           Positioned.fill(
@@ -65,7 +71,7 @@ class CharacterCard extends StatelessWidget {
           // 투두 영역은 그대로 상호작용 가능.
           if (isCharacterLoading && character != null)
             Positioned(
-              top: 10.h,
+              top: topSafePadding + 10.h,
               left: 12.w,
               child: SizedBox(
                 width: 16.sp,
@@ -79,10 +85,11 @@ class CharacterCard extends StatelessWidget {
 
           // 중앙: 말풍선 + 캐릭터 (캐릭터 상태에 따라 분기)
           // 하단 크롬이 없을 땐 아래 패딩을 줄여 캐릭터를 중앙에 가깝게 배치.
+          // 상태바 영역(topSafePadding) 은 비워 중앙 정렬 기준이 그 아래 영역.
           Positioned(
             left: 0,
             right: 0,
-            top: 0,
+            top: topSafePadding,
             bottom: hideChrome ? 0 : 24.h,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -99,7 +106,7 @@ class CharacterCard extends StatelessWidget {
           // 우측 상단 아이콘 (상점 / 도감) — 캐릭터 수령 이후에만 노출
           if (!hideChrome)
             Positioned(
-              top: 8.h,
+              top: topSafePadding + 8.h,
               right: 16.w,
               child: Column(
                 children: [
@@ -477,7 +484,7 @@ class _GrownCharacter extends StatelessWidget {
     }
     return Image.network(
       thumbnailUrl,
-      height: 100.h,
+      height: 80.h,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.medium,
       errorBuilder: (_, _, _) => const _CharacterPlaceholder(),
