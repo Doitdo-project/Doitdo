@@ -1,11 +1,15 @@
 package com.doitdo.domain.tamagotchi.application.impl;
 
 import java.time.Instant;
+import java.util.EnumMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaDetailCharacterResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaDetailResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
@@ -18,6 +22,7 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
+import com.doitdo.domain.tamagotchi.repository.CharacterSpeciesBackgroundRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.user.repository.UserRepository;
@@ -33,6 +38,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 	private final CharacterRepository characterRepository;
 	private final CharacterUnlockRepository characterUnlockRepository;
 	private final UserCharacterRepository userCharacterRepository;
+	private final CharacterSpeciesBackgroundRepository characterSpeciesBackgroundRepository;
 	private final UserRepository userRepository;
 
 	@Override
@@ -95,6 +101,45 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 				character.getThumbnailUrl()
 			))
 			.toList());
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public EncyclopediaDetailResp getEncyclopediaDetail(Long userId, String species) {
+		List<com.doitdo.domain.tamagotchi.entity.Character> characters = characterRepository.findBySpecies(species);
+		if (characters.isEmpty()) {
+			throw new CustomException(TamagotchiErrorCode.M03_002);
+		}
+
+		com.doitdo.domain.tamagotchi.entity.CharacterSpeciesBackground background = characterSpeciesBackgroundRepository
+			.findById(species)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M03_002));
+
+		Long encounterCount = userCharacterRepository.countByUserIdAndSpecies(userId, species);
+		EnumMap<com.doitdo.domain.tamagotchi.entity.Character.Stage, EncyclopediaDetailCharacterResp> stageMap =
+			new EnumMap<>(com.doitdo.domain.tamagotchi.entity.Character.Stage.class);
+		for (com.doitdo.domain.tamagotchi.entity.Character character : characters) {
+			stageMap.put(character.getStage(), new EncyclopediaDetailCharacterResp(
+				character.getCharacterId(),
+				character.getName(),
+				character.getThumbnailUrl()
+			));
+		}
+
+		if (stageMap.get(com.doitdo.domain.tamagotchi.entity.Character.Stage.BABY) == null
+			|| stageMap.get(com.doitdo.domain.tamagotchi.entity.Character.Stage.TEEN) == null
+			|| stageMap.get(com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT) == null) {
+			throw new CustomException(TamagotchiErrorCode.M03_003);
+		}
+
+		return new EncyclopediaDetailResp(
+			species,
+			background.getBirthBackground(),
+			encounterCount != null ? encounterCount : 0L,
+			stageMap.get(com.doitdo.domain.tamagotchi.entity.Character.Stage.BABY),
+			stageMap.get(com.doitdo.domain.tamagotchi.entity.Character.Stage.TEEN),
+			stageMap.get(com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT)
+		);
 	}
 
 	@Override

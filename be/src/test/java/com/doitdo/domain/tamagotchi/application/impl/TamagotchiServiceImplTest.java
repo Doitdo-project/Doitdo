@@ -28,6 +28,7 @@ import com.doitdo.domain.tamagotchi.entity.Character;
 import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
+import com.doitdo.domain.tamagotchi.repository.CharacterSpeciesBackgroundRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.user.entity.User;
@@ -50,11 +51,15 @@ class TamagotchiServiceImplTest {
 	@Mock
 	private UserRepository userRepository;
 
+	@Mock
+	private CharacterSpeciesBackgroundRepository characterSpeciesBackgroundRepository;
+
 	private TamagotchiServiceImpl service() {
 		return new TamagotchiServiceImpl(
 			characterRepository,
 			characterUnlockRepository,
 			userCharacterRepository,
+			characterSpeciesBackgroundRepository,
 			userRepository
 		);
 	}

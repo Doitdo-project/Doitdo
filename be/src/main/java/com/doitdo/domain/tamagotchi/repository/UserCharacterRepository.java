@@ -13,6 +13,16 @@ public interface UserCharacterRepository extends JpaRepository<UserCharacter, Lo
 
 	Optional<UserCharacter> findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(Long userId);
 
+	@Query("""
+		SELECT COUNT(uc)
+		FROM UserCharacter uc
+		JOIN Character c ON uc.characterId = c.characterId
+		WHERE uc.userId = :userId
+			AND uc.isDeleted = false
+			AND c.species = :species
+	""")
+	Long countByUserIdAndSpecies(@Param("userId") Long userId, @Param("species") String species);
+
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("UPDATE UserCharacter uc SET uc.isDeleted = true WHERE uc.userId = :userId AND uc.isDeleted = false")
 	int softDeleteAllByUserId(@Param("userId") Long userId);
