@@ -8,6 +8,7 @@ import 'package:doitdo/presentation/pages/tamagochi/widgets/character_card.dart'
 import 'package:doitdo/presentation/pages/tamagochi/widgets/farewell_banner.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/streak_section.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
+import 'package:doitdo/presentation/pages/todo/widgets/todo_add_sheet.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_dialog.dart';
 import 'package:doitdo/presentation/widgets/common/todo_section.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_full_layout.dart';
@@ -59,6 +60,21 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   void dispose() {
     _headerVisible.dispose();
     super.dispose();
+  }
+
+  /// 오늘/언젠가 할 일 섹션의 "추가하기" 버튼이 눌릴 때 띄우는 바텀시트.
+  /// Todo 페이지와 동일한 `TodoAddSheet` 를 사용한다.
+  ///
+  /// - `date == null` : "언젠가 할 일" 로 추가 (날짜 없음)
+  /// - `date != null` : 해당 날짜(보통 오늘) 의 "오늘의 할 일" 로 추가
+  void _openAddSheet(BuildContext context, DateTime? date) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      useRootNavigator: true,
+      builder: (_) => TodoAddSheet(initialDate: date),
+    );
   }
 
   /// 홈 알 탭 → 부화 페이지 push.
@@ -237,9 +253,10 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                     TodoSection(
                                       title: '오늘의 할 일',
                                       actionLabel: '추가하기',
-                                      onActionTap: () {
-                                        // TODO: 할 일 추가 플로우 연결
-                                      },
+                                      onActionTap: () => _openAddSheet(
+                                        context,
+                                        DateTime.now(),
+                                      ),
                                       todos: todayTodos,
                                       onToggle: todoVm.toggleTodo,
                                     ),
@@ -247,9 +264,8 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                     TodoSection(
                                       title: '언젠가 할 일',
                                       actionLabel: '추가하기',
-                                      onActionTap: () {
-                                        // TODO: 할 일 추가 플로우 연결
-                                      },
+                                      onActionTap: () =>
+                                          _openAddSheet(context, null),
                                       todos: somedayTodos,
                                       onToggle: todoVm.toggleSomedayTodo,
                                     ),
