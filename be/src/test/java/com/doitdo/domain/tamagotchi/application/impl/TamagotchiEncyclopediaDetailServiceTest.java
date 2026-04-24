@@ -48,8 +48,8 @@ class TamagotchiEncyclopediaDetailServiceTest {
 			characterRepository,
 			characterUnlockRepository,
 			userCharacterRepository,
-			userRepository,
-			characterSpeciesBackgroundRepository
+			characterSpeciesBackgroundRepository,
+			userRepository
 		);
 	}
 
