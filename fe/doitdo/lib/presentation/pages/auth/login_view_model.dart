@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:doitdo/core/errors/exceptions.dart';
 import 'package:doitdo/domain/entities/user.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
+import 'package:doitdo/presentation/providers/current_user_provider.dart';
 
 /// 이메일(실제는 username) + 비밀번호 로그인 ViewModel.
 ///
@@ -29,6 +30,8 @@ class LoginViewModel extends AutoDisposeAsyncNotifier<User?> {
         username: username,
         password: password,
       );
+      // 로그인 직후 전역 currentUserProvider 무효화 → 홈 진입 시 최신 프로필 재조회.
+      ref.invalidate(currentUserProvider);
       return user;
     });
   }

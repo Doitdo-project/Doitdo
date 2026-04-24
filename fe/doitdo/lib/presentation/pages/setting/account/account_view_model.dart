@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
+import 'package:doitdo/presentation/providers/current_user_provider.dart';
 
 /// 계정 설정 화면에서 수행되는 사이드이펙트(로그아웃 등) 를 관리.
 ///
@@ -19,10 +20,12 @@ class AccountViewModel extends AutoDisposeAsyncNotifier<bool?> {
 
   /// 로그아웃 — 서버 세션 종료 + 로컬 토큰 삭제 + 소셜 SDK 세션 해제.
   /// 성공 시 `true` 로 상태 전환 → View 의 `ref.listen` 이 감지해 welcome 이동.
+  /// 이어서 currentUserProvider 를 무효화해 다음 로그인 시 프로필 재조회.
   Future<void> signOut() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await ref.read(authRepositoryProvider).signOut();
+      ref.invalidate(currentUserProvider);
       return true;
     });
   }

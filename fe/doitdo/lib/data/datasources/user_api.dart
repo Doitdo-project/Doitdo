@@ -2,8 +2,11 @@ import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
 import 'package:doitdo/core/network/api_response.dart';
+import 'package:doitdo/data/models/change_password_request_dto.dart';
 import 'package:doitdo/data/models/check_email_response_dto.dart';
 import 'package:doitdo/data/models/check_username_response_dto.dart';
+import 'package:doitdo/data/models/empty_data_dto.dart';
+import 'package:doitdo/data/models/user_dto.dart';
 
 part 'user_api.g.dart';
 
@@ -18,6 +21,18 @@ part 'user_api.g.dart';
 @RestApi()
 abstract class UserApi {
   factory UserApi(Dio dio, {String baseUrl}) = _UserApi;
+
+  /// 내 정보 조회. 로그인된 사용자의 최신 `{userId, username, email}` 을 반환.
+  /// 인증 필요(Bearer). `AuthInterceptor` 가 자동 주입.
+  @GET('/api/users/me')
+  Future<ApiResponse<UserDto>> getMe();
+
+  /// 비밀번호 변경. 성공 시 204 No Content — 응답 본문이 없으므로 [EmptyDataDto].
+  /// 실패(현재 비밀번호 불일치 등) 는 `ServerException(message)` 으로 떨어진다.
+  @POST('/api/users/me/password')
+  Future<ApiResponse<EmptyDataDto>> changePassword(
+    @Body() ChangePasswordRequestDto body,
+  );
 
   /// 이메일 중복 확인. `data.available == true` 면 가입 가능.
   @GET('/api/users/check-email')
