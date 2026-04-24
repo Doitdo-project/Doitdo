@@ -1,5 +1,7 @@
 import 'package:doitdo/core/network/base_repository.dart';
 import 'package:doitdo/data/datasources/user_api.dart';
+import 'package:doitdo/data/models/change_password_request_dto.dart';
+import 'package:doitdo/domain/entities/user.dart';
 import 'package:doitdo/domain/repositories/user_repository.dart';
 
 /// [UserRepository] 구현체.
@@ -15,6 +17,24 @@ class UserRepositoryImpl extends BaseRepository implements UserRepository {
   UserRepositoryImpl(this._api);
 
   final UserApi _api;
+
+  @override
+  Future<User> getMe() =>
+      safeApiCall(() => _api.getMe()).then((dto) => dto.toEntity());
+
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) =>
+      safeApiCallNoData(
+        () => _api.changePassword(
+          ChangePasswordRequestDto(
+            currentPassword: currentPassword,
+            newPassword: newPassword,
+          ),
+        ),
+      );
 
   @override
   Future<bool> isEmailAvailable(String email) =>

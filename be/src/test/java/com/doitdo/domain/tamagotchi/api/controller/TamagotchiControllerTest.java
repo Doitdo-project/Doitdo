@@ -14,6 +14,8 @@ import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.tamagotchi.api.dto.req.ApproveIndependenceReq;
 import com.doitdo.domain.tamagotchi.api.dto.req.UpdateCharacterNameReq;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaDetailCharacterResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaDetailResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaItemResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
@@ -38,7 +40,6 @@ class TamagotchiControllerTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build());
 		CurrentCharacterResp serviceResp = new CurrentCharacterResp(
@@ -72,7 +73,6 @@ class TamagotchiControllerTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build());
 		UpdateCharacterNameResp serviceResp = new UpdateCharacterNameResp(10L, "rabi");
@@ -95,16 +95,43 @@ class TamagotchiControllerTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build());
 		EncyclopediaResp serviceResp = new EncyclopediaResp(List.of(
-			new EncyclopediaItemResp(1L, "SLIME", "BABY", true, "https://cdn.example.com/slime.png")
+			new EncyclopediaItemResp(1L, "뚜잇", "SLIME", "ADULT", true, "https://cdn.example.com/slime.png")
 		));
 
 		given(tamagotchiService.getEncyclopedia(1L)).willReturn(serviceResp);
 
 		GlobalApiResponse<EncyclopediaResp> resp = controller.getEncyclopedia(userDetails);
+
+		assertThat(resp.getStatus()).isEqualTo(200);
+		assertThat(resp.getMessage()).isEqualTo("OK");
+		assertThat(resp.getData()).isEqualTo(serviceResp);
+	}
+
+	@Test
+	void getEncyclopediaDetailReturnsGlobalApiResponse() {
+		TamagotchiController controller = new TamagotchiController(tamagotchiService);
+		CustomUserDetails userDetails = new CustomUserDetails(User.builder()
+			.userId(1L)
+			.email("user@example.com")
+			.username("user")
+			.password("password")
+			.isDeleted(false)
+			.build());
+		EncyclopediaDetailResp serviceResp = new EncyclopediaDetailResp(
+			"SLIME",
+			"진흙에서 태어난 생명체",
+			3L,
+			new EncyclopediaDetailCharacterResp(1L, "슬라임 베이비", "https://cdn.example.com/slime-baby.png"),
+			new EncyclopediaDetailCharacterResp(2L, "슬라임 틴", "https://cdn.example.com/slime-teen.png"),
+			new EncyclopediaDetailCharacterResp(3L, "슬라임 어덜트", "https://cdn.example.com/slime-adult.png")
+		);
+
+		given(tamagotchiService.getEncyclopediaDetail(1L, "SLIME")).willReturn(serviceResp);
+
+		GlobalApiResponse<EncyclopediaDetailResp> resp = controller.getEncyclopediaDetail(userDetails, "SLIME");
 
 		assertThat(resp.getStatus()).isEqualTo(200);
 		assertThat(resp.getMessage()).isEqualTo("OK");
@@ -119,7 +146,6 @@ class TamagotchiControllerTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build());
 		HatchCharacterResp serviceResp = new HatchCharacterResp(
@@ -146,7 +172,6 @@ class TamagotchiControllerTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build());
 		EvolutionResp serviceResp = new EvolutionResp(
@@ -177,7 +202,6 @@ class TamagotchiControllerTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build());
 		FarewellResp serviceResp = new FarewellResp(

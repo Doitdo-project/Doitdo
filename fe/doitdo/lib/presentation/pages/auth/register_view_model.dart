@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:doitdo/domain/entities/user.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
+import 'package:doitdo/presentation/providers/current_user_provider.dart';
 
 /// 회원가입 플로우 ViewModel.
 ///
@@ -32,6 +33,8 @@ class RegisterViewModel extends AutoDisposeAsyncNotifier<User?> {
         username: username,
         password: password,
       );
+      // 가입 + 자동 로그인 직후 전역 currentUserProvider 무효화.
+      ref.invalidate(currentUserProvider);
       return user;
     });
   }

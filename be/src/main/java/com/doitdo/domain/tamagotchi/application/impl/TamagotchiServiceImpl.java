@@ -1,11 +1,15 @@
 package com.doitdo.domain.tamagotchi.application.impl;
 
 import java.time.Instant;
+import java.util.EnumMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaDetailCharacterResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaDetailResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
@@ -16,8 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaItemResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
+import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
+import com.doitdo.domain.tamagotchi.repository.CharacterSpeciesBackgroundRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.user.repository.UserRepository;
@@ -33,6 +39,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 	private final CharacterRepository characterRepository;
 	private final CharacterUnlockRepository characterUnlockRepository;
 	private final UserCharacterRepository userCharacterRepository;
+	private final CharacterSpeciesBackgroundRepository characterSpeciesBackgroundRepository;
 	private final UserRepository userRepository;
 
 	@Override
@@ -55,14 +62,13 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		UserCharacter userCharacter = UserCharacter.builder()
 			.userId(userId)
 			.characterId(eggCharacter.getCharacterId())
-			.name("뚜잇이")
+			.name(eggCharacter.getName())
 			.currentExp(0)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
 		UserCharacter savedUserCharacter = userCharacterRepository.save(userCharacter);
 
-		// EGG 단계: growthPercent=0, canEvolve=false, canFarewell=false, currentExp=0, requiredExp=0
 		return new CurrentCharacterResp(
 			eggCharacter.getCharacterId(),
 			savedUserCharacter.getName(),
@@ -86,14 +92,55 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.collect(Collectors.toSet());
 
 		return new EncyclopediaResp(characterRepository.findAll().stream()
+			.filter(character -> character.getStage() == com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT)
 			.map(character -> new EncyclopediaItemResp(
 				character.getCharacterId(),
+				character.getName(),
 				character.getSpecies(),
 				character.getStage().name(),
 				unlockedCharacterIds.contains(character.getCharacterId()),
 				character.getThumbnailUrl()
 			))
 			.toList());
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public EncyclopediaDetailResp getEncyclopediaDetail(Long userId, String species) {
+		List<com.doitdo.domain.tamagotchi.entity.Character> characters = characterRepository.findBySpecies(species);
+		if (characters.isEmpty()) {
+			throw new CustomException(TamagotchiErrorCode.M03_002);
+		}
+
+		com.doitdo.domain.tamagotchi.entity.CharacterSpeciesBackground background = characterSpeciesBackgroundRepository
+			.findById(species)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M03_002));
+
+		Long encounterCount = userCharacterRepository.countByUserIdAndSpecies(userId, species);
+		EnumMap<com.doitdo.domain.tamagotchi.entity.Character.Stage, EncyclopediaDetailCharacterResp> stageMap =
+			new EnumMap<>(com.doitdo.domain.tamagotchi.entity.Character.Stage.class);
+		for (com.doitdo.domain.tamagotchi.entity.Character character : characters) {
+			stageMap.put(character.getStage(), new EncyclopediaDetailCharacterResp(
+				character.getCharacterId(),
+				character.getName(),
+				character.getThumbnailUrl()
+			));
+		}
+
+		if (stageMap.get(com.doitdo.domain.tamagotchi.entity.Character.Stage.BABY) == null
+			|| stageMap.get(com.doitdo.domain.tamagotchi.entity.Character.Stage.TEEN) == null
+			|| stageMap.get(com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT) == null) {
+			throw new CustomException(TamagotchiErrorCode.M03_003);
+		}
+
+		return new EncyclopediaDetailResp(
+			species,
+			background.getBirthBackground(),
+			encounterCount != null ? encounterCount : 0L,
+			stageMap.get(com.doitdo.domain.tamagotchi.entity.Character.Stage.BABY),
+			stageMap.get(com.doitdo.domain.tamagotchi.entity.Character.Stage.TEEN),
+			stageMap.get(com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT)
+		);
 	}
 
 	@Override
@@ -132,15 +179,15 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 
 		Integer requiredExp = character.getRequiredExp();
 		int growthPercent = (requiredExp == null || requiredExp == 0)
-				? 0
-				: Math.min(100, (int) Math.round(userCharacter.getCurrentExp() * 100.0 / requiredExp));
+			? 0
+			: Math.min(100, (int)Math.round(userCharacter.getCurrentExp() * 100.0 / requiredExp));
 		boolean canEvolve = (character.getStage() == com.doitdo.domain.tamagotchi.entity.Character.Stage.BABY
-				|| character.getStage() == com.doitdo.domain.tamagotchi.entity.Character.Stage.TEEN)
-				&& requiredExp != null
-				&& userCharacter.getCurrentExp() >= requiredExp;
+			|| character.getStage() == com.doitdo.domain.tamagotchi.entity.Character.Stage.TEEN)
+			&& requiredExp != null
+			&& userCharacter.getCurrentExp() >= requiredExp;
 		boolean canFarewell = character.getStage() == com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT
-				&& requiredExp != null
-				&& userCharacter.getCurrentExp() >= requiredExp;
+			&& requiredExp != null
+			&& userCharacter.getCurrentExp() >= requiredExp;
 
 		return new CurrentCharacterResp(
 			character.getCharacterId(),
@@ -180,7 +227,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M02_004));
 
 		userCharacter.setCharacterId(babyCharacter.getCharacterId());
-		userCharacter.resetExp(); // EGG → BABY 시 exp 리셋 (EGG 에선 어차피 0이지만 명시적 호출)
+		userCharacter.resetExp();
 
 		return new HatchCharacterResp(
 			babyCharacter.getCharacterId(),
@@ -205,10 +252,8 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.findById(userCharacter.getCharacterId())
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M05_002));
 
-		// exp 게이팅. 현재 단계의 requiredExp 를 채워야만 진화 가능.
 		Integer requiredExp = currentCharacter.getRequiredExp();
 		if (requiredExp == null) {
-			// 데이터 마이그레이션 미완료. 운영 알람 대상.
 			throw new CustomException(TamagotchiErrorCode.M05_005);
 		}
 		if (userCharacter.getCurrentExp() < requiredExp) {
@@ -228,17 +273,39 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 
 		userCharacter.setCharacterId(nextCharacter.getCharacterId());
 		userCharacter.resetExp();
+		if (afterStage == com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT) {
+			unlockSpeciesCharacters(userId, currentCharacter.getSpecies());
+		}
 
 		return new EvolutionResp(
 			userCharacter.getUserCharacterId(),
 			beforeStage.name(),
 			afterStage.name(),
-			userCharacter.getCurrentExp(),    // 진화 직후 0
-			nextCharacter.getRequiredExp(),    // afterStage 의 requiredExp (DB 에서 조회한 값)
+			userCharacter.getCurrentExp(),
+			nextCharacter.getRequiredExp(),
 			buildAnimationUrl(beforeStage, afterStage),
 			nextCharacter.getThumbnailUrl(),
 			Instant.now().toString()
 		);
+	}
+
+	private void unlockSpeciesCharacters(Long userId, String species) {
+		Set<Long> unlockedCharacterIds = characterUnlockRepository.findByUserId(userId).stream()
+			.map(unlock -> unlock.getCharacterId())
+			.collect(Collectors.toSet());
+
+		List<CharacterUnlock> unlocksToSave = characterRepository.findBySpecies(species).stream()
+			.map(character -> character.getCharacterId())
+			.filter(characterId -> !unlockedCharacterIds.contains(characterId))
+			.map(characterId -> CharacterUnlock.builder()
+				.userId(userId)
+				.characterId(characterId)
+				.build())
+			.toList();
+
+		if (!unlocksToSave.isEmpty()) {
+			characterUnlockRepository.saveAll(unlocksToSave);
+		}
 	}
 
 	private String buildAnimationUrl(
@@ -293,8 +360,10 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			adultUserCharacter.getUserCharacterId(),
 			true,
 			eggCharacter.getStage().name(),
-			buildAnimationUrl(com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT,
-				com.doitdo.domain.tamagotchi.entity.Character.Stage.EGG)
+			buildAnimationUrl(
+				com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT,
+				com.doitdo.domain.tamagotchi.entity.Character.Stage.EGG
+			)
 		);
 	}
 }

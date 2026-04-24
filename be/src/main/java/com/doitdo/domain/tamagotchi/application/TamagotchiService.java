@@ -1,6 +1,7 @@
 package com.doitdo.domain.tamagotchi.application;
 
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaDetailResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
@@ -12,6 +13,8 @@ public interface TamagotchiService {
 	CurrentCharacterResp receiveEgg(Long userId);
 
 	EncyclopediaResp getEncyclopedia(Long userId);
+
+	EncyclopediaDetailResp getEncyclopediaDetail(Long userId, String species);
 
 	UpdateCharacterNameResp updateName(Long userId, String name);
 

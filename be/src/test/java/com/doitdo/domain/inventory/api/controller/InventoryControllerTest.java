@@ -32,7 +32,6 @@ class InventoryControllerTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build());
 		InventoryResp serviceResp = new InventoryResp(10L, 42L, List.of(

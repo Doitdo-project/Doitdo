@@ -12,6 +12,8 @@ import com.doitdo.domain.auth.entity.RefreshToken;
 import com.doitdo.domain.auth.repository.RefreshTokenRepository;
 import com.doitdo.domain.setting.entity.UserSetting;
 import com.doitdo.domain.setting.repository.UserSettingRepository;
+import com.doitdo.domain.streak.entity.UserStreak;
+import com.doitdo.domain.streak.repository.UserStreakRepository;
 import com.doitdo.domain.tamagotchi.entity.Character;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
@@ -44,6 +46,7 @@ public class AuthServiceImpl implements AuthService {
 	private final UserRepository userRepository;
 	private final UserWalletRepository userWalletRepository;
 	private final UserSettingRepository userSettingRepository;
+	private final UserStreakRepository userStreakRepository;
 	private final RefreshTokenRepository refreshTokenRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final AuthenticationManager authenticationManager;
@@ -70,6 +73,7 @@ public class AuthServiceImpl implements AuthService {
 
 		userWalletRepository.save(UserWallet.create(user.getUserId()));
 		userSettingRepository.save(UserSetting.create(user.getUserId()));
+		userStreakRepository.save(UserStreak.create(user.getUserId()));
 		defaultCategoryRegistrar.registerFor(user.getUserId());
 
 		// 회원가입 직후부터 exp 시스템 대상이 되도록 EGG UserCharacter 자동 생성.

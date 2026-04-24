@@ -6,7 +6,6 @@ import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
-// ✅ [수정된 부분] 우리가 새로 만든 API Notifier 파일 import 추가
 import 'package:doitdo/presentation/pages/todo/todo_add_notifier.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_category_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_date_sheet.dart';
@@ -36,8 +35,12 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
   @override
   void initState() {
     super.initState();
-    final initial = widget.initialDate ?? DateTime.now();
-    _dateResult = TodoDateResult(type: TodoDateType.normal, date: initial);
+    // ✅ [버그 수정] initialDate가 null(언제가 할 일)이면 억지로 오늘 날짜를 넣지 않고 null 유지!
+    if (widget.initialDate != null) {
+      _dateResult = TodoDateResult(type: TodoDateType.normal, date: widget.initialDate!);
+    } else {
+      _dateResult = null; // 언제가 할 일은 시작부터 날짜 없음
+    }
   }
 
   @override
@@ -87,8 +90,8 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           : _memoController.text.trim(),
       alarmTime:       _alarmEnabled ? _selectedTime : null,
       alarmEnabled:    _alarmEnabled,
-      dateType:        r?.type          ?? TodoDateType.normal,
-      date:            r?.date,
+      dateType:        r?.type ?? TodoDateType.normal, // 날짜가 비어있어도 기본 타입은 normal
+      date:            r?.date, // 🔥 언제가 할 일이면 여기서 안전하게 null이 들어감!
       rangeStart:      r?.rangeStart,
       rangeEnd:        r?.rangeEnd,
       repeatType:      r?.repeatType,
@@ -99,12 +102,11 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
     // 1. 서버로 전송 요청!
     await ref.read(todoAddNotifierProvider.notifier).createTodo(todo);
 
-    // ✅ 2. 전송 결과 확인하기 (성공했는지 에러 났는지)
+    // 2. 전송 결과 확인하기
     final resultState = ref.read(todoAddNotifierProvider);
 
-    // 🚨 에러가 발생했다면? (서버에 안 넘어감)
     if (resultState.hasError) {
-      print('서버 통신 실패: ${resultState.error}'); // 콘솔창에 진짜 에러 원인 출력
+      print('서버 통신 실패: ${resultState.error}');
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -114,14 +116,18 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           ),
         );
       }
-      return; // ❌ 화면에 추가하지 않고, 바텀시트도 닫지 않고 여기서 멈춤!
+      return;
     }
 
-    // ✅ 3. 에러가 없다면(통신 성공) 비로소 로컬 화면(UI)에 추가
+    // 3. 통신 성공 시 로컬 화면(UI)에 추가
     final vm = ref.read(todoViewModelProvider.notifier);
-    widget.initialDate == null
-        ? vm.addSomedayTodo(todo)
-        : vm.addTodo(todo);
+
+    // ✅ _dateResult(사용자가 최종 선택한 날짜)가 비어있으면 언제가 할 일로 추가!
+    if (_dateResult?.date == null) {
+      vm.addSomedayTodo(todo);
+    } else {
+      vm.addTodo(todo);
+    }
 
     // 창 닫기
     if (context.mounted) {
@@ -145,7 +151,6 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 드래그 핸들
             Center(
               child: Container(
                 width: 40, height: 4,
@@ -153,10 +158,8 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                     color: c.border, borderRadius: BorderRadius.circular(2)),
               ),
             ),
-            // 시안: 드래그 핸들 아래 마스코트 말풍선이 뜰 공간.
             const SizedBox(height: 32),
 
-            // 마스코트 말풍선
             _MascotBubble(
               message: widget.initialDate == null
                   ? '언제가 하고 싶은 일은?'
@@ -164,8 +167,6 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
             ),
             const SizedBox(height: 16),
 
-            // 할 일 입력 — 시안: 20pt / Medium(w500) / 힌트 #D6D3D1.
-            // 본문·옵션 텍스트는 마스코트 "가시 영역" 과 맞추기 위해 좌측 8 오프셋.
             Padding(
               padding: const EdgeInsets.only(left: 8),
               child: TextField(
@@ -189,10 +190,8 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                 ),
               ),
             ),
-            // 시안: 타이틀 밑 divider 없이 공백만 두고 옵션 영역 시작.
             const SizedBox(height: 32),
 
-            // 기간
             GestureDetector(
               onTap: () async {
                 final result = await showModalBottomSheet<TodoDateResult>(
@@ -207,13 +206,13 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
               child: _OptionRow(
                 icon: Icons.calendar_today_outlined,
                 label: '기간',
-                valueText: _dateResult?.displayText ?? '',
+                // ✅ 날짜가 비어있을 때는 '미지정'이라고 예쁘게 띄워줍니다.
+                valueText: _dateResult?.displayText ?? '미지정',
                 colors: c,
               ),
             ),
             Divider(color: c.divider, height: 1, thickness: 1),
 
-            // 카테고리 — 점 색은 선택된 카테고리 실제 색(category1~5) 을 동적으로 반영.
             GestureDetector(
               onTap: () async {
                 final result = await showModalBottomSheet<String>(
@@ -226,11 +225,9 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                 if (result != null) setState(() => _selectedCategory = result);
               },
               child: Padding(
-                // 마스코트 가시 영역과 수평 정렬을 위해 좌측 8 오프셋.
                 padding: const EdgeInsets.fromLTRB(8, 20, 0, 20),
                 child: Row(
                   children: [
-                    // 시안 지정 아이콘 브랜드 컬러 (#C8966E — muted brown-orange).
                     const Icon(Icons.category_outlined,
                         size: 18, color: Color(0xFFC8966E)),
                     const SizedBox(width: 12),
@@ -254,9 +251,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                 ),
               ),
             ),
-            // 시안: 카테고리 ↔ 알림 사이 divider 없음.
 
-            // ── 알림 — 시간 탭으로 TodoTimeSheet 열기 ──
             GestureDetector(
               onTap: () async {
                 final result = await showModalBottomSheet<TodoAlarmResult>(
@@ -278,17 +273,14 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
               child: _OptionRow(
                 icon: Icons.notifications_outlined,
                 label: '알림',
-                // 시안: 알림 off 일 때도 선택된 시간을 미리 보여줌(설정값 확인용).
                 valueText: _formatTime(_selectedTime),
                 colors: c,
               ),
             ),
             Divider(color: c.divider, height: 1, thickness: 1),
 
-            // 메모 (5줄 기본, 무제한 확장)
             const SizedBox(height: 16),
             Padding(
-              // 메모 텍스트도 타이틀/옵션 행과 동일한 좌측 8 오프셋.
               padding: const EdgeInsets.only(left: 8),
               child: TextField(
                 controller: _memoController,
@@ -296,11 +288,11 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                 maxLines: null,
                 keyboardType: TextInputType.multiline,
                 style:
-                    AppTextStyles.bodyMedium.copyWith(color: c.textPrimary),
+                AppTextStyles.bodyMedium.copyWith(color: c.textPrimary),
                 decoration: InputDecoration(
                   hintText: '메모를 입력해 보세요.',
                   hintStyle:
-                      AppTextStyles.bodyMedium.copyWith(color: c.textHint),
+                  AppTextStyles.bodyMedium.copyWith(color: c.textHint),
                   border: InputBorder.none,
                   isDense: true,
                   contentPadding: EdgeInsets.zero,
@@ -309,7 +301,6 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
             ),
             const SizedBox(height: 20),
 
-            // 저장하기
             DoitdoPrimaryButton(
               label: '저장하기',
               onPressed: () => _onSave(context),
@@ -336,12 +327,9 @@ class _OptionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      // 시안상 옵션 행 높이 ≈ 66~70px. 아이콘 18 + 상하 여백 20 씩.
-      // 좌측 8 은 마스코트 가시 영역과 수평 정렬을 맞추기 위함.
       padding: const EdgeInsets.fromLTRB(8, 20, 0, 20),
       child: Row(
         children: [
-          // 시안 지정 아이콘 브랜드 컬러 (#C8966E — muted brown-orange).
           Icon(icon, size: 18, color: const Color(0xFFC8966E)),
           const SizedBox(width: 12),
           Text(label,

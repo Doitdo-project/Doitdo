@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
+import 'package:doitdo/core/utils/error_message_mapper.dart';
+import 'package:doitdo/presentation/pages/setting/account/password_change_view_model.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
 
 /// 비밀번호 변경 다이얼로그.
@@ -23,20 +26,25 @@ Future<bool?> showPasswordChangeDialog(BuildContext context) {
   );
 }
 
-class _PasswordChangeDialog extends StatefulWidget {
+class _PasswordChangeDialog extends ConsumerStatefulWidget {
   const _PasswordChangeDialog();
 
   @override
-  State<_PasswordChangeDialog> createState() => _PasswordChangeDialogState();
+  ConsumerState<_PasswordChangeDialog> createState() =>
+      _PasswordChangeDialogState();
 }
 
-class _PasswordChangeDialogState extends State<_PasswordChangeDialog> {
+class _PasswordChangeDialogState extends ConsumerState<_PasswordChangeDialog> {
   final _currentCtrl = TextEditingController();
   final _newCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
 
   // 현재 비밀번호 필드만 눈 아이콘 토글 제공 (시안 기준).
   bool _currentObscured = true;
+
+  /// 클라이언트 측 선검증 실패 메시지. 서버 호출 전에 즉시 노출.
+  /// (서버가 던지는 에러는 `ref.listen` 으로 스낵바 처리.)
+  String? _localError;
 
   @override
   void dispose() {
@@ -46,15 +54,59 @@ class _PasswordChangeDialogState extends State<_PasswordChangeDialog> {
     super.dispose();
   }
 
-  void _submit() {
-    // TODO: 실제 비밀번호 변경 API 연동. 성공 시 true 반환.
-    Navigator.of(context).pop(true);
+  Future<void> _submit() async {
+    final current = _currentCtrl.text;
+    final next = _newCtrl.text;
+    final confirm = _confirmCtrl.text;
+
+    // 1) 클라이언트 선검증 — 빈 값 / 확인 불일치는 서버 왕복 없이 즉시 차단.
+    if (current.isEmpty || next.isEmpty || confirm.isEmpty) {
+      setState(() => _localError = '모든 항목을 입력해 주세요.');
+      return;
+    }
+    if (next != confirm) {
+      setState(() => _localError = '새 비밀번호가 일치하지 않아요.');
+      return;
+    }
+    if (next.length < 8) {
+      setState(() => _localError = '새 비밀번호는 8자 이상이어야 해요.');
+      return;
+    }
+    setState(() => _localError = null);
+
+    // 2) ViewModel 호출 — 성공/실패 라우팅은 ref.listen 에서 처리.
+    await ref.read(passwordChangeViewModelProvider.notifier).submit(
+          currentPassword: current,
+          newPassword: next,
+        );
   }
 
   void _cancel() => Navigator.of(context).pop();
 
   @override
   Widget build(BuildContext context) {
+    // 제출 결과 부수효과.
+    // data == true 만 "변경 성공" 으로 판단 (초기 Data(null) 오인 방지).
+    ref.listen<AsyncValue<bool?>>(passwordChangeViewModelProvider,
+        (prev, next) {
+      next.whenOrNull(
+        data: (success) {
+          if (success != true) return;
+          if (!mounted) return;
+          Navigator.of(context).pop(true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('비밀번호가 변경되었어요.')),
+          );
+        },
+        error: (error, _) {
+          if (!mounted) return;
+          setState(() => _localError = mapErrorMessage(error));
+        },
+      );
+    });
+
+    final isLoading =
+        ref.watch(passwordChangeViewModelProvider).isLoading;
     final colors = context.colors;
     return Dialog(
       backgroundColor: colors.surface,
@@ -138,11 +190,22 @@ class _PasswordChangeDialogState extends State<_PasswordChangeDialog> {
               controller: _confirmCtrl,
               obscureText: true,
             ),
+            // 선검증 / 서버 에러 메시지를 입력 필드 바로 아래에 노출.
+            // 공간이 없을 땐 0 높이로 잡혀서 다이얼로그 높이가 튀지 않게.
+            if (_localError != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _localError!,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: const Color(0xFFE04040),
+                ),
+              ),
+            ],
             const SizedBox(height: 28),
             DoitdoPrimaryButton(
-              label: '변경하기',
+              label: isLoading ? '변경 중...' : '변경하기',
               height: 48,
-              onPressed: _submit,
+              onPressed: isLoading ? null : _submit,
             ),
             const SizedBox(height: 8),
             // ── 취소 텍스트 링크 ──
