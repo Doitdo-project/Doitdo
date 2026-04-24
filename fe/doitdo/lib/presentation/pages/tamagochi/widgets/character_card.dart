@@ -123,6 +123,10 @@ class CharacterCard extends StatelessWidget {
                               color: Colors.black,
                             ),
                           ),
+                          if (_stageHint != null) ...[
+                            SizedBox(width: 4.w),
+                            _StageHintIcon(message: _stageHint!),
+                          ],
                         ],
                       ),
                       Text(
@@ -170,15 +174,30 @@ class CharacterCard extends StatelessWidget {
   // 에만 호출된다.
   String get _displayName => character!.name;
 
-  /// "exp 25/100" 포맷. requiredExp 가 0 인 경우(방어적) 엔 percent 로 폴백.
-  String get _displayProgressLabel {
-    final c = character!;
-    if (c.requiredExp > 0) return '${c.currentExp}/${c.requiredExp}';
-    return '성장률 ${c.growthPercent}%';
-  }
+  String get _displayProgressLabel => '성장률 ${character!.growthPercent}%';
 
   double get _displayProgress =>
       character!.growthPercent.clamp(0, 100) / 100;
+
+  /// 단계별 가이드. 알/미확정 단계는 null (호출부에서 툴팁 자체를 숨김).
+  String? get _stageHint {
+    final c = character;
+    if (c == null) return null;
+    switch (c.stage) {
+      case CharacterStage.egg:
+      case CharacterStage.other:
+        return null;
+      case CharacterStage.infant:
+        return '할 일을 완료해 경험치를 모아보세요.\n100% 달성 시 성장기로 진화해요.';
+      case CharacterStage.juvenile:
+        return '꾸준히 할 일을 완료하면 성숙기로 자라나요.';
+      case CharacterStage.adult:
+        if (c.canFarewell) {
+          return '독립할 준비가 됐어요. 배웅하면 다음 알이 도착해요.';
+        }
+        return '조금만 더 함께하면 독립할 수 있어요.';
+    }
+  }
 
   /// 단계 배지 문구. 미정 단계(other)면 null → 배지 생략.
   String? get _stageLabel => character?.stage.badgeLabel;
@@ -361,6 +380,42 @@ class _EggImage extends StatelessWidget {
   }
 
   Widget _fallback() => Icon(Icons.egg, size: size * 0.88, color: Colors.white);
+}
+
+/// 이름 옆 info 아이콘. 탭하면 현재 단계 기준 안내 문구가 잠깐 떠오른다.
+///
+/// 모바일에선 Tooltip 기본 트리거가 long-press 라 발견성이 떨어져서
+/// [TooltipTriggerMode.tap] 으로 교체하고 유지 시간도 살짝 늘렸다.
+class _StageHintIcon extends StatelessWidget {
+  const _StageHintIcon({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: message,
+      triggerMode: TooltipTriggerMode.tap,
+      showDuration: const Duration(seconds: 4),
+      waitDuration: Duration.zero,
+      preferBelow: true,
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      textStyle: AppTextStyles.labelSmall.copyWith(
+        color: Colors.white,
+        height: 1.4,
+      ),
+      child: Icon(
+        Icons.info_outline_rounded,
+        size: 14.sp,
+        color: Colors.black.withValues(alpha: 0.45),
+      ),
+    );
+  }
 }
 
 /// 이름 앞에 붙는 진화 단계 배지 (네모). 유년기/성장기/성숙기.
