@@ -23,6 +23,7 @@ import com.doitdo.domain.todo.entity.Todo.TodoType;
 import com.doitdo.domain.todo.repository.CategoryRepository;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository.SnoozeCountProjection;
+import com.doitdo.domain.streak.application.UserStreakService;
 import com.doitdo.domain.todo.repository.TodoRepository;
 import com.doitdo.domain.todo.repository.TodoSpecifications;
 import com.doitdo.global.exception.CustomException;
@@ -52,6 +53,7 @@ public class TodoServiceImpl implements TodoService {
 	private final CategoryRepository categoryRepository;
 	private final SnoozeHistoryRepository snoozeHistoryRepository;
 	private final RecurrenceService recurrenceService;
+	private final UserStreakService userStreakService;
 	private final ApplicationEventPublisher eventPublisher;
 
 	@Override
@@ -259,11 +261,12 @@ public class TodoServiceImpl implements TodoService {
 		TodoStatus beforeStatus = todo.getStatus();
 		todo.changeStatus(req.status());
 
-		// DONE 전이 시 Tamagotchi exp 가산 이벤트 발행.
-		// 실제 지급은 리스너가 AFTER_COMMIT + REQUIRES_NEW 로 처리 (멱등성은 Todo.expGranted 로 보장).
-		// - beforeStatus != DONE && after == DONE 일 때만 발행 → 상태 토글 시 중복 이벤트 방지
+		// DONE 으로 새로 진입한 경우에만 streak 갱신 + Tamagotchi exp 이벤트 발행.
+		// - streak: UserStreakService 가 동기 갱신. 엔티티 내부에서도 당일 중복 no-op.
+		// - exp: 리스너가 AFTER_COMMIT + REQUIRES_NEW 로 처리 (멱등성은 Todo.expGranted 로 보장).
 		// - 가산 실패해도 Todo DONE 은 커밋 유지 (사용자 UX 우선)
 		if (beforeStatus != TodoStatus.DONE && req.status() == TodoStatus.DONE) {
+			userStreakService.recordActivity(userId);
 			eventPublisher.publishEvent(new TodoCompletedEvent(userId, todo.getTodoId()));
 		}
 

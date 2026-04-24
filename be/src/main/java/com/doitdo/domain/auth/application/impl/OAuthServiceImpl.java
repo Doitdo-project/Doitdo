@@ -9,6 +9,8 @@ import com.doitdo.domain.auth.repository.AutoProviderRepository;
 import com.doitdo.domain.auth.repository.RefreshTokenRepository;
 import com.doitdo.domain.setting.entity.UserSetting;
 import com.doitdo.domain.setting.repository.UserSettingRepository;
+import com.doitdo.domain.streak.entity.UserStreak;
+import com.doitdo.domain.streak.repository.UserStreakRepository;
 import com.doitdo.domain.todo.application.DefaultCategoryRegistrar;
 import com.doitdo.domain.user.api.dto.resp.UserInfoResp;
 import com.doitdo.domain.user.entity.User;
@@ -42,6 +44,7 @@ public class OAuthServiceImpl implements OAuthService {
 	private final UserRepository userRepository;
 	private final UserWalletRepository userWalletRepository;
 	private final UserSettingRepository userSettingRepository;
+	private final UserStreakRepository userStreakRepository;
 	private final AutoProviderRepository autoProviderRepository;
 	private final RefreshTokenRepository refreshTokenRepository;
 	private final JwtUtil jwtUtil;
@@ -96,6 +99,7 @@ public class OAuthServiceImpl implements OAuthService {
 		User user = userRepository.save(User.createOAuthUser(email, username));
 		userWalletRepository.save(UserWallet.create(user.getUserId()));
 		userSettingRepository.save(UserSetting.create(user.getUserId()));
+		userStreakRepository.save(UserStreak.create(user.getUserId()));
 		autoProviderRepository.save(AutoProvider.create(user.getUserId(), providerName, providerUid));
 		defaultCategoryRegistrar.registerFor(user.getUserId());
 
@@ -139,6 +143,7 @@ public class OAuthServiceImpl implements OAuthService {
 		User user = userRepository.save(User.createOAuthUser(email, username));
 		userWalletRepository.save(UserWallet.create(user.getUserId()));
 		userSettingRepository.save(UserSetting.create(user.getUserId()));
+		userStreakRepository.save(UserStreak.create(user.getUserId()));
 		autoProviderRepository.save(AutoProvider.create(user.getUserId(), providerName, providerUid));
 		defaultCategoryRegistrar.registerFor(user.getUserId());
 
