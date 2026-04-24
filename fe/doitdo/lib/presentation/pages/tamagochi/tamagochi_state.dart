@@ -1,31 +1,24 @@
-import 'package:doitdo/presentation/models/todo.dart';
 import 'package:flutter/foundation.dart';
 
-/// 다마고치 메인 화면에서 보여줄 상태 묶음.
+/// 다마고치 메인 화면 전용 상태.
 ///
-/// `Todo`, `TodoCategory`, `CategoryColorKey` 는 공유 모델(`presentation/models/todo.dart`)
-/// 에서 가져온다. 이 파일에는 다마고치 화면에만 해당하는 상태만 둔다.
-
+/// 캐릭터 본체(이름/단계/성장률) 는 `characterViewModelProvider`,
+/// 오늘의 할 일 / 언젠가 할 일 은 `todoViewModelProvider` 에서 가져온다.
+/// 이 상태에는 아직 BE 엔드포인트가 없는 것만 남겨둔다:
+///   - [speechBubble] 캐릭터 말풍선 (서버 스펙 확정 전까지 로컬 기본값)
+///   - 스트릭 관련 필드 (User.streakCount 만 존재, 시작일/7일 윈도우 API 미정)
+///
+/// 성장률/레벨 UI 는 `expToNextLevel = 100` 기준으로 `character.growthPercent`
+/// 하나만 쓴다.
 @immutable
 class TamagochiState {
   const TamagochiState({
-    required this.characterName,
-    required this.level,
-    required this.currentExp,
-    required this.expToNextLevel,
     required this.speechBubble,
     required this.streakDays,
     required this.streakStartDate,
     required this.streakSlots,
     required this.streakSlotDates,
-    required this.todayTodos,
-    required this.somedayTodos,
   });
-
-  final String characterName;
-  final int level;
-  final int currentExp;
-  final int expToNextLevel;
 
   /// 캐릭터 말풍선 문구. null 이면 말풍선 숨김.
   final String? speechBubble;
@@ -45,29 +38,19 @@ class TamagochiState {
   /// 각 스트릭 칸에 대응하는 날짜. [streakSlots] 와 1:1 매칭. 길이 반드시 7.
   final List<DateTime> streakSlotDates;
 
-  final List<Todo> todayTodos;
-  final List<Todo> somedayTodos;
-
-  double get expProgress =>
-      expToNextLevel == 0 ? 0 : currentExp / expToNextLevel;
-
   TamagochiState copyWith({
     String? speechBubble,
-    List<Todo>? todayTodos,
-    List<Todo>? somedayTodos,
+    int? streakDays,
+    DateTime? streakStartDate,
+    List<bool>? streakSlots,
+    List<DateTime>? streakSlotDates,
   }) {
     return TamagochiState(
-      characterName: characterName,
-      level: level,
-      currentExp: currentExp,
-      expToNextLevel: expToNextLevel,
       speechBubble: speechBubble ?? this.speechBubble,
-      streakDays: streakDays,
-      streakStartDate: streakStartDate,
-      streakSlots: streakSlots,
-      streakSlotDates: streakSlotDates,
-      todayTodos: todayTodos ?? this.todayTodos,
-      somedayTodos: somedayTodos ?? this.somedayTodos,
+      streakDays: streakDays ?? this.streakDays,
+      streakStartDate: streakStartDate ?? this.streakStartDate,
+      streakSlots: streakSlots ?? this.streakSlots,
+      streakSlotDates: streakSlotDates ?? this.streakSlotDates,
     );
   }
 
@@ -111,85 +94,21 @@ class TamagochiState {
     return (slots: slots, dates: dates);
   }
 
-  /// 디자인 시안 기준 더미 초기값.
-  /// API 붙기 전까지 ViewModel 이 이 값을 그대로 반환한다.
-  static TamagochiState get mock {
+  /// 스트릭 / 말풍선 BE 스펙이 확정되기 전까지 기본값.
+  /// TODO(BE): 전용 엔드포인트 나오면 ViewModel 에서 서버 값으로 교체.
+  static TamagochiState get initial {
     final today = DateTime.now();
-    const mockStreakDays = 3;
-    final streakStart = DateTime(today.year, today.month, today.day)
-        .subtract(const Duration(days: mockStreakDays - 1));
     final window = buildStreakWindow(
-      streakDays: mockStreakDays,
-      streakStartDate: streakStart,
+      streakDays: 0,
+      streakStartDate: null,
       today: today,
     );
     return TamagochiState(
-      characterName: '오둥이',
-      level: 3,
-      currentExp: 450,
-      expToNextLevel: 600,
-      speechBubble: '아직 할 일이 남았어...',
-      streakDays: mockStreakDays,
-      streakStartDate: streakStart,
+      speechBubble: null,
+      streakDays: 0,
+      streakStartDate: null,
       streakSlots: window.slots,
       streakSlotDates: window.dates,
-      todayTodos: [
-      const Todo(
-        id: 't1',
-        title: '아침 명상 10분 하기',
-        category: _health,
-        isDone: true,
-      ),
-      const Todo(
-        id: 't2',
-        title: '아침 명상 10분 하기',
-        category: _health,
-        isDone: false,
-      ),
-      const Todo(
-        id: 't3',
-        title: '아침 명상 10분 하기',
-        category: _health,
-        isDone: false,
-      ),
-      const Todo(
-        id: 't3',
-        title: '아침 명상 10분 하기',
-        category: _health,
-        isDone: false,
-      ),
-      const Todo(
-        id: 't3',
-        title: '아침 명상 10분 하기',
-        category: _health,
-        isDone: false,
-      ),
-      const Todo(
-        id: 't3',
-        title: '아침 명상 10분 하기',
-        category: _health,
-        isDone: false,
-      ),
-      const Todo(
-        id: 't3',
-        title: '아침 명상 10분 하기',
-        category: _health,
-        isDone: false,
-      ),
-    ],
-    somedayTodos: [
-      const Todo(
-        id: 's1',
-        title: '아침 명상 10분 하기',
-        category: _health,
-        isDone: false,
-      ),
-    ],
-  );
+    );
   }
-
-  static const TodoCategory _health = TodoCategory(
-    name: '건강',
-    colorKey: CategoryColorKey.health,
-  );
 }
