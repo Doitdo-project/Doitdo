@@ -20,6 +20,7 @@ public interface UserCharacterRepository extends JpaRepository<UserCharacter, Lo
 		WHERE uc.userId = :userId
 			AND uc.isDeleted = false
 			AND c.species = :species
+			AND c.stage = com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT
 	""")
 	Long countByUserIdAndSpecies(@Param("userId") Long userId, @Param("species") String species);
 
