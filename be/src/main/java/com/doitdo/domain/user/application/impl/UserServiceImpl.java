@@ -132,6 +132,11 @@ public class UserServiceImpl implements UserService {
 		characterUnlockRepository.deleteAllByUserId(userId);
 
 		// 6. User 익명화 + isDeleted=true
+		// NOTE: todoRepository / notificationRepository / userCharacterRepository 의 bulk op 가
+		//       모두 @Modifying(clearAutomatically = true) 를 선언하고 있어 EntityManager L1 캐시가
+		//       clear 되면서 user 엔티티가 detached 상태가 된다.
+		//       dirty-checking 만으로는 변경이 flush 되지 않으므로 saveAndFlush 로 merge + 즉시 flush.
 		user.withdraw();
+		userRepository.saveAndFlush(user);
 	}
 }
