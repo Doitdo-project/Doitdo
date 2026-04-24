@@ -14,9 +14,11 @@ public record CategoryResp(
 		@JsonProperty("categoryName")
 		String name,
 
-		Integer colorId
+		Integer colorId,
+
+		String colorHex
 ) {
-	public static CategoryResp from(Category c) {
-		return new CategoryResp(c.getCategoryId(), c.getCategoryName(), c.getColorId());
+	public static CategoryResp from(Category c, String colorHex) {
+		return new CategoryResp(c.getCategoryId(), c.getCategoryName(), c.getColorId(), colorHex);
 	}
 }

@@ -6,9 +6,13 @@ import com.doitdo.domain.todo.api.dto.resp.CategoryListResp;
 import com.doitdo.domain.todo.api.dto.resp.CategoryResp;
 import com.doitdo.domain.todo.application.CategoryService;
 import com.doitdo.domain.todo.entity.Category;
+import com.doitdo.domain.todo.entity.PaletteColor;
 import com.doitdo.domain.todo.repository.CategoryRepository;
+import com.doitdo.domain.todo.repository.PaletteColorRepository;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TodoErrorCode;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +24,7 @@ public class CategoryServiceImpl implements CategoryService {
 	private static final int MAX_CATEGORY_COUNT = 6;
 
 	private final CategoryRepository categoryRepository;
+	private final PaletteColorRepository paletteColorRepository;
 
 	/**
 	 * T10 — 카테고리 생성.
@@ -38,7 +43,8 @@ public class CategoryServiceImpl implements CategoryService {
 
 		// TODO: 고정 카테고리(공부/업무/운동/집안일) 시드 로직 — Category 엔티티에 isFixed 플래그 추가 후 회원가입 시 생성 예정
 		Category category = categoryRepository.save(Category.create(userId, req.name(), req.colorId()));
-		return CategoryResp.from(category);
+		String colorHex = resolveColorHex(category.getColorId());
+		return CategoryResp.from(category, colorHex);
 	}
 
 	/**
@@ -89,18 +95,38 @@ public class CategoryServiceImpl implements CategoryService {
 		}
 
 		category.update(req.name(), req.colorId());
-		return CategoryResp.from(category);
+		String colorHex = resolveColorHex(category.getColorId());
+		return CategoryResp.from(category, colorHex);
 	}
 
 	/**
 	 * T13 — 카테고리 전체 목록 조회.
 	 * 본인 소유 카테고리를 categoryId ASC 순으로 반환한다.
+	 * N+1 회피: PaletteColor 전체를 한 번 조회 후 Map 으로 변환해 사용.
 	 */
 	@Override
 	@Transactional(readOnly = true)
 	public CategoryListResp list(Long userId) {
+		Map<Integer, String> colorIdToHex = buildColorIdToHexMap();
 		return CategoryListResp.from(
-				categoryRepository.findAllByUserIdOrderByCategoryIdAsc(userId)
+				categoryRepository.findAllByUserIdOrderByCategoryIdAsc(userId),
+				colorIdToHex
 		);
+	}
+
+	/** colorId → hex 변환 맵 (PaletteColor 전체 조회, 1회) */
+	private Map<Integer, String> buildColorIdToHexMap() {
+		return paletteColorRepository.findAll().stream()
+				.collect(Collectors.toMap(PaletteColor::getColorId, PaletteColor::getColor));
+	}
+
+	/** 단건 colorHex 조회 (create/update 시 사용) */
+	private String resolveColorHex(Integer colorId) {
+		if (colorId == null) {
+			return null;
+		}
+		return paletteColorRepository.findById(colorId)
+				.map(PaletteColor::getColor)
+				.orElse(null);
 	}
 }

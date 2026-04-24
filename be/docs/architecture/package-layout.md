@@ -178,6 +178,31 @@ domain/{domain}/
 | Repository | `domain/notification/repository/DeviceTokenRepository.java` | FCM 토큰 조회 + 활성 토큰 목록 조회 |
 | Config | `global/config/FirebaseConfig.java` | Firebase App/Messaging 조건부 등록 |
 
+## todo 도메인 추가 파일 (alertTime 활성화 + FCM 알림 스케줄러)
+
+| 종류 | 경로 | 비고 |
+|---|---|---|
+| Scheduler | `domain/notification/application/scheduler/TodoAlertScheduler.java` | 매 분 실행. `alert_time` 일치 TODO 에 개별 FCM 발송 |
+| Repository 메서드 | `domain/todo/repository/TodoRepository.java` | `findAlertTargets(hhmm, today)` 추가 |
+
+`alert_time` 컬럼은 이미 `todos` 테이블에 존재 (`VARCHAR(5)`, HH:mm 포맷). DDL 변경 없음.
+`TodoCreateReq` / `TodoUpdateReq` 에 `alertTime` 필드 추가 (`@Pattern` 검증).
+`TodoDetailResp` 에 `alertTime` 필드 추가 (리스트/검색 응답 자동 반영).
+`Todo.create(...)` / `Todo.update(...)` 시그니처에 `alertTime` 파라미터 추가.
+
+RECURRING 마스터 제외 규칙: 마스터 row 는 `type = RECURRING` 으로 저장되고, 실체화된 인스턴스는 `type = NORMAL` 로 저장됨(`Todo.createRecurringInstance` 참고). 쿼리 조건 `t.type <> RECURRING` 으로 마스터를 제외.
+
+## todo 도메인 추가 파일 (팔레트 조회 API + Category colorHex)
+
+| 종류 | 경로 | 비고 |
+|---|---|---|
+| Response DTO | `domain/todo/api/dto/resp/PaletteResp.java` | `paletteId, paletteName, colors[]` |
+| Application interface | `domain/todo/application/PaletteService.java` | `list()` |
+| Application impl | `domain/todo/application/impl/PaletteServiceImpl.java` | PaletteColor 전체 1회 조회 후 paletteId 로 그룹핑 |
+| Controller | `domain/todo/api/controller/PaletteController.java` | `GET /api/palettes` |
+
+`CategoryResp` 에 `colorHex` 필드 추가 (`colorId` 유지). `CategoryServiceImpl` 이 `PaletteColorRepository` 를 주입받아 N+1 없이 hex 매핑.
+
 ## 네이밍/엔티티 규칙
 
 상세는 [`../conventions/naming.md`](../conventions/naming.md). 요약:

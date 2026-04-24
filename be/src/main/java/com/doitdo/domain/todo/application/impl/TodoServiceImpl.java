@@ -171,7 +171,7 @@ public class TodoServiceImpl implements TodoService {
 
 		Todo todo = todoRepository.save(
 				Todo.create(userId, categoryId, req.title(), req.content(),
-						req.type(), priority, req.startDate(), req.endDate(), req.period())
+						req.type(), priority, req.alertTime(), req.startDate(), req.endDate(), req.period())
 		);
 
 		// 새 TODO 이므로 snooze 이력 없음 — count=0 하드코딩 (DB 조회 불필요)
@@ -237,7 +237,8 @@ public class TodoServiceImpl implements TodoService {
 				req.type(),
 				req.startDate(),
 				req.endDate(),
-				req.period()
+				req.period(),
+				req.alertTime()
 		);
 
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
