@@ -9,6 +9,7 @@ import com.doitdo.domain.todo.api.dto.req.TodoSnoozeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoStatusChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
 import com.doitdo.domain.todo.event.TodoCompletedEvent;
+import com.doitdo.domain.todo.event.TodoSnoozedEvent;
 import com.doitdo.domain.todo.api.dto.resp.TodoCalendarResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoListResp;
@@ -374,6 +375,8 @@ public class TodoServiceImpl implements TodoService {
 
 		snoozeHistoryRepository.save(SnoozeHistory.create(
 				todo.getTodoId(), userId, fromDate, todo.getStartDate()));
+
+		eventPublisher.publishEvent(new TodoSnoozedEvent(userId, todo.getTodoId(), fromDate, todo.getStartDate()));
 
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
 		String categoryName = null;
