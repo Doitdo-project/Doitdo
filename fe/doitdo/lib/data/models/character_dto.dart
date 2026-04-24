@@ -6,9 +6,13 @@ import 'package:doitdo/domain/entities/character.dart';
 /// {
 ///   "characterId": 0,
 ///   "name": "string",
-///   "stage": "egg",
+///   "stage": "BABY",
 ///   "thumbnailUrl": "string",
-///   "growthPercent": 0,
+///   "growthPercent": 25,    // 파생 = currentExp * 100 / requiredExp
+///   "currentExp": 25,
+///   "requiredExp": 100,
+///   "canEvolve": false,     // BABY/TEEN 에서 currentExp >= requiredExp
+///   "canFarewell": false,   // ADULT 에서 currentExp >= requiredExp
 ///   "equippedUserItemId": 0,
 ///   "userCharacterId": 0
 /// }
@@ -20,6 +24,10 @@ class CharacterDto {
     required this.stage,
     required this.thumbnailUrl,
     required this.growthPercent,
+    required this.currentExp,
+    required this.requiredExp,
+    required this.canEvolve,
+    required this.canFarewell,
     required this.userCharacterId,
     this.equippedUserItemId,
   });
@@ -29,6 +37,10 @@ class CharacterDto {
   final String stage;
   final String thumbnailUrl;
   final int growthPercent;
+  final int currentExp;
+  final int requiredExp;
+  final bool canEvolve;
+  final bool canFarewell;
   final int userCharacterId;
 
   /// 아직 아이템을 장착하지 않은 상태(0 또는 null)면 null 로 정규화.
@@ -42,6 +54,10 @@ class CharacterDto {
       stage: (json['stage'] as String?) ?? '',
       thumbnailUrl: (json['thumbnailUrl'] as String?) ?? '',
       growthPercent: (json['growthPercent'] as num?)?.toInt() ?? 0,
+      currentExp: (json['currentExp'] as num?)?.toInt() ?? 0,
+      requiredExp: (json['requiredExp'] as num?)?.toInt() ?? 0,
+      canEvolve: (json['canEvolve'] as bool?) ?? false,
+      canFarewell: (json['canFarewell'] as bool?) ?? false,
       userCharacterId: (json['userCharacterId'] as num?)?.toInt() ?? 0,
       equippedUserItemId: rawEquipped is num && rawEquipped.toInt() != 0
           ? rawEquipped.toInt()
@@ -57,6 +73,10 @@ class CharacterDto {
         rawStage: stage,
         thumbnailUrl: thumbnailUrl,
         growthPercent: growthPercent,
+        currentExp: currentExp,
+        requiredExp: requiredExp,
+        canEvolve: canEvolve,
+        canFarewell: canFarewell,
         equippedUserItemId: equippedUserItemId,
       );
 }
