@@ -72,12 +72,24 @@ public class Todo extends BaseTimeEntity {
 	@Column(name = "is_deleted", nullable = false)
 	private Boolean isDeleted;
 
+	/**
+	 * DONE 전이 시 Tamagotchi 경험치가 이미 지급됐는지 여부.
+	 * 생애주기 동안 최초 1회만 true 로 세팅되어, 같은 Todo 재완료 시 중복 지급 차단.
+	 */
+	@Column(name = "exp_granted", nullable = false)
+	private Boolean expGranted;
+
 	public void softDelete() {
 		this.isDeleted = true;
 	}
 
 	public void changeStatus(TodoStatus status) {
 		this.status = status;
+	}
+
+	/** 경험치 지급 완료 마킹. 멱등 (이미 true 면 no-op). */
+	public void markExpGranted() {
+		this.expGranted = true;
 	}
 
 	public void changePriority(Integer priority) {
@@ -131,6 +143,7 @@ public class Todo extends BaseTimeEntity {
 				.endDate(endDate)
 				.period(period)
 				.isDeleted(false)
+				.expGranted(false)
 				.build();
 	}
 
@@ -148,6 +161,7 @@ public class Todo extends BaseTimeEntity {
 				.endDate(null)
 				.period(null)
 				.isDeleted(false)
+				.expGranted(false)
 				.build();
 	}
 }
