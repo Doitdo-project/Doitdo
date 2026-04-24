@@ -99,7 +99,7 @@ class TamagotchiControllerTest {
 			.isDeleted(false)
 			.build());
 		EncyclopediaResp serviceResp = new EncyclopediaResp(List.of(
-			new EncyclopediaItemResp(1L, "SLIME", "BABY", true, "https://cdn.example.com/slime.png")
+			new EncyclopediaItemResp(1L, "뚜잇", "SLIME", "ADULT", true, "https://cdn.example.com/slime.png")
 		));
 
 		given(tamagotchiService.getEncyclopedia(1L)).willReturn(serviceResp);

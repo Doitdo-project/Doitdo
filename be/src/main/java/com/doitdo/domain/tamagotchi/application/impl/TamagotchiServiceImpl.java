@@ -85,8 +85,10 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.collect(Collectors.toSet());
 
 		return new EncyclopediaResp(characterRepository.findAll().stream()
+			.filter(character -> character.getStage() == com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT)
 			.map(character -> new EncyclopediaItemResp(
 				character.getCharacterId(),
+				character.getName(),
 				character.getSpecies(),
 				character.getStage().name(),
 				unlockedCharacterIds.contains(character.getCharacterId()),
