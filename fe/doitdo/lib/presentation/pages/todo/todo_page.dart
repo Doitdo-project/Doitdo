@@ -20,11 +20,7 @@ class TodoPage extends ConsumerStatefulWidget {
 }
 
 class _TodoPageState extends ConsumerState<TodoPage> {
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(() => ref.read(todoViewModelProvider.notifier).loadDummyTodos());
-  }
+
 
   /// 캘린더 날짜 아래 점(marker) 색.
   /// 배경용 파스텔(category1~5) 은 점 크기(5x5) 에선 거의 안 보여서,
@@ -317,7 +313,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                     todos: state.todos,
                     onToggle: vm.toggleTodo,
                     onReorder: vm.reorderTodo,
-                    onSnooze: isToday ? vm.snoozeTodo : null,
+                    onSnooze: vm.snoozeTodo,
                     actionLabel: '추가하기',
                     onActionTap: () => _openAddSheet(context, state.selectedDay ?? DateTime.now()),
                     onTodoTap: (todo) => _openDetailSheet(context, todo, false),
