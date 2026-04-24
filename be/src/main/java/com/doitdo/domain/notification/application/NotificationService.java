@@ -19,6 +19,8 @@ public interface NotificationService {
 
 	void sendEveningReminder(Long userId, int pendingCount, LocalTime now);
 
+	void sendMorningReminder(Long userId, int pendingCount, LocalTime now);
+
 	void sendTodoDone(Long userId, Long todoId, String todoTitle);
 
 	void sendTodoAlert(Long userId, Long todoId, String todoTitle);

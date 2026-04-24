@@ -98,6 +98,17 @@ public class NotificationServiceImpl implements NotificationService {
 	}
 
 	@Override
+	public void sendMorningReminder(Long userId, int pendingCount, LocalTime now) {
+		String title = "오늘 할 일 알림";
+		String body  = "오늘 %d개의 할 일이 있어요.".formatted(pendingCount);
+
+		notificationRepository.save(Notification.of(
+				userId, NotificationType.REMINDER_MORNING, title, body, null));
+
+		dispatchFcm(userId, now, title, body, "[morning-reminder]");
+	}
+
+	@Override
 	public void sendTodoDone(Long userId, Long todoId, String todoTitle) {
 		String title = "할 일 완료!";
 		String body  = "\"%s\" 완료를 기록했어요. 잘 했어요!".formatted(todoTitle);
