@@ -3,6 +3,7 @@ package com.doitdo.domain.notification.application.impl;
 import com.doitdo.domain.notification.api.dto.resp.NotificationListResp;
 import com.doitdo.domain.notification.api.dto.resp.NotificationReadAllResp;
 import com.doitdo.domain.notification.api.dto.resp.NotificationReadResp;
+import com.doitdo.domain.notification.api.dto.req.TestNotificationSendReq;
 import com.doitdo.domain.notification.application.FcmService;
 import com.doitdo.domain.notification.application.NotificationService;
 import com.doitdo.domain.notification.entity.DeviceToken;
@@ -176,6 +177,21 @@ public class NotificationServiceImpl implements NotificationService {
 			fcmService.send(tokens, title, body);
 		} catch (Exception ex) {
 			log.warn("{} fcm failed user={}", logTag, userId, ex);
+		}
+	}
+
+	@Override
+	public void sendTestNotification(Long userId, TestNotificationSendReq req) {
+		notificationRepository.save(Notification.of(
+				userId, NotificationType.REMINDER_EVENING, req.title(), req.message(), null));
+
+		List<DeviceToken> tokens = deviceTokenRepository.findAllByUserIdAndIsActiveTrue(userId);
+		if (tokens.isEmpty()) return;
+
+		try {
+			fcmService.send(tokens, req.title(), req.message());
+		} catch (Exception ex) {
+			log.warn("[test-notification] fcm failed user={}", userId, ex);
 		}
 	}
 

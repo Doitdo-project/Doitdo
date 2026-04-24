@@ -1,5 +1,6 @@
 package com.doitdo.domain.notification.application;
 
+import com.doitdo.domain.notification.api.dto.req.TestNotificationSendReq;
 import com.doitdo.domain.notification.api.dto.resp.NotificationListResp;
 import com.doitdo.domain.notification.api.dto.resp.NotificationReadAllResp;
 import com.doitdo.domain.notification.api.dto.resp.NotificationReadResp;
@@ -27,4 +28,6 @@ public interface NotificationService {
 	void sendTamagotchiFarewell(Long userId, Long userCharacterId, String beforeCharacterName);
 
 	void sendTamagotchiGrowth(Long userId, Long userCharacterId, String characterName, String afterStage);
+
+	void sendTestNotification(Long userId, TestNotificationSendReq req);
 }

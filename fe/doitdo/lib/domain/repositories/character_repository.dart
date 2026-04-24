@@ -27,4 +27,11 @@ abstract class CharacterRepository {
 
   /// 도감 목록. 미해금 항목은 species/thumbnailUrl 은 들어와도 UI 에서 가린다.
   Future<List<CollectionEntry>> getEncyclopedia();
+
+  /// 도감 상세. [species] 는 BE 의 enum 값 (예: "CAT").
+  Future<EncyclopediaDetail> getEncyclopediaDetail(String species);
+
+  /// 독립 승인. [approved] false 로 보내면 서버가 알 배정 없이 현 상태 유지.
+  /// 캐릭터 상태 반영은 호출자가 [getMyCharacter] 재조회로 맞춘다.
+  Future<void> approveFarewell({required bool approved});
 }

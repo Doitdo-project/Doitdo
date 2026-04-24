@@ -65,6 +65,14 @@ public class OpenApiConfig {
     }
 
     @Bean
+    public GroupedOpenApi streak() {
+        return GroupedOpenApi.builder()
+            .group("streak")
+            .packagesToScan("com.doitdo.domain.streak.api.controller")
+            .build();
+    }
+
+    @Bean
     public GroupedOpenApi inventory() {
         return GroupedOpenApi.builder()
             .group("inventory")

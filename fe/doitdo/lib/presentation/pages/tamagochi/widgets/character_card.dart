@@ -59,6 +59,24 @@ class CharacterCard extends StatelessWidget {
             ),
           ),
 
+          // 진화/부화/독립 같은 주요 액션 중의 로딩 표시. copyWithPrevious 덕에
+          // 이전 캐릭터 데이터는 그대로 남아 있고, 이 작은 스피너만 카드 왼쪽
+          // 상단에 얹혀 "서버 갱신 중" 만 표현한다. 홈 전체를 덮지 않으므로 아래
+          // 투두 영역은 그대로 상호작용 가능.
+          if (isCharacterLoading && character != null)
+            Positioned(
+              top: 10.h,
+              left: 12.w,
+              child: SizedBox(
+                width: 16.sp,
+                height: 16.sp,
+                child: const CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+            ),
+
           // 중앙: 말풍선 + 캐릭터 (캐릭터 상태에 따라 분기)
           // 하단 크롬이 없을 땐 아래 패딩을 줄여 캐릭터를 중앙에 가깝게 배치.
           Positioned(
@@ -123,6 +141,10 @@ class CharacterCard extends StatelessWidget {
                               color: Colors.black,
                             ),
                           ),
+                          if (_stageHint != null) ...[
+                            SizedBox(width: 4.w),
+                            _StageHintIcon(message: _stageHint!),
+                          ],
                         ],
                       ),
                       Text(
@@ -174,6 +196,26 @@ class CharacterCard extends StatelessWidget {
 
   double get _displayProgress =>
       character!.growthPercent.clamp(0, 100) / 100;
+
+  /// 단계별 가이드. 알/미확정 단계는 null (호출부에서 툴팁 자체를 숨김).
+  String? get _stageHint {
+    final c = character;
+    if (c == null) return null;
+    switch (c.stage) {
+      case CharacterStage.egg:
+      case CharacterStage.other:
+        return null;
+      case CharacterStage.infant:
+        return '할 일을 완료해 경험치를 모아보세요.\n100% 달성 시 성장기로 진화해요.';
+      case CharacterStage.juvenile:
+        return '꾸준히 할 일을 완료하면 성숙기로 자라나요.';
+      case CharacterStage.adult:
+        if (c.canFarewell) {
+          return '독립할 준비가 됐어요. 배웅하면 다음 알이 도착해요.';
+        }
+        return '조금만 더 함께하면 독립할 수 있어요.';
+    }
+  }
 
   /// 단계 배지 문구. 미정 단계(other)면 null → 배지 생략.
   String? get _stageLabel => character?.stage.badgeLabel;
@@ -356,6 +398,42 @@ class _EggImage extends StatelessWidget {
   }
 
   Widget _fallback() => Icon(Icons.egg, size: size * 0.88, color: Colors.white);
+}
+
+/// 이름 옆 info 아이콘. 탭하면 현재 단계 기준 안내 문구가 잠깐 떠오른다.
+///
+/// 모바일에선 Tooltip 기본 트리거가 long-press 라 발견성이 떨어져서
+/// [TooltipTriggerMode.tap] 으로 교체하고 유지 시간도 살짝 늘렸다.
+class _StageHintIcon extends StatelessWidget {
+  const _StageHintIcon({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: message,
+      triggerMode: TooltipTriggerMode.tap,
+      showDuration: const Duration(seconds: 4),
+      waitDuration: Duration.zero,
+      preferBelow: true,
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      textStyle: AppTextStyles.labelSmall.copyWith(
+        color: Colors.white,
+        height: 1.4,
+      ),
+      child: Icon(
+        Icons.info_outline_rounded,
+        size: 14.sp,
+        color: Colors.black.withValues(alpha: 0.45),
+      ),
+    );
+  }
 }
 
 /// 이름 앞에 붙는 진화 단계 배지 (네모). 유년기/성장기/성숙기.

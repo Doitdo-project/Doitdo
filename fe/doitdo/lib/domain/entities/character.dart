@@ -62,6 +62,10 @@ class Character {
     required this.rawStage,
     required this.thumbnailUrl,
     required this.growthPercent,
+    required this.currentExp,
+    required this.requiredExp,
+    required this.canEvolve,
+    required this.canFarewell,
     this.equippedUserItemId,
   });
 
@@ -81,8 +85,21 @@ class Character {
 
   final String thumbnailUrl;
 
-  /// 0 ~ 100. 다음 단계까지 얼마나 자랐는지.
+  /// 0 ~ 100. `currentExp * 100 / requiredExp` 의 서버 파생값. 표시용.
   final int growthPercent;
+
+  /// 현재 단계에서 누적된 경험치.
+  final int currentExp;
+
+  /// 현재 단계 진화에 필요한 경험치 총량.
+  final int requiredExp;
+
+  /// 진화 가능 여부 (BABY/TEEN 에서 `currentExp >= requiredExp`).
+  /// 홈에서 이 플래그의 false→true 에지에서만 진화 API 를 호출한다.
+  final bool canEvolve;
+
+  /// 독립(이별) 가능 여부 (ADULT 에서 `currentExp >= requiredExp`).
+  final bool canFarewell;
 
   /// 장착 중인 아이템 ID. 없으면 null.
   final int? equippedUserItemId;

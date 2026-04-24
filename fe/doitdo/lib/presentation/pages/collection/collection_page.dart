@@ -46,13 +46,16 @@ class CollectionPage extends ConsumerWidget {
 }
 
 /// 엔트리 탭 라우팅.
-/// - 해금됨 → 상세 바텀시트.
+/// - 해금됨 → 상세 바텀시트 (species 로 상세 API 를 추가 호출).
 /// - 미해금 → 안내 스낵바.
 void _onEntryTap(BuildContext context, CollectionEntry entry) {
   if (entry.isUnlocked) {
     showDoitdoBottomSheet(
       context: context,
-      child: CharacterDetailSheet(entry: entry),
+      child: CharacterDetailSheet(
+        species: entry.species,
+        currentStage: entry.stage,
+      ),
     );
   } else {
     ScaffoldMessenger.of(context)

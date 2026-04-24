@@ -1,14 +1,19 @@
 import 'package:doitdo/presentation/models/collection_entry.dart';
 
-/// `/api/characters/encyclopedia` 응답 envelope 내부 `data` 에 1:1.
+/// `/api/characters/encyclopedia` 응답 envelope 내부 `data`.
 ///
 /// ```json
-/// { "items": [ { "characterId": 1, "species": "여우둥이", "stage": "ADULT",
-///               "unlocked": true, "thumbnailUrl": "..." }, ... ] }
+/// { "items": [
+///   {
+///     "characterId": 3,
+///     "name": "어른 고양이",
+///     "species": "CAT",
+///     "stage": "ADULT",
+///     "unlocked": true,
+///     "thumbnailUrl": "..."
+///   }
+/// ] }
 /// ```
-///
-/// 상세(탄생 배경 / meetCount / 해금 일시 / 단계별 썸네일) 은 별도 엔드포인트로
-/// 확정 전이라 여기서는 리스트 정보만 담는다. 상세가 나오면 별도 DTO 추가.
 class EncyclopediaDto {
   const EncyclopediaDto({required this.items});
 
@@ -30,6 +35,7 @@ class EncyclopediaDto {
 class EncyclopediaItemDto {
   const EncyclopediaItemDto({
     required this.characterId,
+    required this.name,
     required this.species,
     required this.stage,
     required this.unlocked,
@@ -37,6 +43,7 @@ class EncyclopediaItemDto {
   });
 
   final int characterId;
+  final String name;
   final String species;
   final String stage;
   final bool unlocked;
@@ -45,6 +52,7 @@ class EncyclopediaItemDto {
   factory EncyclopediaItemDto.fromJson(Map<String, dynamic> json) {
     return EncyclopediaItemDto(
       characterId: (json['characterId'] as num?)?.toInt() ?? 0,
+      name: (json['name'] as String?) ?? '',
       species: (json['species'] as String?) ?? '',
       stage: (json['stage'] as String?) ?? '',
       unlocked: (json['unlocked'] as bool?) ?? false,
@@ -53,14 +61,11 @@ class EncyclopediaItemDto {
   }
 
   /// BE stage 문자열 → 도감 3단계 UI 모델로 축약.
-  ///
-  /// 도감 UI 는 baby / teen / adult 3칸이지만 BE 는 EGG, INFANT, JUVENILE, ADULT 등
-  /// 4+ 단계를 내려줄 수 있다. MVP 기준 "미해금이면 아직 알, 부화했으면 해당 단계"
-  /// 로만 구분하면 충분하다.
+  /// 도감은 BABY / TEEN / ADULT 3단계만 다루고 EGG 는 리스트에 노출되지 않는다.
   CharacterStage toCollectionStage() {
     switch (stage.toUpperCase()) {
-      case 'JUVENILE':
       case 'TEEN':
+      case 'JUVENILE':
       case 'GROWING':
       case 'YOUTH':
         return CharacterStage.teen;
@@ -68,11 +73,11 @@ class EncyclopediaItemDto {
       case 'MATURE':
       case 'FULL':
         return CharacterStage.adult;
-      case 'EGG':
-      case 'INFANT':
       case 'BABY':
+      case 'INFANT':
       case 'CHILD':
       case 'YOUNG':
+      case 'EGG':
       default:
         return CharacterStage.baby;
     }
@@ -80,7 +85,9 @@ class EncyclopediaItemDto {
 
   CollectionEntry toEntry() => CollectionEntry(
         characterId: characterId,
-        species: unlocked ? species : '???',
+        species: species,
+        // 미해금 항목의 name 은 UI 에서 "???" 로 가릴 것이라 빈 문자열로.
+        name: unlocked ? name : '',
         stage: toCollectionStage(),
         thumbnailUrl: thumbnailUrl,
         isUnlocked: unlocked,
