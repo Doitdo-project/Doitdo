@@ -35,20 +35,23 @@ cd /home/cbkjh0225/project/ssafyTodo/Jira
 
 ## 2. JQL 주의사항 (사실, 결정 아님)
 
-### 상태 값 한↔영 이원화 ⚠️
+### 상태 값 한↔영 분기 ⚠️ (실측 2026-04-24)
 
-UI 표시는 한글, JIRA 내부 값은 영문. **JQL은 반드시 영문 사용**:
+SSAFY JIRA 는 조회 API 와 transition API 가 **다른 값을 요구**한다. 섞어 쓰면 silent fail 또는 에러.
 
-| UI 표시 | JQL 사용 값 |
+| 맥락 | 사용 값 |
 |---|---|
-| 해야 할 일 | `To Do` |
-| 진행 중 | `In Progress` |
-| 완료 | `Done` |
+| **JQL 조회** (`status = ...`) | **영문**: `To Do` / `In Progress` / `Done` |
+| **Transition** (`jira update --status`) | **한글**: `해야 할 일` / `진행 중` / `완료` |
 
 ```bash
-# ❌ status = 완료 → 0 건 반환 (silent fail)
-# ✅ status = Done → 정상 반환
-./.venv/bin/jira search --jql "status = Done AND assignee = currentUser()"
+# JQL 조회
+./.venv/bin/jira search --jql "status = Done AND assignee = currentUser()"      # ✅
+./.venv/bin/jira search --jql "status = 완료 AND assignee = currentUser()"       # ❌ 0건 (silent fail)
+
+# Transition
+./.venv/bin/jira update S14P31D107-XXX --status "완료"                           # ✅
+./.venv/bin/jira update S14P31D107-XXX --status "Done"                           # ❌ "상태 'Done' 로의 전환을 찾을 수 없습니다"
 ```
 
 ### currentUser

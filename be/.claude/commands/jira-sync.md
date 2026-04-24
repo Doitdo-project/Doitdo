@@ -71,12 +71,14 @@ cd "$JIRA_DIR"
 ./.venv/bin/jira doctor                                          # 환경 진단
 ./.venv/bin/jira search --jql "<JQL>" --limit 30                 # 조회: TEMP_FILE_PATH:/tmp/xxx.md + ISSUE_COUNT:N → md 파일 Read
 ./.venv/bin/jira create --summary "..." --type Task --points 3 --epic S14P31D107-3
-./.venv/bin/jira update S14P31D107-XXX --status "Done" --comment "..." --assign me
+./.venv/bin/jira update S14P31D107-XXX --status "완료" --comment "..." --assign me
 ./.venv/bin/jira link S14P31D107-XXX S14P31D107-3
 ```
 
 - 프로젝트 키는 `$JIRA_DIR/.env` 의 `JIRA_PROJECT_KEY` 사용 (하드코딩 금지)
-- **상태 JQL/transition 은 영문 사용**: `To Do` / `In Progress` / `Done`. ⚠️ `status = 완료` JQL 은 0건 반환 (silent fail)
+- **JQL 조회는 영문, transition 은 한글** ⚠️ (섞어 쓰면 실패)
+  - JQL: `status = Done` (영문만). 한글은 silent 0건.
+  - Transition: `--status "완료"` (한글만). 영문은 `"상태 'Done' 로의 전환을 찾을 수 없습니다"` 에러.
 - `jira search` stdout 의 `TEMP_FILE_PATH:` 줄을 capture → 그 md 파일을 Read 도구로 읽기 (UTF-8 안전)
 - CLI subcommand 5개 한정: `{search, create, update, link, doctor}`. **코멘트 조회는 CLI 미지원** — 필요 시 REST 직접 호출 (`GET /rest/api/2/issue/{key}/comment`)
 
