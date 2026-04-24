@@ -1,4 +1,5 @@
 import 'package:doitdo/domain/entities/character.dart';
+import 'package:doitdo/presentation/models/collection_entry.dart';
 
 /// 현재 사용자의 다마고치 캐릭터 도메인 추상화.
 ///
@@ -16,4 +17,14 @@ abstract class CharacterRepository {
   /// 알을 부화시킨다. 홈에서 알을 10회 두드린 직후 호출.
   /// 성공 시 부화된 상태의 캐릭터가 반환된다.
   Future<Character> hatchEgg();
+
+  /// 이름짓기 화면에서 제출. 성공 시 이름이 반영된 캐릭터 반환.
+  Future<Character> renameCharacter(String name);
+
+  /// 성장률 100% 달성 시 호출. 진화 후 실제 캐릭터 상태는 [getMyCharacter] 로
+  /// 다시 당기는 것을 권장한다.
+  Future<void> evolveCharacter(int userCharacterId);
+
+  /// 도감 목록. 미해금 항목은 species/thumbnailUrl 은 들어와도 UI 에서 가린다.
+  Future<List<CollectionEntry>> getEncyclopedia();
 }
