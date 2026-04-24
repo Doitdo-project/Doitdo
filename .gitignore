@@ -3,3 +3,6 @@ Jira/.venv/
 Jira/__pycache__/
 Jira/**/__pycache__/
 Jira/*.pyc
+
+### Codex CLI 런타임 ###
+.codex

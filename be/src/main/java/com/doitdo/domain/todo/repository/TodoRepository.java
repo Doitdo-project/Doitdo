@@ -25,6 +25,14 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 
 	List<Todo> findAllByUserIdAndTitleAndTypeAndIsDeletedFalse(Long userId, String title, TodoType type);
 
+	@Query("""
+			select count(t) from Todo t
+			where t.userId = :userId
+			  and t.status <> com.doitdo.domain.todo.entity.Todo.TodoStatus.DONE
+			  and t.isDeleted = false
+			""")
+	long countPendingByUserId(@Param("userId") Long userId);
+
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("UPDATE Todo t SET t.isDeleted = true WHERE t.userId = :userId AND t.isDeleted = false")
 	int softDeleteAllByUserId(@Param("userId") Long userId);

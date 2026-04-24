@@ -25,10 +25,10 @@ import lombok.NoArgsConstructor;
 public class Notification extends BaseTimeEntity {
 
 	public enum NotificationType {
-		REMINDER_EVENING,
-		REMINDER_MORNING,
-		TODO_UNLOCK,
-		TAMAGOTCHI_FAREWELL
+		REMINDER_EVENING,       // 저녁 미완료 TODO 리마인더 — 구현 (이번 PR)
+		REMINDER_MORNING,       // TODO: 트리거 미구현 — 기획 확정 시 활성화
+		TODO_UNLOCK,            // TODO: 트리거 미구현 — 기획 확정 시 활성화
+		TAMAGOTCHI_FAREWELL     // TODO: 트리거 미구현 — 기획 확정 시 활성화
 	}
 
 	@Id
