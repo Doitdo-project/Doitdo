@@ -40,7 +40,6 @@ class TamagotchiControllerTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build());
 		CurrentCharacterResp serviceResp = new CurrentCharacterResp(
@@ -74,7 +73,6 @@ class TamagotchiControllerTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build());
 		UpdateCharacterNameResp serviceResp = new UpdateCharacterNameResp(10L, "rabi");
@@ -97,7 +95,6 @@ class TamagotchiControllerTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build());
 		EncyclopediaResp serviceResp = new EncyclopediaResp(List.of(
@@ -121,7 +118,6 @@ class TamagotchiControllerTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build());
 		EncyclopediaDetailResp serviceResp = new EncyclopediaDetailResp(
@@ -150,7 +146,6 @@ class TamagotchiControllerTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build());
 		HatchCharacterResp serviceResp = new HatchCharacterResp(
@@ -177,7 +172,6 @@ class TamagotchiControllerTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build());
 		EvolutionResp serviceResp = new EvolutionResp(
@@ -208,7 +202,6 @@ class TamagotchiControllerTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build());
 		FarewellResp serviceResp = new FarewellResp(

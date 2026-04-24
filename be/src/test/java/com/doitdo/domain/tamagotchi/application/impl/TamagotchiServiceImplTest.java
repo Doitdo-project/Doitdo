@@ -74,7 +74,6 @@ class TamagotchiServiceImplTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build();
 		Character eggCharacter = Character.builder()
@@ -128,7 +127,6 @@ class TamagotchiServiceImplTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build();
 		UserCharacter userCharacter = UserCharacter.builder()
