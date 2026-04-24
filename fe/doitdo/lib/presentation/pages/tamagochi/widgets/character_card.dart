@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:doitdo/core/theme/app_text_styles.dart';
@@ -9,8 +8,13 @@ import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
 
 /// 다마고치 메인 상단의 초록 배경 카드.
 ///
-/// [character] 는 `/api/characters/me` 결과. null 이면 아직 알을 수령 전이라
-/// "알 받기" CTA 를 노출한다. isEgg 인 경우 알 이미지 + 탭 가이드를 덮는다.
+/// [character] 상태에 따라 중앙 슬롯을 분기:
+/// - null : 미수령 — 로딩 스피너 (정상 플로우에선 거의 보이지 않음)
+/// - isEgg: 알 아이콘 + TAP 배지. 탭하면 [onEggTap] 이 호출되어 부화 페이지로 이동
+/// - else : thumbnailUrl 로 캐릭터 이미지
+///
+/// 이름/성장률/경험치/상점/도감 UI("chrome")는 **부화 이후**(egg 가 아닌 상태)
+/// 에만 노출된다.
 class CharacterCard extends StatelessWidget {
   const CharacterCard({
     super.key,
@@ -19,7 +23,7 @@ class CharacterCard extends StatelessWidget {
     this.isCharacterLoading = false,
     this.onTapShop,
     this.onTapCollection,
-    this.onHatch,
+    this.onEggTap,
   });
 
   final TamagochiState state;
@@ -31,9 +35,8 @@ class CharacterCard extends StatelessWidget {
   final VoidCallback? onTapShop;
   final VoidCallback? onTapCollection;
 
-  /// 알 10회 탭이 완료됐을 때. 여기에서 부화 API 호출 + 이름짓기 페이지 이동을
-  /// 파이프라인으로 수행한다. 반환 Future 가 끝나면 _EggSlot 은 카운터를 리셋한다.
-  final Future<void> Function()? onHatch;
+  /// 알을 탭했을 때 호출. 부화 페이지로 이동 + 복귀 시 재조회는 부모가 담당.
+  final VoidCallback? onEggTap;
 
   // 카드 배경이 테마와 무관하게 고정이라 DoitdoColors 가 아닌 로컬 상수.
   static const Color _expBarBg = Color(0xFF3F4A3A);
@@ -41,8 +44,8 @@ class CharacterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 캐릭터가 아직 없으면(로딩 중 포함) 의미 없는 UI(이름/성장률/상점/도감) 는 숨긴다.
-    final hideChrome = character == null;
+    // 미수령 중이거나 알 상태면 이름/성장률/상점/도감 UI 는 숨긴다.
+    final hideChrome = character == null || character!.isEgg;
 
     return SizedBox(
       height: 200.h,
@@ -107,11 +110,20 @@ class CharacterCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        _displayName,
-                        style: AppTextStyles.titleSmall.copyWith(
-                          color: Colors.black,
-                        ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_stageLabel != null) ...[
+                            _StageBadge(label: _stageLabel!),
+                            SizedBox(width: 6.w),
+                          ],
+                          Text(
+                            _displayName,
+                            style: AppTextStyles.titleSmall.copyWith(
+                              color: Colors.black,
+                            ),
+                          ),
+                        ],
                       ),
                       Text(
                         _displayProgressLabel,
@@ -122,7 +134,7 @@ class CharacterCard extends StatelessWidget {
                     ],
                   ),
                   SizedBox(height: 6.h),
-                  ClipRRect(
+                  ClipRRect(  
                     borderRadius: BorderRadius.circular(6.r),
                     child: LinearProgressIndicator(
                       value: _displayProgress,
@@ -149,18 +161,22 @@ class CharacterCard extends StatelessWidget {
       return '알이 도착했어요! 받아볼까요?';
     }
     if (character?.isEgg ?? false) {
-      return '알을 톡톡 두드려보세요';
+      return null;
     }
     return state.speechBubble;
   }
 
-  // 아래 getter 들은 하단 크롬이 노출되는 경우(character != null) 에만 호출된다.
-  String get _displayName => character!.isEgg ? '알' : character!.name;
+  // 아래 getter 들은 하단 크롬이 노출되는 경우(character != null && !isEgg)
+  // 에만 호출된다.
+  String get _displayName => character!.name;
 
   String get _displayProgressLabel => '성장률 ${character!.growthPercent}%';
 
   double get _displayProgress =>
       character!.growthPercent.clamp(0, 100) / 100;
+
+  /// 단계 배지 문구. 미정 단계(other)면 null → 배지 생략.
+  String? get _stageLabel => character?.stage.badgeLabel;
 
   Widget _buildCharacterSlot() {
     if (isCharacterLoading && character == null) {
@@ -181,7 +197,7 @@ class CharacterCard extends StatelessWidget {
       return const _UnreceivedSlot();
     }
     if (c.isEgg) {
-      return _EggSlot(onHatch: onHatch);
+      return _EggSlot(imageUrl: c.thumbnailUrl, onTap: onEggTap);
     }
     return _GrownCharacter(thumbnailUrl: c.thumbnailUrl);
   }
@@ -235,17 +251,22 @@ class _SpeechBubble extends StatelessWidget {
   }
 }
 
-/// 다마고치 캐릭터 이미지. 추후 Lottie 로 교체 가능.
-class _CharacterImage extends StatelessWidget {
-  const _CharacterImage();
+/// 서버 thumbnailUrl 이 비어있거나 로드 실패했을 때 자리를 지키는 중립 플레이스홀더.
+/// 특정 캐릭터 에셋(한라봉 등) 을 깔면 엉뚱한 캐릭터가 보이는 오해를 낳으므로 비움.
+class _CharacterPlaceholder extends StatelessWidget {
+  const _CharacterPlaceholder();
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset(
-      'assets/images/tama_hanrabong.png',
+    return SizedBox(
       height: 100.h,
-      fit: BoxFit.contain,
-      filterQuality: FilterQuality.medium,
+      child: Center(
+        child: Icon(
+          Icons.pets,
+          size: 56.sp,
+          color: Colors.white.withValues(alpha: 0.5),
+        ),
+      ),
     );
   }
 }
@@ -276,108 +297,36 @@ class _UnreceivedSlot extends StatelessWidget {
   }
 }
 
-/// 알 상태. 10회 탭하면 [onHatch] 가 호출되며, Future 가 끝난 뒤 카운터는 0 으로
-/// 리셋된다. 각 탭마다 가벼운 scale 애니메이션 + 햅틱.
-class _EggSlot extends StatefulWidget {
-  const _EggSlot({this.onHatch});
+/// 알 상태. 탭하면 [onTap] 으로 전달만 하고, 실제 부화 카운팅/애니메이션은
+/// 전용 페이지([CharacterHatchPage])에서 처리된다.
+/// 서버가 알 단계에서도 [imageUrl] 을 내려주므로 그 이미지를 사용.
+class _EggSlot extends StatelessWidget {
+  const _EggSlot({required this.imageUrl, this.onTap});
 
-  final Future<void> Function()? onHatch;
-
-  static const int requiredTaps = 10;
-
-  @override
-  State<_EggSlot> createState() => _EggSlotState();
-}
-
-class _EggSlotState extends State<_EggSlot>
-    with SingleTickerProviderStateMixin {
-  int _tapCount = 0;
-  bool _hatching = false;
-  late final AnimationController _bump;
-
-  @override
-  void initState() {
-    super.initState();
-    _bump = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 180),
-      lowerBound: 0.0,
-      upperBound: 1.0,
-    );
-  }
-
-  @override
-  void dispose() {
-    _bump.dispose();
-    super.dispose();
-  }
-
-  Future<void> _handleTap() async {
-    if (_hatching) return;
-    HapticFeedback.lightImpact();
-    _bump.forward(from: 0).then((_) => _bump.reverse());
-
-    final next = _tapCount + 1;
-    if (next < _EggSlot.requiredTaps) {
-      setState(() => _tapCount = next);
-      return;
-    }
-
-    // 10회 째. hatch 호출. 완료/실패 모두 카운터는 리셋.
-    setState(() {
-      _tapCount = next;
-      _hatching = true;
-    });
-    try {
-      await widget.onHatch?.call();
-    } finally {
-      if (mounted) {
-        setState(() {
-          _tapCount = 0;
-          _hatching = false;
-        });
-      }
-    }
-  }
+  final String imageUrl;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final remaining = _EggSlot.requiredTaps - _tapCount;
-    final badgeText = _hatching
-        ? '부화 중...'
-        : (_tapCount == 0 ? 'TAP' : '$remaining번 더');
-
     return GestureDetector(
-      onTap: _handleTap,
+      onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          AnimatedBuilder(
-            animation: _bump,
-            builder: (context, child) {
-              // 탭 때마다 1.0 → 1.12 → 1.0 살짝 튐.
-              final scale = 1.0 + _bump.value * 0.12;
-              return Transform.scale(scale: scale, child: child);
-            },
-            child: Icon(Icons.egg, size: 88.sp, color: Colors.white),
-          ),
+          _EggImage(imageUrl: imageUrl, size: 100.h),
           SizedBox(height: 4.h),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 150),
-            child: Container(
-              key: ValueKey(badgeText),
-              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 3.h),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.45),
-                borderRadius: BorderRadius.circular(10.r),
-              ),
-              child: Text(
-                badgeText,
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: Colors.white,
-                  letterSpacing: 0.5,
-                ),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 3.h),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            child: Text(
+              '알을 톡톡 두드려보세요',
+              style: AppTextStyles.labelSmall.copyWith(
+                color: Colors.white,
+                letterSpacing: 0.5,
               ),
             ),
           ),
@@ -387,7 +336,57 @@ class _EggSlotState extends State<_EggSlot>
   }
 }
 
-/// 이미 부화한 (egg 이외의) 캐릭터. 서버 thumbnailUrl 사용.
+/// 알 이미지. 서버 url 사용 → 실패/빈값이면 Icons.egg fallback.
+class _EggImage extends StatelessWidget {
+  const _EggImage({required this.imageUrl, required this.size});
+
+  final String imageUrl;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageUrl.isEmpty) return _fallback();
+    return Image.network(
+      imageUrl,
+      height: size,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.medium,
+      errorBuilder: (_, _, _) => _fallback(),
+    );
+  }
+
+  Widget _fallback() => Icon(Icons.egg, size: size * 0.88, color: Colors.white);
+}
+
+/// 이름 앞에 붙는 진화 단계 배지 (네모). 유년기/성장기/성숙기.
+class _StageBadge extends StatelessWidget {
+  const _StageBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6.r),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.12)),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.labelSmall.copyWith(
+          color: Colors.black.withValues(alpha: 0.75),
+          fontSize: 11.sp,
+          height: 1.0,
+        ),
+      ),
+    );
+  }
+}
+
+/// 이미 부화한 (egg 이외의) 캐릭터. **항상** 서버 thumbnailUrl 을 사용.
+/// url 이 비었거나 로드 실패 시에만 중립 플레이스홀더로 대체.
 class _GrownCharacter extends StatelessWidget {
   const _GrownCharacter({required this.thumbnailUrl});
 
@@ -396,14 +395,14 @@ class _GrownCharacter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (thumbnailUrl.isEmpty) {
-      return const _CharacterImage();
+      return const _CharacterPlaceholder();
     }
     return Image.network(
       thumbnailUrl,
       height: 100.h,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.medium,
-      errorBuilder: (_, _, _) => const _CharacterImage(),
+      errorBuilder: (_, _, _) => const _CharacterPlaceholder(),
     );
   }
 }
