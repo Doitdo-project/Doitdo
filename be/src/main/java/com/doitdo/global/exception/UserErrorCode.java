@@ -35,7 +35,12 @@ public enum UserErrorCode implements ErrorCode {
 	U04_002("U04-002", HttpStatus.NOT_FOUND, "사용자를 찾을 수 없음"),
 	U04_003("U04-003", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
 	U04_004("U04-004", HttpStatus.UNAUTHORIZED, "비밀번호가 일치하지 않습니다."),
-	U04_005("U04-005", HttpStatus.CONFLICT, "이미 탈퇴한 계정입니다.");
+	U04_005("U04-005", HttpStatus.CONFLICT, "이미 탈퇴한 계정입니다."),
+
+	// U06 - 스트릭 조회
+	U06_001("U06-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),
+	U06_002("U06-002", HttpStatus.NOT_FOUND, "스트릭 데이터를 찾을 수 없습니다."),
+	U06_003("U06-003", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류");
 
 	private final String code;
 	private final HttpStatus httpStatus;
