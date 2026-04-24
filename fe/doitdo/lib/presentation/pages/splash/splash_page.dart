@@ -5,12 +5,18 @@ import 'package:go_router/go_router.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
+import 'package:doitdo/presentation/providers/app_data_providers.dart';
 
-/// 앱 부팅 직후 잠시 노출되는 스플래시.
+/// 앱 부팅 직후 잠시 노출되는 스플래시 + **세션 복원 분기 지점**.
 ///
-/// 현 단계에서는 단순히 정해진 시간 뒤 홈으로 이동하지만,
-/// 추후 로그인 상태 판별/초기 리소스 프리로드 등을 이 화면에서 수행하고
-/// 그 결과에 따라 라우팅을 분기하는 지점으로 확장한다.
+/// secure storage 에 저장된 토큰 유무로 초기 라우팅을 결정한다:
+/// - 토큰 있음 → 메인 탭(`tamagochi`) 으로 자동 진입 — "앱 재시작 시 세션 유지"
+/// - 토큰 없음 → Welcome 화면
+///
+/// 저장된 access token 이 만료된 채로 홈에 진입하더라도, 첫 API 호출 시점에
+/// [AuthInterceptor] 가 refresh 를 자동으로 시도한다. refresh 도 실패하면
+/// 로컬 토큰을 삭제하고 이후 UI 가 `UnauthorizedException` 을 받아 로그인
+/// 화면으로 되돌리는 후속 처리는 별도 과제(글로벌 redirect) 로 둔다.
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
 
@@ -26,9 +32,19 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   }
 
   Future<void> _bootstrap() async {
+    // 최소 노출 시간 — 깜빡임 방지 & 브랜드 각인용. 토큰 읽기 I/O 는 빠르게 끝나므로
+    // 사용자에게 앱 로딩을 느끼게 하는 의도적 딜레이.
     await Future<void>.delayed(const Duration(milliseconds: 1200));
     if (!mounted) return;
-    context.go(AppRoutes.welcome);
+
+    final tokens = await ref.read(authLocalDataSourceProvider).read();
+    if (!mounted) return;
+
+    if (tokens != null) {
+      context.go(AppRoutes.tamagochi);
+    } else {
+      context.go(AppRoutes.welcome);
+    }
   }
 
   @override

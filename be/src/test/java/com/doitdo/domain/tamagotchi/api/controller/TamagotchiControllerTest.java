@@ -118,7 +118,12 @@ class TamagotchiControllerTest {
 			.streakCount(0)
 			.isDeleted(false)
 			.build());
-		HatchCharacterResp serviceResp = new HatchCharacterResp(2L, "BABY", "SLIME");
+		HatchCharacterResp serviceResp = new HatchCharacterResp(
+			2L,
+			"BABY",
+			"SLIME",
+			"https://cdn.example.com/slime.png"
+		);
 
 		given(tamagotchiService.hatch(1L)).willReturn(serviceResp);
 

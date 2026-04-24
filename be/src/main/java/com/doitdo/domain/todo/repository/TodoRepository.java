@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificationExecutor<Todo> {
 
@@ -21,4 +24,16 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 			TodoType type);
 
 	List<Todo> findAllByUserIdAndTitleAndTypeAndIsDeletedFalse(Long userId, String title, TodoType type);
+
+	@Query("""
+			select count(t) from Todo t
+			where t.userId = :userId
+			  and t.status <> com.doitdo.domain.todo.entity.Todo.TodoStatus.DONE
+			  and t.isDeleted = false
+			""")
+	long countPendingByUserId(@Param("userId") Long userId);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("UPDATE Todo t SET t.isDeleted = true WHERE t.userId = :userId AND t.isDeleted = false")
+	int softDeleteAllByUserId(@Param("userId") Long userId);
 }

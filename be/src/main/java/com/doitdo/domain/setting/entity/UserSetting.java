@@ -9,6 +9,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -65,6 +67,19 @@ public class UserSetting extends BaseTimeEntity {
 				.eveningReminderTime(LocalTime.of(21, 0))
 				.homeScreenMode(HomeScreenMode.HOME)
 				.build();
+	}
+
+	@PrePersist
+	@PreUpdate
+	private void normalizeTimes() {
+		this.morningReminderTime = truncate(this.morningReminderTime);
+		this.eveningReminderTime = truncate(this.eveningReminderTime);
+		this.dndStartTime        = truncate(this.dndStartTime);
+		this.dndEndTime          = truncate(this.dndEndTime);
+	}
+
+	private static LocalTime truncate(LocalTime t) {
+		return t == null ? null : t.withSecond(0).withNano(0);
 	}
 
 	/**

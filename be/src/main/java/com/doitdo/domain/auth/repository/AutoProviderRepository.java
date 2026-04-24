@@ -13,4 +13,6 @@ public interface AutoProviderRepository extends JpaRepository<AutoProvider, Long
 	// findByProviderAndProviderUid 가 NonUniqueResultException 을 던지는 상황 방어용.
 	// 호출부에서 stream().findFirst() 로 winner 선택.
 	List<AutoProvider> findAllByProviderAndProviderUid(String provider, String providerUid);
+
+	void deleteAllByUserId(Long userId);
 }

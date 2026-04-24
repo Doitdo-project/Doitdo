@@ -3,6 +3,9 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
+    // START: FlutterFire Configuration
+    id("com.google.gms.google-services")
+    // END: FlutterFire Configuration
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
@@ -50,10 +53,29 @@ android {
         manifestPlaceholders["kakaoNativeAppKey"] = kakaoNativeAppKey
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // 공용 debug keystore.
+    // 개인 `~/.android/debug.keystore` 가 아니라 프로젝트 내부의 파일을 쓰도록
+    // 강제해 팀 누구 PC 에서 빌드해도 동일한 SHA-1 이 나오게 한다.
+    // SHA-1 은 Firebase / Google Cloud Console / Kakao Developers 에 한 번만 등록.
+    // storepass/keypass/alias 는 Android 디버그 keystore 의 관례적 고정값.
+    // ─────────────────────────────────────────────────────────────
+    signingConfigs {
+        getByName("debug") {
+            storeFile = rootProject.file("keystore/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // TODO: 배포용 release keystore 준비 후 별도 signingConfig 연결.
+            //       현재는 `flutter run --release` 가 되도록 debug 서명 재활용.
             signingConfig = signingConfigs.getByName("debug")
         }
     }

@@ -28,4 +28,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 			   and n.isRead = false
 			""")
 	int updateAllRead(@Param("userId") Long userId, @Param("readAt") LocalDateTime readAt);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("update Notification n set n.isDeleted = true where n.userId = :userId and n.isDeleted = false")
+	int softDeleteAllByUserId(@Param("userId") Long userId);
 }

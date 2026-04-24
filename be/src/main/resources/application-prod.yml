@@ -5,3 +5,9 @@ spring:
     url: jdbc:mariadb://${db.host}:${db.port}/${db.name}
     username: ${db.username}
     password: ${db.password}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus

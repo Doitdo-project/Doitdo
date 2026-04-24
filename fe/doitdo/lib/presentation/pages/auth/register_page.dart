@@ -188,23 +188,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     final registerState = ref.watch(registerViewModelProvider);
 
     // 회원가입 성공/실패 부수효과.
-    // 자동 로그인은 하지 않고, 사용자가 직접 로그인 화면에서 입력하도록 돌려보낸다.
+    // signUp 직후 자동 로그인까지 완료된 상태로 data 가 도착하므로 바로 메인 탭으로 이동.
     ref.listen<AsyncValue<User?>>(registerViewModelProvider, (prev, next) {
       next.whenOrNull(
         data: (user) {
           if (user == null) return;
           if (!context.mounted) return;
-          // 스택에 login 이 남아있을 테니 pop 으로 돌아가고, 없으면 go 로 대체.
-          if (context.canPop()) {
-            context.pop();
-          } else {
-            context.go(AppRoutes.login);
-          }
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('가입이 완료됐어요. 방금 만든 계정으로 로그인해 주세요.'),
-            ),
-          );
+          context.go(AppRoutes.tamagochi);
         },
         error: (error, _) {
           if (!context.mounted) return;
