@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
+import 'package:doitdo/presentation/providers/current_user_provider.dart';
 
 /// 소셜 로그인 성공 시 전달되는 요약 데이터.
 ///
@@ -29,11 +30,13 @@ class WelcomeViewModel
   Future<WelcomeSuccess?> build() async => null;
 
   /// Google OAuth 수행. 결과는 state 로만 노출 (반환값 없음).
+  /// 성공 시 currentUserProvider 를 무효화해 홈 진입 시 최신 프로필 재조회.
   Future<void> signInWithGoogle() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final repo = ref.read(authRepositoryProvider);
       final (_, __, isNewUser) = await repo.signInWithGoogle();
+      ref.invalidate(currentUserProvider);
       return WelcomeSuccess(isNewUser: isNewUser);
     });
   }
@@ -44,6 +47,7 @@ class WelcomeViewModel
     state = await AsyncValue.guard(() async {
       final repo = ref.read(authRepositoryProvider);
       final (_, __, isNewUser) = await repo.signInWithKakao();
+      ref.invalidate(currentUserProvider);
       return WelcomeSuccess(isNewUser: isNewUser);
     });
   }
