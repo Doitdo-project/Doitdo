@@ -222,7 +222,6 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                             StreakSection(
                               streakDays: state.streakDays,
                               slots: state.streakSlots,
-                              slotDates: state.streakSlotDates,
                             ),
                           ],
                         ),
