@@ -55,9 +55,17 @@ class _CharacterNamingPageState extends ConsumerState<CharacterNamingPage> {
     if (!_isValid || _submitting) return;
     FocusScope.of(context).unfocus();
     setState(() => _submitting = true);
-    // TODO: 이름 저장 API 연결. 스펙 확정 전까지는 pop 만 하고 홈에서 재조회한다.
-    await Future<void>.delayed(const Duration(milliseconds: 150));
+    final ok = await ref
+        .read(characterViewModelProvider.notifier)
+        .renameCharacter(_controller.text.trim());
     if (!mounted) return;
+    if (!ok) {
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('이름 저장에 실패했어요. 다시 시도해주세요.')),
+      );
+      return;
+    }
     context.pop(true);
   }
 
@@ -159,23 +167,29 @@ class _CharacterPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 부화 직후 진입이라 정상 플로우에선 character.thumbnailUrl 이 있다.
+    // 부화 직후 진입이라 정상 플로우에선 character.thumbnailUrl 이 들어와 있다.
+    // 하드코드 placeholder(한라봉) 로 덮어쓰지 않고 서버 이미지를 그대로 사용.
     final url = character?.thumbnailUrl ?? '';
     if (url.isEmpty) {
-      return Image.asset(
-        'assets/images/tama_hanrabong.png',
-        height: 140.h,
-        fit: BoxFit.contain,
-      );
+      return _previewPlaceholder(context);
     }
     return Image.network(
       url,
       height: 140.h,
       fit: BoxFit.contain,
-      errorBuilder: (_, _, _) => Image.asset(
-        'assets/images/tama_hanrabong.png',
-        height: 140.h,
-        fit: BoxFit.contain,
+      errorBuilder: (_, _, _) => _previewPlaceholder(context),
+    );
+  }
+
+  Widget _previewPlaceholder(BuildContext context) {
+    return SizedBox(
+      height: 140.h,
+      child: Center(
+        child: Icon(
+          Icons.pets,
+          size: 72.sp,
+          color: context.colors.textHint,
+        ),
       ),
     );
   }
