@@ -22,6 +22,7 @@ import com.doitdo.domain.todo.entity.Todo.TodoType;
 import com.doitdo.domain.todo.repository.CategoryRepository;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository.SnoozeCountProjection;
+import com.doitdo.domain.streak.application.UserStreakService;
 import com.doitdo.domain.todo.repository.TodoRepository;
 import com.doitdo.domain.todo.repository.TodoSpecifications;
 import com.doitdo.global.exception.CustomException;
@@ -50,6 +51,7 @@ public class TodoServiceImpl implements TodoService {
 	private final CategoryRepository categoryRepository;
 	private final SnoozeHistoryRepository snoozeHistoryRepository;
 	private final RecurrenceService recurrenceService;
+	private final UserStreakService userStreakService;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -253,7 +255,13 @@ public class TodoServiceImpl implements TodoService {
 			throw new CustomException(TodoErrorCode.T03_004);
 		}
 
+		TodoStatus previousStatus = todo.getStatus();
 		todo.changeStatus(req.status());
+
+		// DONE 으로 새로 진입한 경우에만 streak 갱신 (DONE 유지/재진입 시 중복 증가 방지는 엔티티 내부에서도 처리)
+		if (req.status() == TodoStatus.DONE && previousStatus != TodoStatus.DONE) {
+			userStreakService.recordActivity(userId);
+		}
 
 		String categoryName = null;
 		if (todo.getCategoryId() != null) {
