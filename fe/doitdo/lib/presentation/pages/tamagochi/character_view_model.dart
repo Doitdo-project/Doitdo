@@ -37,6 +37,21 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
     }
   }
 
+  /// [load] 의 조용한 변형. state 를 loading 으로 먼저 전환하지 않고, 성공 시에만
+  /// data 로 갱신한다. todo 완료 후 exp 반영 체크처럼 사용자에게 로딩 스피너를
+  /// 보일 필요가 없는 백그라운드 리프레시에 사용. 실패 시 기존 상태를 유지하고
+  /// 로그만 남긴다.
+  Future<void> refresh() async {
+    try {
+      final character = await _repository.getMyCharacter();
+      state = AsyncValue.data(character);
+    } on ServerException catch (e) {
+      appLogger.d('character refresh: server ${e.statusCode} (silent)');
+    } catch (e, st) {
+      appLogger.e('character refresh failed', error: e, stackTrace: st);
+    }
+  }
+
   /// 알 1회 수령. 완료 후 state 는 data(character) 로 전환된다.
   Future<void> receiveEgg() async {
     state = const AsyncValue.loading();

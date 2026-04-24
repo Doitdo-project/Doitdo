@@ -7,6 +7,7 @@ import 'package:doitdo/presentation/pages/tamagochi/tamagochi_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/character_card.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/farewell_banner.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/streak_section.dart';
+import 'package:doitdo/presentation/pages/todo/todo_state.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_add_sheet.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_dialog.dart';
@@ -60,6 +61,33 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   void dispose() {
     _headerVisible.dispose();
     super.dispose();
+  }
+
+  /// Todo 완료 후 exp 반영을 기다렸다가 캐릭터 상태를 조용히 재조회한다.
+  ///
+  /// BE 가 `AFTER_COMMIT` 리스너로 비동기 exp 지급을 하기 때문에 곧장 GET 하면
+  /// 옛 값을 받을 가능성이 있다. 우선 200ms 뒤 1차 조회, currentExp 가 그대로면
+  /// 아직 커밋이 안 끝났다고 보고 500ms 뒤 한 번 더.
+  ///
+  /// UI 에 로딩 스피너가 튀면 화면이 깜빡이기 때문에 [CharacterViewModel.refresh]
+  /// 를 사용한다 (state 를 loading 으로 전환하지 않고 성공 시에만 data 갱신).
+  Future<void> _refreshCharacterAfterTodoDone() async {
+    final vm = ref.read(characterViewModelProvider.notifier);
+    final beforeExp =
+        ref.read(characterViewModelProvider).valueOrNull?.currentExp;
+
+    await Future.delayed(const Duration(milliseconds: 200));
+    if (!mounted) return;
+    await vm.refresh();
+    if (!mounted) return;
+
+    final afterFirst =
+        ref.read(characterViewModelProvider).valueOrNull?.currentExp;
+    if (afterFirst != beforeExp) return;
+
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+    await vm.refresh();
   }
 
   /// 오늘/언젠가 할 일 섹션의 "추가하기" 버튼이 눌릴 때 띄우는 바텀시트.
@@ -153,6 +181,18 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       ref
           .read(characterViewModelProvider.notifier)
           .evolve(nextChar.userCharacterId);
+    });
+
+    // Todo 완료 count 가 증가하면 exp 가 올라갔을 가능성이 있으므로 캐릭터 재조회.
+    // BE 는 AFTER_COMMIT 리스너로 exp 를 비동기 부여하므로 곧장 GET /me 를 부르면
+    // 옛 값을 받을 수 있다. 200ms 먼저 조회해보고 exp 변화가 없으면 500ms 뒤 한 번 더.
+    ref.listen<TodoState>(todoViewModelProvider, (prev, next) {
+      if (prev == null) return;
+      final prevDone = _doneCount(prev);
+      final nextDone = _doneCount(next);
+      if (nextDone > prevDone) {
+        _refreshCharacterAfterTodoDone();
+      }
     });
 
     final character = characterAsync.valueOrNull;
@@ -298,6 +338,11 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     );
   }
 }
+
+/// TodoState 의 완료된 할 일 총 개수 (오늘의 할 일 + 언젠가 할 일).
+int _doneCount(TodoState s) =>
+    s.allTodos.where((t) => t.isDone).length +
+    s.allSomedayTodos.where((t) => t.isDone).length;
 
 /// 해당 Todo 가 "오늘의 할 일" 에 포함되는지. 단일 날짜는 동일 일자, 기간은 오늘이
 /// 시작~종료 사이, 반복은 시작일이 오늘 이전이고 종료일이 없거나 오늘 이후면 포함.
