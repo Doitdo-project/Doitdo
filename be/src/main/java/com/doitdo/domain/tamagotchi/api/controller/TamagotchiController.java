@@ -13,6 +13,7 @@ import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.tamagotchi.api.dto.req.ApproveIndependenceReq;
 import com.doitdo.domain.tamagotchi.api.dto.req.UpdateCharacterNameReq;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaDetailResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
@@ -50,6 +51,16 @@ public class TamagotchiController {
 		@AuthenticationPrincipal CustomUserDetails userDetails
 	) {
 		return GlobalApiResponse.ok(tamagotchiService.getEncyclopedia(userDetails.getUserId()));
+	}
+
+	@Operation(summary = "도감 상세 조회", description = "선택한 종의 baby, teen, adult 정보와 탄생배경, 만난 횟수를 조회")
+	@ApiErrorCodes({"M03-001", "M03-002", "M03-003"})
+	@GetMapping("/encyclopedia/{species}")
+	public GlobalApiResponse<EncyclopediaDetailResp> getEncyclopediaDetail(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@PathVariable String species
+	) {
+		return GlobalApiResponse.ok(tamagotchiService.getEncyclopediaDetail(userDetails.getUserId(), species));
 	}
 
 	@Operation(summary = "캐릭터 이름 설정", description = "현재 활성 다마고치의 이름을 변경")

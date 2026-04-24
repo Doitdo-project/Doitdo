@@ -28,6 +28,7 @@ import com.doitdo.domain.tamagotchi.entity.Character;
 import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
+import com.doitdo.domain.tamagotchi.repository.CharacterSpeciesBackgroundRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.user.entity.User;
@@ -50,11 +51,15 @@ class TamagotchiServiceImplTest {
 	@Mock
 	private UserRepository userRepository;
 
+	@Mock
+	private CharacterSpeciesBackgroundRepository characterSpeciesBackgroundRepository;
+
 	private TamagotchiServiceImpl service() {
 		return new TamagotchiServiceImpl(
 			characterRepository,
 			characterUnlockRepository,
 			userCharacterRepository,
+			characterSpeciesBackgroundRepository,
 			userRepository
 		);
 	}
@@ -199,13 +204,14 @@ class TamagotchiServiceImplTest {
 	}
 
 	@Test
-	void getEncyclopediaReturnsAllCharactersWithUnlockedStatus() {
+	void getEncyclopediaReturnsOnlyAdultCharactersWithUnlockedStatusAndName() {
 		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
 
 		Character slime = Character.builder()
 			.characterId(1L)
 			.species("SLIME")
+			.name("슬라임")
 			.stage(Character.Stage.BABY)
 			.requiredExp(100)
 			.thumbnailUrl("https://cdn.example.com/slime.png")
@@ -213,28 +219,36 @@ class TamagotchiServiceImplTest {
 		Character rabbit = Character.builder()
 			.characterId(2L)
 			.species("RABBIT")
+			.name("토끼")
 			.stage(Character.Stage.TEEN)
 			.requiredExp(200)
 			.thumbnailUrl("https://cdn.example.com/rabbit.png")
 			.build();
+		Character dragon = Character.builder()
+			.characterId(3L)
+			.species("DRAGON")
+			.name("드래곤")
+			.stage(Character.Stage.ADULT)
+			.requiredExp(300)
+			.thumbnailUrl("https://cdn.example.com/dragon.png")
+			.build();
 		CharacterUnlock unlock = CharacterUnlock.builder()
 			.userId(userId)
-			.characterId(1L)
+			.characterId(3L)
 			.build();
 
-		given(characterRepository.findAll()).willReturn(List.of(slime, rabbit));
+		given(characterRepository.findAll()).willReturn(List.of(slime, rabbit, dragon));
 		given(characterUnlockRepository.findByUserId(userId)).willReturn(List.of(unlock));
 
 		EncyclopediaResp resp = service.getEncyclopedia(userId);
 
-		assertThat(resp.items()).hasSize(2);
-		assertThat(resp.items().get(0).characterId()).isEqualTo(1L);
-		assertThat(resp.items().get(0).species()).isEqualTo("SLIME");
-		assertThat(resp.items().get(0).stage()).isEqualTo("BABY");
-		assertThat(resp.items().get(0).thumbnailUrl()).isEqualTo("https://cdn.example.com/slime.png");
+		assertThat(resp.items()).hasSize(1);
+		assertThat(resp.items().get(0).characterId()).isEqualTo(3L);
+		assertThat(resp.items().get(0).name()).isEqualTo("드래곤");
+		assertThat(resp.items().get(0).species()).isEqualTo("DRAGON");
+		assertThat(resp.items().get(0).stage()).isEqualTo("ADULT");
+		assertThat(resp.items().get(0).thumbnailUrl()).isEqualTo("https://cdn.example.com/dragon.png");
 		assertThat(resp.items().get(0).unlocked()).isTrue();
-		assertThat(resp.items().get(1).characterId()).isEqualTo(2L);
-		assertThat(resp.items().get(1).unlocked()).isFalse();
 	}
 
 	@Test
