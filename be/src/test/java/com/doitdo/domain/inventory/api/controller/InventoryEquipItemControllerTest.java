@@ -28,7 +28,6 @@ class InventoryEquipItemControllerTest {
 			.email("user@example.com")
 			.username("user")
 			.password("password")
-			.streakCount(0)
 			.isDeleted(false)
 			.build());
 		EquipItemResp serviceResp = new EquipItemResp(10L, 42L, 9L, "wizard hat");
