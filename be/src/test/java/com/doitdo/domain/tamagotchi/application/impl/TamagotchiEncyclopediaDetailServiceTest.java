@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaDetailCharacterResp;
@@ -47,6 +48,9 @@ class TamagotchiEncyclopediaDetailServiceTest {
 	@Mock
 	private UserCharacterHistoryRepository userCharacterHistoryRepository;
 
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
+
 	private TamagotchiServiceImpl service() {
 		return new TamagotchiServiceImpl(
 			characterRepository,
@@ -54,7 +58,8 @@ class TamagotchiEncyclopediaDetailServiceTest {
 			userCharacterRepository,
 			userCharacterHistoryRepository,
 			characterSpeciesBackgroundRepository,
-			userRepository
+			userRepository,
+			eventPublisher
 		);
 	}
 

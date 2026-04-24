@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.entity.Character;
@@ -41,6 +42,9 @@ class TamagotchiCurrentCharacterServiceImplTest {
 	@Mock
 	private UserCharacterHistoryRepository userCharacterHistoryRepository;
 
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
+
 	@Test
 	void getCurrentCharacterReturnsActiveCharacterState() {
 		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
@@ -49,7 +53,8 @@ class TamagotchiCurrentCharacterServiceImplTest {
 			userCharacterRepository,
 			userCharacterHistoryRepository,
 			characterSpeciesBackgroundRepository,
-			userRepository
+			userRepository,
+			eventPublisher
 		);
 
 		Long userId = 1L;
