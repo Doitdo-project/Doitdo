@@ -107,6 +107,19 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
       _evolving = false;
     }
   }
+
+  /// ADULT + canFarewell 상태에서 사용자가 독립을 승인했을 때 호출.
+  /// 서버가 다음 알을 자동 배정하므로 [load] 로 새 캐릭터 상태를 당겨온다.
+  Future<bool> farewell() async {
+    try {
+      await _repository.approveFarewell(approved: true);
+      await load();
+      return true;
+    } catch (e, st) {
+      appLogger.e('farewell failed', error: e, stackTrace: st);
+      return false;
+    }
+  }
 }
 
 final characterViewModelProvider =

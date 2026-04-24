@@ -5,8 +5,10 @@ import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/tamagochi/character_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/character_card.dart';
+import 'package:doitdo/presentation/pages/tamagochi/widgets/farewell_banner.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/streak_section.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
+import 'package:doitdo/presentation/widgets/common/doitdo_dialog.dart';
 import 'package:doitdo/presentation/widgets/common/todo_section.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_full_layout.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
@@ -34,6 +36,9 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   /// 헤더가 보이는 상태인지. 상태바 오버레이 + 아이콘 색 전환에만 쓰인다.
   /// 매 스크롤마다 build 가 다시 돌지 않도록 ValueNotifier 로 분리.
   final ValueNotifier<bool> _headerVisible = ValueNotifier<bool>(true);
+
+  /// farewell API 호출 in-flight 여부. 버튼 중복 탭 방지용.
+  bool _farewelling = false;
 
   @override
   void initState() {
@@ -69,6 +74,38 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     await context.push(AppRoutes.tamagochiHatch);
     if (!mounted) return;
     ref.read(characterViewModelProvider.notifier).load();
+  }
+
+  /// 독립 시키기 버튼 탭. 확인 다이얼로그로 한 번 감싼 뒤 farewell API 호출.
+  /// 성공 시 서버가 다음 알을 자동 배정하므로 ViewModel 이 load() 로 갱신.
+  Future<void> _handleFarewellTap() async {
+    if (_farewelling) return;
+    final confirmed = await showDoitdoDialog(
+      context: context,
+      title: '독립 시키기',
+      message: '지금까지 함께한 다마고치를 배웅할게요.\n'
+          '독립하면 되돌릴 수 없고 바로 새 알이 도착해요.',
+      confirmLabel: '독립 시키기',
+      cancelLabel: '취소',
+    );
+    if (!mounted || confirmed != true) return;
+
+    setState(() => _farewelling = true);
+    final ok =
+        await ref.read(characterViewModelProvider.notifier).farewell();
+    if (!mounted) return;
+    setState(() => _farewelling = false);
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(ok ? '독립 완료! 새 알이 도착했어요.' : '독립 처리 중 문제가 생겼어요. 다시 시도해주세요.'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
   }
 
   @override
@@ -170,6 +207,17 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                   context.push(AppRoutes.tamagochiCollection),
                               onEggTap: _handleEggTap,
                             ),
+                            if (character?.canFarewell ?? false) ...[
+                              SizedBox(height: 12.h),
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                                child: FarewellBanner(
+                                  characterName: character!.name,
+                                  busy: _farewelling,
+                                  onTap: _handleFarewellTap,
+                                ),
+                              ),
+                            ],
                             SizedBox(height: _streakTopGap),
                             StreakSection(
                               streakDays: state.streakDays,
