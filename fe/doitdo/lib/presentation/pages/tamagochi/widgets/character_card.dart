@@ -59,6 +59,24 @@ class CharacterCard extends StatelessWidget {
             ),
           ),
 
+          // 진화/부화/독립 같은 주요 액션 중의 로딩 표시. copyWithPrevious 덕에
+          // 이전 캐릭터 데이터는 그대로 남아 있고, 이 작은 스피너만 카드 왼쪽
+          // 상단에 얹혀 "서버 갱신 중" 만 표현한다. 홈 전체를 덮지 않으므로 아래
+          // 투두 영역은 그대로 상호작용 가능.
+          if (isCharacterLoading && character != null)
+            Positioned(
+              top: 10.h,
+              left: 12.w,
+              child: SizedBox(
+                width: 16.sp,
+                height: 16.sp,
+                child: const CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+            ),
+
           // 중앙: 말풍선 + 캐릭터 (캐릭터 상태에 따라 분기)
           // 하단 크롬이 없을 땐 아래 패딩을 줄여 캐릭터를 중앙에 가깝게 배치.
           Positioned(

@@ -24,8 +24,12 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
   /// 여기서는 [ServerException] 전체를 "미수령" 으로 해석한다. 추후 404 코드가
   /// 확정되면 `e.statusCode == 404` 만 미수령으로 좁히는 게 바람직하다.
   /// [UnauthorizedException] / 네트워크 타임아웃 등은 진짜 에러로 올린다.
+  ///
+  /// `copyWithPrevious` 로 직전 값을 유지한 채 isLoading 만 true 로 돌리므로,
+  /// UI 는 이전 캐릭터 정보를 계속 표시하면서 위에 작은 로딩 인디케이터만 얹으면
+  /// 된다 (진화/부화/독립 중 chrome 이 통째로 사라지는 깜빡임 방지).
   Future<void> load() async {
-    state = const AsyncValue.loading();
+    state = const AsyncValue<Character?>.loading().copyWithPrevious(state);
     try {
       final character = await _repository.getMyCharacter();
       state = AsyncValue.data(character);
@@ -54,7 +58,7 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
 
   /// 알 1회 수령. 완료 후 state 는 data(character) 로 전환된다.
   Future<void> receiveEgg() async {
-    state = const AsyncValue.loading();
+    state = const AsyncValue<Character?>.loading().copyWithPrevious(state);
     try {
       final character = await _repository.receiveEgg();
       state = AsyncValue.data(character);
