@@ -5,6 +5,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
@@ -62,9 +63,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			return toCurrentCharacterResp(currentUserCharacter.get(), TamagotchiErrorCode.M04_002);
 		}
 
-		com.doitdo.domain.tamagotchi.entity.Character eggCharacter = characterRepository
-			.findFirstByStageOrderByCharacterIdAsc(com.doitdo.domain.tamagotchi.entity.Character.Stage.EGG)
-			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_003));
+		com.doitdo.domain.tamagotchi.entity.Character eggCharacter = randomEggCharacter(TamagotchiErrorCode.M04_003);
 
 		UserCharacter userCharacter = UserCharacter.builder()
 			.userId(userId)
@@ -373,9 +372,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			throw new CustomException(TamagotchiErrorCode.M00_003);
 		}
 
-		com.doitdo.domain.tamagotchi.entity.Character eggCharacter = characterRepository
-			.findFirstByStageOrderByCharacterIdAsc(com.doitdo.domain.tamagotchi.entity.Character.Stage.EGG)
-			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M00_004));
+		com.doitdo.domain.tamagotchi.entity.Character eggCharacter = randomEggCharacter(TamagotchiErrorCode.M00_004);
 
 		adultUserCharacter.deactivate();
 		userCharacterRepository.save(adultUserCharacter);
@@ -407,6 +404,16 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 				com.doitdo.domain.tamagotchi.entity.Character.Stage.EGG
 			)
 		);
+	}
+
+	private com.doitdo.domain.tamagotchi.entity.Character randomEggCharacter(TamagotchiErrorCode errorCode) {
+		List<com.doitdo.domain.tamagotchi.entity.Character> eggCharacters = characterRepository.findAllByStage(
+			com.doitdo.domain.tamagotchi.entity.Character.Stage.EGG
+		);
+		if (eggCharacters.isEmpty()) {
+			throw new CustomException(errorCode);
+		}
+		return eggCharacters.get(ThreadLocalRandom.current().nextInt(eggCharacters.size()));
 	}
 
 	private void saveHistory(

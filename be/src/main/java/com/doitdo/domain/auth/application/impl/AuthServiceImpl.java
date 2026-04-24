@@ -29,6 +29,8 @@ import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.UserErrorCode;
 import com.doitdo.global.util.JwtUtil;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -78,9 +80,7 @@ public class AuthServiceImpl implements AuthService {
 
 		// 회원가입 직후부터 exp 시스템 대상이 되도록 EGG UserCharacter 자동 생성.
 		// 기존 /api/characters/me/egg (receiveEgg) 는 이미 멱등이라 호환성 영향 없음.
-		Character eggCharacter = characterRepository
-				.findFirstByStageOrderByCharacterIdAsc(Character.Stage.EGG)
-				.orElseThrow(() -> new CustomException(UserErrorCode.U00_005));
+		Character eggCharacter = randomEggCharacter();
 		userCharacterRepository.save(UserCharacter.builder()
 				.userId(user.getUserId())
 				.characterId(eggCharacter.getCharacterId())
@@ -91,6 +91,14 @@ public class AuthServiceImpl implements AuthService {
 				.build());
 
 		return new SignupResp(user.getUserId(), user.getEmail(), user.getUsername());
+	}
+
+	private Character randomEggCharacter() {
+		List<Character> eggCharacters = characterRepository.findAllByStage(Character.Stage.EGG);
+		if (eggCharacters.isEmpty()) {
+			throw new CustomException(UserErrorCode.U00_005);
+		}
+		return eggCharacters.get(ThreadLocalRandom.current().nextInt(eggCharacters.size()));
 	}
 
 	@Override
