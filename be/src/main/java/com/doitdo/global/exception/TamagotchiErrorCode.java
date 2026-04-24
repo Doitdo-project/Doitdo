@@ -43,6 +43,7 @@ public enum TamagotchiErrorCode implements ErrorCode {
 	M05_003("M05-003", HttpStatus.UNPROCESSABLE_ENTITY, "상태가 진화 조건에 맞지 않음"),
 	M05_004("M05-004", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
 	M05_005("M05-005", HttpStatus.CONFLICT, "이미 진화했거나 추가 진화가 불가함"),
+	M05_006("M05-006", HttpStatus.CONFLICT, "아직 진화할 수 없습니다. 경험치가 더 필요합니다."),
 
 	// M06 - history
 	M06_001("M06-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),

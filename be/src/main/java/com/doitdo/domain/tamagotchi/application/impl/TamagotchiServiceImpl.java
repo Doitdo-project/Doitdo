@@ -57,6 +57,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.characterId(eggCharacter.getCharacterId())
 			.name("뚜잇이")
 			.growthPercent(0)
+			.currentExp(0)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
@@ -159,7 +160,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M02_004));
 
 		userCharacter.setCharacterId(babyCharacter.getCharacterId());
-		userCharacter.setGrowthPercent(0);
+		userCharacter.resetExp(); // EGG → BABY 시 exp 리셋 (EGG 에선 어차피 0이지만 명시적 호출)
 
 		return new HatchCharacterResp(
 			babyCharacter.getCharacterId(),
@@ -184,6 +185,16 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.findById(userCharacter.getCharacterId())
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M05_002));
 
+		// exp 게이팅. 현재 단계의 requiredExp 를 채워야만 진화 가능.
+		Integer requiredExp = currentCharacter.getRequiredExp();
+		if (requiredExp == null) {
+			// 데이터 마이그레이션 미완료. 운영 알람 대상.
+			throw new CustomException(TamagotchiErrorCode.M05_005);
+		}
+		if (userCharacter.getCurrentExp() < requiredExp) {
+			throw new CustomException(TamagotchiErrorCode.M05_006);
+		}
+
 		com.doitdo.domain.tamagotchi.entity.Character.Stage beforeStage = currentCharacter.getStage();
 		com.doitdo.domain.tamagotchi.entity.Character.Stage afterStage = switch (beforeStage) {
 			case BABY -> com.doitdo.domain.tamagotchi.entity.Character.Stage.TEEN;
@@ -196,26 +207,18 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M05_005));
 
 		userCharacter.setCharacterId(nextCharacter.getCharacterId());
-		userCharacter.setGrowthPercent(0);
+		userCharacter.resetExp();
 
 		return new EvolutionResp(
 			userCharacter.getUserCharacterId(),
 			beforeStage.name(),
 			afterStage.name(),
-			userCharacter.getGrowthPercent(),
-			getRequiredExp(afterStage),
+			userCharacter.getCurrentExp(),    // 진화 직후 0
+			nextCharacter.getRequiredExp(),    // afterStage 의 requiredExp (DB 에서 조회한 값)
 			buildAnimationUrl(beforeStage, afterStage),
 			nextCharacter.getThumbnailUrl(),
 			Instant.now().toString()
 		);
-	}
-
-	private int getRequiredExp(com.doitdo.domain.tamagotchi.entity.Character.Stage stage) {
-		return switch (stage) {
-			case TEEN -> 100;
-			case ADULT -> 200;
-			default -> 0;
-		};
 	}
 
 	private String buildAnimationUrl(
@@ -261,6 +264,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.characterId(eggCharacter.getCharacterId())
 			.name(adultUserCharacter.getName())
 			.growthPercent(0)
+			.currentExp(0)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
