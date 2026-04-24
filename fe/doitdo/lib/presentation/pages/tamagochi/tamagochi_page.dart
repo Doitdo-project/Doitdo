@@ -46,16 +46,12 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     // 진입 시 캐릭터 조회 + 미수령이면 자동 POST. 로그인 플로우에서는 이쪽만
     // 돌리고 welcome_page 에서는 띄우지 않아, 두 경로 load() 가 경쟁하다
     // "GET 실패 → POST" 판정이 덮이는 상황을 막는다.
+    //
+    // TodoViewModel 은 생성자에서 fetchTodos() 를 자동 호출하므로 홈에서
+    // 별도 부트스트랩은 불필요 — build 안 ref.watch 만으로 초기 로드됨.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(characterViewModelProvider.notifier).ensureCharacter();
-      // todoViewModelProvider 는 팀원이 사용하는 TODO provider 를 그대로 공유.
-      // 탭 전환 시 유지되지만 최초 진입일 수 있으므로, 비어있을 때만 초기 로드.
-      // TODO(BE): 팀원이 /api/todos 를 붙이면 loadDummyTodos 호출도 교체된다.
-      final todoState = ref.read(todoViewModelProvider);
-      if (todoState.allTodos.isEmpty && todoState.allSomedayTodos.isEmpty) {
-        ref.read(todoViewModelProvider.notifier).loadDummyTodos();
-      }
     });
   }
 
