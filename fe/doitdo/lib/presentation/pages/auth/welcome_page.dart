@@ -1,4 +1,3 @@
-import 'dart:async' show unawaited;
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -13,7 +12,6 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/auth/welcome_view_model.dart';
-import 'package:doitdo/presentation/pages/tamagochi/character_view_model.dart';
 
 /// 앱 진입 후 최초로 보이는 로그인 선택 화면.
 ///
@@ -34,12 +32,10 @@ class WelcomePage extends ConsumerWidget {
         data: (success) {
           if (success == null) return;
           if (!context.mounted) return;
-          // 신규 가입자면 알 수령, 기존 유저면 현재 캐릭터 프리로드. 실패해도 홈
-          // 진입 자체는 막지 않는다 (홈 initState 에서 재시도 load() 가 돈다).
+          // 캐릭터 수령/프리로드는 홈(tamagochi_page) initState 의 ensureCharacter()
+          // 한 곳에서만 돌린다. 여기서 unawaited 로 또 띄우면 home 의 load 와 레이스가
+          // 나서 "GET 실패 → POST" 판정이 덮어써질 수 있음.
           // TODO: success.isNewUser == true 면 추후 온보딩 라우트로 분기 가능.
-          unawaited(
-            ref.read(characterViewModelProvider.notifier).ensureCharacter(),
-          );
           context.go(AppRoutes.tamagochi);
         },
         error: (error, _) {
