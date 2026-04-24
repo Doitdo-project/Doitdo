@@ -20,6 +20,7 @@ import com.doitdo.domain.tamagotchi.entity.CharacterSpeciesBackground;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterSpeciesBackgroundRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
+import com.doitdo.domain.tamagotchi.repository.UserCharacterHistoryRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.global.exception.CustomException;
@@ -43,11 +44,15 @@ class TamagotchiEncyclopediaDetailServiceTest {
 	@Mock
 	private CharacterSpeciesBackgroundRepository characterSpeciesBackgroundRepository;
 
+	@Mock
+	private UserCharacterHistoryRepository userCharacterHistoryRepository;
+
 	private TamagotchiServiceImpl service() {
 		return new TamagotchiServiceImpl(
 			characterRepository,
 			characterUnlockRepository,
 			userCharacterRepository,
+			userCharacterHistoryRepository,
 			characterSpeciesBackgroundRepository,
 			userRepository
 		);
