@@ -3,8 +3,10 @@ import 'package:retrofit/retrofit.dart';
 
 import 'package:doitdo/core/network/api_response.dart';
 import 'package:doitdo/data/models/character_dto.dart';
+import 'package:doitdo/data/models/encyclopedia_detail_dto.dart';
 import 'package:doitdo/data/models/encyclopedia_dto.dart';
 import 'package:doitdo/data/models/evolution_dto.dart';
+import 'package:doitdo/data/models/farewell_dto.dart';
 
 part 'character_api.g.dart';
 
@@ -46,4 +48,18 @@ abstract class CharacterApi {
   /// 도감 목록. `{ items: [...] }` 형태.
   @GET('/api/characters/encyclopedia')
   Future<ApiResponse<EncyclopediaDto>> getEncyclopedia();
+
+  /// 도감 상세. 종 enum 을 path 로 넘긴다 (예: CAT, FOX).
+  @GET('/api/characters/encyclopedia/{species}')
+  Future<ApiResponse<EncyclopediaDetailDto>> getEncyclopediaDetail(
+    @Path('species') String species,
+  );
+
+  /// 독립(이별) 승인. body 는 `{"approved": true}`.
+  /// 응답으로 다음 알 배정 정보가 내려오지만, 전체 캐릭터 상태는 별도로 GET /me
+  /// 을 다시 호출해 갱신한다.
+  @POST('/api/characters/me/farewell')
+  Future<ApiResponse<FarewellDto>> approveFarewell(
+    @Body() Map<String, dynamic> body,
+  );
 }
