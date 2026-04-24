@@ -78,10 +78,14 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
   }
 
   /// 이름짓기 화면 제출. 성공 시 이름 반영된 캐릭터로 state 갱신.
+  ///
+  /// rename 응답도 hatch 와 동일하게 characterId/name 2 필드만 내려주므로
+  /// 직접 state 에 꽂으면 userCharacterId/growthPercent 등이 0 으로 리셋된다.
+  /// 성공 직후 GET /api/characters/me 로 전체 정보를 재조회한다.
   Future<bool> renameCharacter(String name) async {
     try {
-      final character = await _repository.renameCharacter(name);
-      state = AsyncValue.data(character);
+      await _repository.renameCharacter(name);
+      await load();
       return true;
     } catch (e, st) {
       appLogger.e('rename failed', error: e, stackTrace: st);
