@@ -37,6 +37,10 @@ class TamagotchiCurrentCharacterControllerTest {
 			"BABY",
 			"https://cdn.example.com/slime.png",
 			45,
+			45,
+			100,
+			false,
+			false,
 			42L,
 			10L
 		);

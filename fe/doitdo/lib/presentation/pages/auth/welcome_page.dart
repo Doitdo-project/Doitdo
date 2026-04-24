@@ -32,6 +32,9 @@ class WelcomePage extends ConsumerWidget {
         data: (success) {
           if (success == null) return;
           if (!context.mounted) return;
+          // 캐릭터 수령/프리로드는 홈(tamagochi_page) initState 의 ensureCharacter()
+          // 한 곳에서만 돌린다. 여기서 unawaited 로 또 띄우면 home 의 load 와 레이스가
+          // 나서 "GET 실패 → POST" 판정이 덮어써질 수 있음.
           // TODO: success.isNewUser == true 면 추후 온보딩 라우트로 분기 가능.
           context.go(AppRoutes.tamagochi);
         },

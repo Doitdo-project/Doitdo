@@ -17,6 +17,9 @@ import 'package:doitdo/domain/repositories/user_repository.dart';
 import 'package:doitdo/data/datasources/todo_api.dart';
 import 'package:doitdo/data/repositories/todo_repository_impl.dart';
 import 'package:doitdo/domain/repositories/todo_repository.dart';
+import 'package:doitdo/data/datasources/character_api.dart';
+import 'package:doitdo/data/repositories/character_repository_impl.dart';
+import 'package:doitdo/domain/repositories/character_repository.dart';
 
 // 중앙 집중식 DI 선언 파일 (MOA 컨벤션)
 // datasource → repository → service 순서로 Provider 추가.
@@ -88,4 +91,13 @@ final todoApiProvider = Provider<TodoApi>(
 
 final todoRepositoryProvider = Provider<TodoRepository>(
       (ref) => TodoRepositoryImpl(ref.watch(todoApiProvider)),
+);
+
+// ─── Character: retrofit API → Repository ──────────────────────
+final characterApiProvider = Provider<CharacterApi>(
+  (ref) => CharacterApi(ref.watch(dioProvider)),
+);
+
+final characterRepositoryProvider = Provider<CharacterRepository>(
+  (ref) => CharacterRepositoryImpl(ref.watch(characterApiProvider)),
 );

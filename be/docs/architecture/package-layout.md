@@ -125,6 +125,33 @@ global/
 
 `TodoServiceImpl` 은 CRUD + 속성 변경(status/priority/snooze) + 조회(list/search) 책임만 유지. RECURRING 관련 로직(캘린더 합성 + 가상 인스턴스 실체화)은 `RecurrenceService` 에 위임.
 
+## todo-exp-system 추가 파일 (2026-04)
+
+### 신규 패키지/파일
+
+| 종류 | 경로 | 비고 |
+|---|---|---|
+| Domain Event | `domain/todo/event/TodoCompletedEvent.java` | TODO DONE 전이 시 발행되는 도메인 이벤트 record |
+| Component | `domain/tamagotchi/application/ExpCalculator.java` | TODO 완료당 지급 exp (3~7 랜덤) 계산 컴포넌트 |
+| Listener | `domain/tamagotchi/application/listener/TodoCompletionExpListener.java` | AFTER_COMMIT + REQUIRES_NEW 로 exp 가산 |
+| Migration SQL | `docs/ops/migrations/2026-04-todo-exp-system.sql` | 수동 실행 필요 |
+| Convention doc | `docs/conventions/domain-events.md` | 이벤트 네이밍/위치/TX 경계 컨벤션 |
+
+### 패턴 확장 — 이벤트 패키지
+
+```
+domain/{domain}/
+ ├ api/
+ ├ application/
+ │   ├ listener/             # 타 도메인 이벤트 구독 리스너 (이번 PR 최초 도입)
+ │   └ ...
+ ├ entity/
+ ├ event/                    # 이 도메인에서 발행하는 도메인 이벤트 (이번 PR 최초 도입)
+ └ repository/
+```
+
+도메인 이벤트 네이밍/트랜잭션 컨벤션은 [`../conventions/domain-events.md`](../conventions/domain-events.md) 참고.
+
 ## notification 도메인 구현 파일
 
 | 종류 | 경로 | 비고 |

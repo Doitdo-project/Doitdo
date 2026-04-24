@@ -1,13 +1,14 @@
 package com.doitdo.domain.todo.application.impl;
 
-import com.doitdo.domain.todo.api.dto.req.TodoCreateReq;
 import com.doitdo.domain.todo.api.dto.req.TodoCalendarReq;
+import com.doitdo.domain.todo.api.dto.req.TodoCreateReq;
 import com.doitdo.domain.todo.api.dto.req.TodoListReq;
 import com.doitdo.domain.todo.api.dto.req.TodoPriorityChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoSearchReq;
 import com.doitdo.domain.todo.api.dto.req.TodoSnoozeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoStatusChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
+import com.doitdo.domain.todo.event.TodoCompletedEvent;
 import com.doitdo.domain.todo.api.dto.resp.TodoCalendarResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoListResp;
@@ -34,6 +35,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -52,6 +54,7 @@ public class TodoServiceImpl implements TodoService {
 	private final SnoozeHistoryRepository snoozeHistoryRepository;
 	private final RecurrenceService recurrenceService;
 	private final UserStreakService userStreakService;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -255,12 +258,16 @@ public class TodoServiceImpl implements TodoService {
 			throw new CustomException(TodoErrorCode.T03_004);
 		}
 
-		TodoStatus previousStatus = todo.getStatus();
+		TodoStatus beforeStatus = todo.getStatus();
 		todo.changeStatus(req.status());
 
-		// DONE 으로 새로 진입한 경우에만 streak 갱신 (DONE 유지/재진입 시 중복 증가 방지는 엔티티 내부에서도 처리)
-		if (req.status() == TodoStatus.DONE && previousStatus != TodoStatus.DONE) {
+		// DONE 으로 새로 진입한 경우에만 streak 갱신 + Tamagotchi exp 이벤트 발행.
+		// - streak: UserStreakService 가 동기 갱신. 엔티티 내부에서도 당일 중복 no-op.
+		// - exp: 리스너가 AFTER_COMMIT + REQUIRES_NEW 로 처리 (멱등성은 Todo.expGranted 로 보장).
+		// - 가산 실패해도 Todo DONE 은 커밋 유지 (사용자 UX 우선)
+		if (beforeStatus != TodoStatus.DONE && req.status() == TodoStatus.DONE) {
 			userStreakService.recordActivity(userId);
+			eventPublisher.publishEvent(new TodoCompletedEvent(userId, todo.getTodoId()));
 		}
 
 		String categoryName = null;
@@ -269,8 +276,6 @@ public class TodoServiceImpl implements TodoService {
 					.map(Category::getCategoryName)
 					.orElse(null);
 		}
-
-		// TODO: DONE 상태 변경 시 Tamagotchi 도메인 경험치 연동 필요 — Tamagotchi 이벤트 발행 추가 예정
 
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
 		return TodoDetailResp.from(todo, categoryName, count);
