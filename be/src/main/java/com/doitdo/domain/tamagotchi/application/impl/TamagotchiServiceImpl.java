@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaItemResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
+import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterSpeciesBackgroundRepository;
@@ -272,6 +273,9 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 
 		userCharacter.setCharacterId(nextCharacter.getCharacterId());
 		userCharacter.resetExp();
+		if (afterStage == com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT) {
+			unlockSpeciesCharacters(userId, currentCharacter.getSpecies());
+		}
 
 		return new EvolutionResp(
 			userCharacter.getUserCharacterId(),
@@ -283,6 +287,25 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			nextCharacter.getThumbnailUrl(),
 			Instant.now().toString()
 		);
+	}
+
+	private void unlockSpeciesCharacters(Long userId, String species) {
+		Set<Long> unlockedCharacterIds = characterUnlockRepository.findByUserId(userId).stream()
+			.map(unlock -> unlock.getCharacterId())
+			.collect(Collectors.toSet());
+
+		List<CharacterUnlock> unlocksToSave = characterRepository.findBySpecies(species).stream()
+			.map(character -> character.getCharacterId())
+			.filter(characterId -> !unlockedCharacterIds.contains(characterId))
+			.map(characterId -> CharacterUnlock.builder()
+				.userId(userId)
+				.characterId(characterId)
+				.build())
+			.toList();
+
+		if (!unlocksToSave.isEmpty()) {
+			characterUnlockRepository.saveAll(unlocksToSave);
+		}
 	}
 
 	private String buildAnimationUrl(
