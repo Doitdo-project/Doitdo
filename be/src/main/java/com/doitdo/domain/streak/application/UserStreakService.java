@@ -1,5 +1,6 @@
 package com.doitdo.domain.streak.application;
 
+import com.doitdo.domain.streak.api.dto.resp.StreakRewardResp;
 import com.doitdo.domain.streak.api.dto.resp.UserStreakResp;
 
 public interface UserStreakService {
@@ -15,4 +16,10 @@ public interface UserStreakService {
 	 * 정상 가입된 유저는 회원가입 시 row 자동 생성되므로 존재함.
 	 */
 	UserStreakResp getMyStreak(Long userId);
+
+	/**
+	 * 현재 streak 이 7일 단위면 보상을 지급한다.
+	 * 같은 streak 구간/회차는 중복 지급하지 않는다.
+	 */
+	StreakRewardResp claimSevenDayReward(Long userId);
 }
