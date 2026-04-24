@@ -1,18 +1,51 @@
-/// 다마고치 캐릭터의 성장 단계.
+/// 다마고치 캐릭터의 성장 단계. 알 → 유년기 → 성장기 → 성숙기 3+1 단계.
 ///
-/// 백엔드는 `stage` 를 문자열로 내려준다. 현재 명세상 확정된 값은 `egg` 뿐이고,
-/// 나머지 단계 이름은 추후 확정되므로 [CharacterStage.fromRaw] 가 모르는 값은
-/// [CharacterStage.other] 로 흡수한다 (원본은 [Character.rawStage] 에 보존).
+/// 백엔드가 `stage` 를 문자열로 내려주는데, 현재 확정된 값은 `EGG` 뿐이고
+/// 이후 단계 표기가 확정 전이라 [fromRaw] 가 여러 후보 키워드를 매핑한다.
+/// 실제 BE 표기가 확정되면 후보 케이스만 좁히면 된다. 모르는 값은 [other] 로
+/// 흡수하고 원본은 [Character.rawStage] 에 보존.
 enum CharacterStage {
   egg,
+  infant, // 유년기
+  juvenile, // 성장기
+  adult, // 성숙기
   other;
 
   static CharacterStage fromRaw(String raw) {
-    switch (raw.toLowerCase()) {
-      case 'egg':
+    switch (raw.toUpperCase()) {
+      case 'EGG':
         return CharacterStage.egg;
+      case 'INFANT':
+      case 'BABY':
+      case 'CHILD':
+      case 'YOUNG':
+        return CharacterStage.infant;
+      case 'JUVENILE':
+      case 'TEEN':
+      case 'GROWING':
+      case 'YOUTH':
+        return CharacterStage.juvenile;
+      case 'ADULT':
+      case 'MATURE':
+      case 'FULL':
+        return CharacterStage.adult;
       default:
         return CharacterStage.other;
+    }
+  }
+
+  /// 경험치 바 위에 붙일 단계 배지 문구. egg/other 단계에서는 숨김(null).
+  String? get badgeLabel {
+    switch (this) {
+      case CharacterStage.infant:
+        return '유년기';
+      case CharacterStage.juvenile:
+        return '성장기';
+      case CharacterStage.adult:
+        return '성숙기';
+      case CharacterStage.egg:
+      case CharacterStage.other:
+        return null;
     }
   }
 }
