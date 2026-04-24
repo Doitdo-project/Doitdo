@@ -36,9 +36,6 @@ public class User extends BaseTimeEntity {
 	@Column(length = 255, unique = true)
 	private String email;
 
-	@Column(name = "streak_count", nullable = false)
-	private Integer streakCount;
-
 	@Column(name = "is_deleted", nullable = false)
 	private Boolean isDeleted;
 
@@ -47,7 +44,6 @@ public class User extends BaseTimeEntity {
 				.email(email)
 				.password(encodedPassword)
 				.username(username)
-				.streakCount(0)
 				.isDeleted(false)
 				.build();
 	}
@@ -57,7 +53,6 @@ public class User extends BaseTimeEntity {
 				.email(email)
 				.password(null)
 				.username(username)
-				.streakCount(0)
 				.isDeleted(false)
 				.build();
 	}
@@ -74,7 +69,6 @@ public class User extends BaseTimeEntity {
 	 *   <li>{@code email}: {@code deleted_<userId>_<timestamp>@deleted.local} 로 치환 — UNIQUE 충돌 방지, 같은 이메일로 재가입 가능</li>
 	 *   <li>{@code username}: {@code deleted_<userId>_<timestamp>} 로 치환 — 동일</li>
 	 *   <li>{@code password}: null — 탈퇴 후 로그인 경로 차단</li>
-	 *   <li>{@code streakCount}: 보존 (집계/통계용)</li>
 	 * </ul>
 	 */
 	public void withdraw() {
