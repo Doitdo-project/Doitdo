@@ -21,10 +21,12 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaItemResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
 import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
+import com.doitdo.domain.tamagotchi.entity.UserCharacterHistory;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterSpeciesBackgroundRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
+import com.doitdo.domain.tamagotchi.repository.UserCharacterHistoryRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.global.exception.CustomException;
@@ -39,6 +41,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 	private final CharacterRepository characterRepository;
 	private final CharacterUnlockRepository characterUnlockRepository;
 	private final UserCharacterRepository userCharacterRepository;
+	private final UserCharacterHistoryRepository userCharacterHistoryRepository;
 	private final CharacterSpeciesBackgroundRepository characterSpeciesBackgroundRepository;
 	private final UserRepository userRepository;
 
@@ -68,6 +71,9 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.isDeleted(false)
 			.build();
 		UserCharacter savedUserCharacter = userCharacterRepository.save(userCharacter);
+		saveHistory(savedUserCharacter.getUserCharacterId(), userId, UserCharacterHistory.EventType.CREATED,
+			null, eggCharacter.getCharacterId(), null, savedUserCharacter.getName(), null, 0,
+			UserCharacterHistory.ActorType.USER, userId, "egg received");
 
 		return new CurrentCharacterResp(
 			eggCharacter.getCharacterId(),
@@ -154,7 +160,13 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M01_002));
 
+		Long beforeCharacterId = userCharacter.getCharacterId();
+		String beforeName = userCharacter.getName();
+		Integer beforeExp = userCharacter.getCurrentExp();
 		userCharacter.setName(name);
+		saveHistory(userCharacter.getUserCharacterId(), userId, UserCharacterHistory.EventType.NAME_UPDATED,
+			beforeCharacterId, beforeCharacterId, beforeName, userCharacter.getName(), beforeExp, beforeExp,
+			UserCharacterHistory.ActorType.USER, userId, "name updated");
 
 		return new UpdateCharacterNameResp(
 			userCharacter.getCharacterId(),
@@ -219,6 +231,9 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			throw new CustomException(TamagotchiErrorCode.M02_003);
 		}
 
+		Long beforeCharacterId = userCharacter.getCharacterId();
+		String beforeName = userCharacter.getName();
+		Integer beforeExp = userCharacter.getCurrentExp();
 		com.doitdo.domain.tamagotchi.entity.Character babyCharacter = characterRepository
 			.findFirstBySpeciesAndStageOrderByCharacterIdAsc(
 				eggCharacter.getSpecies(),
@@ -228,6 +243,9 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 
 		userCharacter.setCharacterId(babyCharacter.getCharacterId());
 		userCharacter.resetExp();
+		saveHistory(userCharacter.getUserCharacterId(), userId, UserCharacterHistory.EventType.HATCHED,
+			beforeCharacterId, babyCharacter.getCharacterId(), beforeName, userCharacter.getName(), beforeExp,
+			userCharacter.getCurrentExp(), UserCharacterHistory.ActorType.USER, userId, "egg hatched");
 
 		return new HatchCharacterResp(
 			babyCharacter.getCharacterId(),
@@ -252,6 +270,9 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.findById(userCharacter.getCharacterId())
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M05_002));
 
+		Long beforeCharacterId = currentCharacter.getCharacterId();
+		String beforeName = userCharacter.getName();
+		Integer beforeExp = userCharacter.getCurrentExp();
 		Integer requiredExp = currentCharacter.getRequiredExp();
 		if (requiredExp == null) {
 			throw new CustomException(TamagotchiErrorCode.M05_005);
@@ -276,6 +297,9 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		if (afterStage == com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT) {
 			unlockSpeciesCharacters(userId, currentCharacter.getSpecies());
 		}
+		saveHistory(userCharacter.getUserCharacterId(), userId, UserCharacterHistory.EventType.EVOLVED,
+			beforeCharacterId, nextCharacter.getCharacterId(), beforeName, userCharacter.getName(), beforeExp,
+			userCharacter.getCurrentExp(), UserCharacterHistory.ActorType.USER, userId, "evolved");
 
 		return new EvolutionResp(
 			userCharacter.getUserCharacterId(),
@@ -354,7 +378,11 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.isActive(true)
 			.isDeleted(false)
 			.build();
-		userCharacterRepository.save(nextEggCharacter);
+		UserCharacter savedNextEggCharacter = userCharacterRepository.save(nextEggCharacter);
+		saveHistory(savedNextEggCharacter.getUserCharacterId(), userId, UserCharacterHistory.EventType.FAREWELL,
+			adultCharacter.getCharacterId(), eggCharacter.getCharacterId(), adultUserCharacter.getName(),
+			savedNextEggCharacter.getName(), adultUserCharacter.getCurrentExp(), savedNextEggCharacter.getCurrentExp(),
+			UserCharacterHistory.ActorType.USER, userId, "independence approved");
 
 		return new FarewellResp(
 			adultUserCharacter.getUserCharacterId(),
@@ -365,5 +393,35 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 				com.doitdo.domain.tamagotchi.entity.Character.Stage.EGG
 			)
 		);
+	}
+
+	private void saveHistory(
+		Long userCharacterId,
+		Long userId,
+		UserCharacterHistory.EventType eventType,
+		Long beforeCharacterId,
+		Long afterCharacterId,
+		String beforeName,
+		String afterName,
+		Integer beforeExp,
+		Integer afterExp,
+		UserCharacterHistory.ActorType actorType,
+		Long actorId,
+		String reason
+	) {
+		userCharacterHistoryRepository.save(UserCharacterHistory.builder()
+			.userCharacterId(userCharacterId)
+			.userId(userId)
+			.eventType(eventType)
+			.beforeCharacterId(beforeCharacterId)
+			.afterCharacterId(afterCharacterId)
+			.beforeName(beforeName)
+			.afterName(afterName)
+			.beforeExp(beforeExp)
+			.afterExp(afterExp)
+			.reason(reason)
+			.actorType(actorType)
+			.actorId(actorId)
+			.build());
 	}
 }

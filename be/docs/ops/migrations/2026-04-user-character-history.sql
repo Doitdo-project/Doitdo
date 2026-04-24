@@ -1,0 +1,22 @@
+CREATE TABLE user_character_history (
+  user_character_history_id BIGINT NOT NULL AUTO_INCREMENT,
+  user_character_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  event_type VARCHAR(30) NOT NULL,
+  before_character_id BIGINT NULL,
+  after_character_id BIGINT NULL,
+  before_name VARCHAR(50) NULL,
+  after_name VARCHAR(50) NULL,
+  before_exp INT NULL,
+  after_exp INT NULL,
+  reason VARCHAR(100) NULL,
+  request_id VARCHAR(100) NULL,
+  actor_type VARCHAR(20) NOT NULL,
+  actor_id BIGINT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (user_character_history_id),
+  KEY idx_user_character_history_user_id (user_id),
+  KEY idx_user_character_history_user_character_id (user_character_id),
+  KEY idx_user_character_history_created_at (created_at)
+);
