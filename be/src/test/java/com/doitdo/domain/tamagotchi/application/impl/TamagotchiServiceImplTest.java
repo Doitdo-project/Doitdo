@@ -8,6 +8,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.ArgumentMatchers.any;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -409,6 +410,68 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.animationUrl()).isEqualTo("https://cdn.example.com/tamagotchi/animations/baby-to-teen");
 		assertThat(resp.characterImageUrl()).isEqualTo("https://cdn.example.com/slime-teen.png");
 		assertThat(resp.evolvedAt()).isNotBlank();
+		then(characterUnlockRepository).should(never()).saveAll(any());
+	}
+
+	@Test
+	void evolveToAdultUnlocksAllCharactersInSpecies() {
+		TamagotchiServiceImpl service = service();
+		Long userId = 1L;
+		UserCharacter userCharacter = UserCharacter.builder()
+			.userCharacterId(20L)
+			.userId(userId)
+			.characterId(3L)
+			.name("rabi")
+			.currentExp(200)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+		Character teenCharacter = Character.builder()
+			.characterId(3L)
+			.species("SLIME")
+			.stage(Character.Stage.TEEN)
+			.requiredExp(200)
+			.thumbnailUrl("https://cdn.example.com/slime-teen.png")
+			.build();
+		Character adultCharacter = Character.builder()
+			.characterId(4L)
+			.species("SLIME")
+			.stage(Character.Stage.ADULT)
+			.requiredExp(300)
+			.thumbnailUrl("https://cdn.example.com/slime-adult.png")
+			.build();
+		Character babyCharacter = Character.builder()
+			.characterId(2L)
+			.species("SLIME")
+			.stage(Character.Stage.BABY)
+			.requiredExp(100)
+			.thumbnailUrl("https://cdn.example.com/slime-baby.png")
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(userCharacter));
+		given(characterRepository.findById(3L)).willReturn(Optional.of(teenCharacter));
+		given(characterRepository.findFirstBySpeciesAndStageOrderByCharacterIdAsc("SLIME", Character.Stage.ADULT))
+			.willReturn(Optional.of(adultCharacter));
+		given(characterRepository.findBySpecies("SLIME")).willReturn(List.of(babyCharacter, teenCharacter, adultCharacter));
+		given(characterUnlockRepository.findByUserId(userId)).willReturn(List.of());
+
+		EvolutionResp resp = service.evolve(userId, 20L);
+
+		assertThat(resp.beforeStage()).isEqualTo("TEEN");
+		assertThat(resp.afterStage()).isEqualTo("ADULT");
+
+		@SuppressWarnings("unchecked")
+		ArgumentCaptor<Iterable<CharacterUnlock>> captor = (ArgumentCaptor<Iterable<CharacterUnlock>>) (ArgumentCaptor<?>)
+			forClass(Iterable.class);
+		then(characterUnlockRepository).should().saveAll(captor.capture());
+
+		ArrayList<Long> unlockedCharacterIds = new ArrayList<>();
+		for (CharacterUnlock unlock : captor.getValue()) {
+			unlockedCharacterIds.add(unlock.getCharacterId());
+			assertThat(unlock.getUserId()).isEqualTo(userId);
+		}
+		assertThat(unlockedCharacterIds).containsExactly(2L, 3L, 4L);
 	}
 
 	@Test
