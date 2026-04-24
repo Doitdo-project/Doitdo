@@ -85,10 +85,10 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
         .toList(growable: false);
     final somedayTodos = todoState.allSomedayTodos;
 
-    // 에러 스낵바 + 성장률 100 → 자동 진화 트리거. 두 작업 모두 character 상태
-    // 변화에 반응하므로 같은 ref.listen 에 묶는다. 진화는 알/미확정 단계에서는
-    // 의미 없고, 이미 100 이었던 상태에서 재렌더될 때 중복 호출되지 않도록
-    // "이전 값이 100 미만이었다가 100 이 된 순간" 만 트리거한다.
+    // 에러 스낵바 + canEvolve 에지 자동 진화 트리거. 두 작업 모두 character 상태
+    // 변화에 반응하므로 같은 ref.listen 에 묶는다. canEvolve 는 BABY/TEEN 에서만
+    // true 가 되고 ADULT 는 canFarewell 로 전환되므로 stage 검사는 생략. 재렌더
+    // 시 중복 호출되지 않도록 "false→true" 순간에만 호출한다.
     ref.listen<AsyncValue<Character?>>(characterViewModelProvider,
         (prev, next) {
       next.whenOrNull(error: (err, _) {
@@ -98,11 +98,9 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
 
       final prevChar = prev?.valueOrNull;
       final nextChar = next.valueOrNull;
-      if (nextChar == null || nextChar.isEgg) return;
-      if (nextChar.growthPercent < 100) return;
-      final wasAlreadyFull =
-          prevChar != null && prevChar.growthPercent >= 100;
-      if (wasAlreadyFull) return;
+      if (nextChar == null || !nextChar.canEvolve) return;
+      final wasAlreadyEvolvable = prevChar != null && prevChar.canEvolve;
+      if (wasAlreadyEvolvable) return;
       ref
           .read(characterViewModelProvider.notifier)
           .evolve(nextChar.userCharacterId);

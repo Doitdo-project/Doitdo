@@ -170,7 +170,12 @@ class CharacterCard extends StatelessWidget {
   // 에만 호출된다.
   String get _displayName => character!.name;
 
-  String get _displayProgressLabel => '성장률 ${character!.growthPercent}%';
+  /// "exp 25/100" 포맷. requiredExp 가 0 인 경우(방어적) 엔 percent 로 폴백.
+  String get _displayProgressLabel {
+    final c = character!;
+    if (c.requiredExp > 0) return '${c.currentExp}/${c.requiredExp}';
+    return '성장률 ${c.growthPercent}%';
+  }
 
   double get _displayProgress =>
       character!.growthPercent.clamp(0, 100) / 100;
