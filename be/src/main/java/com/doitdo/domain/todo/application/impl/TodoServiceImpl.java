@@ -1,13 +1,14 @@
 package com.doitdo.domain.todo.application.impl;
 
-import com.doitdo.domain.todo.api.dto.req.TodoCreateReq;
 import com.doitdo.domain.todo.api.dto.req.TodoCalendarReq;
+import com.doitdo.domain.todo.api.dto.req.TodoCreateReq;
 import com.doitdo.domain.todo.api.dto.req.TodoListReq;
 import com.doitdo.domain.todo.api.dto.req.TodoPriorityChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoSearchReq;
 import com.doitdo.domain.todo.api.dto.req.TodoSnoozeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoStatusChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
+import com.doitdo.domain.todo.event.TodoCompletedEvent;
 import com.doitdo.domain.todo.api.dto.resp.TodoCalendarResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoListResp;
@@ -33,6 +34,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -50,6 +52,7 @@ public class TodoServiceImpl implements TodoService {
 	private final CategoryRepository categoryRepository;
 	private final SnoozeHistoryRepository snoozeHistoryRepository;
 	private final RecurrenceService recurrenceService;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -253,7 +256,16 @@ public class TodoServiceImpl implements TodoService {
 			throw new CustomException(TodoErrorCode.T03_004);
 		}
 
+		TodoStatus beforeStatus = todo.getStatus();
 		todo.changeStatus(req.status());
+
+		// DONE 전이 시 Tamagotchi exp 가산 이벤트 발행.
+		// 실제 지급은 리스너가 AFTER_COMMIT + REQUIRES_NEW 로 처리 (멱등성은 Todo.expGranted 로 보장).
+		// - beforeStatus != DONE && after == DONE 일 때만 발행 → 상태 토글 시 중복 이벤트 방지
+		// - 가산 실패해도 Todo DONE 은 커밋 유지 (사용자 UX 우선)
+		if (beforeStatus != TodoStatus.DONE && req.status() == TodoStatus.DONE) {
+			eventPublisher.publishEvent(new TodoCompletedEvent(userId, todo.getTodoId()));
+		}
 
 		String categoryName = null;
 		if (todo.getCategoryId() != null) {
@@ -261,8 +273,6 @@ public class TodoServiceImpl implements TodoService {
 					.map(Category::getCategoryName)
 					.orElse(null);
 		}
-
-		// TODO: DONE 상태 변경 시 Tamagotchi 도메인 경험치 연동 필요 — Tamagotchi 이벤트 발행 추가 예정
 
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
 		return TodoDetailResp.from(todo, categoryName, count);
