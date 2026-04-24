@@ -65,4 +65,23 @@ public class User extends BaseTimeEntity {
 	public void updatePassword(String encodedPassword) {
 		this.password = encodedPassword;
 	}
+
+	/**
+	 * 회원탈퇴 처리.
+	 *
+	 * <p>{@code isDeleted=true} 로 soft delete 하고 개인정보 필드를 익명화한다.
+	 * <ul>
+	 *   <li>{@code email}: {@code deleted_<userId>_<timestamp>@deleted.local} 로 치환 — UNIQUE 충돌 방지, 같은 이메일로 재가입 가능</li>
+	 *   <li>{@code username}: {@code deleted_<userId>_<timestamp>} 로 치환 — 동일</li>
+	 *   <li>{@code password}: null — 탈퇴 후 로그인 경로 차단</li>
+	 *   <li>{@code streakCount}: 보존 (집계/통계용)</li>
+	 * </ul>
+	 */
+	public void withdraw() {
+		this.isDeleted = true;
+		String marker = "deleted_" + this.userId + "_" + System.currentTimeMillis();
+		this.email = marker + "@deleted.local";
+		this.username = marker;
+		this.password = null;
+	}
 }

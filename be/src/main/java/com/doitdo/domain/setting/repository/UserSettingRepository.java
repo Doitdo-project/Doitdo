@@ -11,4 +11,6 @@ public interface UserSettingRepository extends JpaRepository<UserSetting, Long> 
 	Optional<UserSetting> findByUserId(Long userId);
 
 	List<UserSetting> findAllByEveningReminderEnabledTrueAndEveningReminderTime(LocalTime time);
+
+	void deleteByUserId(Long userId);
 }

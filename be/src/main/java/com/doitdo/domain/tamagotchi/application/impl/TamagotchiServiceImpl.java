@@ -55,6 +55,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		UserCharacter userCharacter = UserCharacter.builder()
 			.userId(userId)
 			.characterId(eggCharacter.getCharacterId())
+			.name("뚜잇이")
 			.growthPercent(0)
 			.isActive(true)
 			.isDeleted(false)
@@ -163,7 +164,8 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		return new HatchCharacterResp(
 			babyCharacter.getCharacterId(),
 			babyCharacter.getStage().name(),
-			userCharacter.getName()
+			userCharacter.getName(),
+			babyCharacter.getThumbnailUrl()
 		);
 	}
 

@@ -2,6 +2,7 @@ package com.doitdo.domain.user.api.controller;
 
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.user.api.dto.req.PasswordChangeReq;
+import com.doitdo.domain.user.api.dto.req.WithdrawReq;
 import com.doitdo.domain.user.api.dto.resp.CheckDuplicateResp;
 import com.doitdo.domain.user.api.dto.resp.UserInfoResp;
 import com.doitdo.domain.user.application.UserService;
@@ -12,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -55,5 +57,17 @@ public class UserController {
 			@Valid @RequestBody PasswordChangeReq req) {
 		userService.changePassword(userDetails.getUserId(), req);
 		return GlobalApiResponse.noContent("비밀번호 변경 완료");
+	}
+
+	@Operation(summary = "회원탈퇴",
+			description = "소프트 삭제(isDeleted=true) + email/username 익명화 + 연관 리소스 정리. "
+					+ "일반 계정은 currentPassword 재입력 필수, OAuth 계정은 생략 가능.")
+	@DeleteMapping("/me")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public GlobalApiResponse<Void> withdraw(
+			@AuthenticationPrincipal CustomUserDetails userDetails,
+			@Valid @RequestBody(required = false) WithdrawReq req) {
+		userService.withdraw(userDetails.getUserId(), req);
+		return GlobalApiResponse.noContent("회원탈퇴 완료");
 	}
 }

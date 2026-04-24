@@ -2,6 +2,7 @@ package com.doitdo.domain.tamagotchi.application.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.never;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -12,6 +13,7 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -79,6 +81,7 @@ class TamagotchiServiceImplTest {
 			.userCharacterId(10L)
 			.userId(userId)
 			.characterId(1L)
+			.name("뚜잇이")
 			.growthPercent(0)
 			.isActive(true)
 			.isDeleted(false)
@@ -98,8 +101,11 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.stage()).isEqualTo("EGG");
 		assertThat(resp.thumbnailUrl()).isEqualTo("https://cdn.example.com/egg.png");
 		assertThat(resp.growthPercent()).isEqualTo(0);
+		assertThat(resp.name()).isEqualTo("뚜잇이");
 		assertThat(resp.equippedUserItemId()).isNull();
-		then(userCharacterRepository).should().save(any(UserCharacter.class));
+		ArgumentCaptor<UserCharacter> captor = forClass(UserCharacter.class);
+		then(userCharacterRepository).should().save(captor.capture());
+		assertThat(captor.getValue().getName()).isEqualTo("뚜잇이");
 	}
 
 	@Test
@@ -255,6 +261,7 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.characterId()).isEqualTo(2L);
 		assertThat(resp.stage()).isEqualTo("BABY");
 		assertThat(resp.name()).isEqualTo("꼬물이");
+		assertThat(resp.thumbnailUrl()).isEqualTo("https://cdn.example.com/slime.png");
 	}
 
 	@Test
