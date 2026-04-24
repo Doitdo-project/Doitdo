@@ -111,12 +111,22 @@ class _HeroThumbnail extends StatelessWidget {
         borderRadius: BorderRadius.circular(16.r),
       ),
       padding: EdgeInsets.all(24.w),
-      child: Image.asset(
-        thumbnailUrl,
-        fit: BoxFit.contain,
-        filterQuality: FilterQuality.none,
-      ),
+      child: thumbnailUrl.isEmpty
+          ? _HeroFallback()
+          : Image.network(
+              thumbnailUrl,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.medium,
+              errorBuilder: (_, _, _) => _HeroFallback(),
+            ),
     );
+  }
+}
+
+class _HeroFallback extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Icon(Icons.pets, size: 72.sp, color: context.colors.textHint);
   }
 }
 
@@ -215,10 +225,16 @@ class _EvolutionCardBody extends StatelessWidget {
             padding: EdgeInsets.all(8.w),
             child: Center(
               child: step.isUnlocked && step.thumbnailUrl.isNotEmpty
-                  ? Image.asset(
+                  ? Image.network(
                       step.thumbnailUrl,
                       fit: BoxFit.contain,
-                      filterQuality: FilterQuality.none,
+                      filterQuality: FilterQuality.medium,
+                      errorBuilder: (_, _, _) => Text(
+                        '?',
+                        style: AppTextStyles.titleMedium.copyWith(
+                          color: colors.textSecondary,
+                        ),
+                      ),
                     )
                   : Text(
                       '?',
