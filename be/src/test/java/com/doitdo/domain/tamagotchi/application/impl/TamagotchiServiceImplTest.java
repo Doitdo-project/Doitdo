@@ -75,6 +75,7 @@ class TamagotchiServiceImplTest {
 			.characterId(1L)
 			.species("SLIME")
 			.stage(Character.Stage.EGG)
+			.requiredExp(0)
 			.thumbnailUrl("https://cdn.example.com/egg.png")
 			.build();
 		UserCharacter savedUserCharacter = UserCharacter.builder()
@@ -82,7 +83,7 @@ class TamagotchiServiceImplTest {
 			.userId(userId)
 			.characterId(1L)
 			.name("뚜잇이")
-			.growthPercent(0)
+			.currentExp(0)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
@@ -101,6 +102,10 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.stage()).isEqualTo("EGG");
 		assertThat(resp.thumbnailUrl()).isEqualTo("https://cdn.example.com/egg.png");
 		assertThat(resp.growthPercent()).isEqualTo(0);
+		assertThat(resp.currentExp()).isEqualTo(0);
+		assertThat(resp.requiredExp()).isEqualTo(0);
+		assertThat(resp.canEvolve()).isFalse();
+		assertThat(resp.canFarewell()).isFalse();
 		assertThat(resp.name()).isEqualTo("뚜잇이");
 		assertThat(resp.equippedUserItemId()).isNull();
 		ArgumentCaptor<UserCharacter> captor = forClass(UserCharacter.class);
@@ -125,7 +130,7 @@ class TamagotchiServiceImplTest {
 			.userId(userId)
 			.characterId(2L)
 			.name("rabi")
-			.growthPercent(20)
+			.currentExp(20)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
@@ -133,6 +138,7 @@ class TamagotchiServiceImplTest {
 			.characterId(2L)
 			.species("SLIME")
 			.stage(Character.Stage.BABY)
+			.requiredExp(100)
 			.thumbnailUrl("https://cdn.example.com/slime.png")
 			.build();
 
@@ -147,6 +153,11 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.characterId()).isEqualTo(2L);
 		assertThat(resp.stage()).isEqualTo("BABY");
 		assertThat(resp.thumbnailUrl()).isEqualTo("https://cdn.example.com/slime.png");
+		assertThat(resp.growthPercent()).isEqualTo(20);
+		assertThat(resp.currentExp()).isEqualTo(20);
+		assertThat(resp.requiredExp()).isEqualTo(100);
+		assertThat(resp.canEvolve()).isFalse(); // 20 < 100
+		assertThat(resp.canFarewell()).isFalse();
 		then(userCharacterRepository).should(never()).save(any(UserCharacter.class));
 	}
 
@@ -159,7 +170,7 @@ class TamagotchiServiceImplTest {
 			.userId(userId)
 			.characterId(1L)
 			.name("old")
-			.growthPercent(0)
+			.currentExp(0)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
@@ -196,12 +207,14 @@ class TamagotchiServiceImplTest {
 			.characterId(1L)
 			.species("SLIME")
 			.stage(Character.Stage.BABY)
+			.requiredExp(100)
 			.thumbnailUrl("https://cdn.example.com/slime.png")
 			.build();
 		Character rabbit = Character.builder()
 			.characterId(2L)
 			.species("RABBIT")
 			.stage(Character.Stage.TEEN)
+			.requiredExp(200)
 			.thumbnailUrl("https://cdn.example.com/rabbit.png")
 			.build();
 		CharacterUnlock unlock = CharacterUnlock.builder()
@@ -233,7 +246,7 @@ class TamagotchiServiceImplTest {
 			.userId(userId)
 			.characterId(1L)
 			.name("꼬물이")
-			.growthPercent(0)
+			.currentExp(0)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
@@ -241,12 +254,14 @@ class TamagotchiServiceImplTest {
 			.characterId(1L)
 			.species("SLIME")
 			.stage(Character.Stage.EGG)
+			.requiredExp(0)
 			.thumbnailUrl("https://cdn.example.com/egg.png")
 			.build();
 		Character babyCharacter = Character.builder()
 			.characterId(2L)
 			.species("SLIME")
 			.stage(Character.Stage.BABY)
+			.requiredExp(100)
 			.thumbnailUrl("https://cdn.example.com/slime.png")
 			.build();
 
@@ -273,7 +288,7 @@ class TamagotchiServiceImplTest {
 			.userId(userId)
 			.characterId(1L)
 			.name("SLIME")
-			.growthPercent(0)
+			.currentExp(0)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
@@ -281,6 +296,7 @@ class TamagotchiServiceImplTest {
 			.characterId(1L)
 			.species("SLIME")
 			.stage(Character.Stage.BABY)
+			.requiredExp(100)
 			.thumbnailUrl("https://cdn.example.com/slime.png")
 			.build();
 
@@ -306,7 +322,7 @@ class TamagotchiServiceImplTest {
 			.userId(userId)
 			.characterId(1L)
 			.name(null)
-			.growthPercent(0)
+			.currentExp(0)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
@@ -314,6 +330,7 @@ class TamagotchiServiceImplTest {
 			.characterId(1L)
 			.species("SLIME")
 			.stage(Character.Stage.EGG)
+			.requiredExp(0)
 			.thumbnailUrl("https://cdn.example.com/egg.png")
 			.build();
 
@@ -336,12 +353,13 @@ class TamagotchiServiceImplTest {
 	void evolveUpdatesBabyToTeenAndReturnsEvolutionResp() {
 		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
+		// currentExp=100 으로 BABY requiredExp=100 달성 → 진화 가능
 		UserCharacter userCharacter = UserCharacter.builder()
 			.userCharacterId(20L)
 			.userId(userId)
 			.characterId(2L)
 			.name("꼬물이")
-			.growthPercent(120)
+			.currentExp(100)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
@@ -349,12 +367,15 @@ class TamagotchiServiceImplTest {
 			.characterId(2L)
 			.species("SLIME")
 			.stage(Character.Stage.BABY)
+			.requiredExp(100)
 			.thumbnailUrl("https://cdn.example.com/slime-baby.png")
 			.build();
+		// TEEN 의 requiredExp=200
 		Character teenCharacter = Character.builder()
 			.characterId(3L)
 			.species("SLIME")
 			.stage(Character.Stage.TEEN)
+			.requiredExp(200)
 			.thumbnailUrl("https://cdn.example.com/slime-teen.png")
 			.build();
 
@@ -369,11 +390,80 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.tamagotchiId()).isEqualTo(20L);
 		assertThat(resp.beforeStage()).isEqualTo("BABY");
 		assertThat(resp.afterStage()).isEqualTo("TEEN");
-		assertThat(resp.currentExp()).isEqualTo(0);
-		assertThat(resp.requiredExp()).isEqualTo(100);
+		assertThat(resp.currentExp()).isEqualTo(0); // 진화 직후 리셋
+		assertThat(resp.requiredExp()).isEqualTo(200); // TEEN requiredExp
 		assertThat(resp.animationUrl()).isEqualTo("https://cdn.example.com/tamagotchi/animations/baby-to-teen");
 		assertThat(resp.characterImageUrl()).isEqualTo("https://cdn.example.com/slime-teen.png");
 		assertThat(resp.evolvedAt()).isNotBlank();
+	}
+
+	@Test
+	void evolveFailsWhenExpInsufficient() {
+		TamagotchiServiceImpl service = service();
+		Long userId = 1L;
+		// currentExp=50 < requiredExp=100 → M05_006
+		UserCharacter userCharacter = UserCharacter.builder()
+			.userCharacterId(20L)
+			.userId(userId)
+			.characterId(2L)
+			.name("꼬물이")
+			.currentExp(50)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+		Character babyCharacter = Character.builder()
+			.characterId(2L)
+			.species("SLIME")
+			.stage(Character.Stage.BABY)
+			.requiredExp(100)
+			.thumbnailUrl("https://cdn.example.com/slime-baby.png")
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(userCharacter));
+		given(characterRepository.findById(2L)).willReturn(Optional.of(babyCharacter));
+
+		assertThatThrownBy(() -> service.evolve(userId, 20L))
+			.isInstanceOf(CustomException.class)
+			.satisfies(throwable -> {
+				CustomException exception = (CustomException)throwable;
+				assertThat(exception.getErrorCode()).isEqualTo(TamagotchiErrorCode.M05_006);
+				assertThat(exception.getErrorCode().getHttpStatus()).isEqualTo(HttpStatus.CONFLICT);
+			});
+	}
+
+	@Test
+	void evolveFailsWhenRequiredExpIsNull() {
+		TamagotchiServiceImpl service = service();
+		Long userId = 1L;
+		// requiredExp=null → M05_005 (마이그레이션 미완료)
+		UserCharacter userCharacter = UserCharacter.builder()
+			.userCharacterId(20L)
+			.userId(userId)
+			.characterId(2L)
+			.name("꼬물이")
+			.currentExp(100)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+		Character babyCharacter = Character.builder()
+			.characterId(2L)
+			.species("SLIME")
+			.stage(Character.Stage.BABY)
+			.requiredExp(null)
+			.thumbnailUrl("https://cdn.example.com/slime-baby.png")
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(userCharacter));
+		given(characterRepository.findById(2L)).willReturn(Optional.of(babyCharacter));
+
+		assertThatThrownBy(() -> service.evolve(userId, 20L))
+			.isInstanceOf(CustomException.class)
+			.satisfies(throwable -> {
+				CustomException exception = (CustomException)throwable;
+				assertThat(exception.getErrorCode()).isEqualTo(TamagotchiErrorCode.M05_005);
+			});
 	}
 
 	@Test
@@ -385,7 +475,7 @@ class TamagotchiServiceImplTest {
 			.userId(userId)
 			.characterId(4L)
 			.name("꼬물이")
-			.growthPercent(0)
+			.currentExp(0)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
@@ -393,12 +483,14 @@ class TamagotchiServiceImplTest {
 			.characterId(4L)
 			.species("SLIME")
 			.stage(Character.Stage.ADULT)
+			.requiredExp(300)
 			.thumbnailUrl("https://cdn.example.com/slime-adult.png")
 			.build();
 		Character eggCharacter = Character.builder()
 			.characterId(1L)
 			.species("DRAGON")
 			.stage(Character.Stage.EGG)
+			.requiredExp(0)
 			.thumbnailUrl("https://cdn.example.com/slime-egg.png")
 			.build();
 
@@ -425,7 +517,7 @@ class TamagotchiServiceImplTest {
 			.userId(userId)
 			.characterId(1L)
 			.name("SLIME")
-			.growthPercent(0)
+			.currentExp(0)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
@@ -433,6 +525,7 @@ class TamagotchiServiceImplTest {
 			.characterId(1L)
 			.species("SLIME")
 			.stage(Character.Stage.EGG)
+			.requiredExp(0)
 			.thumbnailUrl("https://cdn.example.com/slime-egg.png")
 			.build();
 
@@ -458,7 +551,7 @@ class TamagotchiServiceImplTest {
 			.userId(userId)
 			.characterId(1L)
 			.name("SLIME")
-			.growthPercent(0)
+			.currentExp(0)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
@@ -466,6 +559,7 @@ class TamagotchiServiceImplTest {
 			.characterId(1L)
 			.species("SLIME")
 			.stage(Character.Stage.TEEN)
+			.requiredExp(200)
 			.thumbnailUrl("https://cdn.example.com/slime-teen.png")
 			.build();
 

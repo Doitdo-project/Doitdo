@@ -119,6 +119,18 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 
 `@ApiErrorCodes` 어노테이션이 이 Registry 를 통해 코드를 해석하므로, 새 enum 을 추가하면 반드시 `ErrorCodeRegistry.SOURCES` 에도 등록한다.
 
+### `TamagotchiErrorCode` 추가 코드 (exp system, 2026-04)
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `M05_006` | `M05-006` | 409 | 아직 진화할 수 없음 — 경험치 부족 |
+
+### `UserErrorCode` 추가 코드 (exp system, 2026-04)
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `U00_005` | `U00-005` | 500 | 회원가입 초기화 실패 — EGG Character row 누락 등 운영 이슈 |
+
 ## 5. 새 코드 추가 절차
 
 1. 노션 API 명세서에서 코드 충돌 여부 확인 (외부 SSOT).

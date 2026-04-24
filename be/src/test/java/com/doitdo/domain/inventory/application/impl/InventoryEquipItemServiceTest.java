@@ -56,7 +56,7 @@ class InventoryEquipItemServiceTest {
 			.characterId(2L)
 			.equipedItemsId(null)
 			.name("saesangi")
-			.growthPercent(45)
+			.currentExp(45)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
