@@ -73,6 +73,12 @@ TABLES = [
         "reason": "primary key user_id",
     },
     {
+        "name": "user_streaks",
+        "entity": "UserStreak",
+        "condition": "user_id IN ({users})",
+        "reason": "direct user_id, created lazily on first TODO DONE",
+    },
+    {
         "name": "user_wallets",
         "entity": "UserWallet",
         "condition": "user_id IN ({users})",
@@ -107,6 +113,7 @@ ENTITY_TABLE_MAPPING = [
     ("DeviceToken", "device_tokens", "user_id"),
     ("Notification", "notifications", "user_id"),
     ("UserSetting", "user_settings", "user_id PK"),
+    ("UserStreak", "user_streaks", "user_id PK"),
     ("PurchaseLog", "purchase_logs", "user_id, user_item_id"),
     ("Character", "characters", "-"),
     ("CharacterAction", "character_actions", "character_id"),
@@ -159,12 +166,17 @@ def parse_args():
 
 def resolve_config(args):
     env_values = parse_env_file(args.env_file)
+
+    def _get(dotted_key, uppercase_key):
+        """dotted(Spring properties) 와 UPPERCASE(env file) 키를 모두 시도한다."""
+        return env_values.get(dotted_key) or env_values.get(uppercase_key)
+
     config = {
-        "host": env_values.get("db.host"),
-        "port": env_values.get("db.port"),
-        "db": env_values.get("db.name"),
-        "user": env_values.get("db.username"),
-        "password": env_values.get("db.password"),
+        "host": _get("db.host", "DB_HOST"),
+        "port": _get("db.port", "DB_PORT"),
+        "db": _get("db.name", "DB_NAME"),
+        "user": _get("db.username", "DB_USERNAME"),
+        "password": _get("db.password", "DB_PASSWORD"),
     }
     for key in ("host", "port", "db", "user", "password"):
         override = getattr(args, key)
