@@ -62,10 +62,14 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
 
   /// 알 10회 탭 후 호출. 성공하면 true, 실패해도 이전 상태(알)는 유지한다.
   /// 에러 스낵바는 호출자가 띄운다.
+  ///
+  /// hatch 응답은 characterId/stage/name/thumbnailUrl 만 내려주기 때문에
+  /// userCharacterId / growthPercent 가 비어있다. 진화 API 호출에 userCharacterId
+  /// 가 필요하므로 성공 직후 GET /api/characters/me 로 전체 정보를 재조회한다.
   Future<bool> hatchEgg() async {
     try {
-      final character = await _repository.hatchEgg();
-      state = AsyncValue.data(character);
+      await _repository.hatchEgg();
+      await load();
       return true;
     } catch (e, st) {
       appLogger.e('hatch failed', error: e, stackTrace: st);
