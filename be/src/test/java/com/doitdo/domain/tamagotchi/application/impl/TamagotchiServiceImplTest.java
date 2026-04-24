@@ -74,6 +74,7 @@ class TamagotchiServiceImplTest {
 		Character eggCharacter = Character.builder()
 			.characterId(1L)
 			.species("SLIME")
+			.name("\uB69C\uC787")
 			.stage(Character.Stage.EGG)
 			.requiredExp(0)
 			.thumbnailUrl("https://cdn.example.com/egg.png")
@@ -82,7 +83,7 @@ class TamagotchiServiceImplTest {
 			.userCharacterId(10L)
 			.userId(userId)
 			.characterId(1L)
-			.name("뚜잇이")
+			.name("\uB69C\uC787")
 			.currentExp(0)
 			.isActive(true)
 			.isDeleted(false)
@@ -106,13 +107,12 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.requiredExp()).isEqualTo(0);
 		assertThat(resp.canEvolve()).isFalse();
 		assertThat(resp.canFarewell()).isFalse();
-		assertThat(resp.name()).isEqualTo("뚜잇이");
+		assertThat(resp.name()).isEqualTo("\uB69C\uC787");
 		assertThat(resp.equippedUserItemId()).isNull();
 		ArgumentCaptor<UserCharacter> captor = forClass(UserCharacter.class);
 		then(userCharacterRepository).should().save(captor.capture());
-		assertThat(captor.getValue().getName()).isEqualTo("뚜잇이");
+		assertThat(captor.getValue().getName()).isEqualTo("\uB69C\uC787");
 	}
-
 	@Test
 	void receiveEggReturnsCurrentCharacterWithoutSavingWhenActiveCharacterExists() {
 		TamagotchiServiceImpl service = service();
@@ -245,7 +245,7 @@ class TamagotchiServiceImplTest {
 			.userCharacterId(10L)
 			.userId(userId)
 			.characterId(1L)
-			.name("꼬물이")
+			.name("rabi")
 			.currentExp(0)
 			.isActive(true)
 			.isDeleted(false)
@@ -275,7 +275,7 @@ class TamagotchiServiceImplTest {
 
 		assertThat(resp.characterId()).isEqualTo(2L);
 		assertThat(resp.stage()).isEqualTo("BABY");
-		assertThat(resp.name()).isEqualTo("꼬물이");
+		assertThat(resp.name()).isEqualTo("rabi");
 		assertThat(resp.thumbnailUrl()).isEqualTo("https://cdn.example.com/slime.png");
 	}
 
@@ -353,12 +353,12 @@ class TamagotchiServiceImplTest {
 	void evolveUpdatesBabyToTeenAndReturnsEvolutionResp() {
 		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
-		// currentExp=100 으로 BABY requiredExp=100 달성 → 진화 가능
+		// currentExp=100 ??곗쨮 BABY requiredExp=100 ??苑???筌욊쑵??揶쎛??
 		UserCharacter userCharacter = UserCharacter.builder()
 			.userCharacterId(20L)
 			.userId(userId)
 			.characterId(2L)
-			.name("꼬물이")
+			.name("rabi")
 			.currentExp(100)
 			.isActive(true)
 			.isDeleted(false)
@@ -370,7 +370,7 @@ class TamagotchiServiceImplTest {
 			.requiredExp(100)
 			.thumbnailUrl("https://cdn.example.com/slime-baby.png")
 			.build();
-		// TEEN 의 requiredExp=200
+		// TEEN ??requiredExp=200
 		Character teenCharacter = Character.builder()
 			.characterId(3L)
 			.species("SLIME")
@@ -390,7 +390,7 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.tamagotchiId()).isEqualTo(20L);
 		assertThat(resp.beforeStage()).isEqualTo("BABY");
 		assertThat(resp.afterStage()).isEqualTo("TEEN");
-		assertThat(resp.currentExp()).isEqualTo(0); // 진화 직후 리셋
+		assertThat(resp.currentExp()).isEqualTo(0); // 筌욊쑵??筌욊낱???귐딅?
 		assertThat(resp.requiredExp()).isEqualTo(200); // TEEN requiredExp
 		assertThat(resp.animationUrl()).isEqualTo("https://cdn.example.com/tamagotchi/animations/baby-to-teen");
 		assertThat(resp.characterImageUrl()).isEqualTo("https://cdn.example.com/slime-teen.png");
@@ -401,12 +401,12 @@ class TamagotchiServiceImplTest {
 	void evolveFailsWhenExpInsufficient() {
 		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
-		// currentExp=50 < requiredExp=100 → M05_006
+		// currentExp=50 < requiredExp=100 ??M05_006
 		UserCharacter userCharacter = UserCharacter.builder()
 			.userCharacterId(20L)
 			.userId(userId)
 			.characterId(2L)
-			.name("꼬물이")
+			.name("rabi")
 			.currentExp(50)
 			.isActive(true)
 			.isDeleted(false)
@@ -436,12 +436,12 @@ class TamagotchiServiceImplTest {
 	void evolveFailsWhenRequiredExpIsNull() {
 		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
-		// requiredExp=null → M05_005 (마이그레이션 미완료)
+		// requiredExp=null ??M05_005 (筌띾뜆?졿뉩紐껋쟿??곷?沃섎챷?욜뙴?
 		UserCharacter userCharacter = UserCharacter.builder()
 			.userCharacterId(20L)
 			.userId(userId)
 			.characterId(2L)
-			.name("꼬물이")
+			.name("rabi")
 			.currentExp(100)
 			.isActive(true)
 			.isDeleted(false)
@@ -474,7 +474,7 @@ class TamagotchiServiceImplTest {
 			.userCharacterId(30L)
 			.userId(userId)
 			.characterId(4L)
-			.name("꼬물이")
+			.name("rabi")
 			.currentExp(0)
 			.isActive(true)
 			.isDeleted(false)
