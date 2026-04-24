@@ -72,6 +72,37 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
       return false;
     }
   }
+
+  /// 이름짓기 화면 제출. 성공 시 이름 반영된 캐릭터로 state 갱신.
+  Future<bool> renameCharacter(String name) async {
+    try {
+      final character = await _repository.renameCharacter(name);
+      state = AsyncValue.data(character);
+      return true;
+    } catch (e, st) {
+      appLogger.e('rename failed', error: e, stackTrace: st);
+      return false;
+    }
+  }
+
+  /// 성장률 100% 도달 시 호출. 동시에 여러 번 호출되는 걸 방지하기 위해
+  /// in-flight 플래그로 재진입을 막는다. 진화 후에는 [load] 로 최신 캐릭터
+  /// 정보를 다시 당긴다.
+  bool _evolving = false;
+  Future<bool> evolve(int userCharacterId) async {
+    if (_evolving) return false;
+    _evolving = true;
+    try {
+      await _repository.evolveCharacter(userCharacterId);
+      await load();
+      return true;
+    } catch (e, st) {
+      appLogger.e('evolve failed', error: e, stackTrace: st);
+      return false;
+    } finally {
+      _evolving = false;
+    }
+  }
 }
 
 final characterViewModelProvider =
