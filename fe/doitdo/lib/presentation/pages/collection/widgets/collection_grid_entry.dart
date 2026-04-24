@@ -46,25 +46,14 @@ class CollectionGridEntry extends StatelessWidget {
               borderRadius: BorderRadius.circular(_cardRadius.r),
               child: AspectRatio(
                 aspectRatio: 0.85,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.streakBg,
-                        borderRadius: BorderRadius.circular(_cardRadius.r),
-                        border: Border.all(color: colors.border, width: 1),
-                      ),
-                      padding: EdgeInsets.all(_cardInnerPadding.w),
-                      child: _Thumbnail(entry: entry),
-                    ),
-                    if (unlocked && entry.meetCount >= 2)
-                      Positioned(
-                        top: 6.h,
-                        right: 6.w,
-                        child: _MeetCountBadge(count: entry.meetCount),
-                      ),
-                  ],
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.streakBg,
+                    borderRadius: BorderRadius.circular(_cardRadius.r),
+                    border: Border.all(color: colors.border, width: 1),
+                  ),
+                  padding: EdgeInsets.all(_cardInnerPadding.w),
+                  child: _Thumbnail(entry: entry),
                 ),
               ),
             ),
@@ -72,7 +61,7 @@ class CollectionGridEntry extends StatelessWidget {
         ),
         SizedBox(height: 8.h),
         Text(
-          unlocked ? entry.species : '???',
+          unlocked && entry.name.isNotEmpty ? entry.name : '???',
           style: AppTextStyles.labelLarge.copyWith(
             color: unlocked ? colors.textPrimary : colors.textSecondary,
           ),
@@ -129,26 +118,3 @@ class _ThumbnailFallback extends StatelessWidget {
   }
 }
 
-class _MeetCountBadge extends StatelessWidget {
-  const _MeetCountBadge({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-      decoration: BoxDecoration(
-        color: AppColors.streakCheck, // 주황 accent
-        borderRadius: BorderRadius.circular(8.r),
-      ),
-      child: Text(
-        'x$count',
-        style: AppTextStyles.labelSmall.copyWith(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}

@@ -24,8 +24,12 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
   /// 여기서는 [ServerException] 전체를 "미수령" 으로 해석한다. 추후 404 코드가
   /// 확정되면 `e.statusCode == 404` 만 미수령으로 좁히는 게 바람직하다.
   /// [UnauthorizedException] / 네트워크 타임아웃 등은 진짜 에러로 올린다.
+  ///
+  /// `copyWithPrevious` 로 직전 값을 유지한 채 isLoading 만 true 로 돌리므로,
+  /// UI 는 이전 캐릭터 정보를 계속 표시하면서 위에 작은 로딩 인디케이터만 얹으면
+  /// 된다 (진화/부화/독립 중 chrome 이 통째로 사라지는 깜빡임 방지).
   Future<void> load() async {
-    state = const AsyncValue.loading();
+    state = const AsyncValue<Character?>.loading().copyWithPrevious(state);
     try {
       final character = await _repository.getMyCharacter();
       state = AsyncValue.data(character);
@@ -37,9 +41,24 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
     }
   }
 
+  /// [load] 의 조용한 변형. state 를 loading 으로 먼저 전환하지 않고, 성공 시에만
+  /// data 로 갱신한다. todo 완료 후 exp 반영 체크처럼 사용자에게 로딩 스피너를
+  /// 보일 필요가 없는 백그라운드 리프레시에 사용. 실패 시 기존 상태를 유지하고
+  /// 로그만 남긴다.
+  Future<void> refresh() async {
+    try {
+      final character = await _repository.getMyCharacter();
+      state = AsyncValue.data(character);
+    } on ServerException catch (e) {
+      appLogger.d('character refresh: server ${e.statusCode} (silent)');
+    } catch (e, st) {
+      appLogger.e('character refresh failed', error: e, stackTrace: st);
+    }
+  }
+
   /// 알 1회 수령. 완료 후 state 는 data(character) 로 전환된다.
   Future<void> receiveEgg() async {
-    state = const AsyncValue.loading();
+    state = const AsyncValue<Character?>.loading().copyWithPrevious(state);
     try {
       final character = await _repository.receiveEgg();
       state = AsyncValue.data(character);
@@ -78,10 +97,14 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
   }
 
   /// 이름짓기 화면 제출. 성공 시 이름 반영된 캐릭터로 state 갱신.
+  ///
+  /// rename 응답도 hatch 와 동일하게 characterId/name 2 필드만 내려주므로
+  /// 직접 state 에 꽂으면 userCharacterId/growthPercent 등이 0 으로 리셋된다.
+  /// 성공 직후 GET /api/characters/me 로 전체 정보를 재조회한다.
   Future<bool> renameCharacter(String name) async {
     try {
-      final character = await _repository.renameCharacter(name);
-      state = AsyncValue.data(character);
+      await _repository.renameCharacter(name);
+      await load();
       return true;
     } catch (e, st) {
       appLogger.e('rename failed', error: e, stackTrace: st);
@@ -105,6 +128,19 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
       return false;
     } finally {
       _evolving = false;
+    }
+  }
+
+  /// ADULT + canFarewell 상태에서 사용자가 독립을 승인했을 때 호출.
+  /// 서버가 다음 알을 자동 배정하므로 [load] 로 새 캐릭터 상태를 당겨온다.
+  Future<bool> farewell() async {
+    try {
+      await _repository.approveFarewell(approved: true);
+      await load();
+      return true;
+    } catch (e, st) {
+      appLogger.e('farewell failed', error: e, stackTrace: st);
+      return false;
     }
   }
 }

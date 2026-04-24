@@ -35,4 +35,13 @@ class CharacterRepositoryImpl extends BaseRepository
   Future<List<CollectionEntry>> getEncyclopedia() => safeApiCall(
         () => _api.getEncyclopedia(),
       ).then((dto) => dto.items.map((item) => item.toEntry()).toList());
+
+  @override
+  Future<EncyclopediaDetail> getEncyclopediaDetail(String species) =>
+      safeApiCall(() => _api.getEncyclopediaDetail(species))
+          .then((dto) => dto.toEntity());
+
+  @override
+  Future<void> approveFarewell({required bool approved}) =>
+      safeApiCall(() => _api.approveFarewell({'approved': approved}));
 }

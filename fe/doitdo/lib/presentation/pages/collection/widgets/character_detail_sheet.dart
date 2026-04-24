@@ -1,62 +1,107 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-
 import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/models/collection_entry.dart';
+import 'package:doitdo/presentation/providers/app_data_providers.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+
+/// 탭한 종에 대해 상세 API 를 호출해 바텀시트 내용에 바인딩하는 FutureProvider.
+///
+/// 바텀시트가 열릴 때 한 번 호출되고, 닫히면 autoDispose 로 해제된다.
+final encyclopediaDetailProvider = FutureProvider.autoDispose
+    .family<EncyclopediaDetail, String>((ref, species) async {
+      final repo = ref.watch(characterRepositoryProvider);
+      return repo.getEncyclopediaDetail(species);
+    });
 
 /// 도감에서 해금된 캐릭터를 탭했을 때 보여주는 상세 바텀시트.
-class CharacterDetailSheet extends StatelessWidget {
-  const CharacterDetailSheet({super.key, required this.entry});
+///
+/// [species] 는 BE 의 종 enum 값(예: `CAT`). 열리는 순간 상세 API 를 호출해
+/// birthBackground / encounterCount / 진화 3단계 정보를 받아 렌더한다.
+/// [currentStage] 는 리스트에서 넘겨준 사용자의 현재 단계로, 진화 트리에서
+/// "현재" 배지 위치를 결정한다.
+class CharacterDetailSheet extends ConsumerWidget {
+  const CharacterDetailSheet({
+    super.key,
+    required this.species,
+    required this.currentStage,
+  });
 
-  final CollectionEntry entry;
+  final String species;
+  final CharacterStage currentStage;
 
-  // 주황 accent — NOW 뱃지 / 현재 단계 테두리 강조.
+  // 주황 accent — 현재 단계 테두리/배지 강조.
   static const Color _accent = AppColors.streakCheck;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncDetail = ref.watch(encyclopediaDetailProvider(species));
+    return Padding(
+      padding: EdgeInsets.fromLTRB(8.w, 8.h, 8.w, 16.h),
+      child: asyncDetail.when(
+        loading: () => _LoadingBox(),
+        error: (err, _) => _ErrorBox(
+          onRetry: () => ref.invalidate(encyclopediaDetailProvider(species)),
+        ),
+        data: (detail) =>
+            _DetailContent(detail: detail, currentStage: currentStage),
+      ),
+    );
+  }
+}
+
+class _DetailContent extends StatelessWidget {
+  const _DetailContent({required this.detail, required this.currentStage});
+
+  final EncyclopediaDetail detail;
+  final CharacterStage currentStage;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    // 현재 단계 데이터를 헤더에 사용 (adult 를 가리지 않도록 실제 진행에 맞춤).
+    final current = switch (currentStage) {
+      CharacterStage.baby => detail.baby,
+      CharacterStage.teen => detail.teen,
+      CharacterStage.adult => detail.adult,
+    };
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(8.w, 8.h, 8.w, 16.h),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(height: 16.h),
-          Center(child: _HeroThumbnail(thumbnailUrl: entry.thumbnailUrl)),
-          SizedBox(height: 12.h),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(height: 16.h),
+        Center(child: _HeroThumbnail(thumbnailUrl: current.thumbnailUrl)),
+        SizedBox(height: 12.h),
+        Center(
+          child: Text(
+            current.name,
+            style: AppTextStyles.titleLarge.copyWith(color: colors.textPrimary),
+          ),
+        ),
+        if (detail.encounterCount > 0) ...[
+          SizedBox(height: 6.h),
           Center(
             child: Text(
-              '#${entry.characterId.toString().padLeft(3, '0')}',
-              style: AppTextStyles.labelMedium.copyWith(
+              '지금까지 ${detail.encounterCount}번 만났어요',
+              style: AppTextStyles.labelSmall.copyWith(
                 color: colors.textSecondary,
               ),
             ),
           ),
-          SizedBox(height: 4.h),
-          Center(
-            child: Text(
-              entry.species,
-              style: AppTextStyles.titleLarge.copyWith(
-                color: colors.textPrimary,
-              ),
-            ),
-          ),
-          SizedBox(height: 24.h),
-          _BirthStorySection(story: entry.birthStory),
-          SizedBox(height: 24.h),
-          Text(
-            '진화 트리',
-            style:
-                AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
-          ),
-          SizedBox(height: 12.h),
-          _EvolutionTree(steps: entry.evolutionTree),
         ],
-      ),
+        SizedBox(height: 24.h),
+        _BirthStorySection(story: detail.birthBackground),
+        SizedBox(height: 24.h),
+        Text(
+          '진화 트리',
+          style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
+        ),
+        SizedBox(height: 12.h),
+        _EvolutionTree(detail: detail, currentStage: currentStage),
+      ],
     );
   }
 }
@@ -130,16 +175,14 @@ class _HeroFallback extends StatelessWidget {
   }
 }
 
-/// 진화 트리.
-///
-/// 이미지 카드 행과 라벨(이름/LV) 행을 **분리된 2단 Row** 로 그린다.
-/// 이미지 카드는 정사각이고 Row 의 `center` 정렬이 카드 중앙에 맞춰지므로
-/// 화살표가 자연스럽게 **이미지 중앙** 과 수평 정렬된다.
-/// 라벨 행에는 화살표와 동일 폭의 투명 spacer 를 넣어 칸 폭을 맞춘다.
+/// 진화 트리. 이미지 카드 행과 라벨(이름 + 단계) 행을 분리된 Row 로 그린다.
+/// 이미지 카드는 정사각이고 Row center 정렬이 카드 중앙에 맞춰지므로 화살표가
+/// 자연스럽게 이미지 중앙과 수평 정렬된다.
 class _EvolutionTree extends StatelessWidget {
-  const _EvolutionTree({required this.steps});
+  const _EvolutionTree({required this.detail, required this.currentStage});
 
-  final List<EvolutionStep> steps;
+  final EncyclopediaDetail detail;
+  final CharacterStage currentStage;
 
   static const double _arrowSize = 20;
   static const double _cellInnerPadding = 6;
@@ -147,20 +190,23 @@ class _EvolutionTree extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final stages = detail.stagesInOrder;
+
     return Column(
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            for (var i = 0; i < steps.length; i++) ...[
+            for (var i = 0; i < stages.length; i++) ...[
               Expanded(
                 child: Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: _cellInnerPadding.w),
-                  child: _EvolutionCardBody(step: steps[i]),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: _cellInnerPadding.w,
+                  ),
+                  child: _EvolutionCardBody(data: stages[i].data),
                 ),
               ),
-              if (i != steps.length - 1)
+              if (i != stages.length - 1)
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 2.w),
                   child: Icon(
@@ -175,16 +221,19 @@ class _EvolutionTree extends StatelessWidget {
         SizedBox(height: 8.h),
         Row(
           children: [
-            for (var i = 0; i < steps.length; i++) ...[
+            for (var i = 0; i < stages.length; i++) ...[
               Expanded(
                 child: Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: _cellInnerPadding.w),
-                  child: _EvolutionCardLabel(step: steps[i]),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: _cellInnerPadding.w,
+                  ),
+                  child: _EvolutionCardLabel(
+                    name: stages[i].data.name,
+                    stageLabel: stageLabelOf(stages[i].stage),
+                  ),
                 ),
               ),
-              // 화살표 폭만큼 비워 라벨과 이미지의 칸 폭을 맞춘다.
-              if (i != steps.length - 1)
+              if (i != stages.length - 1)
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 2.w),
                   child: SizedBox(width: _arrowSize.sp),
@@ -198,15 +247,13 @@ class _EvolutionTree extends StatelessWidget {
 }
 
 class _EvolutionCardBody extends StatelessWidget {
-  const _EvolutionCardBody({required this.step});
+  const _EvolutionCardBody({required this.data});
 
-  final EvolutionStep step;
+  final EncyclopediaStage data;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final accent = CharacterDetailSheet._accent;
-    final isCurrent = step.isCurrent;
 
     return Stack(
       clipBehavior: Clip.none,
@@ -218,15 +265,21 @@ class _EvolutionCardBody extends StatelessWidget {
               color: AppColors.streakBg,
               borderRadius: BorderRadius.circular(12.r),
               border: Border.all(
-                color: isCurrent ? accent : colors.border,
-                width: isCurrent ? 2 : 1,
+                color: colors.border,
+                width: 1,
               ),
             ),
             padding: EdgeInsets.all(8.w),
             child: Center(
-              child: step.isUnlocked && step.thumbnailUrl.isNotEmpty
-                  ? Image.network(
-                      step.thumbnailUrl,
+              child: data.thumbnailUrl.isEmpty
+                  ? Text(
+                      '?',
+                      style: AppTextStyles.titleMedium.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    )
+                  : Image.network(
+                      data.thumbnailUrl,
                       fit: BoxFit.contain,
                       filterQuality: FilterQuality.medium,
                       errorBuilder: (_, _, _) => Text(
@@ -235,44 +288,20 @@ class _EvolutionCardBody extends StatelessWidget {
                           color: colors.textSecondary,
                         ),
                       ),
-                    )
-                  : Text(
-                      '?',
-                      style: AppTextStyles.titleMedium.copyWith(
-                        color: colors.textSecondary,
-                      ),
                     ),
             ),
           ),
         ),
-        if (isCurrent)
-          Positioned(
-            top: -8.h,
-            right: -4.w,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-              decoration: BoxDecoration(
-                color: accent,
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-              child: Text(
-                '현재',
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
       ],
     );
   }
 }
 
 class _EvolutionCardLabel extends StatelessWidget {
-  const _EvolutionCardLabel({required this.step});
+  const _EvolutionCardLabel({required this.name, required this.stageLabel});
 
-  final EvolutionStep step;
+  final String name;
+  final String stageLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -281,18 +310,49 @@ class _EvolutionCardLabel extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          step.name,
-          style: AppTextStyles.labelMedium.copyWith(
-            color: step.isUnlocked ? colors.textPrimary : colors.textSecondary,
-          ),
-        ),
-        Text(
-          'LV.${step.level}',
-          style: AppTextStyles.labelSmall.copyWith(
-            color: colors.textSecondary,
-          ),
+          stageLabel,
+          style: AppTextStyles.labelMedium.copyWith(color: colors.textPrimary),
         ),
       ],
+    );
+  }
+}
+
+class _LoadingBox extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 240.h,
+      child: const Center(child: CircularProgressIndicator()),
+    );
+  }
+}
+
+class _ErrorBox extends StatelessWidget {
+  const _ErrorBox({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return SizedBox(
+      height: 240.h,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '상세 정보를 불러오지 못했어요.',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: colors.textPrimary,
+              ),
+            ),
+            SizedBox(height: 12.h),
+            TextButton(onPressed: onRetry, child: const Text('다시 시도')),
+          ],
+        ),
+      ),
     );
   }
 }
