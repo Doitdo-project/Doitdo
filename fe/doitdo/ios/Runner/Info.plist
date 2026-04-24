@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -20,57 +22,6 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
-	<key>CFBundleVersion</key>
-	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen</string>
-	<key>UIMainStoryboardFile</key>
-	<string>Main</string>
-	<key>UISupportedInterfaceOrientations</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
-	<!--
-	  image_picker 플러그인이 런타임에 요구하는 권한 설명.
-	  누락 시 앱이 즉시 크래시하며, App Store 심사 가이드 5.1.1 로 반려된다.
-	  문구는 심사에서 "왜 필요한지" 사용자가 이해할 수 있게 구체적으로 작성.
-	-->
-	<key>NSCameraUsageDescription</key>
-	<string>다마고치 프로필 사진 촬영을 위해 카메라를 사용합니다.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>다마고치 프로필 이미지를 선택하기 위해 사진 라이브러리에 접근합니다.</string>
-	<!--
-	  카카오톡 앱-투-앱 로그인 시 KakaoTalk 앱 설치 여부 확인 / 전환을 위해 필요.
-	  누락 시 로그인 시도 중 "App Switching Error" 발생 (docs/KAKAO_SETUP.md 트러블슈팅 참조).
-	-->
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>kakaokompassauth</string>
-		<string>kakaolink</string>
-		<string>kakaoplus</string>
-	</array>
-	<!--
-	  OAuth 리다이렉트 URL scheme 등록.
-	  - Google: GoogleService-Info.plist 의 REVERSED_CLIENT_ID 와 동일해야 함.
-	  - Kakao: `kakao{KAKAO_NATIVE_APP_KEY}` 형식. .env 의 키 값을 그대로 뒤에 붙인다.
-	    TODO: 아래 <REPLACE_WITH_KAKAO_NATIVE_APP_KEY> 자리를 실제 Native App Key 로 치환할 것.
-	    (.env 의 KAKAO_NATIVE_APP_KEY 와 반드시 동일)
-	-->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -90,9 +41,81 @@
 			<string>kakao</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>kakao<REPLACE_WITH_KAKAO_NATIVE_APP_KEY></string>
+				<!--
+				  $(KAKAO_NATIVE_APP_KEY) 는 빌드 시 xcconfig 에서 주입됨.
+				  값은 `ios/Flutter/LocalEnv.xcconfig` (gitignored) 에 정의.
+				  Android 의 `local.properties` 와 동일한 패턴 — 레포에는 절대 키가 올라가지 않는다.
+				-->
+				<string>kakao$(KAKAO_NATIVE_APP_KEY)</string>
 			</array>
 		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<!--
+	  Google Sign-In iOS SDK 는 런타임에 GIDClientID 를 Info.plist 에서 읽는다.
+	  기존에는 GoogleService-Info.plist 의 CLIENT_ID 를 자동 사용했지만,
+	  Firebase Console 에 Google Auth 가 활성화되지 않은 프로젝트에서는
+	  flutterfire configure 가 생성하는 plist 에 CLIENT_ID 가 포함되지 않기 때문에
+	  반드시 이 키를 명시해야 한다. 누락 시 `No active configuration` 예외로 앱이 즉시 크래시.
+	  - GIDClientID: Google Cloud Console 의 "iOS" 유형 OAuth Client ID
+	  - GIDServerClientID: 백엔드 토큰 검증용 "웹 애플리케이션" Client ID (.env 의 GOOGLE_SERVER_CLIENT_ID 와 일치)
+	-->
+	<key>GIDClientID</key>
+	<string>733189444569-ja6ti0dpmutgrmjmnbjtbsfjbqmshn9o.apps.googleusercontent.com</string>
+	<key>GIDServerClientID</key>
+	<string>733189444569-t8s9rpv9h26q3372hcls3cbmg48i664d.apps.googleusercontent.com</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>kakaokompassauth</string>
+		<string>kakaolink</string>
+		<string>kakaoplus</string>
+	</array>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>다마고치 프로필 사진 촬영을 위해 카메라를 사용합니다.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>다마고치 프로필 이미지를 선택하기 위해 사진 라이브러리에 접근합니다.</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneClassName</key>
+					<string>UIWindowScene</string>
+					<key>UISceneConfigurationName</key>
+					<string>flutter</string>
+					<key>UISceneDelegateClassName</key>
+					<string>FlutterSceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 </dict>
 </plist>
