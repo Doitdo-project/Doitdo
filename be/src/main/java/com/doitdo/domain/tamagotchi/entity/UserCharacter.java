@@ -39,9 +39,6 @@ public class UserCharacter extends BaseTimeEntity {
 	@Column(length = 50)
 	private String name;
 
-	@Column(name = "growth_percent", nullable = false)
-	private Integer growthPercent;
-
 	@Column(name = "current_exp", nullable = false)
 	private Integer currentExp;
 
@@ -65,10 +62,6 @@ public class UserCharacter extends BaseTimeEntity {
 
 	public void setCharacterId(Long characterId) {
 		this.characterId = characterId;
-	}
-
-	public void setGrowthPercent(Integer growthPercent) {
-		this.growthPercent = growthPercent;
 	}
 
 	/** 진화/부화/farewell 시 exp 리셋. */

@@ -56,19 +56,23 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.userId(userId)
 			.characterId(eggCharacter.getCharacterId())
 			.name("뚜잇이")
-			.growthPercent(0)
 			.currentExp(0)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
 		UserCharacter savedUserCharacter = userCharacterRepository.save(userCharacter);
 
+		// EGG 단계: growthPercent=0, canEvolve=false, canFarewell=false, currentExp=0, requiredExp=0
 		return new CurrentCharacterResp(
 			eggCharacter.getCharacterId(),
 			savedUserCharacter.getName(),
 			eggCharacter.getStage().name(),
 			eggCharacter.getThumbnailUrl(),
-			savedUserCharacter.getGrowthPercent(),
+			0,
+			0,
+			eggCharacter.getRequiredExp() != null ? eggCharacter.getRequiredExp() : 0,
+			false,
+			false,
 			savedUserCharacter.getEquipedItemsId(),
 			savedUserCharacter.getUserCharacterId()
 		);
@@ -126,12 +130,28 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.findById(userCharacter.getCharacterId())
 			.orElseThrow(() -> new CustomException(errorCode));
 
+		Integer requiredExp = character.getRequiredExp();
+		int growthPercent = (requiredExp == null || requiredExp == 0)
+				? 0
+				: Math.min(100, (int) Math.round(userCharacter.getCurrentExp() * 100.0 / requiredExp));
+		boolean canEvolve = (character.getStage() == com.doitdo.domain.tamagotchi.entity.Character.Stage.BABY
+				|| character.getStage() == com.doitdo.domain.tamagotchi.entity.Character.Stage.TEEN)
+				&& requiredExp != null
+				&& userCharacter.getCurrentExp() >= requiredExp;
+		boolean canFarewell = character.getStage() == com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT
+				&& requiredExp != null
+				&& userCharacter.getCurrentExp() >= requiredExp;
+
 		return new CurrentCharacterResp(
 			character.getCharacterId(),
 			userCharacter.getName(),
 			character.getStage().name(),
 			character.getThumbnailUrl(),
-			userCharacter.getGrowthPercent(),
+			growthPercent,
+			userCharacter.getCurrentExp(),
+			requiredExp,
+			canEvolve,
+			canFarewell,
 			userCharacter.getEquipedItemsId(),
 			userCharacter.getUserCharacterId()
 		);
@@ -263,7 +283,6 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.userId(userId)
 			.characterId(eggCharacter.getCharacterId())
 			.name(adultUserCharacter.getName())
-			.growthPercent(0)
 			.currentExp(0)
 			.isActive(true)
 			.isDeleted(false)

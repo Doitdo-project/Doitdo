@@ -81,7 +81,6 @@ public class AuthServiceImpl implements AuthService {
 				.userId(user.getUserId())
 				.characterId(eggCharacter.getCharacterId())
 				.name("뚜잇이")
-				.growthPercent(0)
 				.currentExp(0)
 				.isActive(true)
 				.isDeleted(false)
