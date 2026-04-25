@@ -79,7 +79,6 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
           // ── 마스코트 + 안내 문구 + 알림 토글 ──
           Row(
             children: [
-              // ✏️ 수정: _MascotIcon → 타마고치 이미지
               Image.asset(
                 'assets/images/Dooit.png',
                 width: 36,

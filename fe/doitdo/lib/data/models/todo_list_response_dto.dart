@@ -24,6 +24,8 @@ class TodoListItemDto with _$TodoListItemDto {
     String? type,
     String? startDate,
     String? endDate,
+    String? alarmTime,
+    List<String>? daysOfWeek,
   }) = _TodoListItemDto;
 
   factory TodoListItemDto.fromJson(Map<String, dynamic> json) =>

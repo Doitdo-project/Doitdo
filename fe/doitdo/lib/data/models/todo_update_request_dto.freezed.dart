@@ -28,7 +28,11 @@ mixin _$TodoUpdateRequestDto {
       throw _privateConstructorUsedError; // NORMAL, RECURRING, PERIOD
   String? get startDate => throw _privateConstructorUsedError; // YYYY-MM-DD 형식
   String? get endDate => throw _privateConstructorUsedError; // YYYY-MM-DD 형식
-  int? get period => throw _privateConstructorUsedError;
+  Set<String>? get daysOfWeek =>
+      throw _privateConstructorUsedError; // ✏️ period → daysOfWeek (서버 변경 반영)
+  @JsonKey(name: 'alertTime')
+  String? get alarmTime => throw _privateConstructorUsedError;
+  bool? get clearAlertTime => throw _privateConstructorUsedError;
 
   /// Serializes this TodoUpdateRequestDto to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -54,7 +58,9 @@ abstract class $TodoUpdateRequestDtoCopyWith<$Res> {
     String type,
     String? startDate,
     String? endDate,
-    int? period,
+    Set<String>? daysOfWeek,
+    @JsonKey(name: 'alertTime') String? alarmTime,
+    bool? clearAlertTime,
   });
 }
 
@@ -82,7 +88,9 @@ class _$TodoUpdateRequestDtoCopyWithImpl<
     Object? type = null,
     Object? startDate = freezed,
     Object? endDate = freezed,
-    Object? period = freezed,
+    Object? daysOfWeek = freezed,
+    Object? alarmTime = freezed,
+    Object? clearAlertTime = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -110,10 +118,18 @@ class _$TodoUpdateRequestDtoCopyWithImpl<
                 ? _value.endDate
                 : endDate // ignore: cast_nullable_to_non_nullable
                       as String?,
-            period: freezed == period
-                ? _value.period
-                : period // ignore: cast_nullable_to_non_nullable
-                      as int?,
+            daysOfWeek: freezed == daysOfWeek
+                ? _value.daysOfWeek
+                : daysOfWeek // ignore: cast_nullable_to_non_nullable
+                      as Set<String>?,
+            alarmTime: freezed == alarmTime
+                ? _value.alarmTime
+                : alarmTime // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            clearAlertTime: freezed == clearAlertTime
+                ? _value.clearAlertTime
+                : clearAlertTime // ignore: cast_nullable_to_non_nullable
+                      as bool?,
           )
           as $Val,
     );
@@ -136,7 +152,9 @@ abstract class _$$TodoUpdateRequestDtoImplCopyWith<$Res>
     String type,
     String? startDate,
     String? endDate,
-    int? period,
+    Set<String>? daysOfWeek,
+    @JsonKey(name: 'alertTime') String? alarmTime,
+    bool? clearAlertTime,
   });
 }
 
@@ -160,7 +178,9 @@ class __$$TodoUpdateRequestDtoImplCopyWithImpl<$Res>
     Object? type = null,
     Object? startDate = freezed,
     Object? endDate = freezed,
-    Object? period = freezed,
+    Object? daysOfWeek = freezed,
+    Object? alarmTime = freezed,
+    Object? clearAlertTime = freezed,
   }) {
     return _then(
       _$TodoUpdateRequestDtoImpl(
@@ -188,10 +208,18 @@ class __$$TodoUpdateRequestDtoImplCopyWithImpl<$Res>
             ? _value.endDate
             : endDate // ignore: cast_nullable_to_non_nullable
                   as String?,
-        period: freezed == period
-            ? _value.period
-            : period // ignore: cast_nullable_to_non_nullable
-                  as int?,
+        daysOfWeek: freezed == daysOfWeek
+            ? _value._daysOfWeek
+            : daysOfWeek // ignore: cast_nullable_to_non_nullable
+                  as Set<String>?,
+        alarmTime: freezed == alarmTime
+            ? _value.alarmTime
+            : alarmTime // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        clearAlertTime: freezed == clearAlertTime
+            ? _value.clearAlertTime
+            : clearAlertTime // ignore: cast_nullable_to_non_nullable
+                  as bool?,
       ),
     );
   }
@@ -207,8 +235,10 @@ class _$TodoUpdateRequestDtoImpl implements _TodoUpdateRequestDto {
     required this.type,
     required this.startDate,
     this.endDate,
-    this.period,
-  });
+    final Set<String>? daysOfWeek,
+    @JsonKey(name: 'alertTime') this.alarmTime,
+    this.clearAlertTime,
+  }) : _daysOfWeek = daysOfWeek;
 
   factory _$TodoUpdateRequestDtoImpl.fromJson(Map<String, dynamic> json) =>
       _$$TodoUpdateRequestDtoImplFromJson(json);
@@ -228,12 +258,27 @@ class _$TodoUpdateRequestDtoImpl implements _TodoUpdateRequestDto {
   @override
   final String? endDate;
   // YYYY-MM-DD 형식
+  final Set<String>? _daysOfWeek;
+  // YYYY-MM-DD 형식
   @override
-  final int? period;
+  Set<String>? get daysOfWeek {
+    final value = _daysOfWeek;
+    if (value == null) return null;
+    if (_daysOfWeek is EqualUnmodifiableSetView) return _daysOfWeek;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableSetView(value);
+  }
+
+  // ✏️ period → daysOfWeek (서버 변경 반영)
+  @override
+  @JsonKey(name: 'alertTime')
+  final String? alarmTime;
+  @override
+  final bool? clearAlertTime;
 
   @override
   String toString() {
-    return 'TodoUpdateRequestDto(title: $title, content: $content, category: $category, type: $type, startDate: $startDate, endDate: $endDate, period: $period)';
+    return 'TodoUpdateRequestDto(title: $title, content: $content, category: $category, type: $type, startDate: $startDate, endDate: $endDate, daysOfWeek: $daysOfWeek, alarmTime: $alarmTime, clearAlertTime: $clearAlertTime)';
   }
 
   @override
@@ -249,7 +294,14 @@ class _$TodoUpdateRequestDtoImpl implements _TodoUpdateRequestDto {
             (identical(other.startDate, startDate) ||
                 other.startDate == startDate) &&
             (identical(other.endDate, endDate) || other.endDate == endDate) &&
-            (identical(other.period, period) || other.period == period));
+            const DeepCollectionEquality().equals(
+              other._daysOfWeek,
+              _daysOfWeek,
+            ) &&
+            (identical(other.alarmTime, alarmTime) ||
+                other.alarmTime == alarmTime) &&
+            (identical(other.clearAlertTime, clearAlertTime) ||
+                other.clearAlertTime == clearAlertTime));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -262,7 +314,9 @@ class _$TodoUpdateRequestDtoImpl implements _TodoUpdateRequestDto {
     type,
     startDate,
     endDate,
-    period,
+    const DeepCollectionEquality().hash(_daysOfWeek),
+    alarmTime,
+    clearAlertTime,
   );
 
   /// Create a copy of TodoUpdateRequestDto
@@ -291,7 +345,9 @@ abstract class _TodoUpdateRequestDto implements TodoUpdateRequestDto {
     required final String type,
     required final String? startDate,
     final String? endDate,
-    final int? period,
+    final Set<String>? daysOfWeek,
+    @JsonKey(name: 'alertTime') final String? alarmTime,
+    final bool? clearAlertTime,
   }) = _$TodoUpdateRequestDtoImpl;
 
   factory _TodoUpdateRequestDto.fromJson(Map<String, dynamic> json) =
@@ -310,7 +366,12 @@ abstract class _TodoUpdateRequestDto implements TodoUpdateRequestDto {
   @override
   String? get endDate; // YYYY-MM-DD 형식
   @override
-  int? get period;
+  Set<String>? get daysOfWeek; // ✏️ period → daysOfWeek (서버 변경 반영)
+  @override
+  @JsonKey(name: 'alertTime')
+  String? get alarmTime;
+  @override
+  bool? get clearAlertTime;
 
   /// Create a copy of TodoUpdateRequestDto
   /// with the given fields replaced by the non-null parameter values.

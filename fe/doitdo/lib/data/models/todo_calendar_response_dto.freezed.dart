@@ -399,7 +399,7 @@ CalendarTodoItemDto _$CalendarTodoItemDtoFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$CalendarTodoItemDto {
-  int get todoId => throw _privateConstructorUsedError;
+  int? get todoId => throw _privateConstructorUsedError;
   String get title => throw _privateConstructorUsedError;
   String get status =>
       throw _privateConstructorUsedError; // TODO, IN_PROGRESS, DONE
@@ -425,7 +425,7 @@ abstract class $CalendarTodoItemDtoCopyWith<$Res> {
   ) = _$CalendarTodoItemDtoCopyWithImpl<$Res, CalendarTodoItemDto>;
   @useResult
   $Res call({
-    int todoId,
+    int? todoId,
     String title,
     String status,
     bool? isVirtual,
@@ -449,7 +449,7 @@ class _$CalendarTodoItemDtoCopyWithImpl<$Res, $Val extends CalendarTodoItemDto>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? todoId = null,
+    Object? todoId = freezed,
     Object? title = null,
     Object? status = null,
     Object? isVirtual = freezed,
@@ -458,10 +458,10 @@ class _$CalendarTodoItemDtoCopyWithImpl<$Res, $Val extends CalendarTodoItemDto>
   }) {
     return _then(
       _value.copyWith(
-            todoId: null == todoId
+            todoId: freezed == todoId
                 ? _value.todoId
                 : todoId // ignore: cast_nullable_to_non_nullable
-                      as int,
+                      as int?,
             title: null == title
                 ? _value.title
                 : title // ignore: cast_nullable_to_non_nullable
@@ -498,7 +498,7 @@ abstract class _$$CalendarTodoItemDtoImplCopyWith<$Res>
   @override
   @useResult
   $Res call({
-    int todoId,
+    int? todoId,
     String title,
     String status,
     bool? isVirtual,
@@ -521,7 +521,7 @@ class __$$CalendarTodoItemDtoImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? todoId = null,
+    Object? todoId = freezed,
     Object? title = null,
     Object? status = null,
     Object? isVirtual = freezed,
@@ -530,10 +530,10 @@ class __$$CalendarTodoItemDtoImplCopyWithImpl<$Res>
   }) {
     return _then(
       _$CalendarTodoItemDtoImpl(
-        todoId: null == todoId
+        todoId: freezed == todoId
             ? _value.todoId
             : todoId // ignore: cast_nullable_to_non_nullable
-                  as int,
+                  as int?,
         title: null == title
             ? _value.title
             : title // ignore: cast_nullable_to_non_nullable
@@ -563,7 +563,7 @@ class __$$CalendarTodoItemDtoImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$CalendarTodoItemDtoImpl implements _CalendarTodoItemDto {
   const _$CalendarTodoItemDtoImpl({
-    required this.todoId,
+    this.todoId,
     required this.title,
     required this.status,
     this.isVirtual,
@@ -575,7 +575,7 @@ class _$CalendarTodoItemDtoImpl implements _CalendarTodoItemDto {
       _$$CalendarTodoItemDtoImplFromJson(json);
 
   @override
-  final int todoId;
+  final int? todoId;
   @override
   final String title;
   @override
@@ -640,7 +640,7 @@ class _$CalendarTodoItemDtoImpl implements _CalendarTodoItemDto {
 
 abstract class _CalendarTodoItemDto implements CalendarTodoItemDto {
   const factory _CalendarTodoItemDto({
-    required final int todoId,
+    final int? todoId,
     required final String title,
     required final String status,
     final bool? isVirtual,
@@ -652,7 +652,7 @@ abstract class _CalendarTodoItemDto implements CalendarTodoItemDto {
       _$CalendarTodoItemDtoImpl.fromJson;
 
   @override
-  int get todoId;
+  int? get todoId;
   @override
   String get title;
   @override

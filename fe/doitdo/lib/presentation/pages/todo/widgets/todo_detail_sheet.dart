@@ -154,6 +154,28 @@ class TodoDetailSheet extends ConsumerWidget {
                     GestureDetector(
                       onTap: () {
                         // 💡 수정 시트를 열기 위해 서버 데이터를 앱 내부 Todo 객체로 변환해서 전달
+                        final sDate = detailDto.startDate != null ? DateTime.tryParse(detailDto.startDate!) : null;
+
+                        // ✏️ 수정: 서버에서 daysOfWeek 배열로 요일 복원
+                        List<int>? restoredDays;
+                        if (detailDto.type == 'RECURRING') {
+                          if (detailDto.daysOfWeek != null && detailDto.daysOfWeek!.isNotEmpty) {
+                            // 서버가 daysOfWeek 반환 → 직접 변환
+                            const codeToIndex = {
+                              'SUN': 0, 'MON': 1, 'TUE': 2, 'WED': 3,
+                              'THU': 4, 'FRI': 5, 'SAT': 6,
+                            };
+                            restoredDays = detailDto.daysOfWeek!
+                                .map((c) => codeToIndex[c.toUpperCase()])
+                                .whereType<int>()
+                                .toList();
+                          } else if (sDate != null) {
+                            // daysOfWeek 없으면 시작 날짜 요일로 폴백
+                            final fw = sDate.weekday;
+                            restoredDays = [fw == 7 ? 0 : fw];
+                          }
+                        }
+
                         final todoToEdit = Todo(
                           id: detailDto.todoId.toString(),
                           title: detailDto.title,
@@ -161,8 +183,17 @@ class TodoDetailSheet extends ConsumerWidget {
                           category: catKey,
                           memo: detailDto.content,
                           dateType: detailDto.type == 'PERIOD' ? TodoDateType.range : (detailDto.type == 'RECURRING' ? TodoDateType.repeat : TodoDateType.normal),
-                          date: detailDto.startDate != null ? DateTime.tryParse(detailDto.startDate!) : null,
+                          date: sDate,
                           rangeEnd: detailDto.endDate != null ? DateTime.tryParse(detailDto.endDate!) : null,
+                          alarmTime: detailDto.alarmTime != null ? TimeOfDay(
+                              hour: int.parse(detailDto.alarmTime!.split(':')[0]),
+                              minute: int.parse(detailDto.alarmTime!.split(':')[1])
+                          ) : null,
+                          alarmEnabled: detailDto.alarmTime != null,
+                          // ✏️ 수정: period 제거 (서버에서 삭제됨)
+                          repeatStartDate: sDate,
+                          repeatEndDate: detailDto.type == 'RECURRING' && detailDto.endDate != null ? DateTime.tryParse(detailDto.endDate!) : null,
+                          repeatDays: restoredDays,
                         );
 
                         Navigator.of(context, rootNavigator: true).pop();
@@ -196,11 +227,11 @@ class TodoDetailSheet extends ConsumerWidget {
                 ),
                 const SizedBox(height: 32),
 
-                // ── 기간 ──
+                // ✅ 1. 기간 (여기가 지워졌었습니다!)
                 _InfoRow(icon: Icons.calendar_today_outlined, label: '기간', value: dateDisplay),
                 Divider(color: c.divider, height: 1, thickness: 1),
 
-                // ── 카테고리 ──
+                // ✅ 2. 카테고리
                 Padding(
                   padding: const EdgeInsets.fromLTRB(8, 20, 0, 20),
                   child: Row(
@@ -219,8 +250,12 @@ class TodoDetailSheet extends ConsumerWidget {
                 ),
                 Divider(color: c.divider, height: 1, thickness: 1),
 
-                // ── 알림 (API 명세에 없으므로 기본값 표시 또는 숨김) ──
-                _InfoRow(icon: Icons.notifications_outlined, label: '알림', value: '없음'),
+                // ✅ 3. 알림 (기존 하드코딩 지우고 하나로 합침!)
+                _InfoRow(
+                  icon: Icons.notifications_outlined,
+                  label: '알림',
+                  value: detailDto.alarmTime ?? '없음',
+                ),
                 Divider(color: c.divider, height: 1, thickness: 1),
 
                 // ── 메모 (내용이 있을 때만 표시) ──
@@ -329,6 +364,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
       repeatType:      t.repeatType,
       repeatStartDate: t.repeatStartDate,
       repeatEndDate:   t.repeatEndDate,
+      repeatDays:      t.repeatDays, // ✏️ 추가: 수정 시 기존 요일 복원
     );
   }
 
@@ -395,6 +431,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
       repeatType:      r.repeatType,
       repeatStartDate: r.repeatStartDate,
       repeatEndDate:   r.repeatEndDate,
+      repeatDays:      r.repeatDays, // ✏️ 추가
     );
 
     final vm = ref.read(todoViewModelProvider.notifier);
@@ -500,7 +537,8 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
                     isScrollControlled: true,
                     backgroundColor: Colors.transparent,
                     builder: (_) => TodoDateSheet(
-                        initialDate: _dateResult.date ?? DateTime.now()),
+                        initialDate: _dateResult.date ?? DateTime.now(),
+                        initialResult: _dateResult),
                   );
                   if (result != null) setState(() => _dateResult = result);
                 },

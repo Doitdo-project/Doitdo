@@ -1,302 +1,3 @@
-// import 'package:flutter/material.dart';
-// import 'package:flutter_riverpod/flutter_riverpod.dart';
-// import 'package:table_calendar/table_calendar.dart';
-// import 'package:doitdo/presentation/models/todo.dart';
-// import 'package:doitdo/presentation/pages/todo/todo_state.dart';
-//
-// // 서버 통신을 위해 레포지토리와 프로바이더 파일 임포트
-// import 'package:doitdo/domain/repositories/todo_repository.dart';
-// import 'package:doitdo/presentation/providers/app_data_providers.dart';
-//
-// // Request DTO 임포트
-// import 'package:doitdo/data/models/todo_update_request_dto.dart';
-//
-// class TodoViewModel extends StateNotifier<TodoState> {
-//   // 생성자에서 서버와 통신할 repository를 주입받고, 초기 데이터를 서버에서 불러옵니다.
-//   TodoViewModel(this._repository) : super(TodoState()) {
-//     // ✅ 앱 실행 시 서버에서 전체 목록을 불러옵니다.
-//     fetchTodos();
-//     // 캘린더 요약 정보도 함께 업데이트합니다.
-//     fetchCalendarData();
-//   }
-//
-//   final TodoRepository _repository; // 레포지토리 저장용 변수
-//
-//   // 핵심: 현재 필터(currentFilter)와 선택된 날짜에 맞춰 목록을 갱신하는 함수
-//   void _updateDisplayedTodos() {
-//     final filter = state.currentFilter;
-//     final selectedDay = state.selectedDay;
-//     final now = DateTime.now();
-//     final today = DateTime(now.year, now.month, now.day);
-//
-//     List<Todo> filtered = state.allTodos;
-//
-//     // 1. 기간(View) 필터 적용
-//     if (filter == 'upcoming') {
-//       filtered = filtered.where((t) => t.date != null && t.date!.isAfter(today)).toList();
-//     } else if (filter == 'past') {
-//       filtered = filtered.where((t) => t.date != null && t.date!.isBefore(today)).toList();
-//     } else {
-//       if (selectedDay != null) {
-//         filtered = filtered.where((t) => t.date != null && isSameDay(t.date!, selectedDay)).toList();
-//       } else {
-//         filtered = [];
-//       }
-//     }
-//
-//     // 2. 상태(Status) 필터 적용
-//     if (filter == 'todo') {
-//       filtered = filtered.where((t) => !t.isDone).toList();
-//     } else if (filter == 'done') {
-//       filtered = filtered.where((t) => t.isDone).toList();
-//     }
-//
-//     // 3. 언제가 할 일(Someday) 필터 적용
-//     List<Todo> somedayFiltered = state.allSomedayTodos;
-//     if (filter == 'todo') {
-//       somedayFiltered = somedayFiltered.where((t) => !t.isDone).toList();
-//     } else if (filter == 'done') {
-//       somedayFiltered = somedayFiltered.where((t) => t.isDone).toList();
-//     }
-//
-//     state = state.copyWith(todos: filtered, somedayTodos: somedayFiltered);
-//   }
-//
-//   // ✅ [추가] T02 API 호출: 전체 TODO 목록 조회 및 자동 분류
-//   Future<void> fetchTodos() async {
-//     // 1. 서버에서 전체 목록('all') 가져오기
-//     final result = await AsyncValue.guard(
-//           () => _repository.getTodos(view: 'all'),
-//     );
-//
-//     if (result.hasValue) {
-//       final items = result.value!.items;
-//
-//       // 2. 서버 데이터를 앱 내부 Todo 모델 형식으로 변환
-//       final allFetchedTodos = items.map((dto) => Todo(
-//         id: dto.todoId.toString(),
-//         title: dto.title,
-//         isDone: dto.status == 'DONE',
-//         // 카테고리 컬러는 임시로 study 지정
-//         category: TodoCategory(
-//             name: dto.category ?? '기타', colorKey: CategoryColorKey.study),
-//         date: dto.startDate != null ? DateTime.tryParse(dto.startDate!) : null,
-//       )).toList();
-//
-//       // 3. 상태 업데이트 (날짜 있으면 allTodos, 없으면 allSomedayTodos로 분류)
-//       state = state.copyWith(
-//         allTodos: allFetchedTodos.where((t) => t.date != null).toList(),
-//         allSomedayTodos: allFetchedTodos.where((t) => t.date == null).toList(),
-//       );
-//
-//       // 4. 화면 갱신
-//       _updateDisplayedTodos();
-//       print('✅ 서버 데이터 불러오기 완료! 총 ${allFetchedTodos.length}개');
-//     } else if (result.hasError) {
-//       print('❌ 서버 데이터 불러오기 실패: ${result.error}');
-//     }
-//   }
-//
-//   // 필터 변경 이벤트
-//   void setFilter(String filter) {
-//     state = state.copyWith(currentFilter: filter);
-//     _updateDisplayedTodos();
-//   }
-//
-//   void onDaySelected(DateTime selectedDay, DateTime focusedDay) {
-//     state = state.copyWith(selectedDay: selectedDay, focusedDay: focusedDay);
-//     _updateDisplayedTodos();
-//   }
-//
-//   void onFormatChanged(CalendarFormat format) {
-//     state = state.copyWith(calendarFormat: format);
-//   }
-//
-//   // ── 오늘의 할 일 CRUD ───────────────────────
-//   void addTodo(Todo todo) {
-//     state = state.copyWith(allTodos: [...state.allTodos, todo]);
-//     _updateDisplayedTodos();
-//   }
-//
-//   // 서버 통신 API 호출이 추가된 토글 함수!
-//   Future<void> toggleTodo(String id) async {
-//     final targetIdx = state.allTodos.indexWhere((t) => t.id == id);
-//     if (targetIdx == -1) return;
-//
-//     final targetTodo = state.allTodos[targetIdx];
-//     final newStatus = targetTodo.isDone ? 'TODO' : 'DONE';
-//
-//     final newAll = state.allTodos
-//         .map((t) => t.id == id ? t.copyWith(isDone: !t.isDone) : t)
-//         .toList();
-//     state = state.copyWith(allTodos: newAll);
-//     _updateDisplayedTodos();
-//
-//     await AsyncValue.guard(() => _repository.updateTodoStatus(id, newStatus));
-//   }
-//
-//   void deleteTodo(String id) {
-//     final newAll = state.allTodos.where((t) => t.id != id).toList();
-//     state = state.copyWith(allTodos: newAll);
-//     _updateDisplayedTodos();
-//   }
-//
-//   Future<void> updateTodo(Todo updated) async {
-//     final newAll =
-//     state.allTodos.map((t) => t.id == updated.id ? updated : t).toList();
-//     state = state.copyWith(allTodos: newAll);
-//     _updateDisplayedTodos();
-//
-//     final startDateStr = updated.date != null
-//         ? updated.date!.toIso8601String().split('T')[0]
-//         : DateTime.now().toIso8601String().split('T')[0];
-//
-//     final endDateStr = updated.rangeEnd != null
-//         ? updated.rangeEnd!.toIso8601String().split('T')[0]
-//         : null;
-//
-//     final requestDto = TodoUpdateRequestDto(
-//       title: updated.title,
-//       category: updated.category.name,
-//       type: updated.dateType == TodoDateType.normal ? 'NORMAL' : 'PERIOD',
-//       startDate: startDateStr,
-//       endDate: endDateStr,
-//     );
-//
-//     await AsyncValue.guard(() => _repository.updateTodo(updated.id, requestDto));
-//   }
-//
-//   void reorderTodo(int oldIndex, int newIndex) {
-//     if (oldIndex < newIndex) newIndex -= 1;
-//     final List<Todo> newList = List.from(state.todos);
-//     final Todo item = newList.removeAt(oldIndex);
-//     newList.insert(newIndex, item);
-//     state = state.copyWith(todos: newList);
-//   }
-//
-//   // ── 언제가 할 일 CRUD ───────────────────────
-//   void addSomedayTodo(Todo todo) {
-//     state = state.copyWith(allSomedayTodos: [...state.allSomedayTodos, todo]);
-//     _updateDisplayedTodos();
-//   }
-//
-//   Future<void> toggleSomedayTodo(String id) async {
-//     final targetIdx = state.allSomedayTodos.indexWhere((t) => t.id == id);
-//     if (targetIdx == -1) return;
-//
-//     final targetTodo = state.allSomedayTodos[targetIdx];
-//     final newStatus = targetTodo.isDone ? 'TODO' : 'DONE';
-//
-//     final updated = state.allSomedayTodos
-//         .map((t) => t.id == id ? t.copyWith(isDone: !t.isDone) : t)
-//         .toList();
-//     state = state.copyWith(allSomedayTodos: updated);
-//     _updateDisplayedTodos();
-//
-//     await AsyncValue.guard(() => _repository.updateTodoStatus(id, newStatus));
-//   }
-//
-//   void deleteSomedayTodo(String id) {
-//     state = state.copyWith(
-//         allSomedayTodos:
-//         state.allSomedayTodos.where((t) => t.id != id).toList());
-//     _updateDisplayedTodos();
-//   }
-//
-//   Future<void> updateSomedayTodo(Todo updated) async {
-//     final list = state.allSomedayTodos
-//         .map((t) => t.id == updated.id ? updated : t)
-//         .toList();
-//     state = state.copyWith(allSomedayTodos: list);
-//     _updateDisplayedTodos();
-//
-//     final startDateStr = DateTime.now().toIso8601String().split('T')[0];
-//
-//     final requestDto = TodoUpdateRequestDto(
-//       title: updated.title,
-//       category: updated.category.name,
-//       type: 'NORMAL',
-//       startDate: startDateStr,
-//     );
-//
-//     await AsyncValue.guard(() => _repository.updateTodo(updated.id, requestDto));
-//   }
-//
-//   // [추가] T08 API 호출: 캘린더 데이터 요약 조회
-//   Future<void> fetchCalendarData() async {
-//     final focusedDay = state.focusedDay;
-//
-//     final firstDay = DateTime(focusedDay.year, focusedDay.month, 1);
-//     final lastDay = DateTime(focusedDay.year, focusedDay.month + 1, 0);
-//
-//     final fromStr = firstDay.toIso8601String().split('T')[0];
-//     final toStr = lastDay.toIso8601String().split('T')[0];
-//
-//     final result = await AsyncValue.guard(
-//           () => _repository.getCalendarTodos(from: fromStr, to: toStr),
-//     );
-//
-//     if (result.hasValue) {
-//       print('📅 캘린더 요약 성공! 받아온 데이터 개수: ${result.value?.selectedDateItems.length}');
-//     } else if (result.hasError) {
-//       print('❌ 캘린더 요약 실패: ${result.error}');
-//     }
-//   }
-//
-//   void reorderSomedayTodo(int oldIndex, int newIndex) {
-//     if (oldIndex < newIndex) newIndex -= 1;
-//     final List<Todo> newList = List.from(state.somedayTodos);
-//     final Todo item = newList.removeAt(oldIndex);
-//     newList.insert(newIndex, item);
-//     state = state.copyWith(somedayTodos: newList);
-//   }
-//
-//   // ── 미루기 (Snooze) API ───────────────────────
-//   void snoozeTodo(String id) {
-//     final targetIdx = state.allTodos.indexWhere((t) => t.id == id);
-//     if (targetIdx == -1) return;
-//     final target = state.allTodos[targetIdx];
-//     if (target.isDone) return;
-//
-//     final tomorrow = DateTime.now().add(const Duration(days: 1));
-//     final newTodoId = DateTime.now().millisecondsSinceEpoch.toString();
-//     final snoozedTodo = target.copyWith(
-//       id: newTodoId,
-//       date: tomorrow,
-//       dateType: TodoDateType.normal,
-//       rangeStart: null,
-//       rangeEnd: null,
-//       repeatType: null,
-//       repeatStartDate: null,
-//       repeatEndDate: null,
-//     );
-//
-//     final newAll = state.allTodos.where((t) => t.id != id).toList();
-//     newAll.add(snoozedTodo);
-//     state = state.copyWith(allTodos: newAll);
-//     _updateDisplayedTodos();
-//   }
-//
-//   // ── 더미 데이터 로드 (필요시 호출) ──────────────────
-//   void loadDummyTodos() {
-//     final today = DateTime.now();
-//     // ... 기존 더미 데이터 로직 생략 ...
-//   }
-// }
-//
-// // Provider 설정
-// final todoViewModelProvider =
-// StateNotifierProvider.autoDispose<TodoViewModel, TodoState>((ref) {
-//   final repository = ref.read(todoRepositoryProvider);
-//   return TodoViewModel(repository);
-// });
-
-
-
-
-
-
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -309,9 +10,6 @@ import 'package:doitdo/data/models/todo_update_request_dto.dart';
 class TodoViewModel extends StateNotifier<TodoState> {
   TodoViewModel(this._repository)
       : super(TodoState(
-    // ✅ [핵심 수정 1] 초기 selectedDay 를 오늘로 설정
-    //    null 이면 _updateDisplayedTodos() 에서 filteredTodos = [] 가 되어
-    //    fetchTodos() 완료 후 onPageChanged 타이밍에 모든 할 일이 '오늘의 할 일'에 몰림
     selectedDay: DateTime(
         DateTime.now().year, DateTime.now().month, DateTime.now().day),
     focusedDay: DateTime(
@@ -323,9 +21,6 @@ class TodoViewModel extends StateNotifier<TodoState> {
 
   final TodoRepository _repository;
 
-  // ─────────────────────────────────────────────
-  // 서버 카테고리명 → CategoryColorKey 변환
-  // ─────────────────────────────────────────────
   static CategoryColorKey _colorKey(String? category) {
     switch (category) {
       case '운동': return CategoryColorKey.exercise;
@@ -337,61 +32,136 @@ class TodoViewModel extends StateNotifier<TodoState> {
     }
   }
 
-  // ─────────────────────────────────────────────
-  // [핵심] 필터 + 날짜 기준 화면 목록 갱신
-  // ─────────────────────────────────────────────
+  // ✅ [치명적 버그 수정] 서버의 String 타입을 앱의 Enum으로 변환해주는 헬퍼 추가
+  TodoDateType _mapTypeFromServer(String? type) {
+    if (type == 'PERIOD') return TodoDateType.range;
+    if (type == 'RECURRING') return TodoDateType.repeat;
+    return TodoDateType.normal;
+  }
+
   void _updateDisplayedTodos() {
-    final filter     = state.currentFilter;
+    final filter = state.currentFilter;
     final selectedDay = state.selectedDay;
-    final now  = DateTime.now();
+    final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    List<Todo> filteredTodos   = state.allTodos;
+    List<Todo> filteredTodos = state.allTodos;
     List<Todo> filteredSomeday = state.allSomedayTodos;
 
-    // ── 1. 날짜 기반 할 일 필터링 ──────────────
     switch (filter) {
       case 'upcoming':
-      // 오늘 이후 할 일
-        filteredTodos = filteredTodos
-            .where((t) => t.date != null && t.date!.isAfter(today))
-            .toList();
-        filteredSomeday = []; // 날짜 없는 건 예정/지난에 미표시
-      case 'past':
-      // 오늘 이전 할 일
-        filteredTodos = filteredTodos
-            .where((t) => t.date != null && t.date!.isBefore(today))
-            .toList();
+        filteredTodos = filteredTodos.where((t) {
+          if (t.date == null) return false;
+          if (t.isDone) return false; // ✏️ 추가: 완료된 것은 예정에서 제외
+          final start = DateTime(t.date!.year, t.date!.month, t.date!.day);
+
+          switch (t.dateType) {
+            case TodoDateType.normal:
+              return !start.isBefore(today);
+
+            case TodoDateType.range:
+              if (t.rangeEnd == null) return !start.isBefore(today);
+              final end = DateTime(t.rangeEnd!.year, t.rangeEnd!.month, t.rangeEnd!.day);
+              return !end.isBefore(today);
+
+            case TodoDateType.repeat:
+              if (t.repeatEndDate == null) return true;
+              final end = DateTime(t.repeatEndDate!.year, t.repeatEndDate!.month, t.repeatEndDate!.day);
+              return !end.isBefore(today);
+          }
+        }).toList();
         filteredSomeday = [];
+        break;
+
+      case 'past':
+        filteredTodos = filteredTodos.where((t) {
+          if (t.date == null) return false;
+          final start = DateTime(t.date!.year, t.date!.month, t.date!.day);
+
+          // ✏️ 수정: dateType 별로 "완전히 끝난 일정" 판단
+          switch (t.dateType) {
+            case TodoDateType.normal:
+            // NORMAL: 오늘 이전 날짜
+              return start.isBefore(today);
+
+            case TodoDateType.range:
+            // PERIOD: endDate가 오늘 이전이어야 완전히 지난 것
+              if (t.rangeEnd == null) return start.isBefore(today);
+              final end = DateTime(t.rangeEnd!.year, t.rangeEnd!.month, t.rangeEnd!.day);
+              return end.isBefore(today);
+
+            case TodoDateType.repeat:
+            // RECURRING: endDate가 있고 오늘 이전이어야 지난 것
+            //            endDate 없으면(무한 반복) → 지난 일정 아님
+              if (t.repeatEndDate == null) return false;
+              final end = DateTime(t.repeatEndDate!.year, t.repeatEndDate!.month, t.repeatEndDate!.day);
+              return end.isBefore(today);
+          }
+        }).toList();
+        filteredSomeday = [];
+        break;
       default:
-      // all / todo / done → 선택 날짜 기준
         if (selectedDay != null) {
-          filteredTodos = filteredTodos
-              .where((t) => t.date != null && isSameDay(t.date!, selectedDay))
-              .toList();
+          final sel = DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
+
+          filteredTodos = filteredTodos.where((t) {
+            if (t.date == null) return false;
+
+            final start = DateTime(t.date!.year, t.date!.month, t.date!.day);
+
+            // 시작 날짜 이전은 표시 안 함
+            if (sel.isBefore(start)) return false;
+
+            // 종료 날짜 계산 (PERIOD → rangeEnd, RECURRING → repeatEndDate)
+            DateTime? endDay;
+            if (t.rangeEnd != null) {
+              endDay = DateTime(t.rangeEnd!.year, t.rangeEnd!.month, t.rangeEnd!.day);
+            } else if (t.repeatEndDate != null) {
+              endDay = DateTime(t.repeatEndDate!.year, t.repeatEndDate!.month, t.repeatEndDate!.day);
+            }
+            if (endDay != null && sel.isAfter(endDay)) return false;
+
+            if (t.dateType == TodoDateType.repeat) {
+              // ✅ RECURRING: 선택 날짜가 반복 요일에 해당하는지 체크
+              final flutterWd = sel.weekday; // 1=월~7=일
+              final appIndex  = flutterWd == 7 ? 0 : flutterWd; // 일요일(7)→0
+
+              if (t.repeatDays != null && t.repeatDays!.isNotEmpty) {
+                // 로컬에 repeatDays 있으면 요일 배열로 체크
+                return t.repeatDays!.contains(appIndex);
+              } else {
+                // 서버 재조회 후 repeatDays 없을 때: 시작 요일과 일치하는지 폴백
+                return sel.weekday == start.weekday;
+              }
+            } else if (t.dateType == TodoDateType.range) {
+              // ✅ PERIOD: 범위 내에 있으면 표시
+              return !sel.isBefore(start) &&
+                  (endDay == null || !sel.isAfter(endDay));
+            } else {
+              // NORMAL: 날짜 일치
+              return isSameDay(t.date!, selectedDay);
+            }
+          }).toList();
         } else {
           filteredTodos = [];
         }
     }
 
-    // ── 2. 상태 필터 (todo / done) ──────────────
+    // ✏️ 수정: todo/done 은 날짜 선택과 무관하게 전체 기간 기준
     if (filter == 'todo') {
-      filteredTodos   = filteredTodos.where((t) => !t.isDone).toList();
-      filteredSomeday = filteredSomeday.where((t) => !t.isDone).toList();
+      filteredTodos   = state.allTodos.where((t) => !t.isDone).toList();
+      filteredSomeday = state.allSomedayTodos.where((t) => !t.isDone).toList();
     } else if (filter == 'done') {
-      filteredTodos   = filteredTodos.where((t) => t.isDone).toList();
-      filteredSomeday = filteredSomeday.where((t) => t.isDone).toList();
+      filteredTodos   = state.allTodos.where((t) => t.isDone).toList();
+      filteredSomeday = state.allSomedayTodos.where((t) => t.isDone).toList();
     }
 
     state = state.copyWith(
-      todos:        filteredTodos,
+      todos: filteredTodos,
       somedayTodos: filteredSomeday,
     );
   }
 
-  // ─────────────────────────────────────────────
-  // [T02] 서버에서 전체 목록 가져와 날짜 유무로 분류 및 정렬
-  // ─────────────────────────────────────────────
   Future<void> fetchTodos() async {
     final result = await AsyncValue.guard(
           () => _repository.getTodos(view: 'all'),
@@ -400,47 +170,107 @@ class TodoViewModel extends StateNotifier<TodoState> {
     if (result.hasValue) {
       final items = result.value!.items;
 
-      // [추가] 서버 데이터를 priority(우선순위) 오름차순으로 정렬
-      // 값이 없을 경우(null) 가장 뒤로 보내기 위해 999를 기본값으로 사용합니다.
       final sortedItems = List.of(items)
         ..sort((a, b) => (a.priority ?? 999).compareTo(b.priority ?? 999));
 
-      // 정렬된 sortedItems를 바탕으로 Todo 객체 생성
       final allFetched = sortedItems.map((dto) => Todo(
-        id:       dto.todoId.toString(),
-        title:    dto.title,
-        isDone:   dto.status == 'DONE',
+        id: dto.todoId.toString(),
+        title: dto.title,
+        isDone: dto.status == 'DONE',
         category: TodoCategory(
-          name:     dto.category ?? '기타',
+          name: dto.category ?? '기타',
           colorKey: _colorKey(dto.category),
         ),
-        date: dto.startDate != null
-            ? DateTime.tryParse(dto.startDate!)
-            : null,
-        rangeEnd: dto.endDate != null
+        date: dto.startDate != null ? DateTime.tryParse(dto.startDate!) : null,
+        // ✏️ 수정: PERIOD → rangeEnd, RECURRING → repeatEndDate 로 각각 분리
+        rangeEnd: dto.type == 'PERIOD' && dto.endDate != null
             ? DateTime.tryParse(dto.endDate!)
+            : null,
+        repeatEndDate: dto.type == 'RECURRING' && dto.endDate != null
+            ? DateTime.tryParse(dto.endDate!)
+            : null,
+        alarmTime: _parseTime(dto.alarmTime),
+        alarmEnabled: dto.alarmTime != null,
+        dateType: _mapTypeFromServer(dto.type),
+        // ✏️ 수정: period 대신 daysOfWeek 파싱 (서버 응답: ["MON","WED","FRI"])
+        repeatDays: dto.daysOfWeek != null && dto.daysOfWeek!.isNotEmpty
+            ? _parseDaysOfWeek(dto.daysOfWeek!)
             : null,
       )).toList();
 
-      // 날짜 유무에 따라 마스터 리스트 분류
       state = state.copyWith(
-        allTodos: allFetched
-            .where((t) => t.date != null || t.rangeEnd != null)
-            .toList(),
-        allSomedayTodos: allFetched
-            .where((t) => t.date == null && t.rangeEnd == null)
-            .toList(),
+        allTodos: allFetched.where((t) => t.date != null).toList(),
+        allSomedayTodos: allFetched.where((t) => t.date == null).toList(),
       );
 
-      // 분류 완료 후 화면 목록 갱신
+      _updateCalendarEvents(state.allTodos);
       _updateDisplayedTodos();
-      print('데이터 정렬 및 불러오기 완료: ${allFetched.length}개');
     }
   }
 
-  // ─────────────────────────────────────────────
-  // [T08] 캘린더 요약 데이터
-  // ─────────────────────────────────────────────
+  void _updateCalendarEvents(List<Todo> allTodos) {
+    final Map<DateTime, List<Todo>> newEvents = {};
+
+    for (var todo in allTodos) {
+      if (todo.date == null) continue;
+
+      final start = DateTime(todo.date!.year, todo.date!.month, todo.date!.day);
+
+      // ✏️ 수정: PERIOD → rangeEnd, RECURRING → repeatEndDate 각각 사용
+      final effectiveEnd = todo.dateType == TodoDateType.range
+          ? todo.rangeEnd
+          : todo.dateType == TodoDateType.repeat
+          ? todo.repeatEndDate
+          : null;
+
+      final end = effectiveEnd != null
+          ? DateTime(effectiveEnd.year, effectiveEnd.month, effectiveEnd.day)
+          : (todo.dateType == TodoDateType.repeat
+          ? start.add(const Duration(days: 90))
+          : start);
+
+      final totalDays = end.difference(start).inDays;
+
+      for (int i = 0; i <= totalDays; i++) {
+        final currentDay = start.add(Duration(days: i));
+        final normalizedDay = DateTime(currentDay.year, currentDay.month, currentDay.day);
+
+        bool shouldAddEvent = false;
+
+        if (todo.dateType == TodoDateType.repeat) {
+          // ✏️ 수정: repeatDays(요일 배열) 기반 체크
+          //   앱 인덱스: 0=일, 1=월, 2=화, 3=수, 4=목, 5=금, 6=토
+          //   Flutter weekday: 1=월~6=토, 7=일
+          final flutterWd = currentDay.weekday; // 1~7
+          final appIndex  = flutterWd == 7 ? 0 : flutterWd; // 일요일(7)→0
+
+          if (todo.repeatDays != null && todo.repeatDays!.isNotEmpty) {
+            // repeatDays 기반 요일 체크
+            if (todo.repeatDays!.contains(appIndex)) shouldAddEvent = true;
+          } else {
+            // repeatDays 없으면 시작 요일과 일치하는지 폴백
+            if (flutterWd == start.weekday) shouldAddEvent = true;
+          }
+        } else if (todo.dateType == TodoDateType.range) {
+          shouldAddEvent = true;
+        } else {
+          if (i == 0) shouldAddEvent = true;
+        }
+
+        if (shouldAddEvent) {
+          if (newEvents[normalizedDay] == null) {
+            newEvents[normalizedDay] = [];
+          }
+          newEvents[normalizedDay]!.add(todo);
+        }
+
+        if (todo.dateType == TodoDateType.normal && i == 0) break;
+      }
+    }
+
+    state = state.copyWith(kEvents: newEvents);
+  }
+
   Future<void> fetchCalendarData() async {
     final focusedDay = state.focusedDay;
     final firstDay   = DateTime(focusedDay.year, focusedDay.month, 1);
@@ -454,9 +284,6 @@ class TodoViewModel extends StateNotifier<TodoState> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // 필터 / 캘린더 액션
-  // ─────────────────────────────────────────────
   void setFilter(String filter) {
     state = state.copyWith(currentFilter: filter);
     _updateDisplayedTodos();
@@ -474,11 +301,9 @@ class TodoViewModel extends StateNotifier<TodoState> {
     state = state.copyWith(calendarFormat: format);
   }
 
-  // ─────────────────────────────────────────────
-  // 오늘의 할 일 (날짜 있음) CRUD
-  // ─────────────────────────────────────────────
   void addTodo(Todo todo) {
     state = state.copyWith(allTodos: [...state.allTodos, todo]);
+    _updateCalendarEvents(state.allTodos);
     _updateDisplayedTodos();
   }
 
@@ -492,74 +317,93 @@ class TodoViewModel extends StateNotifier<TodoState> {
           .map((t) => t.id == id ? t.copyWith(isDone: !t.isDone) : t)
           .toList(),
     );
+    _updateCalendarEvents(state.allTodos);
     _updateDisplayedTodos();
 
     await AsyncValue.guard(() => _repository.updateTodoStatus(id, newStatus));
   }
 
   Future<void> updateTodo(Todo updated) async {
+    // ✅ [수정] 반복 일정인 경우 시작 날짜를 선택된 요일 중 첫 번째 날로 보정
+    Todo finalTodo = updated;
+    if (updated.dateType == TodoDateType.repeat &&
+        updated.repeatDays != null &&
+        updated.repeatDays!.isNotEmpty &&
+        updated.repeatStartDate != null) {
+      DateTime adjustedStart = updated.repeatStartDate!;
+      for (int i = 0; i < 7; i++) {
+        final candidate = updated.repeatStartDate!.add(Duration(days: i));
+        final flutterWd = candidate.weekday;
+        final appIdx = flutterWd == 7 ? 0 : flutterWd;
+        if (updated.repeatDays!.contains(appIdx)) {
+          adjustedStart = candidate;
+          break;
+        }
+      }
+      finalTodo = updated.copyWith(date: adjustedStart, repeatStartDate: adjustedStart);
+    }
+
     state = state.copyWith(
       allTodos: state.allTodos
-          .map((t) => t.id == updated.id ? updated : t)
+          .map((t) => t.id == finalTodo.id ? finalTodo : t)
           .toList(),
     );
+    _updateCalendarEvents(state.allTodos);
     _updateDisplayedTodos();
 
     await AsyncValue.guard(() => _repository.updateTodo(
-      updated.id,
+      finalTodo.id,
       TodoUpdateRequestDto(
-        title:     updated.title,
-        category:  updated.category.name,
-        type: switch (updated.dateType) {
+        title:     finalTodo.title,
+        content:   finalTodo.memo,
+        category:  finalTodo.category.name,
+        type: switch (finalTodo.dateType) {
           TodoDateType.normal => 'NORMAL',
           TodoDateType.range  => 'PERIOD',
           TodoDateType.repeat => 'RECURRING',
         },
-        startDate: updated.date?.toIso8601String().split('T')[0],
-        endDate:   updated.rangeEnd?.toIso8601String().split('T')[0],
+        startDate: (finalTodo.dateType == TodoDateType.repeat ? finalTodo.repeatStartDate : finalTodo.date)
+            ?.toIso8601String().split('T')[0],
+        endDate:   (finalTodo.dateType == TodoDateType.range ? finalTodo.rangeEnd : finalTodo.repeatEndDate)
+            ?.toIso8601String().split('T')[0],
+        // ✏️ 수정: period → daysOfWeek
+        daysOfWeek: finalTodo.repeatDays != null && finalTodo.repeatDays!.isNotEmpty
+            ? _repeatDaysToDaysOfWeek(finalTodo.repeatDays!)
+            : null,
+        // ✏️ 수정: 알람 off 시 clearAlertTime: true 전송
+        alarmTime: finalTodo.alarmEnabled ? _formatTime(finalTodo.alarmTime) : null,
+        clearAlertTime: finalTodo.alarmEnabled ? null : true,
       ),
     ));
   }
 
-  // 삭제 함수 (서버 통신 추가)
   Future<void> deleteTodo(String id, {String? scope}) async {
-    // 1. 화면(로컬 상태)에서 먼저 즉시 지웁니다. (빠른 UX)
     state = state.copyWith(
       allTodos: state.allTodos.where((t) => t.id != id).toList(),
     );
+    _updateCalendarEvents(state.allTodos);
     _updateDisplayedTodos();
-
-    // 2. 백그라운드에서 서버로 삭제 API(T01)를 요청합니다.
     await AsyncValue.guard(() => _repository.deleteTodo(id, scope: scope));
   }
 
-  // ─────────────────────────────────────────────
-  // 오늘의 할 일 드래그 앤 드롭 우선순위 변경
-  // ─────────────────────────────────────────────
   Future<void> reorderTodo(int oldIndex, int newIndex) async {
     if (oldIndex < newIndex) newIndex -= 1;
     final list = List<Todo>.from(state.todos);
     final Todo item = list.removeAt(oldIndex);
     list.insert(newIndex, item);
 
-    // 1. 화면에 즉시 반영 (낙관적 업데이트)
     state = state.copyWith(todos: list);
 
-    // 2. 서버에 변경된 우선순위 전송 (1부터 시작하는 순서로 계산)
     final newPriority = newIndex + 1;
     final response = await AsyncValue.guard(
             () => _repository.updateTodoPriority(item.id, newPriority)
     );
 
-    // 3. ✅ 서버 업데이트 성공 시, 전체 데이터를 다시 불러와 마스터 리스트(allTodos) 싱크 맞추기
     if (!response.hasError) {
       fetchTodos();
     }
   }
 
-  // ─────────────────────────────────────────────
-  // 언제가 할 일 (날짜 없음) CRUD
-  // ─────────────────────────────────────────────
   void addSomedayTodo(Todo todo) {
     state = state.copyWith(
         allSomedayTodos: [...state.allSomedayTodos, todo]);
@@ -589,59 +433,47 @@ class TodoViewModel extends StateNotifier<TodoState> {
     );
     _updateDisplayedTodos();
 
-    // ✅ [핵심 수정 4] 언제가 할 일은 startDate: null 로 전송 (백엔드 수정 완료)
     await AsyncValue.guard(() => _repository.updateTodo(
       updated.id,
       TodoUpdateRequestDto(
         title:     updated.title,
         category:  updated.category.name,
         type:      'NORMAL',
-        startDate: null, // 날짜 없음 유지
+        startDate: null,
         endDate:   null,
+        alarmTime: updated.alarmEnabled ? _formatTime(updated.alarmTime) : null,
+        clearAlertTime: updated.alarmEnabled ? null : true, // ✏️ 추가
       ),
     ));
   }
 
-  // 삭제 함수(서버 통신 추가)
   Future<void> deleteSomedayTodo(String id) async {
-    // 1. 화면(로컬 상태)에서 먼저 즉시 지웁니다.
     state = state.copyWith(
       allSomedayTodos:
       state.allSomedayTodos.where((t) => t.id != id).toList(),
     );
     _updateDisplayedTodos();
-
-    // 2. 백그라운드에서 서버로 삭제 API(T01)를 요청합니다.
     await AsyncValue.guard(() => _repository.deleteTodo(id));
   }
 
-  // ─────────────────────────────────────────────
-  // 언제가 할 일 드래그 앤 드롭 우선순위 변경
-  // ─────────────────────────────────────────────
   Future<void> reorderSomedayTodo(int oldIndex, int newIndex) async {
     if (oldIndex < newIndex) newIndex -= 1;
     final list = List<Todo>.from(state.somedayTodos);
     final Todo item = list.removeAt(oldIndex);
     list.insert(newIndex, item);
 
-    // 1. 화면에 즉시 반영
     state = state.copyWith(somedayTodos: list);
 
-    // 2. 서버에 변경된 우선순위 전송
     final newPriority = newIndex + 1;
     final response = await AsyncValue.guard(
             () => _repository.updateTodoPriority(item.id, newPriority)
     );
 
-    // 3. 서버 업데이트 성공 시 데이터 동기화
     if (!response.hasError) {
       fetchTodos();
     }
   }
 
-  // ─────────────────────────────────────────────
-  // 미루기 (오늘 → 내일로 이동) - 연동
-  // ─────────────────────────────────────────────
   Future<void> snoozeTodo(String id) async {
     final idx = state.allTodos.indexWhere((t) => t.id == id);
     if (idx == -1) return;
@@ -649,14 +481,11 @@ class TodoViewModel extends StateNotifier<TodoState> {
     final target = state.allTodos[idx];
     if (target.isDone) return;
 
-    // API 명세서 참고: 반복 일정은 현재 지원하지 않으므로 막아둡니다.
     if (target.dateType == TodoDateType.repeat) {
       print('⚠️ 반복 일정은 아직 미루기를 지원하지 않습니다.');
       return;
     }
 
-    // 1. 화면 즉시 반영 (낙관적 업데이트)
-    // 기존 가짜 ID 생성 로직을 버리고, 기존 ID 그대로 날짜만 하루 더해서 화면에 반영합니다.
     final snoozed = target.copyWith(
       date: target.date != null ? target.date!.add(const Duration(days: 1)) : null,
       rangeEnd: target.rangeEnd != null ? target.rangeEnd!.add(const Duration(days: 1)) : null,
@@ -667,16 +496,55 @@ class TodoViewModel extends StateNotifier<TodoState> {
     );
     _updateDisplayedTodos();
 
-    // 2. 서버에 미루기(T05) 전송
     final response = await AsyncValue.guard(() => _repository.snoozeTodo(id));
 
-    // 3. 서버 업데이트 완료 후 마스터 목록 완벽 동기화
     if (!response.hasError) {
       fetchTodos();
     } else {
-      // 만약 422 에러 등이 났다면 원상복구를 위해 다시 불러오기
       fetchTodos();
     }
+  }
+
+  TimeOfDay? _parseTime(String? timeStr) {
+    if (timeStr == null || !timeStr.contains(':')) return null;
+    try {
+      final parts = timeStr.split(':');
+      return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  String? _formatTime(TimeOfDay? time) {
+    if (time == null) return null;
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return "$hour:$minute";
+  }
+
+  // ✏️ 추가: 서버 daysOfWeek(["MON","FRI"]) → 앱 인덱스([1,5]) 변환
+  // 앱 인덱스: 0=일, 1=월, 2=화, 3=수, 4=목, 5=금, 6=토
+  static List<int> _parseDaysOfWeek(List<String> daysOfWeek) {
+    const codeToIndex = {
+      'SUN': 0, 'MON': 1, 'TUE': 2, 'WED': 3,
+      'THU': 4, 'FRI': 5, 'SAT': 6,
+    };
+    return daysOfWeek
+        .map((code) => codeToIndex[code.toUpperCase()])
+        .whereType<int>()
+        .toList();
+  }
+
+  // ✏️ 추가: 앱 인덱스([1,5]) → 서버 daysOfWeek({"MON","FRI"}) 변환
+  static Set<String> _repeatDaysToDaysOfWeek(List<int> repeatDays) {
+    const indexToCode = {
+      0: 'SUN', 1: 'MON', 2: 'TUE', 3: 'WED',
+      4: 'THU', 5: 'FRI', 6: 'SAT',
+    };
+    return repeatDays
+        .map((i) => indexToCode[i])
+        .whereType<String>()
+        .toSet();
   }
 }
 

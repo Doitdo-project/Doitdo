@@ -192,6 +192,8 @@ mixin _$TodoListItemDto {
   String? get type => throw _privateConstructorUsedError;
   String? get startDate => throw _privateConstructorUsedError;
   String? get endDate => throw _privateConstructorUsedError;
+  String? get alarmTime => throw _privateConstructorUsedError;
+  List<String>? get daysOfWeek => throw _privateConstructorUsedError;
 
   /// Serializes this TodoListItemDto to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -219,6 +221,8 @@ abstract class $TodoListItemDtoCopyWith<$Res> {
     String? type,
     String? startDate,
     String? endDate,
+    String? alarmTime,
+    List<String>? daysOfWeek,
   });
 }
 
@@ -245,6 +249,8 @@ class _$TodoListItemDtoCopyWithImpl<$Res, $Val extends TodoListItemDto>
     Object? type = freezed,
     Object? startDate = freezed,
     Object? endDate = freezed,
+    Object? alarmTime = freezed,
+    Object? daysOfWeek = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -280,6 +286,14 @@ class _$TodoListItemDtoCopyWithImpl<$Res, $Val extends TodoListItemDto>
                 ? _value.endDate
                 : endDate // ignore: cast_nullable_to_non_nullable
                       as String?,
+            alarmTime: freezed == alarmTime
+                ? _value.alarmTime
+                : alarmTime // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            daysOfWeek: freezed == daysOfWeek
+                ? _value.daysOfWeek
+                : daysOfWeek // ignore: cast_nullable_to_non_nullable
+                      as List<String>?,
           )
           as $Val,
     );
@@ -304,6 +318,8 @@ abstract class _$$TodoListItemDtoImplCopyWith<$Res>
     String? type,
     String? startDate,
     String? endDate,
+    String? alarmTime,
+    List<String>? daysOfWeek,
   });
 }
 
@@ -329,6 +345,8 @@ class __$$TodoListItemDtoImplCopyWithImpl<$Res>
     Object? type = freezed,
     Object? startDate = freezed,
     Object? endDate = freezed,
+    Object? alarmTime = freezed,
+    Object? daysOfWeek = freezed,
   }) {
     return _then(
       _$TodoListItemDtoImpl(
@@ -364,6 +382,14 @@ class __$$TodoListItemDtoImplCopyWithImpl<$Res>
             ? _value.endDate
             : endDate // ignore: cast_nullable_to_non_nullable
                   as String?,
+        alarmTime: freezed == alarmTime
+            ? _value.alarmTime
+            : alarmTime // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        daysOfWeek: freezed == daysOfWeek
+            ? _value._daysOfWeek
+            : daysOfWeek // ignore: cast_nullable_to_non_nullable
+                  as List<String>?,
       ),
     );
   }
@@ -381,7 +407,9 @@ class _$TodoListItemDtoImpl implements _TodoListItemDto {
     this.type,
     this.startDate,
     this.endDate,
-  });
+    this.alarmTime,
+    final List<String>? daysOfWeek,
+  }) : _daysOfWeek = daysOfWeek;
 
   factory _$TodoListItemDtoImpl.fromJson(Map<String, dynamic> json) =>
       _$$TodoListItemDtoImplFromJson(json);
@@ -402,10 +430,21 @@ class _$TodoListItemDtoImpl implements _TodoListItemDto {
   final String? startDate;
   @override
   final String? endDate;
+  @override
+  final String? alarmTime;
+  final List<String>? _daysOfWeek;
+  @override
+  List<String>? get daysOfWeek {
+    final value = _daysOfWeek;
+    if (value == null) return null;
+    if (_daysOfWeek is EqualUnmodifiableListView) return _daysOfWeek;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
 
   @override
   String toString() {
-    return 'TodoListItemDto(todoId: $todoId, title: $title, status: $status, priority: $priority, category: $category, type: $type, startDate: $startDate, endDate: $endDate)';
+    return 'TodoListItemDto(todoId: $todoId, title: $title, status: $status, priority: $priority, category: $category, type: $type, startDate: $startDate, endDate: $endDate, alarmTime: $alarmTime, daysOfWeek: $daysOfWeek)';
   }
 
   @override
@@ -423,7 +462,13 @@ class _$TodoListItemDtoImpl implements _TodoListItemDto {
             (identical(other.type, type) || other.type == type) &&
             (identical(other.startDate, startDate) ||
                 other.startDate == startDate) &&
-            (identical(other.endDate, endDate) || other.endDate == endDate));
+            (identical(other.endDate, endDate) || other.endDate == endDate) &&
+            (identical(other.alarmTime, alarmTime) ||
+                other.alarmTime == alarmTime) &&
+            const DeepCollectionEquality().equals(
+              other._daysOfWeek,
+              _daysOfWeek,
+            ));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -438,6 +483,8 @@ class _$TodoListItemDtoImpl implements _TodoListItemDto {
     type,
     startDate,
     endDate,
+    alarmTime,
+    const DeepCollectionEquality().hash(_daysOfWeek),
   );
 
   /// Create a copy of TodoListItemDto
@@ -467,6 +514,8 @@ abstract class _TodoListItemDto implements TodoListItemDto {
     final String? type,
     final String? startDate,
     final String? endDate,
+    final String? alarmTime,
+    final List<String>? daysOfWeek,
   }) = _$TodoListItemDtoImpl;
 
   factory _TodoListItemDto.fromJson(Map<String, dynamic> json) =
@@ -488,6 +537,10 @@ abstract class _TodoListItemDto implements TodoListItemDto {
   String? get startDate;
   @override
   String? get endDate;
+  @override
+  String? get alarmTime;
+  @override
+  List<String>? get daysOfWeek;
 
   /// Create a copy of TodoListItemDto
   /// with the given fields replaced by the non-null parameter values.

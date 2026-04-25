@@ -49,7 +49,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       // TODO(BE): 팀원이 /api/todos 를 붙이면 loadDummyTodos 호출도 교체된다.
       final todoState = ref.read(todoViewModelProvider);
       if (todoState.allTodos.isEmpty && todoState.allSomedayTodos.isEmpty) {
-        ref.read(todoViewModelProvider.notifier).loadDummyTodos();
+        // ref.read(todoViewModelProvider.notifier).loadDummyTodos();
       }
     });
   }

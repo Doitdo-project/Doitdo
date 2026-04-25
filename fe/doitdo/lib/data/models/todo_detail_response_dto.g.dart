@@ -18,7 +18,10 @@ _$TodoDetailResponseDtoImpl _$$TodoDetailResponseDtoImplFromJson(
   priority: (json['priority'] as num).toInt(),
   startDate: json['startDate'] as String?,
   endDate: json['endDate'] as String?,
-  period: (json['period'] as num?)?.toInt(),
+  daysOfWeek: (json['daysOfWeek'] as List<dynamic>?)
+      ?.map((e) => e as String)
+      .toList(),
+  alarmTime: json['alertTime'] as String?,
 );
 
 Map<String, dynamic> _$$TodoDetailResponseDtoImplToJson(
@@ -33,5 +36,6 @@ Map<String, dynamic> _$$TodoDetailResponseDtoImplToJson(
   'priority': instance.priority,
   'startDate': instance.startDate,
   'endDate': instance.endDate,
-  'period': instance.period,
+  'daysOfWeek': instance.daysOfWeek,
+  'alertTime': instance.alarmTime,
 };

@@ -37,7 +37,7 @@ Map<String, dynamic> _$$CalendarSummaryDtoImplToJson(
 _$CalendarTodoItemDtoImpl _$$CalendarTodoItemDtoImplFromJson(
   Map<String, dynamic> json,
 ) => _$CalendarTodoItemDtoImpl(
-  todoId: (json['todoId'] as num).toInt(),
+  todoId: (json['todoId'] as num?)?.toInt(),
   title: json['title'] as String,
   status: json['status'] as String,
   isVirtual: json['isVirtual'] as bool?,

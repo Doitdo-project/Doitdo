@@ -25,16 +25,17 @@ TodoDetailResponseDto _$TodoDetailResponseDtoFromJson(
 mixin _$TodoDetailResponseDto {
   int get todoId => throw _privateConstructorUsedError;
   String get title => throw _privateConstructorUsedError;
-  String? get content => throw _privateConstructorUsedError; // = memo
+  String? get content => throw _privateConstructorUsedError;
   String get status => throw _privateConstructorUsedError;
   String? get category => throw _privateConstructorUsedError;
-  String get type =>
-      throw _privateConstructorUsedError; // NORMAL, RECURRING, PERIOD
+  String get type => throw _privateConstructorUsedError;
   int get priority => throw _privateConstructorUsedError;
-  String? get startDate =>
-      throw _privateConstructorUsedError; // 언제가 할 일 대응을 위해 Nullable로 지정
+  String? get startDate => throw _privateConstructorUsedError;
   String? get endDate => throw _privateConstructorUsedError;
-  int? get period => throw _privateConstructorUsedError;
+  List<String>? get daysOfWeek =>
+      throw _privateConstructorUsedError; // ✏️ period → daysOfWeek (서버 변경 반영)
+  @JsonKey(name: 'alertTime')
+  String? get alarmTime => throw _privateConstructorUsedError;
 
   /// Serializes this TodoDetailResponseDto to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -63,7 +64,8 @@ abstract class $TodoDetailResponseDtoCopyWith<$Res> {
     int priority,
     String? startDate,
     String? endDate,
-    int? period,
+    List<String>? daysOfWeek,
+    @JsonKey(name: 'alertTime') String? alarmTime,
   });
 }
 
@@ -94,7 +96,8 @@ class _$TodoDetailResponseDtoCopyWithImpl<
     Object? priority = null,
     Object? startDate = freezed,
     Object? endDate = freezed,
-    Object? period = freezed,
+    Object? daysOfWeek = freezed,
+    Object? alarmTime = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -134,10 +137,14 @@ class _$TodoDetailResponseDtoCopyWithImpl<
                 ? _value.endDate
                 : endDate // ignore: cast_nullable_to_non_nullable
                       as String?,
-            period: freezed == period
-                ? _value.period
-                : period // ignore: cast_nullable_to_non_nullable
-                      as int?,
+            daysOfWeek: freezed == daysOfWeek
+                ? _value.daysOfWeek
+                : daysOfWeek // ignore: cast_nullable_to_non_nullable
+                      as List<String>?,
+            alarmTime: freezed == alarmTime
+                ? _value.alarmTime
+                : alarmTime // ignore: cast_nullable_to_non_nullable
+                      as String?,
           )
           as $Val,
     );
@@ -163,7 +170,8 @@ abstract class _$$TodoDetailResponseDtoImplCopyWith<$Res>
     int priority,
     String? startDate,
     String? endDate,
-    int? period,
+    List<String>? daysOfWeek,
+    @JsonKey(name: 'alertTime') String? alarmTime,
   });
 }
 
@@ -191,7 +199,8 @@ class __$$TodoDetailResponseDtoImplCopyWithImpl<$Res>
     Object? priority = null,
     Object? startDate = freezed,
     Object? endDate = freezed,
-    Object? period = freezed,
+    Object? daysOfWeek = freezed,
+    Object? alarmTime = freezed,
   }) {
     return _then(
       _$TodoDetailResponseDtoImpl(
@@ -231,10 +240,14 @@ class __$$TodoDetailResponseDtoImplCopyWithImpl<$Res>
             ? _value.endDate
             : endDate // ignore: cast_nullable_to_non_nullable
                   as String?,
-        period: freezed == period
-            ? _value.period
-            : period // ignore: cast_nullable_to_non_nullable
-                  as int?,
+        daysOfWeek: freezed == daysOfWeek
+            ? _value._daysOfWeek
+            : daysOfWeek // ignore: cast_nullable_to_non_nullable
+                  as List<String>?,
+        alarmTime: freezed == alarmTime
+            ? _value.alarmTime
+            : alarmTime // ignore: cast_nullable_to_non_nullable
+                  as String?,
       ),
     );
   }
@@ -253,8 +266,9 @@ class _$TodoDetailResponseDtoImpl implements _TodoDetailResponseDto {
     required this.priority,
     this.startDate,
     this.endDate,
-    this.period,
-  });
+    final List<String>? daysOfWeek,
+    @JsonKey(name: 'alertTime') this.alarmTime,
+  }) : _daysOfWeek = daysOfWeek;
 
   factory _$TodoDetailResponseDtoImpl.fromJson(Map<String, dynamic> json) =>
       _$$TodoDetailResponseDtoImplFromJson(json);
@@ -265,27 +279,36 @@ class _$TodoDetailResponseDtoImpl implements _TodoDetailResponseDto {
   final String title;
   @override
   final String? content;
-  // = memo
   @override
   final String status;
   @override
   final String? category;
   @override
   final String type;
-  // NORMAL, RECURRING, PERIOD
   @override
   final int priority;
   @override
   final String? startDate;
-  // 언제가 할 일 대응을 위해 Nullable로 지정
   @override
   final String? endDate;
+  final List<String>? _daysOfWeek;
   @override
-  final int? period;
+  List<String>? get daysOfWeek {
+    final value = _daysOfWeek;
+    if (value == null) return null;
+    if (_daysOfWeek is EqualUnmodifiableListView) return _daysOfWeek;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
+  // ✏️ period → daysOfWeek (서버 변경 반영)
+  @override
+  @JsonKey(name: 'alertTime')
+  final String? alarmTime;
 
   @override
   String toString() {
-    return 'TodoDetailResponseDto(todoId: $todoId, title: $title, content: $content, status: $status, category: $category, type: $type, priority: $priority, startDate: $startDate, endDate: $endDate, period: $period)';
+    return 'TodoDetailResponseDto(todoId: $todoId, title: $title, content: $content, status: $status, category: $category, type: $type, priority: $priority, startDate: $startDate, endDate: $endDate, daysOfWeek: $daysOfWeek, alarmTime: $alarmTime)';
   }
 
   @override
@@ -305,7 +328,12 @@ class _$TodoDetailResponseDtoImpl implements _TodoDetailResponseDto {
             (identical(other.startDate, startDate) ||
                 other.startDate == startDate) &&
             (identical(other.endDate, endDate) || other.endDate == endDate) &&
-            (identical(other.period, period) || other.period == period));
+            const DeepCollectionEquality().equals(
+              other._daysOfWeek,
+              _daysOfWeek,
+            ) &&
+            (identical(other.alarmTime, alarmTime) ||
+                other.alarmTime == alarmTime));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -321,7 +349,8 @@ class _$TodoDetailResponseDtoImpl implements _TodoDetailResponseDto {
     priority,
     startDate,
     endDate,
-    period,
+    const DeepCollectionEquality().hash(_daysOfWeek),
+    alarmTime,
   );
 
   /// Create a copy of TodoDetailResponseDto
@@ -353,7 +382,8 @@ abstract class _TodoDetailResponseDto implements TodoDetailResponseDto {
     required final int priority,
     final String? startDate,
     final String? endDate,
-    final int? period,
+    final List<String>? daysOfWeek,
+    @JsonKey(name: 'alertTime') final String? alarmTime,
   }) = _$TodoDetailResponseDtoImpl;
 
   factory _TodoDetailResponseDto.fromJson(Map<String, dynamic> json) =
@@ -364,21 +394,24 @@ abstract class _TodoDetailResponseDto implements TodoDetailResponseDto {
   @override
   String get title;
   @override
-  String? get content; // = memo
+  String? get content;
   @override
   String get status;
   @override
   String? get category;
   @override
-  String get type; // NORMAL, RECURRING, PERIOD
+  String get type;
   @override
   int get priority;
   @override
-  String? get startDate; // 언제가 할 일 대응을 위해 Nullable로 지정
+  String? get startDate;
   @override
   String? get endDate;
   @override
-  int? get period;
+  List<String>? get daysOfWeek; // ✏️ period → daysOfWeek (서버 변경 반영)
+  @override
+  @JsonKey(name: 'alertTime')
+  String? get alarmTime;
 
   /// Create a copy of TodoDetailResponseDto
   /// with the given fields replaced by the non-null parameter values.

@@ -80,7 +80,11 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
     }
 
     final r = _dateResult;
+
+    // UI 로딩 표시자 등이 필요하다면 여기에 추가 (선택사항)
+
     final todo = Todo(
+      // 어차피 서버에서 생성된 후 찐 ID로 덮어씌워지므로 임시 ID는 중요하지 않음
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       title: title,
       category: TodoCategory.fromName(_selectedCategory),
@@ -90,16 +94,18 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           : _memoController.text.trim(),
       alarmTime:       _alarmEnabled ? _selectedTime : null,
       alarmEnabled:    _alarmEnabled,
-      dateType:        r?.type ?? TodoDateType.normal, // 날짜가 비어있어도 기본 타입은 normal
-      date:            r?.date, // 🔥 언제가 할 일이면 여기서 안전하게 null이 들어감!
+      dateType:        r?.type ?? TodoDateType.normal,
+      date:            r?.date,
       rangeStart:      r?.rangeStart,
       rangeEnd:        r?.rangeEnd,
       repeatType:      r?.repeatType,
       repeatStartDate: r?.repeatStartDate,
       repeatEndDate:   r?.repeatEndDate,
+      period: r?.repeatType == '매주' ? 7 : null,
+      repeatDays:      r?.repeatDays, // ✏️ 추가: 선택된 요일 목록
     );
 
-    // 1. 서버로 전송 요청!
+    // 1. 서버로 전송 요청 (todoAddNotifier 가 내부적으로 POST 수행)
     await ref.read(todoAddNotifierProvider.notifier).createTodo(todo);
 
     // 2. 전송 결과 확인하기
@@ -107,7 +113,6 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
 
     if (resultState.hasError) {
       print('서버 통신 실패: ${resultState.error}');
-
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -119,21 +124,90 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
       return;
     }
 
-    // 3. 통신 성공 시 로컬 화면(UI)에 추가
-    final vm = ref.read(todoViewModelProvider.notifier);
-
-    // ✅ _dateResult(사용자가 최종 선택한 날짜)가 비어있으면 언제가 할 일로 추가!
-    if (_dateResult?.date == null) {
-      vm.addSomedayTodo(todo);
-    } else {
-      vm.addTodo(todo);
-    }
+    // ✅ 3. [핵심 수정] 가짜 ID가 들어간 로컬 todo를 화면에 억지로 끼워넣지 않고,
+    // 서버에서 찐 ID가 포함된 가장 최신의 데이터를 새로 받아와 화면을 동기화합니다.
+    await ref.read(todoViewModelProvider.notifier).fetchTodos();
 
     // 창 닫기
     if (context.mounted) {
       Navigator.of(context).pop();
     }
   }
+  // Future<void> _onSave(BuildContext context) async {
+  //   final title = _titleController.text.trim();
+  //
+  //   if (title.isEmpty) {
+  //     _titleFocusNode.requestFocus();
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text('할 일을 입력해주세요.',
+  //             style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)),
+  //         backgroundColor: AppColors.calendarPoint,
+  //         behavior: SnackBarBehavior.floating,
+  //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  //         margin: const EdgeInsets.all(16),
+  //         duration: const Duration(seconds: 2),
+  //       ),
+  //     );
+  //     return;
+  //   }
+  //
+  //   final r = _dateResult;
+  //   final todo = Todo(
+  //     id: DateTime.now().millisecondsSinceEpoch.toString(),
+  //     title: title,
+  //     category: TodoCategory.fromName(_selectedCategory),
+  //     isDone: false,
+  //     memo: _memoController.text.trim().isEmpty
+  //         ? null
+  //         : _memoController.text.trim(),
+  //     alarmTime:       _alarmEnabled ? _selectedTime : null,
+  //     alarmEnabled:    _alarmEnabled,
+  //     dateType:        r?.type ?? TodoDateType.normal, // 날짜가 비어있어도 기본 타입은 normal
+  //     date:            r?.date, // 🔥 언제가 할 일이면 여기서 안전하게 null이 들어감!
+  //     rangeStart:      r?.rangeStart,
+  //     rangeEnd:        r?.rangeEnd,
+  //     repeatType:      r?.repeatType,
+  //     repeatStartDate: r?.repeatStartDate,
+  //     repeatEndDate:   r?.repeatEndDate,
+  //     period:          r?.period, // ✅ 반복 주기가 있다면 잊지 말고 담아주세요!
+  //   );
+  //
+  //   // 1. 서버로 전송 요청!
+  //   await ref.read(todoAddNotifierProvider.notifier).createTodo(todo);
+  //
+  //   // 2. 전송 결과 확인하기
+  //   final resultState = ref.read(todoAddNotifierProvider);
+  //
+  //   if (resultState.hasError) {
+  //     print('서버 통신 실패: ${resultState.error}');
+  //
+  //     if (context.mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(
+  //           content: Text('서버 저장 실패: ${resultState.error}'),
+  //           backgroundColor: Colors.red,
+  //         ),
+  //       );
+  //     }
+  //     return;
+  //   }
+  //
+  //   // 3. 통신 성공 시 로컬 화면(UI)에 추가
+  //   final vm = ref.read(todoViewModelProvider.notifier);
+  //
+  //   // ✅ _dateResult(사용자가 최종 선택한 날짜)가 비어있으면 언제가 할 일로 추가!
+  //   if (_dateResult?.date == null) {
+  //     vm.addSomedayTodo(todo);
+  //   } else {
+  //     vm.addTodo(todo);
+  //   }
+  //
+  //   // 창 닫기
+  //   if (context.mounted) {
+  //     Navigator.of(context).pop();
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -273,8 +347,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
               child: _OptionRow(
                 icon: Icons.notifications_outlined,
                 label: '알림',
-                valueText: _formatTime(_selectedTime),
-                colors: c,
+                valueText: _alarmEnabled ? _formatTime(_selectedTime) : '없음',                colors: c,
               ),
             ),
             Divider(color: c.divider, height: 1, thickness: 1),

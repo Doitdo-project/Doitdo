@@ -215,7 +215,13 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                     onPageChanged: (focusedDay) => vm.onDaySelected(focusedDay, focusedDay),
                     headerVisible: false,
                     locale: 'ko_KR',
-                    eventLoader: (day) => state.allTodos.where((t) => t.date != null && isSameDay(t.date!, day)).toList(),
+                    // 수정 후
+                    eventLoader: (day) {
+                      // 시간을 제외한 날짜 값만 추출 (00:00:00 기준)
+                      final normalizedDay = DateTime(day.year, day.month, day.day);
+                      // 뷰모델의 state에 미리 계산해둔 kEvents 맵에서 해당 날짜의 할 일을 반환
+                      return state.kEvents[normalizedDay] ?? [];
+                    },
                     rowHeight: 52,
                     // 요일 헤더 ↔ 첫 날짜 행 간격을 날짜 행 간격(rowHeight 기반) 과 맞춤.
                     daysOfWeekHeight: 40,

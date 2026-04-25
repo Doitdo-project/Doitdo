@@ -8,14 +8,15 @@ class TodoDetailResponseDto with _$TodoDetailResponseDto {
   const factory TodoDetailResponseDto({
     required int todoId,
     required String title,
-    String? content, // = memo
+    String? content,
     required String status,
     String? category,
-    required String type, // NORMAL, RECURRING, PERIOD
+    required String type,
     required int priority,
-    String? startDate, // 언제가 할 일 대응을 위해 Nullable로 지정
+    String? startDate,
     String? endDate,
-    int? period,
+    List<String>? daysOfWeek, // ✏️ period → daysOfWeek (서버 변경 반영)
+    @JsonKey(name: 'alertTime') String? alarmTime,
   }) = _TodoDetailResponseDto;
 
   factory TodoDetailResponseDto.fromJson(Map<String, dynamic> json) =>
