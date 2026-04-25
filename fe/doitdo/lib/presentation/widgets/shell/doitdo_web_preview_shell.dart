@@ -42,7 +42,10 @@ class DoitdoWebPreviewShell extends StatefulWidget {
   static bool get isEnabled {
     if (!kIsWeb) return false;
 
-    final uri = Uri.base;
+    return isEnabledForUri(Uri.base);
+  }
+
+  static bool isEnabledForUri(Uri uri) {
     final pathSegments = uri.pathSegments;
 
     final queryParams = <String, String>{
@@ -67,7 +70,7 @@ class DoitdoWebPreviewShell extends StatefulWidget {
           normalized != 'off';
     }
 
-    return uri.host == 'j14d101.p.ssafy.io';
+    return uri.host == 'j14d101.p.ssafy.io' || uri.host == 'dev.doitdo.site';
   }
 
   /// fragment(`/welcome?preview=1`) 에서 쿼리 파라미터를 추출.
