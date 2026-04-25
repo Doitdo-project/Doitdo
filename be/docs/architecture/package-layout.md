@@ -192,6 +192,19 @@ domain/{domain}/
 
 RECURRING 마스터 제외 규칙: 마스터 row 는 `type = RECURRING` 으로 저장되고, 실체화된 인스턴스는 `type = NORMAL` 로 저장됨(`Todo.createRecurringInstance` 참고). 쿼리 조건 `t.type <> RECURRING` 으로 마스터를 제외.
 
+## todo 도메인 추가 파일 (alert/recurrence redesign — daysOfWeek + 실체화 스케줄러)
+
+| 종류 | 경로 | 비고 |
+|---|---|---|
+| Scheduler | `domain/todo/application/scheduler/RecurrenceMaterializeScheduler.java` | RECURRING 마스터를 매일 자정 NORMAL 인스턴스로 실체화 (Asia/Seoul, idempotent via uk_todos_user_master_date) |
+| Migration SQL | `docs/ops/migrations/2026-04-alert-recurrence-redesign.sql` | 수동 실행 필요. period 컬럼 삭제 + days_of_week 추가 + UNIQUE 제약 |
+
+`period` 컬럼이 삭제되고 `days_of_week VARCHAR(27)` (CSV, 예: `"MON,WED,FRI"`) 로 교체됨. Entity/DTO/Generator/Service/Scheduler 모두 `daysOfWeek` 기반으로 교체.
+
+UNIQUE 제약 `uk_todos_user_master_date (user_id, master_todo_id, start_date)` 추가 — 스케줄러/snooze 중복 INSERT 방지.
+
+`TodoUpdateReq` 에 `Boolean clearAlertTime` 플래그 추가 — `true` 이면 `alertTime` 을 null 로 초기화 (alertTime 동시 전송 시 clear 우선).
+
 ## todo 도메인 추가 파일 (팔레트 조회 API + Category colorHex)
 
 | 종류 | 경로 | 비고 |

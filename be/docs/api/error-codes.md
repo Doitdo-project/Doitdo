@@ -131,6 +131,13 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 |---|---|---|---|
 | `U00_005` | `U00-005` | 500 | 회원가입 초기화 실패 — EGG Character row 누락 등 운영 이슈 |
 
+### `TodoErrorCode` 추가 코드 (alert/recurrence redesign, 2026-04)
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `TODO_RECURRING_DAYS_OF_WEEK_REQUIRED` | `T14-001` | 400 | 반복 TODO는 daysOfWeek가 필요함 |
+| `TODO_RECURRING_START_DATE_DAY_MISMATCH` | `T14-002` | 400 | 반복 TODO의 startDate 요일이 daysOfWeek에 포함되어야 함 |
+
 ## 5. 새 코드 추가 절차
 
 1. 노션 API 명세서에서 코드 충돌 여부 확인 (외부 SSOT).
