@@ -12,13 +12,10 @@ class StreakSection extends StatelessWidget {
     super.key,
     required this.streakDays,
     required this.slots,
-    required this.slotDates,
-  })  : assert(slots.length == 7, 'slots 는 7칸이어야 합니다.'),
-        assert(slotDates.length == 7, 'slotDates 는 7칸이어야 합니다.');
+  }) : assert(slots.length == 7, 'slots 는 7칸이어야 합니다.');
 
   final int streakDays;
   final List<bool> slots;
-  final List<DateTime> slotDates;
 
   @override
   Widget build(BuildContext context) {
@@ -42,45 +39,13 @@ class StreakSection extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              for (var i = 0; i < 7; i++)
-                _StreakEntry(
-                  achieved: slots[i],
-                  date: slotDates[i],
-                ),
+              for (var i = 0; i < 7; i++) _StreakDot(achieved: slots[i]),
             ],
           ),
         ],
       ),
     );
   }
-}
-
-class _StreakEntry extends StatelessWidget {
-  const _StreakEntry({required this.achieved, required this.date});
-
-  final bool achieved;
-  final DateTime date;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _StreakDot(achieved: achieved),
-        const SizedBox(height: 4),
-        Text(
-          _formatMMdd(date),
-          style: AppTextStyles.labelSmall.copyWith(
-            color: colors.textSecondary,
-          ),
-        ),
-      ],
-    );
-  }
-
-  static String _formatMMdd(DateTime d) =>
-      '${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
 }
 
 class _StreakDot extends StatelessWidget {

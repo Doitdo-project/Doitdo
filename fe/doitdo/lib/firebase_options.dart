@@ -65,4 +65,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'doitdo-c3fcd.firebasestorage.app',
     iosBundleId: 'com.d107.doitdo',
   );
+
 }

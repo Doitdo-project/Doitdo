@@ -55,7 +55,6 @@ class TodoCompletionExpListenerTest {
 				.priority(1)
 				.startDate(LocalDate.now())
 				.endDate(null)
-				.period(null)
 				.isDeleted(false)
 				.expGranted(expGranted)
 				.build();

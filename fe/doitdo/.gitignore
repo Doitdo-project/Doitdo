@@ -52,6 +52,10 @@ app.*.map.json
 # 빌드 키
 android/key.properties
 *.jks
+
+# iOS 로컬 시크릿 (Kakao Native App Key 등) — Android 의 local.properties 와 동일 역할.
+# Info.plist 의 $(KAKAO_NATIVE_APP_KEY) 변수에 주입되며 레포에는 올라가지 않는다.
+ios/Flutter/LocalEnv.xcconfig
 # 공용 debug keystore — git 에 올리지 않고 Slack/Notion 으로 팀 공유.
 # 팀원은 받은 파일을 android/keystore/debug.keystore 에 배치해야 빌드 가능.
 android/keystore/

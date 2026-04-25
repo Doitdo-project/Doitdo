@@ -34,3 +34,5 @@ firebase:
 notification:
   evening-reminder:
     enabled: ${NOTIFICATION_EVENING_REMINDER_ENABLED:true}
+  morning-reminder:
+    enabled: ${NOTIFICATION_MORNING_REMINDER_ENABLED:true}

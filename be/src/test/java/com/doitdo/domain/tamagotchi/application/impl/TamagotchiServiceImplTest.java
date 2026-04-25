@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
@@ -27,10 +28,12 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.UpdateCharacterNameResp;
 import com.doitdo.domain.tamagotchi.entity.Character;
 import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
+import com.doitdo.domain.tamagotchi.entity.UserCharacterHistory;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterSpeciesBackgroundRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
+import com.doitdo.domain.tamagotchi.repository.UserCharacterHistoryRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.user.entity.User;
 import com.doitdo.domain.user.repository.UserRepository;
@@ -50,23 +53,31 @@ class TamagotchiServiceImplTest {
 	private UserCharacterRepository userCharacterRepository;
 
 	@Mock
+	private UserCharacterHistoryRepository userCharacterHistoryRepository;
+
+	@Mock
 	private UserRepository userRepository;
 
 	@Mock
 	private CharacterSpeciesBackgroundRepository characterSpeciesBackgroundRepository;
+
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
 
 	private TamagotchiServiceImpl service() {
 		return new TamagotchiServiceImpl(
 			characterRepository,
 			characterUnlockRepository,
 			userCharacterRepository,
+			userCharacterHistoryRepository,
 			characterSpeciesBackgroundRepository,
-			userRepository
+			userRepository,
+			eventPublisher
 		);
 	}
 
 	@Test
-	void receiveEggCreatesFirstEggWhenUserHasNoActiveCharacter() {
+	void receiveEggCreatesRandomEggWhenUserHasNoActiveCharacter() {
 		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
 		User user = User.builder()
@@ -97,9 +108,10 @@ class TamagotchiServiceImplTest {
 		given(userRepository.findByIdForUpdate(userId)).willReturn(Optional.of(user));
 		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
 			.willReturn(Optional.empty());
-		given(characterRepository.findFirstByStageOrderByCharacterIdAsc(Character.Stage.EGG))
-			.willReturn(Optional.of(eggCharacter));
+		given(characterRepository.findAllByStage(Character.Stage.EGG)).willReturn(List.of(eggCharacter));
 		given(userCharacterRepository.save(any(UserCharacter.class))).willReturn(savedUserCharacter);
+		given(userCharacterHistoryRepository.save(any(UserCharacterHistory.class)))
+			.willAnswer(invocation -> invocation.getArgument(0));
 
 		CurrentCharacterResp resp = service.receiveEgg(userId);
 
@@ -116,7 +128,9 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.equippedUserItemId()).isNull();
 		ArgumentCaptor<UserCharacter> captor = forClass(UserCharacter.class);
 		then(userCharacterRepository).should().save(captor.capture());
+		assertThat(captor.getValue().getCharacterId()).isEqualTo(1L);
 		assertThat(captor.getValue().getName()).isEqualTo("\uB69C\uC787");
+		then(userCharacterHistoryRepository).should().save(any(UserCharacterHistory.class));
 	}
 	@Test
 	void receiveEggReturnsCurrentCharacterWithoutSavingWhenActiveCharacterExists() {
@@ -181,12 +195,15 @@ class TamagotchiServiceImplTest {
 
 		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
 			.willReturn(Optional.of(userCharacter));
+		given(userCharacterHistoryRepository.save(any(UserCharacterHistory.class)))
+			.willAnswer(invocation -> invocation.getArgument(0));
 
 		UpdateCharacterNameResp resp = service.updateName(userId, "rabi");
 
 		assertThat(resp.characterId()).isEqualTo(1L);
 		assertThat(resp.name()).isEqualTo("rabi");
 		assertThat(userCharacter.getName()).isEqualTo("rabi");
+		then(userCharacterHistoryRepository).should().save(any(UserCharacterHistory.class));
 	}
 
 	@Test
@@ -283,6 +300,8 @@ class TamagotchiServiceImplTest {
 		given(characterRepository.findById(1L)).willReturn(Optional.of(eggCharacter));
 		given(characterRepository.findFirstBySpeciesAndStageOrderByCharacterIdAsc("SLIME", Character.Stage.BABY))
 			.willReturn(Optional.of(babyCharacter));
+		given(userCharacterHistoryRepository.save(any(UserCharacterHistory.class)))
+			.willAnswer(invocation -> invocation.getArgument(0));
 
 		HatchCharacterResp resp = service.hatch(userId);
 
@@ -290,6 +309,7 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.stage()).isEqualTo("BABY");
 		assertThat(resp.name()).isEqualTo("rabi");
 		assertThat(resp.thumbnailUrl()).isEqualTo("https://cdn.example.com/slime.png");
+		then(userCharacterHistoryRepository).should().save(any(UserCharacterHistory.class));
 	}
 
 	@Test
@@ -397,6 +417,8 @@ class TamagotchiServiceImplTest {
 		given(characterRepository.findById(2L)).willReturn(Optional.of(babyCharacter));
 		given(characterRepository.findFirstBySpeciesAndStageOrderByCharacterIdAsc("SLIME", Character.Stage.TEEN))
 			.willReturn(Optional.of(teenCharacter));
+		given(userCharacterHistoryRepository.save(any(UserCharacterHistory.class)))
+			.willAnswer(invocation -> invocation.getArgument(0));
 
 		EvolutionResp resp = service.evolve(userId, 20L);
 
@@ -409,6 +431,7 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.characterImageUrl()).isEqualTo("https://cdn.example.com/slime-teen.png");
 		assertThat(resp.evolvedAt()).isNotBlank();
 		then(characterUnlockRepository).should(never()).saveAll(any());
+		then(userCharacterHistoryRepository).should().save(any(UserCharacterHistory.class));
 	}
 
 	@Test
@@ -453,6 +476,8 @@ class TamagotchiServiceImplTest {
 			.willReturn(Optional.of(adultCharacter));
 		given(characterRepository.findBySpecies("SLIME")).willReturn(List.of(babyCharacter, teenCharacter, adultCharacter));
 		given(characterUnlockRepository.findByUserId(userId)).willReturn(List.of());
+		given(userCharacterHistoryRepository.save(any(UserCharacterHistory.class)))
+			.willAnswer(invocation -> invocation.getArgument(0));
 
 		EvolutionResp resp = service.evolve(userId, 20L);
 
@@ -463,6 +488,7 @@ class TamagotchiServiceImplTest {
 		ArgumentCaptor<Iterable<CharacterUnlock>> captor = (ArgumentCaptor<Iterable<CharacterUnlock>>) (ArgumentCaptor<?>)
 			forClass(Iterable.class);
 		then(characterUnlockRepository).should().saveAll(captor.capture());
+		then(userCharacterHistoryRepository).should().save(any(UserCharacterHistory.class));
 
 		ArrayList<Long> unlockedCharacterIds = new ArrayList<>();
 		for (CharacterUnlock unlock : captor.getValue()) {
@@ -572,8 +598,11 @@ class TamagotchiServiceImplTest {
 		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
 			.willReturn(Optional.of(adultUserCharacter));
 		given(characterRepository.findById(4L)).willReturn(Optional.of(adultCharacter));
-		given(characterRepository.findFirstByStageOrderByCharacterIdAsc(Character.Stage.EGG))
-			.willReturn(Optional.of(eggCharacter));
+		given(characterRepository.findAllByStage(Character.Stage.EGG)).willReturn(List.of(eggCharacter));
+		given(userCharacterRepository.save(any(UserCharacter.class)))
+			.willAnswer(invocation -> invocation.getArgument(0));
+		given(userCharacterHistoryRepository.save(any(UserCharacterHistory.class)))
+			.willAnswer(invocation -> invocation.getArgument(0));
 
 		FarewellResp resp = service.approveIndependence(userId, true);
 
@@ -581,6 +610,7 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.nextCharacterAssigned()).isTrue();
 		assertThat(resp.nextCharacterStage()).isEqualTo("EGG");
 		assertThat(resp.animationUrl()).isNotBlank();
+		then(userCharacterHistoryRepository).should().save(any(UserCharacterHistory.class));
 	}
 
 	@Test

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaDetailCharacterResp;
@@ -20,6 +21,7 @@ import com.doitdo.domain.tamagotchi.entity.CharacterSpeciesBackground;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterSpeciesBackgroundRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
+import com.doitdo.domain.tamagotchi.repository.UserCharacterHistoryRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.global.exception.CustomException;
@@ -43,13 +45,21 @@ class TamagotchiEncyclopediaDetailServiceTest {
 	@Mock
 	private CharacterSpeciesBackgroundRepository characterSpeciesBackgroundRepository;
 
+	@Mock
+	private UserCharacterHistoryRepository userCharacterHistoryRepository;
+
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
+
 	private TamagotchiServiceImpl service() {
 		return new TamagotchiServiceImpl(
 			characterRepository,
 			characterUnlockRepository,
 			userCharacterRepository,
+			userCharacterHistoryRepository,
 			characterSpeciesBackgroundRepository,
-			userRepository
+			userRepository,
+			eventPublisher
 		);
 	}
 

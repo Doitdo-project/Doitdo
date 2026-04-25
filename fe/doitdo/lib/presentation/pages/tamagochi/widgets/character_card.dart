@@ -24,6 +24,7 @@ class CharacterCard extends StatelessWidget {
     this.onTapShop,
     this.onTapCollection,
     this.onEggTap,
+    this.topSafePadding = 0,
   });
 
   final TamagochiState state;
@@ -38,6 +39,11 @@ class CharacterCard extends StatelessWidget {
   /// 알을 탭했을 때 호출. 부화 페이지로 이동 + 복귀 시 재조회는 부모가 담당.
   final VoidCallback? onEggTap;
 
+  /// 카드가 상태바 영역까지 확장될 때 content 가 상태바 아이콘과 겹치지 않도록
+  /// 밀어낼 상단 여백. 배경(grass) 은 이 영역까지 그대로 이어지고, 내부 content
+  /// 좌표만 이 값만큼 내려간다.
+  final double topSafePadding;
+
   // 카드 배경이 테마와 무관하게 고정이라 DoitdoColors 가 아닌 로컬 상수.
   static const Color _expBarBg = Color(0xFF3F4A3A);
   static const Color _expBarFill = Color(0xFFF5D33C);
@@ -48,7 +54,7 @@ class CharacterCard extends StatelessWidget {
     final hideChrome = character == null || character!.isEgg;
 
     return SizedBox(
-      height: 200.h,
+      height: 200.h + topSafePadding,
       child: Stack(
         children: [
           Positioned.fill(
@@ -59,12 +65,31 @@ class CharacterCard extends StatelessWidget {
             ),
           ),
 
+          // 진화/부화/독립 같은 주요 액션 중의 로딩 표시. copyWithPrevious 덕에
+          // 이전 캐릭터 데이터는 그대로 남아 있고, 이 작은 스피너만 카드 왼쪽
+          // 상단에 얹혀 "서버 갱신 중" 만 표현한다. 홈 전체를 덮지 않으므로 아래
+          // 투두 영역은 그대로 상호작용 가능.
+          if (isCharacterLoading && character != null)
+            Positioned(
+              top: topSafePadding + 10.h,
+              left: 12.w,
+              child: SizedBox(
+                width: 16.sp,
+                height: 16.sp,
+                child: const CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+            ),
+
           // 중앙: 말풍선 + 캐릭터 (캐릭터 상태에 따라 분기)
           // 하단 크롬이 없을 땐 아래 패딩을 줄여 캐릭터를 중앙에 가깝게 배치.
+          // 상태바 영역(topSafePadding) 은 비워 중앙 정렬 기준이 그 아래 영역.
           Positioned(
             left: 0,
             right: 0,
-            top: 0,
+            top: topSafePadding,
             bottom: hideChrome ? 0 : 24.h,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -81,7 +106,7 @@ class CharacterCard extends StatelessWidget {
           // 우측 상단 아이콘 (상점 / 도감) — 캐릭터 수령 이후에만 노출
           if (!hideChrome)
             Positioned(
-              top: 8.h,
+              top: topSafePadding + 8.h,
               right: 16.w,
               child: Column(
                 children: [
@@ -123,6 +148,10 @@ class CharacterCard extends StatelessWidget {
                               color: Colors.black,
                             ),
                           ),
+                          if (_stageHint != null) ...[
+                            SizedBox(width: 4.w),
+                            _StageHintIcon(message: _stageHint!),
+                          ],
                         ],
                       ),
                       Text(
@@ -174,6 +203,26 @@ class CharacterCard extends StatelessWidget {
 
   double get _displayProgress =>
       character!.growthPercent.clamp(0, 100) / 100;
+
+  /// 단계별 가이드. 알/미확정 단계는 null (호출부에서 툴팁 자체를 숨김).
+  String? get _stageHint {
+    final c = character;
+    if (c == null) return null;
+    switch (c.stage) {
+      case CharacterStage.egg:
+      case CharacterStage.other:
+        return null;
+      case CharacterStage.infant:
+        return '할 일을 완료해 경험치를 모아보세요.\n100% 달성 시 성장기로 진화해요.';
+      case CharacterStage.juvenile:
+        return '꾸준히 할 일을 완료하면 성숙기로 자라나요.';
+      case CharacterStage.adult:
+        if (c.canFarewell) {
+          return '독립할 준비가 됐어요. 배웅하면 다음 알이 도착해요.';
+        }
+        return '조금만 더 함께하면 독립할 수 있어요.';
+    }
+  }
 
   /// 단계 배지 문구. 미정 단계(other)면 null → 배지 생략.
   String? get _stageLabel => character?.stage.badgeLabel;
@@ -358,6 +407,42 @@ class _EggImage extends StatelessWidget {
   Widget _fallback() => Icon(Icons.egg, size: size * 0.88, color: Colors.white);
 }
 
+/// 이름 옆 info 아이콘. 탭하면 현재 단계 기준 안내 문구가 잠깐 떠오른다.
+///
+/// 모바일에선 Tooltip 기본 트리거가 long-press 라 발견성이 떨어져서
+/// [TooltipTriggerMode.tap] 으로 교체하고 유지 시간도 살짝 늘렸다.
+class _StageHintIcon extends StatelessWidget {
+  const _StageHintIcon({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: message,
+      triggerMode: TooltipTriggerMode.tap,
+      showDuration: const Duration(seconds: 4),
+      waitDuration: Duration.zero,
+      preferBelow: true,
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      textStyle: AppTextStyles.labelSmall.copyWith(
+        color: Colors.white,
+        height: 1.4,
+      ),
+      child: Icon(
+        Icons.info_outline_rounded,
+        size: 14.sp,
+        color: Colors.black.withValues(alpha: 0.45),
+      ),
+    );
+  }
+}
+
 /// 이름 앞에 붙는 진화 단계 배지 (네모). 유년기/성장기/성숙기.
 class _StageBadge extends StatelessWidget {
   const _StageBadge({required this.label});
@@ -399,7 +484,7 @@ class _GrownCharacter extends StatelessWidget {
     }
     return Image.network(
       thumbnailUrl,
-      height: 100.h,
+      height: 80.h,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.medium,
       errorBuilder: (_, _, _) => const _CharacterPlaceholder(),

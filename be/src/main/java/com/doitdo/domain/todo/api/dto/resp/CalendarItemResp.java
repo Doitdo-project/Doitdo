@@ -3,8 +3,11 @@ package com.doitdo.domain.todo.api.dto.resp;
 import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.entity.Todo.TodoStatus;
 import com.doitdo.domain.todo.entity.Todo.TodoType;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Set;
 
 public record CalendarItemResp(
 		Long todoId,
@@ -18,7 +21,7 @@ public record CalendarItemResp(
 		Integer priority,
 		LocalDate startDate,
 		LocalDate endDate,
-		Integer period,
+		List<String> daysOfWeek,
 		TodoStatus status,
 		LocalDateTime updatedAt,
 		int snoozedDays
@@ -29,7 +32,7 @@ public record CalendarItemResp(
 			Long masterTodoId,
 			String categoryName,
 			TodoType responseType,
-			Integer responsePeriod,
+			Set<DayOfWeek> responseDaysOfWeek,
 			int snoozedDays) {
 		LocalDate occurrenceDate = masterTodoId != null ? todo.getStartDate() : null;
 		return new CalendarItemResp(
@@ -44,7 +47,7 @@ public record CalendarItemResp(
 				todo.getPriority(),
 				todo.getStartDate(),
 				todo.getEndDate(),
-				responsePeriod,
+				toDayOfWeekCodes(responseDaysOfWeek),
 				todo.getStatus(),
 				todo.getUpdatedAt(),
 				snoozedDays
@@ -64,10 +67,19 @@ public record CalendarItemResp(
 				master.getPriority(),
 				occurrenceDate,
 				null,
-				master.getPeriod(),
+				toDayOfWeekCodes(master.getDaysOfWeek()),
 				TodoStatus.TODO,
 				master.getUpdatedAt(),
 				0
 		);
+	}
+
+	private static List<String> toDayOfWeekCodes(Set<DayOfWeek> daysOfWeek) {
+		return daysOfWeek == null
+				? List.of()
+				: daysOfWeek.stream()
+						.sorted()
+						.map(Todo::toDayOfWeekCode)
+						.toList();
 	}
 }

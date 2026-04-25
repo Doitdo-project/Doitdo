@@ -28,6 +28,23 @@ class SnapScrollPhysics extends ScrollPhysics {
     );
   }
 
+  /// 상단 오버스크롤(= pixels <= 0 지점에서 더 아래로 당기는 제스처) 을 막는다.
+  /// 헤더가 이미 전부 보이는 상태에서 추가로 pull-down 되면 위에 생기는 빈 공간이
+  /// grass 배경 위로 노출되면서 시각적 결함이 되기 때문. 하단 오버스크롤(bounce) 은
+  /// 그대로 두어 리스트 스크롤감은 유지.
+  @override
+  double applyBoundaryConditions(ScrollMetrics position, double value) {
+    if (value < position.pixels &&
+        position.pixels <= position.minScrollExtent) {
+      return value - position.pixels;
+    }
+    if (value < position.minScrollExtent &&
+        position.minScrollExtent < position.pixels) {
+      return value - position.minScrollExtent;
+    }
+    return super.applyBoundaryConditions(position, value);
+  }
+
   @override
   Simulation? createBallisticSimulation(
     ScrollMetrics position,

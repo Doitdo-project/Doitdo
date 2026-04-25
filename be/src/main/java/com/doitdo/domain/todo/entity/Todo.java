@@ -1,6 +1,12 @@
 package com.doitdo.domain.todo.entity;
 
 import java.time.LocalDate;
+import java.time.DayOfWeek;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.doitdo.global.entity.BaseTimeEntity;
 
@@ -12,6 +18,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -67,7 +74,11 @@ public class Todo extends BaseTimeEntity {
 	@Column(name = "end_date")
 	private LocalDate endDate;
 
-	private Integer period;
+	@Column(name = "master_todo_id")
+	private Long masterTodoId;
+
+	@Column(name = "days_of_week", length = 27)
+	private String daysOfWeekRaw;
 
 	@Column(name = "is_deleted", nullable = false)
 	private Boolean isDeleted;
@@ -96,11 +107,31 @@ public class Todo extends BaseTimeEntity {
 		this.priority = priority;
 	}
 
+	public void clearAlertTime() {
+		this.alertTime = null;
+	}
+
 	public void snooze() {
 		this.startDate = this.startDate.plusDays(1);
 		if (this.endDate != null) {
 			this.endDate = this.endDate.plusDays(1);
 		}
+	}
+
+	@Transient
+	public Set<DayOfWeek> getDaysOfWeek() {
+		if (daysOfWeekRaw == null || daysOfWeekRaw.isBlank()) {
+			return Set.of();
+		}
+		return Arrays.stream(daysOfWeekRaw.split(","))
+				.map(String::trim)
+				.filter(token -> !token.isEmpty())
+				.map(Todo::toDayOfWeek)
+				.collect(Collectors.toCollection(() -> EnumSet.noneOf(DayOfWeek.class)));
+	}
+
+	public void setDaysOfWeek(Set<DayOfWeek> daysOfWeek) {
+		this.daysOfWeekRaw = toRawDaysOfWeek(daysOfWeek);
 	}
 
 	public void update(
@@ -110,14 +141,16 @@ public class Todo extends BaseTimeEntity {
 			TodoType type,
 			LocalDate startDate,
 			LocalDate endDate,
-			Integer period) {
+			Set<DayOfWeek> daysOfWeek,
+			String alertTime) {
 		if (title != null) this.title = title;
 		if (content != null) this.content = content;
 		if (categoryId != null) this.categoryId = categoryId;
 		if (type != null) this.type = type;
 		if (startDate != null) this.startDate = startDate;
 		if (endDate != null) this.endDate = endDate;
-		if (period != null) this.period = period;
+		if (daysOfWeek != null) setDaysOfWeek(daysOfWeek);
+		if (alertTime != null) this.alertTime = alertTime;
 	}
 
 	public static Todo create(
@@ -127,9 +160,10 @@ public class Todo extends BaseTimeEntity {
 			String content,
 			TodoType type,
 			Integer priority,
+			String alertTime,
 			LocalDate startDate,
 			LocalDate endDate,
-			Integer period) {
+			Set<DayOfWeek> daysOfWeek) {
 		return Todo.builder()
 				.userId(userId)
 				.categoryId(categoryId)
@@ -138,10 +172,11 @@ public class Todo extends BaseTimeEntity {
 				.type(type)
 				.status(TodoStatus.TODO)
 				.priority(priority)
-				.alertTime(null)
+				.alertTime(alertTime)
 				.startDate(startDate)
 				.endDate(endDate)
-				.period(period)
+				.masterTodoId(null)
+				.daysOfWeekRaw(toRawDaysOfWeek(daysOfWeek))
 				.isDeleted(false)
 				.expGranted(false)
 				.build();
@@ -159,9 +194,45 @@ public class Todo extends BaseTimeEntity {
 				.alertTime(master.getAlertTime())
 				.startDate(occurrenceDate)
 				.endDate(null)
-				.period(null)
+				.masterTodoId(master.getTodoId())
+				.daysOfWeekRaw(null)
 				.isDeleted(false)
 				.expGranted(false)
 				.build();
+	}
+
+	private static String toRawDaysOfWeek(Set<DayOfWeek> daysOfWeek) {
+		if (daysOfWeek == null || daysOfWeek.isEmpty()) {
+			return null;
+		}
+		return daysOfWeek.stream()
+				.sorted()
+				.map(Todo::toDayOfWeekCode)
+				.collect(Collectors.joining(","));
+	}
+
+	public static DayOfWeek toDayOfWeek(String code) {
+		return switch (code.toUpperCase(Locale.ROOT)) {
+			case "MON" -> DayOfWeek.MONDAY;
+			case "TUE" -> DayOfWeek.TUESDAY;
+			case "WED" -> DayOfWeek.WEDNESDAY;
+			case "THU" -> DayOfWeek.THURSDAY;
+			case "FRI" -> DayOfWeek.FRIDAY;
+			case "SAT" -> DayOfWeek.SATURDAY;
+			case "SUN" -> DayOfWeek.SUNDAY;
+			default -> throw new IllegalArgumentException("Unknown dayOfWeek: " + code);
+		};
+	}
+
+	public static String toDayOfWeekCode(DayOfWeek dayOfWeek) {
+		return switch (dayOfWeek) {
+			case MONDAY -> "MON";
+			case TUESDAY -> "TUE";
+			case WEDNESDAY -> "WED";
+			case THURSDAY -> "THU";
+			case FRIDAY -> "FRI";
+			case SATURDAY -> "SAT";
+			case SUNDAY -> "SUN";
+		};
 	}
 }
