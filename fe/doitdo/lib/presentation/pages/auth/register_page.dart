@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:doitdo/core/theme/app_text_styles.dart';
@@ -11,8 +11,9 @@ import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/domain/entities/user.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/auth/register_view_model.dart';
+import 'package:doitdo/presentation/pages/auth/widgets/auth_pill_button.dart';
 import 'package:doitdo/presentation/pages/auth/widgets/auth_text_field.dart';
-import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
+import 'package:doitdo/presentation/pages/auth/widgets/inline_back_bar.dart';
 
 /// 회원가입 화면.
 ///
@@ -23,6 +24,8 @@ import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
 /// - 폼 전체가 유효하지 않으면 "회원가입 완료" 버튼은 회색으로 비활성화.
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
+
+  static const _bgColor = Color(0xFFF8F5EC);
 
   @override
   ConsumerState<RegisterPage> createState() => _RegisterPageState();
@@ -112,7 +115,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     final v = _emailCtrl.text.trim();
     if (v.isEmpty) return '이메일을 입력해주세요';
     if (!_emailRegex.hasMatch(v)) return '올바른 이메일 형식이 아닙니다';
-    // 서버 중복체크 결과가 false 이면 에러 노출. 로딩/에러 상태는 에러로 표시하지 않음.
     final avail = ref.read(emailAvailabilityProvider).valueOrNull;
     if (avail == false) return '이미 사용 중인 이메일입니다';
     return null;
@@ -153,15 +155,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     if (_userIdCtrl.text.trim().length < 4) return false;
     if (_passwordCtrl.text.length < 8) return false;
     if (_passwordCtrl.text != _confirmCtrl.text) return false;
-    // 중복체크 서버 결과 — 명시적으로 "사용 가능(true)" 이 확인돼야 제출 허용.
     if (ref.read(emailAvailabilityProvider).valueOrNull != true) return false;
     if (ref.read(usernameAvailabilityProvider).valueOrNull != true) return false;
     return true;
   }
 
   void _submit() {
-    // 버튼은 항상 활성화돼 있지만, 제출 시점에 유효성 검증.
-    // 유효하지 않으면 각 필드에 에러 메시지가 이미 노출되므로 별도 스낵바 없이 return.
     if (!_isFormValid) {
       setState(() {
         _emailTouched = true;
@@ -206,138 +205,117 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     });
 
     return Scaffold(
+      backgroundColor: RegisterPage._bgColor,
       resizeToAvoidBottomInset: true,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset('assets/images/background2.jpg', fit: BoxFit.cover),
-          GestureDetector(
-            onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-            behavior: HitTestBehavior.opaque,
-            child: SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  // 비율 배치:
-                  // - 타이틀: 화면 상단 ~1/3 지점 (상단 여백 25%)
-                  // - 버튼: 화면 하단 ~1/3 지점 (필드 후 flexible gap)
-                  // SingleChildScrollView 로 감싸서 작은 화면·키보드 상황에도 안전.
-                  final h = constraints.maxHeight;
-                  final topSpace = h * 0.22;
-                  // 필드 이후 ~ 버튼 사이 공간. 최소 24dp.
-                  final midGap = math.max(24.0, h * 0.04);
-                  final bottomSpace = h * 0.05;
+      body: GestureDetector(
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        behavior: HitTestBehavior.opaque,
+        child: SafeArea(
+          child: Column(
+            children: [
+              const InlineBackBar(label: '회원가입'),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(28.w, 12.h, 28.w, 24.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        '계정 만들기',
+                        style: AppTextStyles.titleLarge.copyWith(
+                          color: colors.textPrimary,
+                          fontSize: 22.sp,
+                        ),
+                      ),
+                      SizedBox(height: 6.h),
+                      Text(
+                        '두잇두에서 사용할 정보를 입력해주세요',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: colors.textSecondary,
+                          fontSize: 13.sp,
+                        ),
+                      ),
+                      SizedBox(height: 24.h),
 
-                  return SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(
-                      36,
-                      topSpace,
-                      36,
-                      bottomSpace,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // ── 타이틀 (Medium weight) ──
-                        Text(
-                          '회원가입',
-                          style: AppTextStyles.titleLarge.copyWith(
-                            color: colors.textPrimary,
-                            fontSize: 28,
-                            fontFamily: 'GmarketSansMedium',
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 32),
+                      // ── 필드 4개 (아이디 → 이메일 → 비밀번호 → 확인) ──
+                      AuthTextField(
+                        controller: _userIdCtrl,
+                        hint: '아이디 (4자 이상)',
+                        textInputAction: TextInputAction.next,
+                        errorText: _userIdError,
+                        showSuccess: _userIdError == null &&
+                            _userIdCtrl.text.trim().length >= 4 &&
+                            ref
+                                    .read(usernameAvailabilityProvider)
+                                    .valueOrNull ==
+                                true,
+                      ),
+                      AuthTextField(
+                        controller: _emailCtrl,
+                        hint: '이메일',
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        errorText: _emailError,
+                        showSuccess: _emailError == null &&
+                            _emailCtrl.text.trim().isNotEmpty &&
+                            ref.read(emailAvailabilityProvider).valueOrNull ==
+                                true,
+                      ),
+                      AuthTextField(
+                        controller: _passwordCtrl,
+                        hint: '비밀번호 (8자 이상)',
+                        obscureText: true,
+                        textInputAction: TextInputAction.next,
+                        errorText: _passwordError,
+                      ),
+                      AuthTextField(
+                        controller: _confirmCtrl,
+                        hint: '비밀번호 확인',
+                        obscureText: true,
+                        textInputAction: TextInputAction.done,
+                        errorText: _confirmError,
+                        showSuccess: _passwordMatch,
+                        onSubmitted: (_) => _submit(),
+                      ),
 
-                        // ── 필드 4개 (아이디 → 이메일 → 비밀번호 → 확인) ──
-                        // showSuccess: 서버 중복체크까지 "true(가능)" 확인된 경우만 초록 체크.
-                        AuthTextField(
-                          controller: _userIdCtrl,
-                          hint: '아이디',
-                          textInputAction: TextInputAction.next,
-                          errorText: _userIdError,
-                          showSuccess: _userIdError == null &&
-                              _userIdCtrl.text.trim().length >= 4 &&
-                              ref
-                                      .read(usernameAvailabilityProvider)
-                                      .valueOrNull ==
-                                  true,
-                        ),
-                        const SizedBox(height: 4),
-                        AuthTextField(
-                          controller: _emailCtrl,
-                          hint: '이메일',
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          errorText: _emailError,
-                          showSuccess: _emailError == null &&
-                              _emailCtrl.text.trim().isNotEmpty &&
-                              ref
-                                      .read(emailAvailabilityProvider)
-                                      .valueOrNull ==
-                                  true,
-                        ),
-                        const SizedBox(height: 4),
-                        AuthTextField(
-                          controller: _passwordCtrl,
-                          hint: '비밀번호',
-                          obscureText: true,
-                          textInputAction: TextInputAction.next,
-                          errorText: _passwordError,
-                        ),
-                        const SizedBox(height: 4),
-                        AuthTextField(
-                          controller: _confirmCtrl,
-                          hint: '비밀번호 확인',
-                          obscureText: true,
-                          textInputAction: TextInputAction.done,
-                          errorText: _confirmError,
-                          showSuccess: _passwordMatch,
-                          onSubmitted: (_) => _submit(),
-                        ),
+                      SizedBox(height: 16.h),
 
-                        SizedBox(height: midGap),
+                      AuthPillButton(
+                        label:
+                            registerState.isLoading ? '가입 중…' : '회원가입 완료',
+                        onPressed: registerState.isLoading ? null : _submit,
+                      ),
+                      SizedBox(height: 16.h),
 
-                        // ── 버튼 ──
-                        DoitdoPrimaryButton(
-                          label: registerState.isLoading
-                              ? '가입 중…'
-                              : '회원가입 완료',
-                          height: 48,
-                          onPressed: registerState.isLoading ? null : _submit,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // ── 로그인 화면으로 이동 ──
-                        GestureDetector(
-                          onTap: () => context.pop(),
-                          behavior: HitTestBehavior.opaque,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                '로그인 화면으로 이동',
-                                style: AppTextStyles.labelMedium.copyWith(
-                                  color: colors.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.arrow_forward,
-                                size: 14,
+                      GestureDetector(
+                        onTap: () => context.pop(),
+                        behavior: HitTestBehavior.opaque,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '로그인 화면으로 이동',
+                              style: AppTextStyles.labelMedium.copyWith(
                                 color: colors.textSecondary,
+                                fontSize: 13.sp,
                               ),
-                            ],
-                          ),
+                            ),
+                            SizedBox(width: 4.w),
+                            Icon(
+                              Icons.arrow_forward,
+                              size: 14.sp,
+                              color: colors.textSecondary,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  );
-                },
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -352,64 +330,5 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 //
 // class _TermsCheckbox extends StatelessWidget {
 //   const _TermsCheckbox({required this.value, required this.onChanged});
-//
-//   final bool value;
-//   final ValueChanged<bool> onChanged;
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     final colors = context.colors;
-//     return InkWell(
-//       onTap: () => onChanged(!value),
-//       borderRadius: BorderRadius.circular(8),
-//       child: Padding(
-//         padding: const EdgeInsets.symmetric(vertical: 4),
-//         child: Row(
-//           children: [
-//             SizedBox(
-//               width: 22,
-//               height: 22,
-//               child: Checkbox(
-//                 value: value,
-//                 onChanged: (v) => onChanged(v ?? false),
-//                 activeColor: colors.primary,
-//                 shape: RoundedRectangleBorder(
-//                   borderRadius: BorderRadius.circular(4),
-//                 ),
-//                 side: BorderSide(color: colors.textHint),
-//                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-//                 visualDensity: VisualDensity.compact,
-//               ),
-//             ),
-//             const SizedBox(width: 10),
-//             Expanded(
-//               child: Wrap(
-//                 crossAxisAlignment: WrapCrossAlignment.center,
-//                 children: [
-//                   Text('이용약관',
-//                       style: AppTextStyles.labelMedium.copyWith(
-//                         color: colors.textPrimary,
-//                         decoration: TextDecoration.underline,
-//                       )),
-//                   Text(' 및 ',
-//                       style: AppTextStyles.labelMedium.copyWith(
-//                         color: colors.textSecondary,
-//                       )),
-//                   Text('개인정보 처리방침',
-//                       style: AppTextStyles.labelMedium.copyWith(
-//                         color: colors.textPrimary,
-//                         decoration: TextDecoration.underline,
-//                       )),
-//                   Text('에 동의합니다',
-//                       style: AppTextStyles.labelMedium.copyWith(
-//                         color: colors.textSecondary,
-//                       )),
-//                 ],
-//               ),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
+//   ... (이전 동일) ...
 // }
