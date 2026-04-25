@@ -87,7 +87,11 @@ public enum TodoErrorCode implements ErrorCode {
 
 	// T13 - GET /categories (카테고리 조회)
 	T13_001("T13-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),
-	T13_002("T13-002", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류");
+	T13_002("T13-002", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
+
+	// T14 - TODO 반복 요일 검증
+	TODO_RECURRING_DAYS_OF_WEEK_REQUIRED("T14-001", HttpStatus.BAD_REQUEST, "반복 TODO는 daysOfWeek가 필요함"),
+	TODO_RECURRING_START_DATE_DAY_MISMATCH("T14-002", HttpStatus.BAD_REQUEST, "반복 TODO의 startDate 요일이 daysOfWeek에 포함되어야 함");
 
 	private final String code;
 	private final HttpStatus httpStatus;

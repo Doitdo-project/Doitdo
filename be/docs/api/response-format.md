@@ -86,7 +86,7 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `priority` | `Integer` | |
 | `startDate` | `LocalDate` | |
 | `endDate` | `LocalDate` | nullable |
-| `period` | `Integer` | nullable |
+| `daysOfWeek` | `String` | nullable. RECURRING 타입만 채워짐. 요일 CSV (예: `"MON,WED,FRI"`) |
 | `status` | `TodoStatus` | TODO / IN_PROGRESS / DONE |
 | `updatedAt` | `LocalDateTime` | |
 | `snoozedDays` | `int` | 이 TODO 를 미룬 누적 횟수. `snooze_history` 테이블 COUNT 파생 (todos DDL 변경 없음) |
@@ -125,7 +125,7 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `priority` | `Integer` | |
 | `startDate` | `LocalDate` | 가상 인스턴스는 occurrenceDate 와 동일 |
 | `endDate` | `LocalDate` | nullable |
-| `period` | `Integer` | nullable. RECURRING 는 마스터 주기 |
+| `daysOfWeek` | `String` | nullable. RECURRING 마스터의 요일 집합 CSV (예: `"MON,WED,FRI"`) |
 | `status` | `TodoStatus` | 가상 인스턴스는 항상 `TODO` |
 | `updatedAt` | `LocalDateTime` | 가상 인스턴스는 마스터 `updatedAt` |
 | `snoozedDays` | `int` | 가상 인스턴스는 `0` |

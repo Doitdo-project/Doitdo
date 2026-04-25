@@ -16,16 +16,19 @@ import com.doitdo.domain.todo.repository.TodoRepository;
 import com.doitdo.domain.todo.repository.TodoSpecifications;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TodoErrorCode;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Order;
 import org.springframework.data.jpa.domain.Specification;
@@ -33,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RecurrenceServiceImpl implements RecurrenceService {
@@ -70,6 +74,8 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 		Map<Long, String> categoryNameById = buildCategoryNameMap(overlappingTodos);
 		Map<Long, Integer> snoozeCountByTodoId = buildSnoozeCountMap(actualTodos);
 		Map<Long, LocalDate> originalOccurrenceByTodoId = buildOriginalOccurrenceMap(actualTodos);
+		Map<Long, Todo> mastersById = recurringMasters.stream()
+				.collect(Collectors.toMap(Todo::getTodoId, Function.identity()));
 		Map<String, List<Todo>> mastersByTitle = recurringMasters.stream()
 				.collect(Collectors.groupingBy(Todo::getTitle));
 
@@ -78,7 +84,7 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 
 		for (Todo actualTodo : actualTodos) {
 			LocalDate originalOccurrenceDate = originalOccurrenceByTodoId.getOrDefault(actualTodo.getTodoId(), actualTodo.getStartDate());
-			Todo matchedMaster = findMatchingRecurringMaster(actualTodo, originalOccurrenceDate, mastersByTitle);
+			Todo matchedMaster = findMatchingRecurringMaster(actualTodo, originalOccurrenceDate, mastersById, mastersByTitle);
 			if (matchedMaster != null) {
 				actualizedOccurrencesByMasterId
 						.computeIfAbsent(matchedMaster.getTodoId(), ignored -> new java.util.HashSet<>())
@@ -187,17 +193,23 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 
 	private CalendarItemResp toActualCalendarItem(Todo actualTodo, Todo matchedMaster, String categoryName, int snoozedDays) {
 		TodoType responseType = matchedMaster != null ? TodoType.RECURRING : actualTodo.getType();
-		Integer responsePeriod = matchedMaster != null ? matchedMaster.getPeriod() : actualTodo.getPeriod();
+		Set<DayOfWeek> responseDaysOfWeek = matchedMaster != null ? matchedMaster.getDaysOfWeek() : actualTodo.getDaysOfWeek();
 		Long masterTodoId = matchedMaster != null ? matchedMaster.getTodoId() : null;
-		return CalendarItemResp.fromActual(actualTodo, masterTodoId, categoryName, responseType, responsePeriod, snoozedDays);
+		return CalendarItemResp.fromActual(actualTodo, masterTodoId, categoryName, responseType, responseDaysOfWeek, snoozedDays);
 	}
 
 	private Todo findMatchingRecurringMaster(
 			Todo actualTodo,
 			LocalDate originalOccurrenceDate,
+			Map<Long, Todo> mastersById,
 			Map<String, List<Todo>> mastersByTitle) {
 		if (actualTodo.getType() != TodoType.NORMAL) {
 			return null;
+		}
+
+		if (actualTodo.getMasterTodoId() != null) {
+			Todo master = mastersById.get(actualTodo.getMasterTodoId());
+			return master != null && isOccurrenceOfMaster(master, originalOccurrenceDate) ? master : null;
 		}
 
 		return mastersByTitle.getOrDefault(actualTodo.getTitle(), List.of()).stream()
@@ -207,7 +219,8 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 	}
 
 	private boolean isOccurrenceOfMaster(Todo master, LocalDate occurrenceDate) {
-		if (master.getPeriod() == null || master.getPeriod() <= 0) {
+		Set<DayOfWeek> daysOfWeek = master.getDaysOfWeek();
+		if (daysOfWeek.isEmpty()) {
 			return false;
 		}
 		if (occurrenceDate.isBefore(master.getStartDate())) {
@@ -217,8 +230,7 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 			return false;
 		}
 
-		long diff = java.time.temporal.ChronoUnit.DAYS.between(master.getStartDate(), occurrenceDate);
-		return diff % master.getPeriod() == 0;
+		return daysOfWeek.contains(occurrenceDate.getDayOfWeek());
 	}
 
 	private boolean matchesCalendarFilters(CalendarItemResp item, TodoCalendarReq req) {
@@ -241,24 +253,24 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 			throw new CustomException(TodoErrorCode.T05_004);
 		}
 
-		return todoRepository.findByUserIdAndTitleAndStartDateAndTypeAndIsDeletedFalse(
+		return todoRepository.findByUserIdAndMasterTodoIdAndStartDateAndIsDeletedFalse(
 						userId,
-						master.getTitle(),
-						occurrenceDate,
-						TodoType.NORMAL)
-				.orElseGet(() -> findExistingMaterializedInstance(userId, master.getTitle(), occurrenceDate)
-						.orElseGet(() -> todoRepository.save(Todo.createRecurringInstance(master, occurrenceDate))));
+						master.getTodoId(),
+						occurrenceDate)
+				.orElseGet(() -> saveRecurringInstanceIdempotently(master, occurrenceDate));
 	}
 
-	private Optional<Todo> findExistingMaterializedInstance(Long userId, String title, LocalDate occurrenceDate) {
-		List<Todo> candidates = todoRepository.findAllByUserIdAndTitleAndTypeAndIsDeletedFalse(userId, title, TodoType.NORMAL);
-		if (candidates.isEmpty()) {
-			return Optional.empty();
+	private Todo saveRecurringInstanceIdempotently(Todo master, LocalDate occurrenceDate) {
+		try {
+			return todoRepository.saveAndFlush(Todo.createRecurringInstance(master, occurrenceDate));
+		} catch (DataIntegrityViolationException ex) {
+			log.warn("[recurrence] duplicate materialized instance skipped masterTodoId={} occurrenceDate={}",
+					master.getTodoId(), occurrenceDate);
+			return todoRepository.findByUserIdAndMasterTodoIdAndStartDateAndIsDeletedFalse(
+							master.getUserId(),
+							master.getTodoId(),
+							occurrenceDate)
+					.orElseThrow(() -> ex);
 		}
-
-		Map<Long, LocalDate> originalOccurrenceByTodoId = buildOriginalOccurrenceMap(candidates);
-		return candidates.stream()
-				.filter(todo -> occurrenceDate.equals(originalOccurrenceByTodoId.get(todo.getTodoId())))
-				.findFirst();
 	}
 }
