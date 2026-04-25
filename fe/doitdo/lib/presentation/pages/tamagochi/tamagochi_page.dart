@@ -10,6 +10,7 @@ import 'package:doitdo/presentation/pages/tamagochi/widgets/streak_section.dart'
 import 'package:doitdo/presentation/pages/todo/todo_state.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_add_sheet.dart';
+import 'package:doitdo/presentation/pages/todo/widgets/todo_detail_sheet.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_dialog.dart';
 import 'package:doitdo/presentation/widgets/common/todo_section.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_full_layout.dart';
@@ -102,6 +103,16 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       backgroundColor: Colors.transparent,
       useRootNavigator: true,
       builder: (_) => TodoAddSheet(initialDate: date),
+    );
+  }
+
+  void _openDetailSheet(BuildContext context, Todo todo, bool isSomeday) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      useRootNavigator: true,
+      builder: (_) => TodoDetailSheet(todoId: todo.id, isSomeday: isSomeday),
     );
   }
 
@@ -299,6 +310,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                       ),
                                       todos: todayTodos,
                                       onToggle: todoVm.toggleTodo,
+                                      onTodoTap: (todo) => _openDetailSheet(context, todo, false),
                                     ),
                                     const SizedBox(height: 24),
                                     TodoSection(
@@ -308,6 +320,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                           _openAddSheet(context, null),
                                       todos: somedayTodos,
                                       onToggle: todoVm.toggleSomedayTodo,
+                                      onTodoTap: (todo) => _openDetailSheet(context, todo, true),
                                     ),
                                   ],
                                 ),
