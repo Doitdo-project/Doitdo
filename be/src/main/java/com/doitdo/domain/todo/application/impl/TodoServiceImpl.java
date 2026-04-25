@@ -29,7 +29,9 @@ import com.doitdo.domain.todo.repository.TodoRepository;
 import com.doitdo.domain.todo.repository.TodoSpecifications;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TodoErrorCode;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -155,9 +157,8 @@ public class TodoServiceImpl implements TodoService {
 	@Override
 	@Transactional
 	public TodoDetailResp create(Long userId, TodoCreateReq req) {
-		if (req.type() == TodoType.RECURRING && req.period() == null) {
-			throw new CustomException(TodoErrorCode.T06_002);
-		}
+		Set<DayOfWeek> daysOfWeek = parseDaysOfWeek(req.daysOfWeek());
+		validateRecurringDays(req.type(), req.startDate(), daysOfWeek);
 
 		Long categoryId = null;
 		String categoryName = null;
@@ -172,7 +173,7 @@ public class TodoServiceImpl implements TodoService {
 
 		Todo todo = todoRepository.save(
 				Todo.create(userId, categoryId, req.title(), req.content(),
-						req.type(), priority, req.alertTime(), req.startDate(), req.endDate(), req.period())
+						req.type(), priority, req.alertTime(), req.startDate(), req.endDate(), daysOfWeek)
 		);
 
 		// 새 TODO 이므로 snooze 이력 없음 — count=0 하드코딩 (DB 조회 불필요)
@@ -191,7 +192,7 @@ public class TodoServiceImpl implements TodoService {
 
 		todo.softDelete();
 		if (todo.getType() == TodoType.RECURRING && isAllScope(scope)) {
-			todoRepository.findAllByUserIdAndTitleAndTypeAndIsDeletedFalse(userId, todo.getTitle(), TodoType.NORMAL)
+			todoRepository.findAllByUserIdAndMasterTodoIdAndIsDeletedFalse(userId, todo.getTodoId())
 					.forEach(Todo::softDelete);
 		}
 	}
@@ -225,11 +226,11 @@ public class TodoServiceImpl implements TodoService {
 			}
 		}
 
+		Set<DayOfWeek> requestedDaysOfWeek = req.daysOfWeek() != null ? parseDaysOfWeek(req.daysOfWeek()) : null;
 		TodoType finalType = req.type() != null ? req.type() : todo.getType();
-		Integer finalPeriod = req.period() != null ? req.period() : todo.getPeriod();
-		if (finalType == TodoType.RECURRING && finalPeriod == null) {
-			throw new CustomException(TodoErrorCode.T04_004);
-		}
+		LocalDate finalStartDate = req.startDate() != null ? req.startDate() : todo.getStartDate();
+		Set<DayOfWeek> finalDaysOfWeek = requestedDaysOfWeek != null ? requestedDaysOfWeek : todo.getDaysOfWeek();
+		validateRecurringDays(finalType, finalStartDate, finalDaysOfWeek);
 
 		todo.update(
 				req.title(),
@@ -238,9 +239,12 @@ public class TodoServiceImpl implements TodoService {
 				req.type(),
 				req.startDate(),
 				req.endDate(),
-				req.period(),
+				requestedDaysOfWeek,
 				req.alertTime()
 		);
+		if (Boolean.TRUE.equals(req.clearAlertTime())) {
+			todo.clearAlertTime();
+		}
 
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
 		return TodoDetailResp.from(todo, categoryName, count);
@@ -390,5 +394,26 @@ public class TodoServiceImpl implements TodoService {
 
 	private boolean isAllScope(String scope) {
 		return StringUtils.hasText(scope) && "all".equalsIgnoreCase(scope);
+	}
+
+	private Set<DayOfWeek> parseDaysOfWeek(Set<String> daysOfWeek) {
+		if (daysOfWeek == null) {
+			return null;
+		}
+		EnumSet<DayOfWeek> parsed = EnumSet.noneOf(DayOfWeek.class);
+		daysOfWeek.forEach(code -> parsed.add(Todo.toDayOfWeek(code)));
+		return parsed;
+	}
+
+	private void validateRecurringDays(TodoType type, LocalDate startDate, Set<DayOfWeek> daysOfWeek) {
+		if (type != TodoType.RECURRING) {
+			return;
+		}
+		if (daysOfWeek == null || daysOfWeek.isEmpty()) {
+			throw new CustomException(TodoErrorCode.TODO_RECURRING_DAYS_OF_WEEK_REQUIRED);
+		}
+		if (startDate != null && !daysOfWeek.contains(startDate.getDayOfWeek())) {
+			throw new CustomException(TodoErrorCode.TODO_RECURRING_START_DATE_DAY_MISMATCH);
+		}
 	}
 }

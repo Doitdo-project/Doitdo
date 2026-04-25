@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.time.LocalDate;
+import java.util.Set;
 
 public record TodoCreateReq(
 
@@ -23,7 +24,7 @@ public record TodoCreateReq(
 
 		LocalDate endDate,
 
-		Integer period,
+		Set<@Pattern(regexp = "^(MON|TUE|WED|THU|FRI|SAT|SUN)$", message = "요일은 MON,TUE,WED,THU,FRI,SAT,SUN 중 하나여야 합니다") String> daysOfWeek,
 
 		Integer priority,
 

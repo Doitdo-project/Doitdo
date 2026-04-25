@@ -95,18 +95,18 @@ public class TodoController {
 	}
 
 	@Operation(summary = "TODO 수정", description = "TODO 의 내용·일정 정보를 부분 수정한다. 본인 소유 + 'TODO' 상태의 항목만 수정 가능.")
-	@ApiErrorCodes({"T04-001", "T04-003", "T04-004", "T04-005"})
+	@ApiErrorCodes({"T04-001", "T04-003", "T04-004", "T04-005", "T14-001", "T14-002"})
 	@PatchMapping("/{todoId}")
 	public GlobalApiResponse<TodoDetailResp> update(
 			@AuthenticationPrincipal CustomUserDetails userDetails,
 			@PathVariable Long todoId,
-			@RequestBody TodoUpdateReq req) {
+			@Valid @RequestBody TodoUpdateReq req) {
 		return GlobalApiResponse.ok("TODO 수정 성공",
 				todoService.update(userDetails.getUserId(), todoId, req));
 	}
 
 	@Operation(summary = "TODO 작성", description = "새로운 TODO 항목을 작성한다")
-	@ApiErrorCodes({"T06-002", "T06-003"})
+	@ApiErrorCodes({"T06-002", "T06-003", "T14-001", "T14-002"})
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	public GlobalApiResponse<TodoDetailResp> create(

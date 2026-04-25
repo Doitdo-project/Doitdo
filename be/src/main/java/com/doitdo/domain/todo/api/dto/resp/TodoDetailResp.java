@@ -5,6 +5,7 @@ import com.doitdo.domain.todo.entity.Todo.TodoStatus;
 import com.doitdo.domain.todo.entity.Todo.TodoType;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record TodoDetailResp(
 
@@ -17,7 +18,7 @@ public record TodoDetailResp(
 		String alertTime,
 		LocalDate startDate,
 		LocalDate endDate,
-		Integer period,
+		List<String> daysOfWeek,
 		TodoStatus status,
 		LocalDateTime updatedAt,
 		int snoozedDays
@@ -34,7 +35,10 @@ public record TodoDetailResp(
 				todo.getAlertTime(),
 				todo.getStartDate(),
 				todo.getEndDate(),
-				todo.getPeriod(),
+				todo.getDaysOfWeek().stream()
+						.sorted()
+						.map(Todo::toDayOfWeekCode)
+						.toList(),
 				todo.getStatus(),
 				todo.getUpdatedAt(),
 				snoozedDays

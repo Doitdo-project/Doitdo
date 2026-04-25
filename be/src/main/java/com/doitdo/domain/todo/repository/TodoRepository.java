@@ -25,6 +25,15 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 
 	List<Todo> findAllByUserIdAndTitleAndTypeAndIsDeletedFalse(Long userId, String title, TodoType type);
 
+	Optional<Todo> findByUserIdAndMasterTodoIdAndStartDateAndIsDeletedFalse(
+			Long userId,
+			Long masterTodoId,
+			LocalDate startDate);
+
+	List<Todo> findAllByUserIdAndMasterTodoIdAndIsDeletedFalse(Long userId, Long masterTodoId);
+
+	List<Todo> findAllByTypeAndIsDeletedFalse(TodoType type);
+
 	@Query("""
 			select count(t) from Todo t
 			where t.userId = :userId
