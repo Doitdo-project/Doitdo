@@ -76,7 +76,7 @@ public enum TodoErrorCode implements ErrorCode {
 	// T11 - DELETE /categories/{categoryId} (카테고리 삭제)
 	T11_001("T11-001", HttpStatus.NOT_FOUND, "카테고리를 찾을 수 없음"),
 	T11_002("T11-002", HttpStatus.UNAUTHORIZED, "인증되지 않은 요청"),
-	T11_003("T11-003", HttpStatus.FORBIDDEN, "삭제 권한 없음 (고정 카테고리 또는 타인 소유)"),
+	T11_003("T11-003", HttpStatus.FORBIDDEN, "삭제 권한 없음 (타인 소유)"),
 	T11_004("T11-004", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
 
 	// T12 - PATCH /categories/{categoryId} (카테고리 수정)
