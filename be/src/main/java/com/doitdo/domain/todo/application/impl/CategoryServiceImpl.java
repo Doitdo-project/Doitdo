@@ -41,7 +41,6 @@ public class CategoryServiceImpl implements CategoryService {
 			throw new CustomException(TodoErrorCode.T10_004);
 		}
 
-		// TODO: 고정 카테고리(공부/업무/운동/집안일) 시드 로직 — Category 엔티티에 isFixed 플래그 추가 후 회원가입 시 생성 예정
 		Category category = categoryRepository.save(Category.create(userId, req.name(), req.colorId()));
 		String colorHex = resolveColorHex(category.getColorId());
 		return CategoryResp.from(category, colorHex);
@@ -61,8 +60,6 @@ public class CategoryServiceImpl implements CategoryService {
 			throw new CustomException(TodoErrorCode.T11_003);
 		}
 
-		// TODO: 고정 카테고리(공부/업무/운동/집안일) 삭제 방지 —
-		//       Category 엔티티에 isFixed 플래그 추가 후 여기서 체크하여 T11_003 던질 예정
 		categoryRepository.delete(category);
 	}
 
