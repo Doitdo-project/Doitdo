@@ -119,15 +119,10 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
       return;
     }
 
-    // 3. 통신 성공 시 로컬 화면(UI)에 추가
+    // 3. 통신 성공 시 서버 목록을 다시 받아 실제 todoId로 화면을 갱신
     final vm = ref.read(todoViewModelProvider.notifier);
-
-    // ✅ _dateResult(사용자가 최종 선택한 날짜)가 비어있으면 언제가 할 일로 추가!
-    if (_dateResult?.date == null) {
-      vm.addSomedayTodo(todo);
-    } else {
-      vm.addTodo(todo);
-    }
+    await vm.fetchTodos();
+    await vm.fetchCalendarData();
 
     // 창 닫기
     if (context.mounted) {
