@@ -9,6 +9,8 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 /// - [errorText] 비어있지 않으면 필드 아래 빨간 에러 메시지 표시 + 테두리 빨강.
 /// - [helperText] 은 [errorText] 가 없을 때만 표시되는 보조 안내 문구.
 /// - [showSuccess] true 면 suffix 에 초록 체크 아이콘을 보여준다 (비밀번호 일치 등).
+/// - [variant] 기본값 [AuthFieldVariant.pill] — 둥근 알약형(현재 디자인 시스템).
+///   [AuthFieldVariant.outlined] 는 라운드 12 + 테두리 형태(레거시).
 class AuthTextField extends StatefulWidget {
   const AuthTextField({
     super.key,
@@ -22,6 +24,7 @@ class AuthTextField extends StatefulWidget {
     this.errorText,
     this.helperText,
     this.showSuccess = false,
+    this.variant = AuthFieldVariant.pill,
   });
 
   final TextEditingController controller;
@@ -41,9 +44,14 @@ class AuthTextField extends StatefulWidget {
   /// 유효값 입력 완료시 suffix 에 초록 체크 아이콘 노출.
   final bool showSuccess;
 
+  /// 시각적 스타일.
+  final AuthFieldVariant variant;
+
   @override
   State<AuthTextField> createState() => _AuthTextFieldState();
 }
+
+enum AuthFieldVariant { pill, outlined }
 
 class _AuthTextFieldState extends State<AuthTextField> {
   late bool _obscure;
@@ -79,7 +87,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
     // 일반 필드: 성공 체크 아이콘만
     if (widget.showSuccess) {
       return const Padding(
-        padding: EdgeInsets.only(right: 12),
+        padding: EdgeInsets.only(right: 16),
         child: Icon(Icons.check_circle, color: Color(0xFF2EBD6B), size: 18),
       );
     }
@@ -90,6 +98,27 @@ class _AuthTextFieldState extends State<AuthTextField> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final hasError = widget.errorText != null && widget.errorText!.isNotEmpty;
+    final isPill = widget.variant == AuthFieldVariant.pill;
+
+    // pill: 알약형 — 라운드 28, 테두리 없음, 따뜻한 그레이 배경.
+    // outlined: 12px 라운드 + 1px 테두리 (레거시 호환용).
+    final radius = isPill ? 28.0 : 12.0;
+    final fillColor = isPill ? const Color(0xFFEFE8DC) : colors.surface;
+    final borderSide = isPill
+        ? BorderSide.none
+        : BorderSide(color: colors.border, width: 1);
+    final focusedBorderSide = isPill
+        ? BorderSide.none
+        : BorderSide(
+            color: hasError ? const Color(0xFFD64545) : colors.primary,
+            width: 1.5,
+          );
+    final errorBorderSide = isPill
+        ? const BorderSide(color: Color(0xFFD64545), width: 1)
+        : const BorderSide(color: Color(0xFFD64545), width: 1);
+    final focusedErrorBorderSide = isPill
+        ? const BorderSide(color: Color(0xFFD64545), width: 1.2)
+        : const BorderSide(color: Color(0xFFD64545), width: 1.5);
 
     return TextField(
       controller: widget.controller,
@@ -113,37 +142,35 @@ class _AuthTextFieldState extends State<AuthTextField> {
           color: colors.textHint,
         ),
         filled: true,
-        fillColor: colors.surface,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        fillColor: fillColor,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: isPill ? 24 : 16,
+          vertical: isPill ? 18 : 15,
+        ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colors.border, width: 1),
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: borderSide,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: hasError ? const Color(0xFFD64545) : colors.border,
-            width: 1,
-          ),
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: hasError
+              ? const BorderSide(color: Color(0xFFD64545), width: 1)
+              : borderSide,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: hasError ? const Color(0xFFD64545) : colors.primary,
-            width: 1.5,
-          ),
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: hasError ? errorBorderSide : focusedBorderSide,
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFD64545), width: 1),
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: errorBorderSide,
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFD64545), width: 1.5),
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: focusedErrorBorderSide,
         ),
         disabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(radius),
           borderSide: BorderSide.none,
         ),
         suffixIcon: _buildSuffixIcon(colors),
