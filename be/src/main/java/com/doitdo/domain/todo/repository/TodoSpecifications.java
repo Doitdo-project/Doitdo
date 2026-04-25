@@ -3,6 +3,7 @@ package com.doitdo.domain.todo.repository;
 import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.entity.Todo.TodoStatus;
 import com.doitdo.domain.todo.entity.Todo.TodoType;
+import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -75,15 +76,29 @@ public final class TodoSpecifications {
 		return (root, query, cb) -> cb.equal(root.get("type"), type);
 	}
 
-	/** 시작/종료일이 요청 범위와 겹치는 TODO 조회 */
+	/**
+	 * 캘린더 범위 매칭. type 별 의미가 다르다.
+	 * - NORMAL: 단일 날짜 todo. {@code from <= startDate <= to} 만 매칭 (endDate 는 의미 없음).
+	 * - PERIOD: 기간형 todo. 기간이 [from, to] 와 겹치면 매칭.
+	 * - RECURRING: 마스터 row. startDate <= to 인 마스터는 가상 occurrence 펼치기 위해 모두 잡아야 함 (endDate=null 무한 반복 포함).
+	 */
 	public static Specification<Todo> overlappingRange(LocalDate from, LocalDate to) {
-		return (root, query, cb) -> cb.and(
-				cb.lessThanOrEqualTo(root.get("startDate"), to),
-				cb.or(
-						cb.isNull(root.get("endDate")),
-						cb.greaterThanOrEqualTo(root.get("endDate"), from)
-				)
-		);
+		return (root, query, cb) -> {
+			Predicate normalInRange = cb.and(
+					cb.equal(root.get("type"), TodoType.NORMAL),
+					cb.greaterThanOrEqualTo(root.get("startDate"), from),
+					cb.lessThanOrEqualTo(root.get("startDate"), to)
+			);
+			Predicate nonNormalOverlap = cb.and(
+					cb.notEqual(root.get("type"), TodoType.NORMAL),
+					cb.lessThanOrEqualTo(root.get("startDate"), to),
+					cb.or(
+							cb.isNull(root.get("endDate")),
+							cb.greaterThanOrEqualTo(root.get("endDate"), from)
+					)
+			);
+			return cb.or(normalInRange, nonNormalOverlap);
+		};
 	}
 
 	/** 키워드 검색: title LIKE %q% OR content LIKE %q%. null/blank 이면 no-op */
