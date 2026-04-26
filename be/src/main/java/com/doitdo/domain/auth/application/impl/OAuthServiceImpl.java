@@ -1,5 +1,6 @@
 package com.doitdo.domain.auth.application.impl;
 
+import com.doitdo.domain.auth.api.dto.req.OAuthLoginReq;
 import com.doitdo.domain.auth.api.dto.resp.OAuthLoginResp;
 import com.doitdo.domain.auth.application.OAuthService;
 import com.doitdo.domain.auth.entity.AutoProvider;
@@ -18,6 +19,7 @@ import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.domain.user.repository.UserWalletRepository;
 import com.doitdo.global.client.AppleIdTokenVerifierService;
+import com.doitdo.global.client.AppleOAuthClient;
 import com.doitdo.global.client.GoogleIdTokenVerifierService;
 import com.doitdo.global.client.KakaoOAuthClient;
 import com.doitdo.global.client.dto.AppleUserInfo;
@@ -44,6 +46,7 @@ public class OAuthServiceImpl implements OAuthService {
 	private final KakaoOAuthClient kakaoOAuthClient;
 	private final GoogleIdTokenVerifierService googleIdTokenVerifierService;
 	private final AppleIdTokenVerifierService appleIdTokenVerifierService;
+	private final AppleOAuthClient appleOAuthClient;
 	private final UserRepository userRepository;
 	private final UserWalletRepository userWalletRepository;
 	private final UserSettingRepository userSettingRepository;
@@ -58,11 +61,11 @@ public class OAuthServiceImpl implements OAuthService {
 
 	@Override
 	@Transactional
-	public OAuthLoginResp login(OAuthProvider provider, String accessToken) {
+	public OAuthLoginResp login(OAuthProvider provider, OAuthLoginReq req) {
 		return switch (provider) {
-			case KAKAO -> loginWithKakao(accessToken);
-			case GOOGLE -> loginWithGoogle(accessToken);
-			case APPLE -> loginWithApple(accessToken);
+			case KAKAO -> loginWithKakao(req.accessToken());
+			case GOOGLE -> loginWithGoogle(req.accessToken());
+			case APPLE -> loginWithApple(req);
 		};
 	}
 
@@ -154,19 +157,41 @@ public class OAuthServiceImpl implements OAuthService {
 		return issueTokens(user, true);
 	}
 
-	private OAuthLoginResp loginWithApple(String identityToken) {
-		AppleUserInfo appleUser = appleIdTokenVerifierService.verify(identityToken);
+	private OAuthLoginResp loginWithApple(OAuthLoginReq req) {
+		// 정책: authorizationCode 누락 시 엄격 거절.
+		// 이유: refresh_token 을 받지 못하면 향후 회원탈퇴 시 Apple revoke 호출 불가 → App Store 정책 위반.
+		String authorizationCode = req.appleAuthorizationCode();
+		if (authorizationCode == null || authorizationCode.isBlank()) {
+			throw new CustomException(AuthErrorCode.A03_002,
+					"Apple 로그인은 authorizationCode 가 필수입니다.");
+		}
+
+		AppleUserInfo appleUser = appleIdTokenVerifierService.verify(req.accessToken());
 		String providerName = OAuthProvider.APPLE.name();
 		String providerUid = appleUser.sub();
 
-		Optional<User> existingUser = findUserByProvider(providerName, providerUid);
-		if (existingUser.isPresent()) {
-			return issueTokens(existingUser.get(), false);
+		// authorizationCode → refresh_token 교환을 먼저 수행.
+		// 실패 시 로그인 자체를 거절 (베스트 에포트 X) — 위 정책과 동일 이유.
+		String appleRefreshToken = appleOAuthClient.exchangeCodeForRefreshToken(authorizationCode);
+
+		// 재로그인: 기존 AutoProvider 행의 refresh_token 을 갱신 (Apple 은 매 로그인마다 새 코드 발급).
+		Optional<AutoProvider> existingProvider = autoProviderRepository
+				.findAllByProviderAndProviderUid(providerName, providerUid)
+				.stream()
+				.findFirst();
+		if (existingProvider.isPresent()) {
+			AutoProvider ap = existingProvider.get();
+			ap.updateAppleRefreshToken(appleRefreshToken);
+			User user = userRepository.findById(ap.getUserId())
+					.orElseThrow(() -> new CustomException(AuthErrorCode.A03_004));
+			return issueTokens(user, false);
 		}
 
 		try {
-			return signupWithApple(appleUser, providerName, providerUid);
+			return signupWithApple(appleUser, providerName, providerUid, appleRefreshToken);
 		} catch (DataIntegrityViolationException e) {
+			// race winner 가 만든 row 의 refresh_token 은 그쪽이 받은 값으로 이미 채워졌을 가능성이 큼.
+			// 우리가 받은 토큰으로 덮어써도 무방하나, race 빈도가 낮아 단순화 — 다음 로그인에서 자연 갱신.
 			return recoverFromRace(providerName, providerUid);
 		}
 	}
@@ -178,8 +203,13 @@ public class OAuthServiceImpl implements OAuthService {
 	 * 릴레이 주소가 내려온다 — 우리 서비스에는 이 값을 그대로 저장해 사용한다(Apple 이 실제 주소로 포워딩).
 	 *
 	 * <p>{@link AppleUserInfo#emailVerified()} 는 Apple 자체 검증을 통과한 경우에만 true 다.
+	 *
+	 * <p>{@code appleRefreshToken} 은 신규/연결 두 경로 모두 {@link AutoProvider} 에 저장된다 —
+	 * 회원탈퇴 시 revoke 호출에 필요.
 	 */
-	private OAuthLoginResp signupWithApple(AppleUserInfo appleUser, String providerName, String providerUid) {
+	private OAuthLoginResp signupWithApple(
+			AppleUserInfo appleUser, String providerName, String providerUid, String appleRefreshToken
+	) {
 		String email = appleUser.email();
 		if (email == null || email.isBlank()) {
 			// 첫 로그인이 아니라 sub 만 받은 상태로 신규 가입 경로에 들어왔다면 데이터 부족 → 에러.
@@ -190,7 +220,8 @@ public class OAuthServiceImpl implements OAuthService {
 			throw new CustomException(AuthErrorCode.A03_005);
 		}
 
-		Optional<OAuthLoginResp> linked = tryLinkExistingAccount(email, providerName, providerUid);
+		Optional<OAuthLoginResp> linked = tryLinkExistingAppleAccount(
+				email, providerName, providerUid, appleRefreshToken);
 		if (linked.isPresent()) {
 			return linked.get();
 		}
@@ -204,10 +235,31 @@ public class OAuthServiceImpl implements OAuthService {
 		userWalletRepository.save(UserWallet.create(user.getUserId()));
 		userSettingRepository.save(UserSetting.create(user.getUserId()));
 		userStreakRepository.save(UserStreak.create(user.getUserId()));
-		autoProviderRepository.save(AutoProvider.create(user.getUserId(), providerName, providerUid));
+		autoProviderRepository.save(AutoProvider.createWithRefreshToken(
+				user.getUserId(), providerName, providerUid, appleRefreshToken));
 		defaultCategoryRegistrar.registerFor(user.getUserId());
 
 		return issueTokens(user, true);
+	}
+
+	/**
+	 * Apple 전용 기존 계정 연결. {@link #tryLinkExistingAccount} 와 정책은 동일하지만
+	 * {@link AutoProvider} 행에 {@code appleRefreshToken} 까지 함께 저장한다.
+	 */
+	private Optional<OAuthLoginResp> tryLinkExistingAppleAccount(
+			String email, String providerName, String providerUid, String appleRefreshToken
+	) {
+		Optional<User> existing = userRepository.findByEmail(email);
+		if (existing.isEmpty()) {
+			return Optional.empty();
+		}
+		User user = existing.get();
+		if (user.getPassword() != null) {
+			throw new CustomException(AuthErrorCode.A03_006);
+		}
+		autoProviderRepository.save(AutoProvider.createWithRefreshToken(
+				user.getUserId(), providerName, providerUid, appleRefreshToken));
+		return Optional.of(issueTokens(user, false));
 	}
 
 	private String resolveUniqueUsername(String baseNickname) {

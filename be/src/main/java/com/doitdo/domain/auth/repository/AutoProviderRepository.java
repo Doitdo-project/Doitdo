@@ -15,4 +15,7 @@ public interface AutoProviderRepository extends JpaRepository<AutoProvider, Long
 	List<AutoProvider> findAllByProviderAndProviderUid(String provider, String providerUid);
 
 	void deleteAllByUserId(Long userId);
+
+	// Apple revoke 호출 대상 추출용. provider 별 분기 호출 시 KAKAO/GOOGLE 도 사용 가능.
+	List<AutoProvider> findAllByUserIdAndProvider(Long userId, String provider);
 }

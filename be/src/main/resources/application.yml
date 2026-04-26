@@ -31,6 +31,16 @@ apple:
     # iOS 네이티브 Sign in with Apple 의 audience(앱 Bundle Identifier).
     # Web/Service ID 등 다른 클라이언트가 추가되면 다중 audience 지원으로 확장 필요.
     client-id: ${APPLE_OAUTH_CLIENT_ID:}
+  signin:
+    # Apple Developer 콘솔에서 발급받은 Sign in with Apple Key (.p8) 관련 설정.
+    # 회원가입 시 authorizationCode 교환과 회원탈퇴 시 토큰 revoke 호출의 client_secret JWT 서명에 사용.
+    # 누락 시 부팅 실패 (silent failure 방지).
+    team-id: ${APPLE_SIGNIN_TEAM_ID:}
+    key-id: ${APPLE_SIGNIN_KEY_ID:}
+    # 상대경로 가능 — working directory 기준 (./gradlew bootRun 은 be/ 에서 실행됨, Docker 도 WORKDIR=/app/ 동일).
+    key-path: ${APPLE_SIGNIN_KEY_PATH:}
+    # client_secret JWT 의 sub 값. 보통 oauth.client-id 와 동일 (앱 Bundle Identifier).
+    client-id: ${APPLE_SIGNIN_CLIENT_ID:com.d107.doitdo}
 
 firebase:
   enabled: ${FIREBASE_ENABLED:false}

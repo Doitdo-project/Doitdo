@@ -67,6 +67,6 @@ public class AuthController {
 	public GlobalApiResponse<OAuthLoginResp> oauthLogin(
 			@PathVariable OAuthProvider provider,
 			@Valid @RequestBody OAuthLoginReq req) {
-		return GlobalApiResponse.ok("소셜 로그인 성공", oauthService.login(provider, req.accessToken()));
+		return GlobalApiResponse.ok("소셜 로그인 성공", oauthService.login(provider, req));
 	}
 }
