@@ -197,8 +197,11 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
     final c = context.colors;
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
+      builder: (_) => SafeArea(
+        top: false,
+        child: Container(
         decoration: BoxDecoration(
           color: c.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -236,6 +239,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
             }),
             const SizedBox(height: 8),
           ],
+        ),
         ),
       ),
     );
@@ -286,8 +290,11 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
+      builder: (_) => SafeArea(
+        top: false,
+        child: Container(
         decoration: BoxDecoration(
           color: c.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -371,6 +378,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
             ),
             const SizedBox(height: 16),
           ],
+        ),
         ),
       ),
     );

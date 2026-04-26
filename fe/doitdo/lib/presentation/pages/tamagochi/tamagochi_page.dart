@@ -112,6 +112,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       useRootNavigator: true,
       builder: (_) => TodoAddSheet(initialDate: date),
@@ -122,6 +123,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       useRootNavigator: true,
       builder: (_) => TodoDetailSheet(todoId: todo.id, isSomeday: isSomeday),
