@@ -3,6 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 // Kakao SDK 는 우리 프로젝트의 `User` / `UserApi` 와 이름이 모두 겹치므로 별칭(kakao)으로 분리.
 // 도메인 User 엔티티, 우리 UserApi 클래스는 아래 package:doitdo/... import 를 통해 사용.
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import 'package:doitdo/core/errors/exceptions.dart';
 import 'package:doitdo/core/network/base_repository.dart';
@@ -134,15 +135,66 @@ class AuthRepositoryImpl extends BaseRepository implements AuthRepository {
     );
   }
 
-  /// Google/Kakao 공통 마지막 단계 — 서버 교환 + 토큰 저장.
+  @override
+  Future<(User, AuthTokens, bool isNewUser)> signInWithApple() async {
+    // 1. Apple 네이티브 로그인 시트.
+    //    scopes 는 첫 로그인 시점에만 의미가 있다 — Apple 은 동일 사용자의 두 번째 이후
+    //    로그인부터 email/이름을 내려주지 않는다. 백엔드는 첫 로그인의 email 만으로
+    //    가입 처리를 끝내므로 별도 캐싱 불필요.
+    final AuthorizationCredentialAppleID credential;
+    try {
+      credential = await SignInWithApple.getAppleIDCredential(
+        scopes: const [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        throw const AuthCanceledException();
+      }
+      throw AuthException('Apple 로그인 실패: ${e.message}');
+    }
+
+    final identityToken = credential.identityToken;
+    final authorizationCode = credential.authorizationCode;
+    // identityToken 은 서버 검증용, authorizationCode 는 서버측 refresh_token 교환용.
+    // 둘 중 하나라도 없으면 서버 호출 자체가 무의미 — 백엔드가 거절(A03-001/002)하기 전에
+    // 클라이언트 단에서 명확한 메시지로 실패시킨다.
+    if (identityToken == null) {
+      throw const AuthException(
+        'Apple 로그인 응답에 identityToken 이 없습니다. 잠시 후 다시 시도해주세요.',
+      );
+    }
+    if (authorizationCode.isEmpty) {
+      throw const AuthException(
+        'Apple 로그인 응답에 authorizationCode 가 없습니다. 잠시 후 다시 시도해주세요.',
+      );
+    }
+
+    // 2. 서버에 identityToken + authorizationCode 전달 → 우리 서비스 세션 발급.
+    return _completeSocialLogin(
+      provider: 'APPLE',
+      providerToken: identityToken,
+      appleAuthorizationCode: authorizationCode,
+    );
+  }
+
+  /// Google/Kakao/Apple 공통 마지막 단계 — 서버 교환 + 토큰 저장.
+  ///
+  /// [appleAuthorizationCode] 는 APPLE 호출 전용. 다른 provider 에선 null.
   Future<(User, AuthTokens, bool isNewUser)> _completeSocialLogin({
     required String provider,
     required String providerToken,
+    String? appleAuthorizationCode,
   }) async {
     final dto = await safeApiCall(
       () => authApi.socialLogin(
         provider,
-        SocialLoginRequestDto(accessToken: providerToken),
+        SocialLoginRequestDto(
+          accessToken: providerToken,
+          appleAuthorizationCode: appleAuthorizationCode,
+        ),
       ),
     );
     await local.save(dto.tokens);

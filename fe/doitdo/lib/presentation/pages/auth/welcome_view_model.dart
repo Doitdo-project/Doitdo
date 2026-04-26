@@ -51,6 +51,17 @@ class WelcomeViewModel
       return WelcomeSuccess(isNewUser: isNewUser);
     });
   }
+
+  /// Apple Sign-In 수행. 규약은 [signInWithGoogle] 과 동일.
+  Future<void> signInWithApple() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final repo = ref.read(authRepositoryProvider);
+      final (_, __, isNewUser) = await repo.signInWithApple();
+      ref.invalidate(currentUserProvider);
+      return WelcomeSuccess(isNewUser: isNewUser);
+    });
+  }
 }
 
 final welcomeViewModelProvider =

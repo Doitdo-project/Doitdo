@@ -39,8 +39,10 @@ abstract class AuthApi {
     @Body() SignUpRequestDto body,
   );
 
-  /// 소셜 로그인. [provider] = "GOOGLE" | "KAKAO" (대문자).
-  /// body 의 accessToken 은 각 SDK 에서 발급받은 OAuth 토큰.
+  /// 소셜 로그인. [provider] = "GOOGLE" | "KAKAO" | "APPLE" (대문자).
+  /// body 의 accessToken 은 각 SDK 에서 발급받은 OAuth 토큰
+  /// (Google idToken / Kakao accessToken / Apple identityToken).
+  /// APPLE 의 경우 [SocialLoginRequestDto.appleAuthorizationCode] 도 함께 전송 필수.
   @POST('/api/auth/social/{provider}')
   Future<ApiResponse<AuthResponseDto>> socialLogin(
     @Path('provider') String provider,
