@@ -118,7 +118,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
   Widget build(BuildContext context) {
     final c = context.colors;
 
-    // ✅ 동적 카테고리 색상 찾기
+    // 동적 카테고리 색상: 서버에서 받은 카테고리 목록에서 이름으로 색을 찾는다.
     final categories = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
     Color getCategoryColor(String name) {
       try {
@@ -128,15 +128,23 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
       }
     }
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
+    // SafeArea(top: false) 가 시스템 네비바(뒤로가기/홈/멀티태스킹) 영역의 높이를
+    // padding 으로 더해줘서 시트 하단이 시스템바와 절대 겹치지 않게 한다.
+    // 호출부의 showModalBottomSheet(useSafeArea: true) 가 MediaQuery.padding.bottom
+    // 을 보존하기 때문에 가능. 키보드(viewInsets.bottom)는 별도 Padding 으로 처리.
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
         decoration: BoxDecoration(
           color: c.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -161,7 +169,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
             GestureDetector(
               onTap: () async {
                 final result = await showModalBottomSheet<TodoDateResult>(
-                  context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+                  context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
                   builder: (_) => TodoDateSheet(initialDate: _dateResult?.date ?? DateTime.now(), initialResult: _dateResult),
                 );
                 if (result != null) setState(() => _dateResult = result);
@@ -173,7 +181,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
             GestureDetector(
               onTap: () async {
                 final result = await showModalBottomSheet<dynamic>(
-                  context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+                  context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
                   builder: (_) => TodoCategorySheet(selectedCategory: _selectedCategory, embedded: false),
                 );
                 if (result != null && result is CategoryResp) {
@@ -208,7 +216,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
             GestureDetector(
               onTap: () async {
                 final result = await showModalBottomSheet<TodoAlarmResult>(
-                  context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+                  context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
                   builder: (_) => TodoTimeSheet(initialTime: _selectedTime, initialEnabled: _alarmEnabled),
                 );
                 if (result != null) {
@@ -238,6 +246,8 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
 
             DoitdoPrimaryButton(label: '저장하기', onPressed: () => _onSave(context)),
           ],
+        ),
+        ),
         ),
       ),
     );

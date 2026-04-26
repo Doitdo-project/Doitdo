@@ -98,7 +98,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
 
   void _openAddSheet(BuildContext context, DateTime? date) {
     showModalBottomSheet(
-      context: context, isScrollControlled: true,
+      context: context, isScrollControlled: true, useSafeArea: true,
       backgroundColor: Colors.transparent, useRootNavigator: true,
       builder: (_) => TodoAddSheet(initialDate: date),
     );
@@ -106,7 +106,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
 
   void _openDetailSheet(BuildContext context, Todo todo, bool isSomeday) {
     showModalBottomSheet(
-      context: context, isScrollControlled: true,
+      context: context, isScrollControlled: true, useSafeArea: true,
       backgroundColor: Colors.transparent, useRootNavigator: true,
       builder: (_) => TodoDetailSheet(todoId: todo.id, isSomeday: isSomeday),
     );

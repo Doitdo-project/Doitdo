@@ -186,12 +186,12 @@ class CharacterCard extends StatelessWidget {
   // 미수령 단계에서는 플레이스홀더로, 수령 후에는 growthPercent 로 채운다.
 
   String? get _speechText {
-    if (character == null && !isCharacterLoading) {
-      return '알이 도착했어요! 받아볼까요?';
-    }
-    if (character?.isEgg ?? false) {
-      return null;
-    }
+    // 캐릭터가 아직 없거나(network slow / receive 진행 중) 알 단계면 말풍선을
+    // 띄우지 않는다. 예전에는 character == null && !isLoading 조건일 때
+    // "알이 도착했어요!" 를 띄웠는데, 서버 응답이 느려 load → receiveEgg 사이
+    // 짧은 윈도우에서 실제 알이 도착하지도 않은 상태로 떠 오해를 줘서 제거.
+    if (character == null) return null;
+    if (character?.isEgg ?? false) return null;
     return state.speechBubble;
   }
 

@@ -1,8 +1,13 @@
+import 'dart:async' show unawaited;
+
 import 'package:doitdo/core/utils/snap_scroll_physics.dart';
 import 'package:doitdo/domain/entities/character.dart';
+import 'package:doitdo/domain/entities/streak.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/tamagochi/character_view_model.dart';
+import 'package:doitdo/presentation/pages/tamagochi/streak_view_model.dart';
+import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/character_card.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/farewell_banner.dart';
@@ -43,6 +48,9 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   /// farewell API 호출 in-flight 여부. 버튼 중복 탭 방지용.
   bool _farewelling = false;
 
+  /// 스트릭 보상 수령 API in-flight 여부. 버튼 중복 탭 방지 + 버튼 스피너용.
+  bool _claimingReward = false;
+
   @override
   void initState() {
     super.initState();
@@ -72,6 +80,9 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   ///
   /// UI 에 로딩 스피너가 튀면 화면이 깜빡이기 때문에 [CharacterViewModel.refresh]
   /// 를 사용한다 (state 를 loading 으로 전환하지 않고 성공 시에만 data 갱신).
+  ///
+  /// 같은 트리거(=오늘 첫 todo 완료) 에 스트릭도 적립되므로 캐릭터 1차 조회와
+  /// 함께 스트릭도 silent refresh — 별도 폴링 없이 한 번이면 충분하다고 가정.
   Future<void> _refreshCharacterAfterTodoDone() async {
     final vm = ref.read(characterViewModelProvider.notifier);
     final beforeExp =
@@ -80,6 +91,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     await Future.delayed(const Duration(milliseconds: 200));
     if (!mounted) return;
     await vm.refresh();
+    unawaited(ref.read(streakViewModelProvider.notifier).refresh());
     if (!mounted) return;
 
     final afterFirst =
@@ -100,6 +112,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       useRootNavigator: true,
       builder: (_) => TodoAddSheet(initialDate: date),
@@ -110,6 +123,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       useRootNavigator: true,
       builder: (_) => TodoDetailSheet(todoId: todo.id, isSomeday: isSomeday),
@@ -159,15 +173,60 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       );
   }
 
+  /// 7일 블록 완성 시 노출되는 "🎁 보상 받기" 탭 핸들러.
+  /// BE 가 이미 수령된 케이스를 `rewarded=false` 로 회신하므로 분기해서 안내.
+  Future<void> _handleClaimReward() async {
+    if (_claimingReward) return;
+    setState(() => _claimingReward = true);
+    final reward = await ref
+        .read(streakViewModelProvider.notifier)
+        .claimReward();
+    if (!mounted) return;
+    setState(() => _claimingReward = false);
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    if (reward == null) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('보상 수령 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.'),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          reward.rewarded
+              ? '🎉 ${reward.streakCount}일 연속 달성! +${reward.rewardAmount}코인'
+              : '이미 보상을 받았어요.',
+        ),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(tamagochiViewModelProvider);
     final characterAsync = ref.watch(characterViewModelProvider);
+    final streakAsync = ref.watch(streakViewModelProvider);
     final todoState = ref.watch(todoViewModelProvider);
     final todoVm = ref.read(todoViewModelProvider.notifier);
 
-    // 오늘 날짜에 해당하는 할 일만 필터. range 타입도 오늘 포함이면 노출.
+    // 스트릭은 네트워크 실패 / 로딩 중에는 0/빈 윈도우로 fallback (홈을 막지 않는다).
+    final streak = streakAsync.valueOrNull ?? Streak.empty;
     final today = DateTime.now();
+    final streakWindow = TamagochiState.buildStreakWindow(
+      streakDays: streak.currentCount,
+      streakStartDate: streak.currentStartDate,
+      today: today,
+    );
+
+    // 오늘 날짜에 해당하는 할 일만 필터. range 타입도 오늘 포함이면 노출.
     final todayTodos = todoState.allTodos
         .where((t) => _isTodayTodo(t, today))
         .toList(growable: false);
@@ -179,10 +238,16 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     // 시 중복 호출되지 않도록 "false→true" 순간에만 호출한다.
     ref.listen<AsyncValue<Character?>>(characterViewModelProvider,
         (prev, next) {
-      next.whenOrNull(error: (err, _) {
-        if (!mounted) return;
+      // 첫 로드(loading→error) 는 dio 의 토큰 refresh / 자동 재시도가 끼어들면서
+      // 잠깐 error 로 빠졌다 곧 회복되는 경우가 많다. 깜빡 떴다 사라지는 스낵바를
+      // 막기 위해, "한 번이라도 데이터를 보여준 적이 있는데 다시 실패" 한 경우
+      // (= data → error regression) 에만 알림. 진짜 영구 실패는 캐릭터 카드의
+      // 빈 상태 UI 가 처리하므로 사용자가 모르고 지나치진 않는다.
+      final wasShowingData =
+          prev != null && prev.hasValue && prev.value != null;
+      if (next.hasError && wasShowingData && mounted) {
         _showComingSoon(context, '캐릭터 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
-      });
+      }
 
       final prevChar = prev?.valueOrNull;
       final nextChar = next.valueOrNull;
@@ -283,8 +348,11 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                             ],
                             SizedBox(height: _streakTopGap),
                             StreakSection(
-                              streakDays: state.streakDays,
-                              slots: state.streakSlots,
+                              streakDays: streak.currentCount,
+                              slots: streakWindow.slots,
+                              isRewardClaimable: streak.hasCompletedBlock,
+                              isClaimingReward: _claimingReward,
+                              onClaimReward: _handleClaimReward,
                             ),
                           ],
                         ),
