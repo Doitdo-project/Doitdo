@@ -1,8 +1,13 @@
+import 'package:app_settings/app_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'package:doitdo/core/theme/app_text_styles.dart';
+import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
+import 'package:doitdo/data/models/setting_dto.dart';
+import 'package:doitdo/presentation/pages/setting/notification/notification_settings_view_model.dart';
 import 'package:doitdo/presentation/pages/setting/notification/widgets/time_picker_sheet.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_top_bar.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_padding_layout.dart';
@@ -11,12 +16,20 @@ import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
 /// 설정 > 알림 설정 화면.
 ///
 /// 3개 섹션:
-///   1) 일반 — 푸시 알림 수신 on/off
-///   2) 알림 금지 시간 — 활성화 토글 + 시작/종료 시간 선택
-///   3) 리마인드 — 아침 / 저녁 리마인드 각각 활성화 + 시간 선택
+///   1) 일반 — 푸시알림 토글 (OS 알림 권한 상태 반영)
+///   2) 알림 금지 시간 — dndEnabled + dndStartTime / dndEndTime
+///   3) 리마인드 — morningReminder / eveningReminder
 ///
-/// 상태는 현재 로컬 (setState). 추후 NotificationSettingsViewModel + provider
-/// 로 승격해 SharedPreferences / 서버와 동기화 예정.
+/// 시간/리마인드 토글은 낙관적 업데이트 후 PATCH. 실패 시 롤백 + SnackBar.
+///
+/// ### 푸시알림 토글 동작
+/// 진실의 출처는 OS 알림 권한이다 (앱이 권한을 무시한 채 푸시를 띄울 수 없으므로).
+/// 따라서 토글의 `value` 는 [Permission.notification] 의 상태를 그대로 반영하고,
+/// 인앱에서 직접 끄거나 켤 수 없다. 탭 시 동작은 다음과 같다.
+///   - 권한 허용 상태에서 탭(=끄려는 의도): OS 알림 설정 페이지로 이동
+///   - 권한 미요청/거부 상태에서 탭(=켜려는 의도): 시스템 권한 다이얼로그 요청
+///   - 영구 거부(permanentlyDenied)인 경우: OS 알림 설정 페이지로 이동
+/// 앱이 다시 foreground 로 돌아오면 권한 상태를 다시 읽어 토글에 반영한다.
 class NotificationSettingsPage extends ConsumerStatefulWidget {
   const NotificationSettingsPage({super.key});
 
@@ -26,135 +39,281 @@ class NotificationSettingsPage extends ConsumerStatefulWidget {
 }
 
 class _NotificationSettingsPageState
-    extends ConsumerState<NotificationSettingsPage> {
-  bool _pushEnabled = true;
-  bool _quietEnabled = false;
-  TimeOfDay _quietStart = const TimeOfDay(hour: 22, minute: 0);
-  TimeOfDay _quietEnd = const TimeOfDay(hour: 7, minute: 0);
-  bool _morningEnabled = false;
-  TimeOfDay _morningTime = const TimeOfDay(hour: 22, minute: 0);
-  bool _eveningEnabled = false;
-  TimeOfDay _eveningTime = const TimeOfDay(hour: 22, minute: 0);
+    extends ConsumerState<NotificationSettingsPage>
+    with WidgetsBindingObserver {
+  /// OS 알림 권한 허용 여부. 페이지 진입 + 앱 resume 시점에 갱신된다.
+  /// `provisional`(iOS 한정) 도 알림이 도달하므로 true 로 친다.
+  bool _osNotificationGranted = false;
 
-  Future<TimeOfDay?> _pickTime(TimeOfDay current) {
-    return showTimePickerSheet(context: context, initial: current);
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _refreshOsPermission();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 사용자가 OS 설정에서 권한을 바꾸고 앱으로 돌아왔을 때 토글에 반영.
+    if (state == AppLifecycleState.resumed) {
+      _refreshOsPermission();
+    }
+  }
+
+  Future<void> _refreshOsPermission() async {
+    final status = await Permission.notification.status;
+    if (!mounted) return;
+    setState(() {
+      _osNotificationGranted = status.isGranted || status.isProvisional;
+    });
+  }
+
+  void _showError(Object e) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(mapErrorMessage(e))));
+  }
+
+  Future<void> _run(Future<void> Function() action) async {
+    try {
+      await action();
+    } catch (e) {
+      if (mounted) _showError(e);
+    }
+  }
+
+  Future<TimeOfDay?> _pickTime(TimeOfDay current) =>
+      showTimePickerSheet(context: context, initial: current);
+
+  /// 푸시알림 토글 탭 핸들러.
+  /// 권한 상태에 따라 OS 설정으로 보내거나 권한 요청 다이얼로그를 띄운다.
+  /// 자세한 분기는 [NotificationSettingsPage] 의 클래스 docstring 참조.
+  Future<void> _onPushToggleTapped() async {
+    try {
+      final status = await Permission.notification.status;
+
+      if (status.isGranted || status.isProvisional) {
+        // 켜져 있는 상태에서의 탭 = 끄려는 의도. 앱에서 직접 끌 수 없으므로 OS 설정으로.
+        await AppSettings.openAppSettings(type: AppSettingsType.notification);
+        return;
+      }
+
+      if (status.isPermanentlyDenied || status.isRestricted) {
+        // 시스템 다이얼로그를 다시 띄울 수 없는 상태 → OS 설정으로 직접 보냄.
+        await AppSettings.openAppSettings(type: AppSettingsType.notification);
+        return;
+      }
+
+      // denied / notDetermined → 시스템 권한 다이얼로그 요청.
+      final newStatus = await Permission.notification.request();
+      if (!mounted) return;
+      setState(() {
+        _osNotificationGranted =
+            newStatus.isGranted || newStatus.isProvisional;
+      });
+    } catch (e) {
+      if (mounted) _showError(e);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(notificationSettingsViewModelProvider);
+    final vm = ref.read(notificationSettingsViewModelProvider.notifier);
+
     return DoitdoScaffold(
       topBar: const DoitdoTopBar(title: '알림 설정'),
       body: DoitdoPaddingLayout(
         top: 16,
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            // ── 일반 ──────────────────────────
-            const _SectionLabel('일반'),
-            const SizedBox(height: 8),
-            _SettingsCard(
-              child: _ToggleRow(
-                icon: Icons.notifications_none_outlined,
-                title: '푸시알림',
-                description: '두잇뚜로부터 알림을 수신합니다.',
-                value: _pushEnabled,
-                onChanged: (v) => setState(() => _pushEnabled = v),
-              ),
+        child: state.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  mapErrorMessage(e),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: context.colors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () => ref.invalidate(
+                    notificationSettingsViewModelProvider,
+                  ),
+                  child: const Text('다시 시도'),
+                ),
+              ],
             ),
-
-            const SizedBox(height: 24),
-            // ── 알림 금지 시간 ──────────────────
-            const _SectionLabel('알림 금지 시간'),
-            const SizedBox(height: 8),
-            _SettingsCard(
-              child: Column(
-                children: [
-                  _ToggleRow(
-                    icon: Icons.bedtime_outlined,
-                    title: '금지 시간 활성화',
-                    description: '설정한 시간에는 알림이 울리지 않습니다.',
-                    value: _quietEnabled,
-                    onChanged: (v) => setState(() => _quietEnabled = v),
-                  ),
-                  const SizedBox(height: 14),
-                  _TimeRangeBlock(
-                    start: _quietStart,
-                    end: _quietEnd,
-                    enabled: _quietEnabled,
-                    onTapStart: () async {
-                      final picked = await _pickTime(_quietStart);
-                      if (picked != null) {
-                        setState(() => _quietStart = picked);
-                      }
-                    },
-                    onTapEnd: () async {
-                      final picked = await _pickTime(_quietEnd);
-                      if (picked != null) {
-                        setState(() => _quietEnd = picked);
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-            // ── 리마인드 ───────────────────────
-            const _SectionLabel('리마인드'),
-            const SizedBox(height: 8),
-            _SettingsCard(
-              child: Column(
-                children: [
-                  _ToggleRow(
-                    icon: Icons.alarm_outlined,
-                    title: '아침 리마인드',
-                    description: '하루의 시작을 돕는 알림',
-                    value: _morningEnabled,
-                    onChanged: (v) => setState(() => _morningEnabled = v),
-                  ),
-                  const SizedBox(height: 14),
-                  _SingleTimeBlock(
-                    time: _morningTime,
-                    enabled: _morningEnabled,
-                    onTap: () async {
-                      final picked = await _pickTime(_morningTime);
-                      if (picked != null) {
-                        setState(() => _morningTime = picked);
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            _SettingsCard(
-              child: Column(
-                children: [
-                  _ToggleRow(
-                    icon: Icons.calendar_today_outlined,
-                    title: '저녁 리마인드',
-                    description: '내일을 위한 기록 리마인드',
-                    value: _eveningEnabled,
-                    onChanged: (v) => setState(() => _eveningEnabled = v),
-                  ),
-                  const SizedBox(height: 14),
-                  _SingleTimeBlock(
-                    time: _eveningTime,
-                    enabled: _eveningEnabled,
-                    onTap: () async {
-                      final picked = await _pickTime(_eveningTime);
-                      if (picked != null) {
-                        setState(() => _eveningTime = picked);
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 40),
-          ],
+          ),
+          data: (setting) => _Body(
+            setting: setting,
+            pushGranted: _osNotificationGranted,
+            onPushTap: _onPushToggleTapped,
+            onDndChanged: (v) => _run(() => vm.setDndEnabled(v)),
+            onDndStartTap: () async {
+              final current = setting.dndStartTime?.toTimeOfDay() ??
+                  const TimeOfDay(hour: 22, minute: 0);
+              final picked = await _pickTime(current);
+              if (picked != null) _run(() => vm.setDndStartTime(picked));
+            },
+            onDndEndTap: () async {
+              final current = setting.dndEndTime?.toTimeOfDay() ??
+                  const TimeOfDay(hour: 7, minute: 0);
+              final picked = await _pickTime(current);
+              if (picked != null) _run(() => vm.setDndEndTime(picked));
+            },
+            onMorningChanged: (v) => _run(() => vm.setMorningEnabled(v)),
+            onMorningTimeTap: () async {
+              final current = setting.morningReminderTime?.toTimeOfDay() ??
+                  const TimeOfDay(hour: 8, minute: 0);
+              final picked = await _pickTime(current);
+              if (picked != null) _run(() => vm.setMorningTime(picked));
+            },
+            onEveningChanged: (v) => _run(() => vm.setEveningEnabled(v)),
+            onEveningTimeTap: () async {
+              final current = setting.eveningReminderTime?.toTimeOfDay() ??
+                  const TimeOfDay(hour: 21, minute: 0);
+              final picked = await _pickTime(current);
+              if (picked != null) _run(() => vm.setEveningTime(picked));
+            },
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// 실제 콘텐츠 — state.when(data:) 안에서만 렌더링.
+class _Body extends StatelessWidget {
+  const _Body({
+    required this.setting,
+    required this.pushGranted,
+    required this.onPushTap,
+    required this.onDndChanged,
+    required this.onDndStartTap,
+    required this.onDndEndTap,
+    required this.onMorningChanged,
+    required this.onMorningTimeTap,
+    required this.onEveningChanged,
+    required this.onEveningTimeTap,
+  });
+
+  final UserSettingResp setting;
+  final bool pushGranted;
+  final VoidCallback onPushTap;
+  final ValueChanged<bool> onDndChanged;
+  final VoidCallback onDndStartTap;
+  final VoidCallback onDndEndTap;
+  final ValueChanged<bool> onMorningChanged;
+  final VoidCallback onMorningTimeTap;
+  final ValueChanged<bool> onEveningChanged;
+  final VoidCallback onEveningTimeTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final dndStart = setting.dndStartTime?.toTimeOfDay() ??
+        const TimeOfDay(hour: 22, minute: 0);
+    final dndEnd = setting.dndEndTime?.toTimeOfDay() ??
+        const TimeOfDay(hour: 7, minute: 0);
+    final morningTime = setting.morningReminderTime?.toTimeOfDay() ??
+        const TimeOfDay(hour: 8, minute: 0);
+    final eveningTime = setting.eveningReminderTime?.toTimeOfDay() ??
+        const TimeOfDay(hour: 21, minute: 0);
+
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        // ── 일반 ──────────────────────────
+        // 토글은 OS 알림 권한 상태를 그대로 표시한다.
+        // 탭 이벤트는 _PushToggleRow 안의 GestureDetector 가 받아 _onPushToggleTapped 로 위임.
+        const _SectionLabel('일반'),
+        const SizedBox(height: 8),
+        _SettingsCard(
+          child: _PushToggleRow(
+            granted: pushGranted,
+            onTap: onPushTap,
+          ),
+        ),
+
+        const SizedBox(height: 24),
+        // ── 알림 금지 시간 ──────────────────
+        const _SectionLabel('알림 금지 시간'),
+        const SizedBox(height: 8),
+        _SettingsCard(
+          child: Column(
+            children: [
+              _ToggleRow(
+                icon: Icons.bedtime_outlined,
+                title: '금지 시간 활성화',
+                description: '설정한 시간에는 알림이 울리지 않습니다.',
+                value: setting.dndEnabled,
+                onChanged: onDndChanged,
+              ),
+              const SizedBox(height: 14),
+              _TimeRangeBlock(
+                start: dndStart,
+                end: dndEnd,
+                enabled: setting.dndEnabled,
+                onTapStart: onDndStartTap,
+                onTapEnd: onDndEndTap,
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 24),
+        // ── 리마인드 ───────────────────────
+        const _SectionLabel('리마인드'),
+        const SizedBox(height: 8),
+        _SettingsCard(
+          child: Column(
+            children: [
+              _ToggleRow(
+                icon: Icons.alarm_outlined,
+                title: '아침 리마인드',
+                description: '하루의 시작을 돕는 알림',
+                value: setting.morningReminderEnabled,
+                onChanged: onMorningChanged,
+              ),
+              const SizedBox(height: 14),
+              _SingleTimeBlock(
+                time: morningTime,
+                enabled: setting.morningReminderEnabled,
+                onTap: onMorningTimeTap,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _SettingsCard(
+          child: Column(
+            children: [
+              _ToggleRow(
+                icon: Icons.calendar_today_outlined,
+                title: '저녁 리마인드',
+                description: '내일을 위한 기록 리마인드',
+                value: setting.eveningReminderEnabled,
+                onChanged: onEveningChanged,
+              ),
+              const SizedBox(height: 14),
+              _SingleTimeBlock(
+                time: eveningTime,
+                enabled: setting.eveningReminderEnabled,
+                onTap: onEveningTimeTap,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 40),
+      ],
     );
   }
 }
@@ -181,7 +340,6 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-/// 흰색 라운드 카드 컨테이너 (rx=24). 내부에 토글 로우 + 선택적 시간 블록.
 class _SettingsCard extends StatelessWidget {
   const _SettingsCard({required this.child});
   final Widget child;
@@ -201,7 +359,6 @@ class _SettingsCard extends StatelessWidget {
   }
 }
 
-/// 아이콘 + 제목 + 설명 + Switch 한 행.
 class _ToggleRow extends StatelessWidget {
   const _ToggleRow({
     required this.icon,
@@ -263,7 +420,74 @@ class _ToggleRow extends StatelessWidget {
   }
 }
 
-/// "시작 22:00  —  종료 07:00" 두 칸 시간 블록.
+/// 푸시알림 행. 비주얼은 일반 토글과 동일하지만 동작이 다르다.
+///
+/// - [granted] 는 OS 알림 권한 상태. Switch 의 value 로 그대로 들어간다.
+/// - 행 전체를 GestureDetector 로 받아 [onTap] 으로 위임한다 (Switch 자체는 [IgnorePointer]
+///   로 인터랙션을 막아 사용자가 토글을 직접 켜고 끄는 것처럼 보이지 않도록 한다 —
+///   실제 권한 변경은 OS 설정 / 권한 다이얼로그를 거쳐야 한다).
+class _PushToggleRow extends StatelessWidget {
+  const _PushToggleRow({
+    required this.granted,
+    required this.onTap,
+  });
+
+  final bool granted;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        children: [
+          Icon(Icons.notifications_none_outlined,
+              color: colors.primary, size: 22),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '푸시알림',
+                  style: AppTextStyles.titleSmall.copyWith(
+                    color: colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '두잇뚜로부터 알림을 수신합니다.',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Switch 는 비주얼 전용. 실제 탭은 바깥 GestureDetector 가 처리.
+          IgnorePointer(
+            child: Transform.scale(
+              scale: 0.9,
+              child: Switch(
+                value: granted,
+                onChanged: (_) {},
+                activeColor: Colors.white,
+                activeTrackColor: colors.primary,
+                inactiveThumbColor: Colors.white,
+                inactiveTrackColor: colors.border,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _TimeRangeBlock extends StatelessWidget {
   const _TimeRangeBlock({
     required this.start,
@@ -347,7 +571,6 @@ class _TimeEntry extends StatelessWidget {
           Text(
             _formatTime(time),
             style: AppTextStyles.titleMedium.copyWith(
-              // 비활성 시 약하게 페이드.
               color: enabled
                   ? colors.primary
                   : colors.primary.withOpacity(0.5),
@@ -359,7 +582,6 @@ class _TimeEntry extends StatelessWidget {
   }
 }
 
-/// 단일 시간 블록 ("22:00" 중앙 정렬) — 리마인드 카드용.
 class _SingleTimeBlock extends StatelessWidget {
   const _SingleTimeBlock({
     required this.time,

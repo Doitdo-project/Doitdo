@@ -7,6 +7,7 @@ import 'package:doitdo/data/models/check_email_response_dto.dart';
 import 'package:doitdo/data/models/check_username_response_dto.dart';
 import 'package:doitdo/data/models/empty_data_dto.dart';
 import 'package:doitdo/data/models/user_dto.dart';
+import 'package:doitdo/data/models/withdraw_request_dto.dart';
 
 part 'user_api.g.dart';
 
@@ -44,5 +45,16 @@ abstract class UserApi {
   @GET('/api/users/check-username')
   Future<ApiResponse<CheckUsernameResponseDto>> checkUsername(
     @Query('username') String username,
+  );
+
+  /// 회원탈퇴 (소프트 삭제 + email/username 익명화 + 연관 리소스 정리).
+  /// 일반 계정은 [WithdrawRequestDto.currentPassword] 필수, OAuth 계정은 null 가능.
+  ///
+  /// `Future<void>` 사용 이유: 서버가 204 No Content 로 **본문 자체가 null** 인
+  /// 응답을 내려주므로 `ApiResponse` 로 감싸면 retrofit 의 자동 생성 파서가
+  /// 빈 본문에 대해 null check 에서 터진다 (deleteCategory 와 동일 패턴).
+  @DELETE('/api/users/me')
+  Future<void> withdraw(
+    @Body() WithdrawRequestDto body,
   );
 }

@@ -28,4 +28,12 @@ abstract class UserRepository {
   /// - `true`: 사용 가능 (미등록)
   /// - `false`: 이미 사용 중
   Future<bool> isUsernameAvailable(String username);
+
+  /// 회원탈퇴 (소프트 삭제). 성공 시 서버에서 isDeleted=true, email/username
+  /// 익명화 처리. 호출자는 성공 후 토큰 정리(`AuthRepository.signOut`) 와
+  /// Welcome 화면 라우팅을 별도로 수행해야 한다.
+  ///
+  /// [currentPassword] 는 일반(이메일+비번) 계정에서만 필수. OAuth 계정은 null.
+  /// 일반 계정인데 비번을 안 보내거나 틀리면 `ServerException` (BE 메시지 포함).
+  Future<void> withdraw({String? currentPassword});
 }

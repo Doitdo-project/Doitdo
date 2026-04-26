@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 
@@ -23,7 +22,7 @@ class StreakSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: AppColors.streakBg,
+        color: colors.streakCardBg,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -55,11 +54,14 @@ class _StreakDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return Container(
       width: 22,
       height: 22,
       decoration: BoxDecoration(
-        color: achieved ? AppColors.streakCheck : AppColors.streakCheckX,
+        // 라이트는 브랜드 오렌지 / 라이트 그레이, 다크는 톤 다운된 오렌지 / 다크 그레이.
+        color:
+            achieved ? colors.streakDotActive : colors.streakDotInactive,
         shape: BoxShape.circle,
       ),
     );

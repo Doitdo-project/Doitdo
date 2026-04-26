@@ -1,3 +1,11 @@
+/// retrofit 제너레이터가 `Object?` 타입에 존재하지 않는 `Object.fromJson` 을
+/// 생성해 컴파일 에러를 내기 때문에, 응답 body 가 없는 엔드포인트(DELETE 등)에서
+/// `ApiResponse<ApiVoid>` 형태로 사용하는 sentinel 타입.
+class ApiVoid {
+  const ApiVoid();
+  factory ApiVoid.fromJson(Map<String, dynamic> _) => const ApiVoid();
+}
+
 /// 백엔드 공통 응답 envelope.
 ///
 /// 모든 REST 응답은 아래 스키마를 따른다:

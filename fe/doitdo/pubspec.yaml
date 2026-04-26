@@ -34,6 +34,16 @@ dependencies:
   firebase_messaging: ^16.0.1
   flutter_local_notifications: ^17.2.4
 
+  # OS 알림 설정 페이지 열기 (iOS/Android).
+  # 알림 설정 페이지에서 푸시알림 토글이 OS 알림 권한 상태를 반영하고,
+  # 토글 탭 시 OS 알림 설정 페이지로 보내기 위해 사용 (NotificationSettingsPage).
+  app_settings: ^5.1.1
+
+  # OS 알림 권한 상태 조회 / 요청.
+  # 알림 설정 페이지의 푸시알림 토글이 이걸로 권한 상태를 읽어 비주얼에 반영하고,
+  # 권한 미허용 상태에서 토글 탭 시 권한 요청 다이얼로그를 띄운다.
+  permission_handler: ^11.3.1
+
   # 로컬 저장
   hive: ^2.2.3
   hive_flutter: ^1.1.0

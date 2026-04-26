@@ -77,13 +77,39 @@ abstract class BaseRepository {
     }
   }
 
+  /// 204 No Content 처럼 body 자체가 없는 엔드포인트용.
+  ///
+  /// Retrofit 쪽에서 `Future<void>` 로 선언하면 retrofit_generator 가
+  /// body 파싱 코드를 아예 생성하지 않아서 null body 로 인한 런타임 에러가 없다.
+  @protected
+  Future<void> safeApiCallVoid(
+    Future<void> Function() block, {
+    String? debugLabel,
+  }) async {
+    try {
+      await block();
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    } on Exception {
+      rethrow;
+    } catch (e, st) {
+      appLogger.e(
+        'safeApiCallVoid unexpected ${debugLabel ?? ''}',
+        error: e,
+        stackTrace: st,
+      );
+      throw UnknownException(e.toString());
+    }
+  }
+
   /// 본문 없이 성공/실패만 신경 쓰면 되는 엔드포인트용 (e.g. DELETE, 로그아웃).
   ///
-  /// Retrofit 쪽은 `Future<ApiResponse<void>>` 대신 `Future<ApiResponse<Object?>>`
-  /// 로 선언하고 data 는 무시하면 된다.
+  /// Retrofit 쪽은 `Future<ApiResponse<ApiVoid>>` 로 선언한다.
+  /// `Object?` 를 사용하면 retrofit_generator 가 존재하지 않는
+  /// `Object.fromJson` 을 생성해 컴파일 에러가 발생하기 때문.
   @protected
-  Future<void> safeApiCallNoData(
-    Future<ApiResponse<Object?>> Function() block, {
+  Future<void> safeApiCallNoData<T>(
+    Future<ApiResponse<T>> Function() block, {
     String? debugLabel,
   }) async {
     try {

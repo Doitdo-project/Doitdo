@@ -30,25 +30,25 @@ class WelcomePage extends ConsumerWidget {
     // AsyncNotifier 상태 변화 감지 — 성공 시 페이지 이동, 에러 시 스낵바.
     // AuthCanceledException 은 "사용자가 직접 취소" 이므로 메시지 노출 생략.
     ref.listen<AsyncValue<WelcomeSuccess?>>(welcomeViewModelProvider,
-        (prev, next) {
-      next.whenOrNull(
-        data: (success) {
-          if (success == null) return;
-          if (!context.mounted) return;
-          // 캐릭터 수령/프리로드는 홈(tamagochi_page) initState 의 ensureCharacter()
-          // 한 곳에서만 돌린다. 여기서 unawaited 로 또 띄우면 home 의 load 와 레이스가
-          // 나서 "GET 실패 → POST" 판정이 덮어써질 수 있음.
-          context.go(AppRoutes.tamagochi);
-        },
-        error: (error, _) {
-          if (error is AuthCanceledException) return;
-          if (!context.mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(mapErrorMessage(error))),
+            (prev, next) {
+          next.whenOrNull(
+            data: (success) {
+              if (success == null) return;
+              if (!context.mounted) return;
+              // 캐릭터 수령/프리로드는 홈(tamagochi_page) initState 의 ensureCharacter()
+              // 한 곳에서만 돌린다. 여기서 unawaited 로 또 띄우면 home 의 load 와 레이스가
+              // 나서 "GET 실패 → POST" 판정이 덮어써질 수 있음.
+              context.go(AppRoutes.tamagochi);
+            },
+            error: (error, _) {
+              if (error is AuthCanceledException) return;
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(mapErrorMessage(error))),
+              );
+            },
           );
-        },
-      );
-    });
+        });
 
     return Scaffold(
       backgroundColor: _bgColor,

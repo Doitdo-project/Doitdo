@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:doitdo/core/errors/exceptions.dart';
@@ -32,6 +34,9 @@ class LoginViewModel extends AutoDisposeAsyncNotifier<User?> {
       );
       // 로그인 직후 전역 currentUserProvider 무효화 → 홈 진입 시 최신 프로필 재조회.
       ref.invalidate(currentUserProvider);
+      // FCM 디바이스 토큰 등록은 푸시 수신을 위해 필요하지만 로그인 성공 흐름을
+      // 막으면 안 되므로 fire-and-forget. (내부에서 예외를 warn 로그로만 남긴다)
+      unawaited(ref.read(fcmTokenRegistrarProvider).register());
       return user;
     });
   }

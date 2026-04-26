@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/models/collection_entry.dart';
@@ -151,7 +150,7 @@ class _FooterHint extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
       decoration: BoxDecoration(
-        color: AppColors.streakBg,
+        color: colors.streakCardBg,
         borderRadius: BorderRadius.circular(20.r),
         border: Border.all(color: colors.border, width: 1),
       ),
