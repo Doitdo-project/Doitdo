@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
+import 'package:doitdo/core/utils/app_env.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
 import 'package:doitdo/presentation/providers/default_screen_provider.dart';
@@ -48,6 +49,16 @@ class _SplashPageState extends ConsumerState<SplashPage> {
       // (디바이스 재부팅 / 앱 재설치 등으로 토큰이 바뀌었을 수 있음)
       // fire-and-forget — 네트워크 실패에도 메인 진입은 계속한다.
       unawaited(ref.read(fcmTokenRegistrarProvider).register());
+
+      // 홈스크린 위젯에도 토큰 / API base URL 을 다시 채워준다.
+      // 위젯은 별도 프로세스라 secure storage 에 직접 접근 못 함 — 앱이 부팅될 때마다
+      // App Group UserDefaults 를 새로 갱신해줘야 위젯의 백그라운드 PATCH 가 동작한다.
+      // 이미 로그인된 상태로 앱을 처음 띄울 때(=재로그인 안 거치는 경우) 도 sync 보장.
+      unawaited(ref.read(widgetSyncServiceProvider).syncAuthTokens(
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            apiBaseUrl: AppEnv.optional('API_BASE_URL'),
+          ));
 
       // 사용자가 설정에서 고른 기본 화면(`home` / `calendar`)으로 진입한다.
       // /tamagochi = 홈(다마고치), /todo = 캘린더 탭.
