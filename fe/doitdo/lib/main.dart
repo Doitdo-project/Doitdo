@@ -9,6 +9,7 @@ import 'package:doitdo/app.dart';
 import 'package:doitdo/core/notifications/fcm_service.dart';
 import 'package:doitdo/core/utils/app_env.dart';
 import 'package:doitdo/core/utils/app_logger.dart';
+import 'package:doitdo/core/widget_sync/widget_sync_service.dart';
 import 'package:doitdo/firebase_options.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
 
@@ -30,6 +31,11 @@ Future<void> main() async {
 
   await Hive.initFlutter();
   final prefs = await SharedPreferences.getInstance();
+
+  // 홈스크린 위젯 ↔ 앱 공유 저장소 초기화 (iOS App Group / Android SharedPreferences).
+  // 위젯 native 코드가 같은 App Group ID 로 데이터를 읽기 때문에 앱 시작 직후 1회 set 필요.
+  // 실패해도 앱은 정상 기동 — 위젯이 동작 안 할 뿐.
+  await WidgetSyncService().init();
 
   try {
     await Firebase.initializeApp(

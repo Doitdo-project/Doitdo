@@ -9,6 +9,7 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/notification/notification_view_model.dart';
+import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart'; // ✅ 추가
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/widgets/common/todo_section.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
@@ -24,20 +25,7 @@ class TodoPage extends ConsumerStatefulWidget {
 
 class _TodoPageState extends ConsumerState<TodoPage> {
 
-
-  /// 캘린더 날짜 아래 점(marker) 색.
-  /// 배경용 파스텔(category1~5) 은 점 크기(5x5) 에선 거의 안 보여서,
-  /// 강조 팔레트(categoryDot1~5) 를 사용.
-  static Color _dotColor(CategoryColorKey key) {
-    switch (key) {
-      case CategoryColorKey.study:    return AppColors.categoryDot1;
-      case CategoryColorKey.exercise: return AppColors.categoryDot2;
-      case CategoryColorKey.work:     return AppColors.categoryDot3;
-      case CategoryColorKey.health:   return AppColors.categoryDot4;
-      case CategoryColorKey.hobby:    return AppColors.categoryDot5;
-      case CategoryColorKey.etc:      return AppColors.textLowIntensity;
-    }
-  }
+  // ✅ _dotColor 하드코딩 메서드 삭제 — 서버 카테고리 색상으로 대체
 
   void _onCalendarSwipe(DragEndDetails details) {
     final velocity = details.primaryVelocity ?? 0;
@@ -140,6 +128,18 @@ class _TodoPageState extends ConsumerState<TodoPage> {
     final vm     = ref.read(todoViewModelProvider.notifier);
     final colors = context.colors;
 
+    // ✅ 서버 카테고리 목록 구독 (실제 colorId 기반 색상 사용)
+    final categoryList = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
+
+    // ✅ 카테고리 이름으로 실제 Color를 찾는 헬퍼
+    Color getDotColor(String categoryName) {
+      try {
+        return categoryList.firstWhere((c) => c.categoryName == categoryName).color;
+      } catch (_) {
+        return AppColors.calendarPoint; // 매칭 없으면 기본 오렌지
+      }
+    }
+
     final now = DateTime.now();
     final isToday = state.selectedDay != null &&
         state.selectedDay!.year == now.year &&
@@ -156,13 +156,10 @@ class _TodoPageState extends ConsumerState<TodoPage> {
           GestureDetector(
             onVerticalDragEnd: _onCalendarSwipe,
             child: Padding(
-              // 페이지 좌우 여백 24px — 홈/설정 탭과 통일 (가이드 §4 DoitdoPaddingLayout 기준).
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
                   Padding(
-                    // 헤더 왼쪽 여백(12) 은 아래 TableCalendar 의 요일('일') 컬럼과 라인을 맞추기 위함.
-                    // 아래 여백(20) 은 "4월" 타이틀과 요일 헤더 사이에 숨 쉬는 공간 확보.
                     padding: const EdgeInsets.only(left: 12, top: 12, bottom: 20),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -181,7 +178,6 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                                 decoration: BoxDecoration(
                                   color: colors.surface,
                                   borderRadius: BorderRadius.circular(8),
-                                  // 시안: 테두리 없음 — 탭 가능 표시는 dropdown 아이콘으로 충분.
                                 ),
                                 child: Row(
                                   children: [
@@ -199,14 +195,12 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                         ),
                         Row(
                           children: [
-                            // 필터 아이콘
                             GestureDetector(
                               onTap: () => _showFilterMenu(context, state.currentFilter),
                               behavior: HitTestBehavior.opaque,
                               child: Icon(Icons.filter_alt_outlined, size: 24, color: colors.textPrimary),
                             ),
                             const SizedBox(width: 12),
-                            // 알림 벨 아이콘 (안 읽음 뱃지 포함)
                             GestureDetector(
                               onTap: () => context.push(AppRoutes.notifications),
                               behavior: HitTestBehavior.opaque,
@@ -266,15 +260,11 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                     onPageChanged: (focusedDay) => vm.onDaySelected(focusedDay, focusedDay),
                     headerVisible: false,
                     locale: 'ko_KR',
-                    // 수정 후
                     eventLoader: (day) {
-                      // 시간을 제외한 날짜 값만 추출 (00:00:00 기준)
                       final normalizedDay = DateTime(day.year, day.month, day.day);
-                      // 뷰모델의 state에 미리 계산해둔 kEvents 맵에서 해당 날짜의 할 일을 반환
                       return state.kEvents[normalizedDay] ?? [];
                     },
                     rowHeight: 52,
-                    // 요일 헤더 ↔ 첫 날짜 행 간격을 날짜 행 간격(rowHeight 기반) 과 맞춤.
                     daysOfWeekHeight: 40,
                     daysOfWeekStyle: DaysOfWeekStyle(
                       dowTextFormatter: (date, locale) {
@@ -293,8 +283,6 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                       defaultTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textPrimary),
                       weekendTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textPrimary),
                       outsideTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textHint),
-                      // cellMargin 을 넉넉히 줘서 원형 decoration 이 숫자를 감쌀 정도 크기로만 렌더.
-                      // (0 이면 셀 전체를 덮어 과도하게 큰 원이 됨)
                       cellMargin: const EdgeInsets.all(10),
                     ),
                     calendarBuilders: CalendarBuilders(
@@ -304,11 +292,15 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                         final row1 = todos.take(3).toList();
                         final row2 = todos.length > 3 ? todos.sublist(3) : <Todo>[];
 
+                        // ✅ 하드코딩 _dotColor 대신 서버 카테고리 실제 색상 사용
                         Widget dotRow(List<Todo> items) => Row(
                           mainAxisSize: MainAxisSize.min,
                           children: items.map((t) => Container(
                             width: 5, height: 5, margin: const EdgeInsets.only(right: 2),
-                            decoration: BoxDecoration(color: _dotColor(t.category.colorKey), shape: BoxShape.circle),
+                            decoration: BoxDecoration(
+                              color: getDotColor(t.category.name), // ✅ 이름으로 실제 색상 조회
+                              shape: BoxShape.circle,
+                            ),
                           )).toList(),
                         );
 
@@ -333,7 +325,6 @@ class _TodoPageState extends ConsumerState<TodoPage> {
           ),
 
           Padding(
-            // 마스코트 말풍선 위아래로 숨 쉬는 공간 — 캘린더/할 일 섹션과 시각적 분리.
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -356,11 +347,13 @@ class _TodoPageState extends ConsumerState<TodoPage> {
           ),
 
           // ══════════════════════════════════════
-          // 할 일 섹션
+          // 할 일 섹션 (캘린더 고정 후 나머지 영역 스크롤)
           // ══════════════════════════════════════
           Expanded(
             child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
               padding: const EdgeInsets.fromLTRB(24, 4, 24, 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -396,4 +389,3 @@ class _TodoPageState extends ConsumerState<TodoPage> {
     );
   }
 }
-

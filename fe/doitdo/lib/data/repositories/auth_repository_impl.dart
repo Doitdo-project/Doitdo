@@ -7,6 +7,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import 'package:doitdo/core/errors/exceptions.dart';
 import 'package:doitdo/core/network/base_repository.dart';
+import 'package:doitdo/core/widget_sync/widget_sync_service.dart';
 import 'package:doitdo/data/datasources/auth_api.dart';
 import 'package:doitdo/data/datasources/auth_local_data_source.dart';
 import 'package:doitdo/data/models/login_request_dto.dart';
@@ -31,11 +32,21 @@ class AuthRepositoryImpl extends BaseRepository implements AuthRepository {
     required this.authApi,
     required this.local,
     required this.googleSignIn,
+    required this.widgetSync,
+    required this.apiBaseUrl,
   });
 
   final AuthApi authApi;
   final AuthLocalDataSource local;
   final GoogleSignIn googleSignIn;
+
+  /// 홈스크린 위젯 (iOS/Android) 으로 토큰 변경을 전파.
+  /// 위젯의 백그라운드 AppIntent/Provider 가 PATCH 호출에 사용한다.
+  final WidgetSyncService widgetSync;
+
+  /// 위젯이 PATCH 호출할 때 prefix 로 사용할 베이스 URL — 토큰과 함께 같이 저장.
+  /// 환경별 (dev/prod) 다르므로 런타임 주입 (.env 의 API_BASE_URL).
+  final String apiBaseUrl;
 
   // ── 이메일 계정 ───────────────────────────────────────────────
 
@@ -50,6 +61,7 @@ class AuthRepositoryImpl extends BaseRepository implements AuthRepository {
       ),
     );
     await local.save(dto.tokens);
+    await _syncTokensToWidget(dto.tokens);
     return (dto.user.toEntity(), dto.tokens);
   }
 
@@ -198,6 +210,7 @@ class AuthRepositoryImpl extends BaseRepository implements AuthRepository {
       ),
     );
     await local.save(dto.tokens);
+    await _syncTokensToWidget(dto.tokens);
     return (dto.user.toEntity(), dto.tokens, dto.isNewUser ?? false);
   }
 
@@ -225,6 +238,7 @@ class AuthRepositoryImpl extends BaseRepository implements AuthRepository {
     );
     final newTokens = dto.toEntity();
     await local.save(newTokens);
+    await _syncTokensToWidget(newTokens);
     return newTokens;
   }
 
@@ -239,6 +253,9 @@ class AuthRepositoryImpl extends BaseRepository implements AuthRepository {
       // no-op — 로컬 정리는 아래에서 계속 진행.
     }
     await local.clear();
+    // 홈스크린 위젯에 남은 토큰/TODO 데이터도 비운다 — 디바이스를 다른 사람이 받았을 때
+    // 이전 사용자 데이터가 위젯에 남아있는 사고 방지.
+    await widgetSync.clearAll();
 
     // 어느 provider 로 로그인했는지 추적하지 않으므로 두 SDK 모두 안전하게 로그아웃 시도.
     try {
@@ -255,4 +272,14 @@ class AuthRepositoryImpl extends BaseRepository implements AuthRepository {
 
   // 이메일/닉네임 중복체크는 UserRepository 가 담당. AuthRepository 는
   // 순수한 인증/세션 관리에만 집중한다.
+
+  /// 위젯이 백그라운드에서 우리 API 를 직접 호출하도록 토큰 + base URL 을 공유 영역에 저장.
+  /// 실패는 무시 — 위젯이 안 떠 있어도 본 인증 흐름은 정상 진행되어야 한다.
+  Future<void> _syncTokensToWidget(AuthTokens tokens) async {
+    await widgetSync.syncAuthTokens(
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      apiBaseUrl: apiBaseUrl,
+    );
+  }
 }
