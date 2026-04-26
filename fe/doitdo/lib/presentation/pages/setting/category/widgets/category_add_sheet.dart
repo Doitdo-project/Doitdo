@@ -314,29 +314,34 @@ class _ColorCircle extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Opacity(
-        opacity: isUsed ? 0.45 : 1.0,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color,
-            border: isSelected
-                ? Border.all(color: colors.primary, width: 3)
-                : null,
-          ),
-          child: isUsed
-              ? const Center(
-                  child: Icon(
-                    Icons.check,
-                    size: 18,
-                    color: Colors.white,
-                  ),
-                )
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color,
+          border: isSelected
+              ? Border.all(color: colors.primary, width: 3)
               : null,
         ),
+        child: isUsed
+            ? const Center(
+                child: Icon(
+                  Icons.check,
+                  size: 20,
+                  color: Colors.white,
+                  // 밝은 색 위에서도 체크가 묻히지 않게 그림자로 외곽선 효과.
+                  shadows: [
+                    Shadow(
+                      offset: Offset(0, 0),
+                      blurRadius: 3,
+                      color: Color(0x88000000),
+                    ),
+                  ],
+                ),
+              )
+            : null,
       ),
     );
   }

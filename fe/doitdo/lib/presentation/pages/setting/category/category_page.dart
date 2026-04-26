@@ -65,8 +65,12 @@ class CategoryPage extends ConsumerWidget {
     }
   }
 
-  /// 팔레트 셀렉터 화살표로 팔레트가 바뀐 직후 동작.
-  /// ViewModel 의 일괄 PATCH 후 활성 팔레트 ID 도 SharedPreferences 에 갱신.
+  /// 팔레트 시트에서 "확인" 누른 직후 동작.
+  /// 모든 카테고리를 새 팔레트의 같은 인덱스 색으로 일괄 PATCH 후 활성 팔레트 갱신.
+  ///
+  /// 실패 시: 활성 팔레트는 갱신하지 않고 카테고리를 서버에서 재조회한다.
+  /// 이렇게 하지 않으면 "활성 팔레트 = 네온" / "카테고리 색 = 이전" 같은
+  /// 모순 상태가 남는다 (PATCH 실패로 카테고리는 안 바뀌었는데 활성 팔레트만 바뀐 경우).
   Future<void> _handlePaletteChange(
     BuildContext context,
     WidgetRef ref,
@@ -80,9 +84,8 @@ class CategoryPage extends ConsumerWidget {
           );
       await ref.read(activePaletteProvider.notifier).set(newPaletteId);
     } catch (e) {
-      // 일부 PATCH 실패해도 활성 팔레트는 갱신해 둔다 — 다음 추가 카테고리는
-      // 새 팔레트 색을 쓰도록. 실패한 카테고리는 ViewModel 에서 기존 색 유지.
-      await ref.read(activePaletteProvider.notifier).set(newPaletteId);
+      // 서버 진실 상태로 다시 동기화 — partial 적용 잔존 방지.
+      ref.invalidate(categoryViewModelProvider);
       if (context.mounted) _showError(context, e);
     }
   }
