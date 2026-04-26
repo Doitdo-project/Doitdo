@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 
@@ -25,16 +24,15 @@ class CollectionProgressCard extends StatelessWidget {
   /// 위해 남겨둔다(예: 접근성 value 로 사용 가능).
   final double progress;
 
-  static const Color _trackColor = Color(0xFFEAE8DE);
-  static const Color _fillColor = AppColors.streakCheck; // 주황 accent
-
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final trackColor = colors.streakDotInactive;
+    final fillColor = colors.streakDotActive;
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
       decoration: BoxDecoration(
-        color: AppColors.streakBg,
+        color: colors.streakCardBg,
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Column(
@@ -64,7 +62,7 @@ class CollectionProgressCard extends StatelessWidget {
               Text(
                 '$unlockedCount종',
                 style: AppTextStyles.bodyLarge.copyWith(
-                  color: _fillColor,
+                  color: fillColor,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -80,8 +78,8 @@ class CollectionProgressCard extends StatelessWidget {
           _SegmentedProgressBar(
             totalCount: totalCount,
             filledCount: unlockedCount,
-            trackColor: _trackColor,
-            fillColor: _fillColor,
+            trackColor: trackColor,
+            fillColor: fillColor,
           ),
         ],
       ),

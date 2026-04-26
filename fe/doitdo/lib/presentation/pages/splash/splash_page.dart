@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
+import 'package:doitdo/presentation/providers/default_screen_provider.dart';
 
 /// 앱 부팅 직후 잠시 노출되는 스플래시 + **세션 복원 분기 지점**.
 ///
@@ -41,7 +44,19 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     if (!mounted) return;
 
     if (tokens != null) {
-      context.go(AppRoutes.tamagochi);
+      // 앱 재시작으로 세션이 복원되면 FCM 토큰도 다시 서버에 동기화해 둔다.
+      // (디바이스 재부팅 / 앱 재설치 등으로 토큰이 바뀌었을 수 있음)
+      // fire-and-forget — 네트워크 실패에도 메인 진입은 계속한다.
+      unawaited(ref.read(fcmTokenRegistrarProvider).register());
+
+      // 사용자가 설정에서 고른 기본 화면(`home` / `calendar`)으로 진입한다.
+      // /tamagochi = 홈(다마고치), /todo = 캘린더 탭.
+      final defaultScreen = ref.read(defaultScreenProvider);
+      final destination = switch (defaultScreen) {
+        DefaultScreen.home => AppRoutes.tamagochi,
+        DefaultScreen.calendar => AppRoutes.todo,
+      };
+      context.go(destination);
     } else {
       context.go(AppRoutes.welcome);
     }

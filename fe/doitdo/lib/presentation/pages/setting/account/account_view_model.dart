@@ -24,6 +24,9 @@ class AccountViewModel extends AutoDisposeAsyncNotifier<bool?> {
   Future<void> signOut() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
+      // FCM 디바이스 토큰 해제는 서버 인증이 살아있을 때(= authRepository.signOut
+      // 전에) 먼저 시도. 실패하더라도 로그아웃 흐름은 계속 진행한다.
+      await ref.read(fcmTokenRegistrarProvider).unregister();
       await ref.read(authRepositoryProvider).signOut();
       ref.invalidate(currentUserProvider);
       return true;

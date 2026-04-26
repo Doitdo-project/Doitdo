@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
+import 'package:doitdo/core/utils/error_message_mapper.dart';
+import 'package:doitdo/data/models/category_dto.dart';
+import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
 import 'package:doitdo/presentation/pages/setting/category/widgets/category_add_sheet.dart';
+import 'package:doitdo/presentation/pages/setting/category/widgets/palette_selector_sheet.dart';
+import 'package:doitdo/presentation/providers/active_palette_provider.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_dialog.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_top_bar.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_padding_layout.dart';
@@ -12,110 +16,153 @@ import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
 
 /// 설정 > 투두 카테고리 설정 화면.
 ///
-/// 내 카테고리 목록 + 각 항목 옆 메뉴(편집/삭제) + 하단 "새 카테고리 만들기" 진입점.
-/// 현재는 mock 데이터 — 추후 CategoryRepository / CategoryViewModel 로 교체.
-class CategoryPage extends ConsumerStatefulWidget {
+/// CategoryViewModel 을 통해 서버와 연동된다.
+/// 추가/수정/삭제는 낙관적 업데이트로 state 를 직접 갱신하며,
+/// 실패 시 SnackBar 로 에러 메시지를 노출한다.
+class CategoryPage extends ConsumerWidget {
   const CategoryPage({super.key});
 
-  @override
-  ConsumerState<CategoryPage> createState() => _CategoryPageState();
-}
-
-class _CategoryPageState extends ConsumerState<CategoryPage> {
-  // TODO: API 연동 시 Repository/ViewModel 로 교체.
-  // 색상은 가이드(§7) 에 따라 `AppColors.category*` 팔레트를 직접 참조.
-  final List<_Category> _categories = [
-    const _Category(id: '1', name: '공부', color: AppColors.category1),
-    const _Category(id: '2', name: '업무', color: AppColors.category2),
-    const _Category(id: '3', name: '운동', color: AppColors.category3),
-    const _Category(id: '4', name: '집안일', color: AppColors.category5),
-  ];
-
-  Future<void> _handleAdd() async {
-    final result = await showCategoryAddSheet(context);
-    if (result == null) return;
-    setState(() {
-      _categories.add(_Category(
-        // 임시 id — 서버 연동 시 실제 카테고리 id 로 교체.
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: result.name,
-        color: result.color,
-      ));
-    });
+  void _showError(BuildContext context, Object e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(mapErrorMessage(e))),
+    );
   }
 
-  Future<void> _handleEdit(_Category category) async {
+  Future<void> _handleAdd(BuildContext context, WidgetRef ref) async {
+    final result = await showCategoryAddSheet(context);
+    if (result == null) return;
+    try {
+      await ref.read(categoryViewModelProvider.notifier).addCategory(
+            name: result.name,
+            colorId: result.colorId,
+          );
+    } catch (e) {
+      if (context.mounted) _showError(context, e);
+    }
+  }
+
+  Future<void> _handleEdit(
+    BuildContext context,
+    WidgetRef ref,
+    CategoryResp category,
+  ) async {
     final result = await showCategoryAddSheet(
       context,
       initial: CategoryAddResult(
-        name: category.name,
-        color: category.color,
+        name: category.categoryName,
+        colorId: category.colorId,
       ),
     );
     if (result == null) return;
-    setState(() {
-      final idx = _categories.indexWhere((c) => c.id == category.id);
-      if (idx >= 0) {
-        _categories[idx] = _Category(
-          id: category.id,
-          name: result.name,
-          color: result.color,
-        );
-      }
-    });
+    try {
+      await ref.read(categoryViewModelProvider.notifier).editCategory(
+            categoryId: category.categoryId,
+            name: result.name,
+            colorId: result.colorId,
+          );
+    } catch (e) {
+      if (context.mounted) _showError(context, e);
+    }
   }
 
-  Future<void> _handleDelete(_Category category) async {
+  /// 팔레트 셀렉터 화살표로 팔레트가 바뀐 직후 동작.
+  /// ViewModel 의 일괄 PATCH 후 활성 팔레트 ID 도 SharedPreferences 에 갱신.
+  Future<void> _handlePaletteChange(
+    BuildContext context,
+    WidgetRef ref,
+    int newPaletteId,
+    PaletteListResp palettes,
+  ) async {
+    try {
+      await ref.read(categoryViewModelProvider.notifier).applyPaletteToAll(
+            newPaletteId: newPaletteId,
+            paletteList: palettes,
+          );
+      await ref.read(activePaletteProvider.notifier).set(newPaletteId);
+    } catch (e) {
+      // 일부 PATCH 실패해도 활성 팔레트는 갱신해 둔다 — 다음 추가 카테고리는
+      // 새 팔레트 색을 쓰도록. 실패한 카테고리는 ViewModel 에서 기존 색 유지.
+      await ref.read(activePaletteProvider.notifier).set(newPaletteId);
+      if (context.mounted) _showError(context, e);
+    }
+  }
+
+  Future<void> _handleDelete(
+    BuildContext context,
+    WidgetRef ref,
+    CategoryResp category,
+  ) async {
     final ok = await showDoitdoDialog(
       context: context,
       title: '카테고리를 삭제할까요?',
-      message: '"${category.name}" 카테고리가 제거됩니다.',
+      message: '"${category.categoryName}" 카테고리가 제거됩니다.',
       confirmLabel: '삭제',
       cancelLabel: '취소',
     );
     if (ok != true) return;
-    setState(() {
-      _categories.removeWhere((c) => c.id == category.id);
-    });
+    try {
+      await ref
+          .read(categoryViewModelProvider.notifier)
+          .removeCategory(category.categoryId);
+    } catch (e) {
+      if (context.mounted) _showError(context, e);
+    }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(categoryViewModelProvider);
+
     return DoitdoScaffold(
       topBar: const DoitdoTopBar(title: '카테고리 설정'),
       body: DoitdoPaddingLayout(
         top: 16,
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const _SectionLabel('내 카테고리'),
-            const SizedBox(height: 8),
-            _CategoryCard(
-              categories: _categories,
-              onEdit: _handleEdit,
-              onDelete: _handleDelete,
-              onAddTap: _handleAdd,
+        child: state.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  mapErrorMessage(e),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: context.colors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () => ref.invalidate(categoryViewModelProvider),
+                  child: const Text('다시 시도'),
+                ),
+              ],
             ),
-            const SizedBox(height: 40),
-          ],
+          ),
+          data: (categories) => ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              const _SectionLabel('팔레트 설정'),
+              const SizedBox(height: 8),
+              _PaletteSelector(
+                onChanged: (newPaletteId, palettes) =>
+                    _handlePaletteChange(context, ref, newPaletteId, palettes),
+              ),
+              const SizedBox(height: 24),
+              const _SectionLabel('내 카테고리'),
+              const SizedBox(height: 8),
+              _CategoryCard(
+                categories: categories,
+                onEdit: (c) => _handleEdit(context, ref, c),
+                onDelete: (c) => _handleDelete(context, ref, c),
+                onAddTap: () => _handleAdd(context, ref),
+              ),
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );
   }
-}
-
-/// 화면 전용 카테고리 데이터 타입.
-/// API 연동 시 `domain/entities/category.dart` 의 엔티티로 치환 예정.
-class _Category {
-  const _Category({
-    required this.id,
-    required this.name,
-    required this.color,
-  });
-
-  final String id;
-  final String name;
-  final Color color;
 }
 
 class _SectionLabel extends StatelessWidget {
@@ -145,9 +192,9 @@ class _CategoryCard extends StatelessWidget {
     required this.onAddTap,
   });
 
-  final List<_Category> categories;
-  final ValueChanged<_Category> onEdit;
-  final ValueChanged<_Category> onDelete;
+  final List<CategoryResp> categories;
+  final ValueChanged<CategoryResp> onEdit;
+  final ValueChanged<CategoryResp> onDelete;
   final VoidCallback onAddTap;
 
   @override
@@ -159,7 +206,6 @@ class _CategoryCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: colors.border),
       ),
-      // 카드 내부 상/하 여유 공간 — 첫·마지막 행과 카드 경계 사이 호흡.
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
@@ -182,13 +228,12 @@ class _CategoryCard extends StatelessWidget {
   }
 }
 
-/// 삼점 메뉴 항목 식별자.
 enum _RowMenuAction { edit, delete }
 
 /// 행 삼점 아이콘 위치를 기준으로 팝업 메뉴를 띄우는 헬퍼.
 ///
-/// [iconContext] 는 탭한 아이콘의 BuildContext — 해당 RenderBox 좌표를
-/// 기준으로 팝업이 그 아래에 뜨도록 RelativeRect 를 계산한다.
+/// [iconContext] 의 RenderBox 좌표로 RelativeRect 를 계산해
+/// PopupMenuButton 없이 아이콘 크기만 유지하면서 메뉴를 띄운다.
 Future<void> _openRowMenu(
   BuildContext iconContext, {
   required VoidCallback onEdit,
@@ -197,7 +242,6 @@ Future<void> _openRowMenu(
   final box = iconContext.findRenderObject() as RenderBox;
   final overlay =
       Overlay.of(iconContext).context.findRenderObject() as RenderBox;
-  // 아이콘의 실제 경계 박스를 overlay 좌표계로 매핑 → 이 박스를 기준으로 메뉴가 인접해 뜬다.
   final position = RelativeRect.fromRect(
     Rect.fromPoints(
       box.localToGlobal(Offset.zero, ancestor: overlay),
@@ -211,17 +255,13 @@ Future<void> _openRowMenu(
     context: iconContext,
     position: position,
     color: colors.surface,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-    ),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     items: [
       PopupMenuItem(
         value: _RowMenuAction.edit,
         child: Text(
           '수정',
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: colors.textPrimary,
-          ),
+          style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
         ),
       ),
       PopupMenuItem(
@@ -250,13 +290,16 @@ class _CategoryRow extends StatelessWidget {
     required this.onDelete,
   });
 
-  final _Category category;
+  final CategoryResp category;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    // colorHex 를 서버에서 직접 받아 Color 로 변환.
+    final dotColor = category.color;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
       child: Row(
@@ -266,20 +309,18 @@ class _CategoryRow extends StatelessWidget {
             height: 12,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: category.color,
+              color: dotColor,
             ),
           ),
           const SizedBox(width: 20),
           Expanded(
             child: Text(
-              category.name,
+              category.categoryName,
               style: AppTextStyles.bodyLarge.copyWith(
                 color: colors.textPrimary,
               ),
             ),
           ),
-          // PopupMenuButton 은 내부 IconButton 의 48×48 최소 터치 영역 때문에
-          // 행 전체 높이를 강제로 키워서 사용 불가 — showMenu 를 직접 호출해 아이콘 크기만 유지.
           Builder(
             builder: (iconContext) {
               return GestureDetector(
@@ -302,6 +343,105 @@ class _CategoryRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 카테고리 페이지 상단 팔레트 진입 카드.
+///
+/// 한 줄짜리 카드 — 현재 활성 팔레트 이름 + chevron right. 탭하면
+/// [showPaletteSelectorSheet] 로 좌우 화살표 미리보기 시트가 열린다.
+/// 시트에서 "확인" 을 누르면 [onChanged] 콜백으로 새 paletteId 가 전달되어
+/// 부모가 모든 카테고리를 일괄 PATCH 한다.
+///
+/// 첫 진입 시 활성 팔레트 ID 가 null 이면 paletteProvider 데이터를 받자마자
+/// 첫 팔레트로 자동 set 한다 (post-frame).
+class _PaletteSelector extends ConsumerWidget {
+  const _PaletteSelector({required this.onChanged});
+
+  final void Function(int newPaletteId, PaletteListResp palettes) onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.colors;
+    final palette = ref.watch(paletteProvider);
+    final activeId = ref.watch(activePaletteProvider);
+
+    return palette.when(
+      loading: () => const SizedBox(
+        height: 64,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => SizedBox(
+        height: 64,
+        child: Center(
+          child: Text(
+            '팔레트를 불러오지 못했어요',
+            style: AppTextStyles.bodySmall.copyWith(color: colors.textHint),
+          ),
+        ),
+      ),
+      data: (paletteList) {
+        final palettes = paletteList.items;
+        if (palettes.isEmpty) return const SizedBox.shrink();
+
+        var currentIndex = palettes.indexWhere((p) => p.paletteId == activeId);
+        if (currentIndex < 0) currentIndex = 0;
+        final current = palettes[currentIndex];
+
+        // 첫 진입 시 활성 팔레트 미설정이면 첫 팔레트로 자동 set (post-frame).
+        if (activeId == null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!context.mounted) return;
+            ref.read(activePaletteProvider.notifier).set(current.paletteId);
+          });
+        }
+
+        return Container(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.border),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () async {
+                final picked = await showPaletteSelectorSheet(
+                  context,
+                  currentPaletteId: current.paletteId,
+                );
+                if (picked == null || picked == current.paletteId) return;
+                onChanged(picked, paletteList);
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        current.paletteName,
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right,
+                      size: 20,
+                      color: colors.textHint,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

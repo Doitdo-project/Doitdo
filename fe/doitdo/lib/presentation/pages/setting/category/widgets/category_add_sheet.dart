@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
+import 'package:doitdo/data/models/category_dto.dart';
+import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
+import 'package:doitdo/presentation/providers/active_palette_provider.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_bottom_sheet.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_sheet_action_button.dart';
 
 /// 카테고리 추가/수정 바텀시트.
 ///
-/// [initial] 이 null 이면 추가 모드 ("카테고리 추가"), 값이 있으면 수정 모드 ("카테고리 수정")
-/// 로 동작하며 이름/색상 필드에 초기값이 채워진다.
-///
-/// [확인] 시 입력한 (name, color) 반환. 이전 / 바깥 탭 / 뒤로가기 시 null.
+/// [initial] 이 null 이면 추가 모드, 값이 있으면 수정 모드 (이름·색상 초기값 채움).
+/// 확인 시 [CategoryAddResult] 반환. 이전/바깥 탭/뒤로가기 시 null.
 Future<CategoryAddResult?> showCategoryAddSheet(
   BuildContext context, {
   CategoryAddResult? initial,
@@ -22,27 +23,32 @@ Future<CategoryAddResult?> showCategoryAddSheet(
   );
 }
 
-/// 시트가 반환하는 결과 타입 (Dart record 대신 명시 클래스 — public API 안정성 위해).
+/// 시트가 반환하는 결과 타입.
 class CategoryAddResult {
-  const CategoryAddResult({required this.name, required this.color});
+  const CategoryAddResult({
+    required this.name,
+    required this.colorId,
+  });
 
   final String name;
-  final Color color;
+
+  /// 서버 팔레트의 colorId (1-based).
+  final int colorId;
 }
 
-class _CategoryAddSheet extends StatefulWidget {
+class _CategoryAddSheet extends ConsumerStatefulWidget {
   const _CategoryAddSheet({this.initial});
 
   final CategoryAddResult? initial;
 
   @override
-  State<_CategoryAddSheet> createState() => _CategoryAddSheetState();
+  ConsumerState<_CategoryAddSheet> createState() => _CategoryAddSheetState();
 }
 
-class _CategoryAddSheetState extends State<_CategoryAddSheet> {
+class _CategoryAddSheetState extends ConsumerState<_CategoryAddSheet> {
   late final TextEditingController _nameCtrl =
       TextEditingController(text: widget.initial?.name ?? '');
-  late Color? _selectedColor = widget.initial?.color;
+  late int? _selectedColorId = widget.initial?.colorId;
 
   bool get _isEdit => widget.initial != null;
 
@@ -53,21 +59,34 @@ class _CategoryAddSheetState extends State<_CategoryAddSheet> {
   }
 
   bool get _canConfirm =>
-      _nameCtrl.text.trim().isNotEmpty && _selectedColor != null;
+      _nameCtrl.text.trim().isNotEmpty && _selectedColorId != null;
 
   void _submit() {
     if (!_canConfirm) return;
     Navigator.of(context).pop(
       CategoryAddResult(
         name: _nameCtrl.text.trim(),
-        color: _selectedColor!,
+        colorId: _selectedColorId!,
       ),
     );
+  }
+
+  /// 다른 카테고리들이 이미 쓰는 colorId 집합 — 시트의 색 그리드에서 비활성화 표시.
+  /// 수정 모드면 자기 자신(initial.colorId) 은 빼서 본인 색은 그대로 다시 선택 가능.
+  Set<int> _disabledColorIds(List<CategoryResp> categories) {
+    final selfId = widget.initial?.colorId;
+    return categories
+        .where((c) => c.colorId != selfId)
+        .map((c) => c.colorId)
+        .toSet();
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final categories = ref.watch(categoryViewModelProvider).valueOrNull ?? const [];
+    final disabledIds = _disabledColorIds(categories);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -81,20 +100,19 @@ class _CategoryAddSheetState extends State<_CategoryAddSheet> {
           ),
         ),
         const SizedBox(height: 8),
-        // 입력 필드 / 색상 박스 / 버튼 영역 공통 좌우 패딩 — 다른 설정 시트들과 동일한 30 총폭.
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: Column(
             children: [
               _NameField(
                 controller: _nameCtrl,
-                // 입력 값이 바뀌면 _canConfirm 가 바뀌므로 부모 rebuild.
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 16),
               _ColorPickerBox(
-                selected: _selectedColor,
-                onSelect: (c) => setState(() => _selectedColor = c),
+                selectedColorId: _selectedColorId,
+                disabledColorIds: disabledIds,
+                onSelect: (id) => setState(() => _selectedColorId = id),
               ),
               const SizedBox(height: 20),
               Row(
@@ -110,8 +128,7 @@ class _CategoryAddSheetState extends State<_CategoryAddSheet> {
                   Expanded(
                     child: DoitdoSheetActionButton(
                       label: '확인',
-                      // 시각적으로는 항상 오렌지 유지 — 미입력/미선택 시 _submit 이 내부에서 no-op.
-                      onPressed: _submit,
+                      onPressed: _canConfirm ? _submit : null,
                     ),
                   ),
                 ],
@@ -124,7 +141,6 @@ class _CategoryAddSheetState extends State<_CategoryAddSheet> {
   }
 }
 
-/// 이름 입력 필드 — 흰 배경 + 회색 외곽선.
 class _NameField extends StatelessWidget {
   const _NameField({
     required this.controller,
@@ -160,60 +176,115 @@ class _NameField extends StatelessWidget {
   }
 }
 
-/// 기본 색상 팔레트 박스 — 타이틀 + 좌/우 화살표 + 8개 원형 선택지.
+/// 카테고리 추가/수정 시트의 색상 피커 박스.
 ///
-/// 화살표는 추후 커스텀 팔레트 페이지네이션 확장용. 현재는 시각적 요소만.
-class _ColorPickerBox extends StatelessWidget {
-  const _ColorPickerBox({required this.selected, required this.onSelect});
+/// **활성 팔레트(`activePaletteProvider`) 의 색만** 그리드로 보여준다.
+/// 시트 안에서 팔레트를 바꾸는 좌우 화살표는 의도적으로 두지 않는다 — 팔레트
+/// 변경은 카테고리 페이지 상단의 `_PaletteSelector` 가 단일 진입점이고, 거기서
+/// 바꾸면 모든 카테고리가 일괄로 같이 바뀐다.
+///
+/// [disabledColorIds] 에 포함된 colorId 는 다른 카테고리가 이미 쓰는 색 — 시각적으로
+/// 사용 중 표시(체크 아이콘) 를 띄우고 탭을 막아 색상 중복을 방지한다.
+class _ColorPickerBox extends ConsumerWidget {
+  const _ColorPickerBox({
+    required this.selectedColorId,
+    required this.disabledColorIds,
+    required this.onSelect,
+  });
 
-  final Color? selected;
-  final ValueChanged<Color> onSelect;
+  final int? selectedColorId;
+  final Set<int> disabledColorIds;
+  final ValueChanged<int> onSelect;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
+    final palette = ref.watch(paletteProvider);
+    final activeId = ref.watch(activePaletteProvider);
+
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: colors.border),
       ),
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
-      child: Column(
-        children: [
-          Row(
+      child: palette.when(
+        loading: () => const SizedBox(
+          height: 80,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (e, _) => SizedBox(
+          height: 80,
+          child: Center(
+            child: Text(
+              '색상을 불러오지 못했어요',
+              style: AppTextStyles.bodySmall.copyWith(color: colors.textHint),
+            ),
+          ),
+        ),
+        data: (paletteList) {
+          final palettes = paletteList.items;
+          if (palettes.isEmpty) return const SizedBox(height: 80);
+
+          // 활성 팔레트 인덱스 — 못 찾으면 첫 팔레트 (방어).
+          var currentIndex =
+              palettes.indexWhere((p) => p.paletteId == activeId);
+          if (currentIndex < 0) currentIndex = 0;
+          final currentPalette = palettes[currentIndex];
+
+          // 전역 colorId 매핑: baseId = 이전 팔레트들의 색상 수 합 + 1 (1-based).
+          int baseId = 1;
+          for (int i = 0; i < currentIndex; i++) {
+            baseId += palettes[i].colors.length;
+          }
+
+          return _buildColorGrid(currentPalette.colors, baseId, colors);
+        },
+      ),
+    );
+  }
+
+  Widget _buildColorGrid(
+    List<String> hexColors,
+    int baseColorId,
+    DoitdoColors colors,
+  ) {
+    const int cols = 4;
+    final rows = (hexColors.length / cols).ceil();
+
+    return Column(
+      children: List.generate(rows, (rowIdx) {
+        final start = rowIdx * cols;
+        final end = (start + cols).clamp(0, hexColors.length);
+        final rowItems = hexColors.sublist(start, end);
+
+        return Padding(
+          padding:
+              rowIdx > 0 ? const EdgeInsets.only(top: 14) : EdgeInsets.zero,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(Icons.chevron_left, size: 20, color: colors.textPrimary),
-              Expanded(
-                child: Center(
-                  child: Text(
-                    '기본 색상',
-                    style: AppTextStyles.bodyLarge.copyWith(
-                      color: colors.textPrimary,
-                    ),
-                  ),
-                ),
+              ...rowItems.asMap().entries.map((entry) {
+                final colorId = baseColorId + start + entry.key;
+                final color = hexToColor(entry.value);
+                final isUsed = disabledColorIds.contains(colorId);
+                return _ColorCircle(
+                  color: color,
+                  colorId: colorId,
+                  isSelected: selectedColorId == colorId,
+                  isUsed: isUsed,
+                  onTap: isUsed ? null : () => onSelect(colorId),
+                );
+              }),
+              // 마지막 줄 빈 칸 채우기 — 4개 미만일 때 정렬 유지.
+              ...List.generate(
+                cols - rowItems.length,
+                (_) => const SizedBox(width: 36, height: 36),
               ),
-              Icon(Icons.chevron_right, size: 20, color: colors.textPrimary),
             ],
           ),
-          const SizedBox(height: 20),
-          for (var rowIndex = 0; rowIndex < 2; rowIndex++) ...[
-            if (rowIndex > 0) const SizedBox(height: 14),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                for (final c in AppColors.categories.sublist(
-                    rowIndex * 4, rowIndex * 4 + 4))
-                  _ColorCircle(
-                    color: c,
-                    isSelected: selected == c,
-                    onTap: () => onSelect(c),
-                  ),
-              ],
-            ),
-          ],
-        ],
-      ),
+        );
+      }),
     );
   }
 }
@@ -221,13 +292,21 @@ class _ColorPickerBox extends StatelessWidget {
 class _ColorCircle extends StatelessWidget {
   const _ColorCircle({
     required this.color,
+    required this.colorId,
     required this.isSelected,
+    required this.isUsed,
     required this.onTap,
   });
 
   final Color color;
+  final int colorId;
   final bool isSelected;
-  final VoidCallback onTap;
+
+  /// 다른 카테고리가 이미 쓰는 색 — 체크 아이콘 + 반투명 + 탭 비활성.
+  final bool isUsed;
+
+  /// null 이면 탭 비활성 (사용 중인 색).
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -235,15 +314,27 @@ class _ColorCircle extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: color,
-          border: isSelected
-              ? Border.all(color: colors.primary, width: 3)
+      child: Opacity(
+        opacity: isUsed ? 0.45 : 1.0,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color,
+            border: isSelected
+                ? Border.all(color: colors.primary, width: 3)
+                : null,
+          ),
+          child: isUsed
+              ? const Center(
+                  child: Icon(
+                    Icons.check,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+                )
               : null,
         ),
       ),

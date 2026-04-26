@@ -12,9 +12,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 /// 바텀시트가 열릴 때 한 번 호출되고, 닫히면 autoDispose 로 해제된다.
 final encyclopediaDetailProvider = FutureProvider.autoDispose
     .family<EncyclopediaDetail, String>((ref, species) async {
-      final repo = ref.watch(characterRepositoryProvider);
-      return repo.getEncyclopediaDetail(species);
-    });
+  final repo = ref.watch(characterRepositoryProvider);
+  return repo.getEncyclopediaDetail(species);
+});
 
 /// 도감에서 해금된 캐릭터를 탭했을 때 보여주는 상세 바텀시트.
 ///
@@ -159,11 +159,11 @@ class _HeroThumbnail extends StatelessWidget {
       child: thumbnailUrl.isEmpty
           ? _HeroFallback()
           : Image.network(
-              thumbnailUrl,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.medium,
-              errorBuilder: (_, _, _) => _HeroFallback(),
-            ),
+        thumbnailUrl,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.medium,
+        errorBuilder: (_, _, _) => _HeroFallback(),
+      ),
     );
   }
 }
@@ -273,22 +273,22 @@ class _EvolutionCardBody extends StatelessWidget {
             child: Center(
               child: data.thumbnailUrl.isEmpty
                   ? Text(
-                      '?',
-                      style: AppTextStyles.titleMedium.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                    )
+                '?',
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: colors.textSecondary,
+                ),
+              )
                   : Image.network(
-                      data.thumbnailUrl,
-                      fit: BoxFit.contain,
-                      filterQuality: FilterQuality.medium,
-                      errorBuilder: (_, _, _) => Text(
-                        '?',
-                        style: AppTextStyles.titleMedium.copyWith(
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                    ),
+                data.thumbnailUrl,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.medium,
+                errorBuilder: (_, _, _) => Text(
+                  '?',
+                  style: AppTextStyles.titleMedium.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ),
             ),
           ),
         ),

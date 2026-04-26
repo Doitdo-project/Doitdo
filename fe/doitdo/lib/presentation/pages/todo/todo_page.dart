@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/models/todo.dart';
+import 'package:doitdo/presentation/navigation/app_router.dart';
+import 'package:doitdo/presentation/pages/notification/notification_view_model.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/widgets/common/todo_section.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
@@ -194,10 +197,58 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                             ),
                           ],
                         ),
-                        GestureDetector(
-                          onTap: () => _showFilterMenu(context, state.currentFilter),
-                          behavior: HitTestBehavior.opaque,
-                          child: Icon(Icons.filter_alt_outlined, size: 24, color: colors.textPrimary),
+                        Row(
+                          children: [
+                            // 필터 아이콘
+                            GestureDetector(
+                              onTap: () => _showFilterMenu(context, state.currentFilter),
+                              behavior: HitTestBehavior.opaque,
+                              child: Icon(Icons.filter_alt_outlined, size: 24, color: colors.textPrimary),
+                            ),
+                            const SizedBox(width: 12),
+                            // 알림 벨 아이콘 (안 읽음 뱃지 포함)
+                            GestureDetector(
+                              onTap: () => context.push(AppRoutes.notifications),
+                              behavior: HitTestBehavior.opaque,
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Icon(Icons.notifications_outlined, size: 24, color: colors.textPrimary),
+                                  Consumer(
+                                    builder: (context, ref, _) {
+                                      final unread = ref.watch(
+                                        notificationViewModelProvider.select((s) => s.unreadCount),
+                                      );
+                                      if (unread == 0) return const SizedBox.shrink();
+                                      return Positioned(
+                                        top: -4,
+                                        right: -4,
+                                        child: Container(
+                                          width: 14,
+                                          height: 14,
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFE2782B),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              unread > 9 ? '9+' : '$unread',
+                                              style: const TextStyle(
+                                                fontSize: 8,
+                                                fontWeight: FontWeight.w700,
+                                                color: Colors.white,
+                                                fontFamily: 'GmarketSansMedium',
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

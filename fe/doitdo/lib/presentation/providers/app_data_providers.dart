@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:doitdo/core/network/api_client.dart';
 import 'package:doitdo/core/network/auth_interceptor.dart';
+import 'package:doitdo/core/notifications/fcm_token_registrar.dart';
 import 'package:doitdo/core/utils/app_env.dart';
 import 'package:doitdo/data/datasources/auth_api.dart';
 import 'package:doitdo/data/datasources/auth_local_data_source.dart';
@@ -17,9 +18,18 @@ import 'package:doitdo/domain/repositories/user_repository.dart';
 import 'package:doitdo/data/datasources/todo_api.dart';
 import 'package:doitdo/data/repositories/todo_repository_impl.dart';
 import 'package:doitdo/domain/repositories/todo_repository.dart';
+import 'package:doitdo/data/datasources/category_api.dart';
 import 'package:doitdo/data/datasources/character_api.dart';
+import 'package:doitdo/data/datasources/notification_api.dart';
+import 'package:doitdo/data/datasources/setting_api.dart';
+import 'package:doitdo/data/repositories/category_repository_impl.dart';
 import 'package:doitdo/data/repositories/character_repository_impl.dart';
+import 'package:doitdo/data/repositories/notification_repository_impl.dart';
+import 'package:doitdo/data/repositories/setting_repository_impl.dart';
+import 'package:doitdo/domain/repositories/category_repository.dart';
 import 'package:doitdo/domain/repositories/character_repository.dart';
+import 'package:doitdo/domain/repositories/notification_repository.dart';
+import 'package:doitdo/domain/repositories/setting_repository.dart';
 
 // 중앙 집중식 DI 선언 파일 (MOA 컨벤션)
 // datasource → repository → service 순서로 Provider 추가.
@@ -93,6 +103,24 @@ final todoRepositoryProvider = Provider<TodoRepository>(
       (ref) => TodoRepositoryImpl(ref.watch(todoApiProvider)),
 );
 
+// ─── Category: retrofit API → Repository ───────────────────────
+final categoryApiProvider = Provider<CategoryApi>(
+  (ref) => CategoryApi(ref.watch(dioProvider)),
+);
+
+final categoryRepositoryProvider = Provider<CategoryRepository>(
+  (ref) => CategoryRepositoryImpl(ref.watch(categoryApiProvider)),
+);
+
+// ─── Setting: retrofit API → Repository ────────────────────────
+final settingApiProvider = Provider<SettingApi>(
+  (ref) => SettingApi(ref.watch(dioProvider)),
+);
+
+final settingRepositoryProvider = Provider<SettingRepository>(
+  (ref) => SettingRepositoryImpl(ref.watch(settingApiProvider)),
+);
+
 // ─── Character: retrofit API → Repository ──────────────────────
 final characterApiProvider = Provider<CharacterApi>(
   (ref) => CharacterApi(ref.watch(dioProvider)),
@@ -100,4 +128,20 @@ final characterApiProvider = Provider<CharacterApi>(
 
 final characterRepositoryProvider = Provider<CharacterRepository>(
   (ref) => CharacterRepositoryImpl(ref.watch(characterApiProvider)),
+);
+
+// ─── Notification: retrofit API → Repository ───────────────────
+final notificationApiProvider = Provider<NotificationApi>(
+  (ref) => NotificationApi(ref.watch(dioProvider)),
+);
+
+final notificationRepositoryProvider = Provider<NotificationRepository>(
+  (ref) => NotificationRepositoryImpl(ref.watch(notificationApiProvider)),
+);
+
+// ─── FCM: 디바이스 토큰 등록 헬퍼 ───────────────────────────────
+// 앱 전체에서 1개 인스턴스만 필요 (onTokenRefresh listener 중복 방지).
+// 로그인 성공 시 register(), 로그아웃 직전 unregister() 호출.
+final fcmTokenRegistrarProvider = Provider<FcmTokenRegistrar>(
+  (ref) => FcmTokenRegistrar(ref.watch(notificationRepositoryProvider)),
 );

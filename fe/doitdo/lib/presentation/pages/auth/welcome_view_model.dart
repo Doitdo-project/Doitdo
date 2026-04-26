@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
@@ -37,6 +39,8 @@ class WelcomeViewModel
       final repo = ref.read(authRepositoryProvider);
       final (_, __, isNewUser) = await repo.signInWithGoogle();
       ref.invalidate(currentUserProvider);
+      // FCM 토큰 등록은 비동기 부수효과 — 실패해도 로그인 흐름을 막지 않는다.
+      unawaited(ref.read(fcmTokenRegistrarProvider).register());
       return WelcomeSuccess(isNewUser: isNewUser);
     });
   }
@@ -48,6 +52,7 @@ class WelcomeViewModel
       final repo = ref.read(authRepositoryProvider);
       final (_, __, isNewUser) = await repo.signInWithKakao();
       ref.invalidate(currentUserProvider);
+      unawaited(ref.read(fcmTokenRegistrarProvider).register());
       return WelcomeSuccess(isNewUser: isNewUser);
     });
   }

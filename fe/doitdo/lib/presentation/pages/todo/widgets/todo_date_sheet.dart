@@ -85,7 +85,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
   @override
   void initState() {
     super.initState();
-    
+
     // 초기값 복원
     final init = widget.initialResult;
     if (init != null) {
@@ -96,7 +96,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
       _repeatType = init.repeatType ?? '매주';
       _repeatStartDate = init.repeatStartDate ?? widget.initialDate ?? DateTime.now();
       _repeatEndDate = init.repeatEndDate;
-      
+
       if (init.repeatDays != null && init.repeatDays!.isNotEmpty) {
         for (var idx in init.repeatDays!) {
           if (idx >= 0 && idx < 7) _selectedWeekdays[idx] = true;
@@ -111,7 +111,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
       _rangeStart = _selectedDay;
       _selectedWeekdays[DateTime.now().weekday == 7 ? 0 : DateTime.now().weekday] = true;
     }
-    
+
     _focusedDay = _selectedDay ?? DateTime.now();
   }
 

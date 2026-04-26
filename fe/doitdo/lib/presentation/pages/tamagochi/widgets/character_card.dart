@@ -270,7 +270,9 @@ class _RoundIconButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(10.r),
         child: Padding(
           padding: EdgeInsets.all(8.w),
-          child: Icon(icon, size: 20.sp, color: context.colors.textPrimary),
+          // 카드 자체가 라이트/다크 무관 고정 잔디 배경 + 흰 버튼이라
+          // 아이콘도 토큰이 아닌 고정 어두운 색으로 둔다 (다크에서 흰 위 흰 회피).
+          child: Icon(icon, size: 20.sp, color: Colors.black87),
         ),
       ),
     );
@@ -290,10 +292,11 @@ class _SpeechBubble extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.r),
       ),
+      // 흰 말풍선 배경은 라이트/다크 무관 고정. 텍스트도 토큰이 아닌 고정 어두운 색.
       child: Text(
         text,
         style: AppTextStyles.bodySmall.copyWith(
-          color: context.colors.textPrimary,
+          color: Colors.black87,
         ),
       ),
     );

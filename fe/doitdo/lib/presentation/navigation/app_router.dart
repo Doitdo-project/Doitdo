@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:doitdo/presentation/pages/setting/account/account_page.dart';
 import 'package:doitdo/presentation/pages/auth/find_password_page.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_page.dart';
+import 'package:doitdo/presentation/pages/notification/notification_page.dart';
 import 'package:doitdo/presentation/pages/setting/notification/notification_settings_page.dart';
 import 'package:doitdo/presentation/pages/auth/login_page.dart';
 import 'package:doitdo/presentation/pages/auth/register_page.dart';
@@ -37,6 +38,7 @@ class AppRoutes {
   static const String account = '/setting/account';
   static const String category = '/setting/category';
   static const String notification = '/setting/notification';
+  static const String notifications = '/todo/notifications';
 }
 
 /// 탭별 중첩 네비게이터가 각자의 스택을 보존하도록 NavigatorKey 분리.
@@ -88,6 +90,15 @@ final GoRouter appRouter = GoRouter(
             GoRoute(
               path: AppRoutes.todo,
               builder: (context, state) => const TodoPage(),
+              routes: [
+                // '/todo/notifications' — 전체 화면(bottom nav 숨김).
+                // parentNavigatorKey: _rootNavigatorKey 로 root 스택에 push.
+                GoRoute(
+                  path: 'notifications',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) => const NotificationPage(),
+                ),
+              ],
             ),
           ],
         ),

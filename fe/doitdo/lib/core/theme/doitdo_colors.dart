@@ -26,6 +26,10 @@ class DoitdoColors extends ThemeExtension<DoitdoColors> {
     required this.topBarBg,
     required this.bottomNavBg,
     required this.scrim,
+    required this.streakCardBg,
+    required this.streakDotInactive,
+    required this.streakDotActive,
+    required this.streakSilhouette,
   });
 
   final Color background;
@@ -42,6 +46,24 @@ class DoitdoColors extends ThemeExtension<DoitdoColors> {
   final Color bottomNavBg;
   final Color scrim;
 
+  /// 스트릭/콜렉션 카드의 크림톤 배경.
+  /// 라이트는 브랜드 크림(#FFF8F2), 다크에선 surface 톤으로 적응시켜
+  /// 다크모드에서 페이지 안에 떠있는 흰 카드처럼 보이는 문제를 막는다.
+  final Color streakCardBg;
+
+  /// 스트릭 동그라미(미체크) / 위 카드의 보조 톤.
+  /// 라이트는 라이트 그레이(#EAE8DE), 다크는 border 톤(#3A3A3A).
+  final Color streakDotInactive;
+
+  /// 스트릭 동그라미(체크) — 브랜드 오렌지.
+  /// 라이트는 #E2782B, 다크는 #FFA066 (다크에서 가독성을 위해 더 밝은 톤).
+  final Color streakDotActive;
+
+  /// 도감 미해금 캐릭터 실루엣 색.
+  /// 라이트(크림 카드) 위에서는 어둡게(#2B2B2B), 다크(어두운 카드) 위에서는
+  /// 살짝 밝은 회색(#5A5A5A) 으로 톤을 뒤집어 카드 위에서 보이도록 한다.
+  final Color streakSilhouette;
+
   static const DoitdoColors light = DoitdoColors(
     background: Color(0xFFFFFFFF),
     surface: Color(0xFFFFFFFF),
@@ -56,6 +78,10 @@ class DoitdoColors extends ThemeExtension<DoitdoColors> {
     topBarBg: Color(0xFFFFFFFF),
     bottomNavBg: Color(0xFFFFFFFF),
     scrim: Color(0x66000000),
+    streakCardBg: AppColors.streakBg,
+    streakDotInactive: AppColors.streakCheckX,
+    streakDotActive: AppColors.streakCheck,
+    streakSilhouette: Color(0xFF2B2B2B),
   );
 
   static const DoitdoColors dark = DoitdoColors(
@@ -72,6 +98,10 @@ class DoitdoColors extends ThemeExtension<DoitdoColors> {
     topBarBg: Color(0xFF1A1A1A),
     bottomNavBg: Color(0xFF1A1A1A),
     scrim: Color(0x99000000),
+    streakCardBg: Color(0xFF2A2A2A),
+    streakDotInactive: Color(0xFF3A3A3A),
+    streakDotActive: Color(0xFFFFA066),
+    streakSilhouette: Color(0xFF5A5A5A),
   );
 
   @override
@@ -89,6 +119,10 @@ class DoitdoColors extends ThemeExtension<DoitdoColors> {
     Color? topBarBg,
     Color? bottomNavBg,
     Color? scrim,
+    Color? streakCardBg,
+    Color? streakDotInactive,
+    Color? streakDotActive,
+    Color? streakSilhouette,
   }) {
     return DoitdoColors(
       background: background ?? this.background,
@@ -104,6 +138,10 @@ class DoitdoColors extends ThemeExtension<DoitdoColors> {
       topBarBg: topBarBg ?? this.topBarBg,
       bottomNavBg: bottomNavBg ?? this.bottomNavBg,
       scrim: scrim ?? this.scrim,
+      streakCardBg: streakCardBg ?? this.streakCardBg,
+      streakDotInactive: streakDotInactive ?? this.streakDotInactive,
+      streakDotActive: streakDotActive ?? this.streakDotActive,
+      streakSilhouette: streakSilhouette ?? this.streakSilhouette,
     );
   }
 
@@ -124,6 +162,12 @@ class DoitdoColors extends ThemeExtension<DoitdoColors> {
       topBarBg: Color.lerp(topBarBg, other.topBarBg, t)!,
       bottomNavBg: Color.lerp(bottomNavBg, other.bottomNavBg, t)!,
       scrim: Color.lerp(scrim, other.scrim, t)!,
+      streakCardBg: Color.lerp(streakCardBg, other.streakCardBg, t)!,
+      streakDotInactive:
+          Color.lerp(streakDotInactive, other.streakDotInactive, t)!,
+      streakDotActive: Color.lerp(streakDotActive, other.streakDotActive, t)!,
+      streakSilhouette:
+          Color.lerp(streakSilhouette, other.streakSilhouette, t)!,
     );
   }
 }
