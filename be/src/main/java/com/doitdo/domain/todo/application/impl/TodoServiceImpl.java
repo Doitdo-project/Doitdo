@@ -124,12 +124,12 @@ public class TodoServiceImpl implements TodoService {
 
 	private Sort resolveSort(String sortParam) {
 		if (sortParam == null) {
-			return Sort.by("startDate").ascending().and(Sort.by("todoId").ascending());
+			return Sort.by(Order.asc("startDate").nullsLast(), Order.asc("todoId"));
 		}
 		return switch (sortParam.toLowerCase()) {
-			case "category" -> Sort.by("categoryId").ascending().and(Sort.by("startDate").ascending());
-			case "priority" -> Sort.by("priority").descending().and(Sort.by("startDate").ascending());
-			default -> Sort.by("startDate").ascending().and(Sort.by("todoId").ascending());
+			case "category" -> Sort.by(Order.asc("categoryId"), Order.asc("startDate").nullsLast(), Order.asc("todoId"));
+			case "priority" -> Sort.by(Order.desc("priority"), Order.asc("startDate").nullsLast(), Order.asc("todoId"));
+			default -> Sort.by(Order.asc("startDate").nullsLast(), Order.asc("todoId"));
 		};
 	}
 
@@ -158,7 +158,13 @@ public class TodoServiceImpl implements TodoService {
 	@Transactional
 	public TodoDetailResp create(Long userId, TodoCreateReq req) {
 		Set<DayOfWeek> daysOfWeek = parseDaysOfWeek(req.daysOfWeek());
-		validateRecurringDays(req.type(), req.startDate(), daysOfWeek);
+		TodoType type = req.type();
+		if (type == null) {
+			throw new CustomException(TodoErrorCode.T06_002);
+		}
+		LocalDate startDate = normalizeStartDate(type, req.startDate());
+		validateStartDate(type, startDate, true);
+		validateRecurringDays(type, startDate, daysOfWeek);
 
 		Long categoryId = null;
 		String categoryName = null;
@@ -173,7 +179,7 @@ public class TodoServiceImpl implements TodoService {
 
 		Todo todo = todoRepository.save(
 				Todo.create(userId, categoryId, req.title(), req.content(),
-						req.type(), priority, req.alertTime(), req.startDate(), req.endDate(), daysOfWeek)
+						type, priority, req.alertTime(), startDate, req.endDate(), daysOfWeek)
 		);
 
 		// 새 TODO 이므로 snooze 이력 없음 — count=0 하드코딩 (DB 조회 불필요)
@@ -228,16 +234,17 @@ public class TodoServiceImpl implements TodoService {
 
 		Set<DayOfWeek> requestedDaysOfWeek = req.daysOfWeek() != null ? parseDaysOfWeek(req.daysOfWeek()) : null;
 		TodoType finalType = req.type() != null ? req.type() : todo.getType();
-		LocalDate finalStartDate = req.startDate() != null ? req.startDate() : todo.getStartDate();
+		LocalDate finalStartDate = normalizeStartDate(finalType, req.startDate() != null ? req.startDate() : todo.getStartDate());
 		Set<DayOfWeek> finalDaysOfWeek = requestedDaysOfWeek != null ? requestedDaysOfWeek : todo.getDaysOfWeek();
+		validateStartDate(finalType, finalStartDate, false);
 		validateRecurringDays(finalType, finalStartDate, finalDaysOfWeek);
 
 		todo.update(
 				req.title(),
 				req.content(),
 				categoryId,
-				req.type(),
-				req.startDate(),
+				finalType,
+				finalStartDate,
 				req.endDate(),
 				requestedDaysOfWeek,
 				req.alertTime()
@@ -357,8 +364,8 @@ public class TodoServiceImpl implements TodoService {
 
 	private Sort resolveSearchSort(String sortParam) {
 		return switch (sortParam.toLowerCase()) {
-			case "category" -> Sort.by(Order.asc("categoryId").nullsLast(), Order.asc("startDate"));
-			default -> Sort.by(Order.asc("startDate"), Order.asc("todoId"));
+			case "category" -> Sort.by(Order.asc("categoryId").nullsLast(), Order.asc("startDate").nullsLast(), Order.asc("todoId"));
+			default -> Sort.by(Order.asc("startDate").nullsLast(), Order.asc("todoId"));
 		};
 	}
 
@@ -415,5 +422,15 @@ public class TodoServiceImpl implements TodoService {
 		if (startDate != null && !daysOfWeek.contains(startDate.getDayOfWeek())) {
 			throw new CustomException(TodoErrorCode.TODO_RECURRING_START_DATE_DAY_MISMATCH);
 		}
+	}
+
+	private void validateStartDate(TodoType type, LocalDate startDate, boolean create) {
+		if (type != TodoType.SOMEDAY && startDate == null) {
+			throw new CustomException(create ? TodoErrorCode.T06_002 : TodoErrorCode.T04_006);
+		}
+	}
+
+	private LocalDate normalizeStartDate(TodoType type, LocalDate startDate) {
+		return type == TodoType.SOMEDAY ? null : startDate;
 	}
 }

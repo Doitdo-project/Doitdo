@@ -33,17 +33,28 @@ public final class TodoSpecifications {
 
 		return switch (view.toLowerCase()) {
 			case "today" -> (root, query, cb) -> cb.or(
-					cb.equal(root.get("startDate"), baseDate),
+					cb.and(
+							cb.isNotNull(root.get("startDate")),
+							cb.equal(root.get("startDate"), baseDate)
+					),
 					cb.and(
 							cb.equal(root.get("type"), TodoType.PERIOD),
+							cb.isNotNull(root.get("startDate")),
 							cb.lessThanOrEqualTo(root.get("startDate"), baseDate),
 							cb.greaterThanOrEqualTo(root.get("endDate"), baseDate)
 					)
 			);
-			case "upcoming" -> (root, query, cb) -> cb.greaterThan(root.get("startDate"), baseDate);
+			case "upcoming" -> (root, query, cb) -> cb.and(
+					cb.isNotNull(root.get("startDate")),
+					cb.greaterThan(root.get("startDate"), baseDate)
+			);
 			case "past" -> (root, query, cb) -> cb.or(
-					cb.lessThan(root.get("endDate"), baseDate),
 					cb.and(
+							cb.isNotNull(root.get("startDate")),
+							cb.lessThan(root.get("endDate"), baseDate)
+					),
+					cb.and(
+							cb.isNotNull(root.get("startDate")),
 							cb.isNull(root.get("endDate")),
 							cb.lessThan(root.get("startDate"), baseDate)
 					)
@@ -86,11 +97,13 @@ public final class TodoSpecifications {
 		return (root, query, cb) -> {
 			Predicate normalInRange = cb.and(
 					cb.equal(root.get("type"), TodoType.NORMAL),
+					cb.isNotNull(root.get("startDate")),
 					cb.greaterThanOrEqualTo(root.get("startDate"), from),
 					cb.lessThanOrEqualTo(root.get("startDate"), to)
 			);
 			Predicate nonNormalOverlap = cb.and(
 					cb.notEqual(root.get("type"), TodoType.NORMAL),
+					cb.isNotNull(root.get("startDate")),
 					cb.lessThanOrEqualTo(root.get("startDate"), to),
 					cb.or(
 							cb.isNull(root.get("endDate")),
