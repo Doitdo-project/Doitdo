@@ -36,7 +36,15 @@ abstract class CategoryApi {
   );
 
   // [팔레트] 전체 팔레트 목록 조회 — 카테고리 색상 피커에 사용.
-  // data 가 List 이므로 PaletteListResp 래퍼로 감싼다.
+  //
+  // 다른 엔드포인트와 다르게 envelope 의 `data` 가 **List** 라
+  // (`{status, message, data: [{...}, ...]}`), retrofit_generator 가
+  // 자동으로 만드는 `data as Map<String, dynamic>` 캐스트가 실패한다.
+  // 또 `Map<String, dynamic>` 시그니처로 받아도 generator 가 value 마다
+  // `dynamic.fromJson()` 같은 무효한 코드를 만들어 빌드 자체가 깨진다.
+  //
+  // 따라서 가장 안전하게 `Future<dynamic>` 으로 raw 디코드 결과를 받아,
+  // Repository 에서 envelope 째 직접 파싱해 [PaletteListResp] 로 변환한다.
   @GET('/api/palettes')
-  Future<ApiResponse<PaletteListResp>> getPalettes();
+  Future<dynamic> getPalettesRaw();
 }

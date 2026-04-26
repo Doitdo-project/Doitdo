@@ -134,12 +134,12 @@ class _CategoryApi implements CategoryApi {
   }
 
   @override
-  Future<ApiResponse<PaletteListResp>> getPalettes() async {
+  Future<dynamic> getPalettesRaw() async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<ApiResponse<PaletteListResp>>(
+    final _options = _setStreamType<dynamic>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -149,17 +149,8 @@ class _CategoryApi implements CategoryApi {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late ApiResponse<PaletteListResp> _value;
-    try {
-      _value = ApiResponse<PaletteListResp>.fromJson(
-        _result.data!,
-        (json) => PaletteListResp.fromJson(json as Map<String, dynamic>),
-      );
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 

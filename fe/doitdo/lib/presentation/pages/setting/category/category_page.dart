@@ -375,12 +375,35 @@ class _PaletteSelector extends ConsumerWidget {
         height: 64,
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (e, _) => SizedBox(
-        height: 64,
-        child: Center(
-          child: Text(
-            '팔레트를 불러오지 못했어요',
-            style: AppTextStyles.bodySmall.copyWith(color: colors.textHint),
+      error: (e, _) => Container(
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.border),
+        ),
+        child: InkWell(
+          // FutureProvider 는 한 번 실패하면 그 에러 상태로 머무르므로
+          // 사용자가 직접 invalidate 해 다시 GET 을 트리거하게 한다.
+          onTap: () => ref.invalidate(paletteProvider),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 20,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '팔레트를 불러오지 못했어요',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: colors.textHint,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.refresh, size: 16, color: colors.textHint),
+              ],
+            ),
           ),
         ),
       ),
