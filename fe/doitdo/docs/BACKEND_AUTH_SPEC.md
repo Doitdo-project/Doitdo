@@ -90,4 +90,9 @@ Content-Type: application/json
 - [ ] 토큰 만료 시간 (access / refresh)
 - [ ] 에러 응답 포맷
 - [ ] 회원탈퇴 엔드포인트 (App Store 심사 필수)
-- [ ] Apple 로그인 지원 여부 (`/auth/social/APPLE`?)
+- [x] Apple 로그인 지원 여부 — `POST /api/auth/social/APPLE` 추가됨.
+  - body: `{ "accessToken": "<Apple identityToken JWT>" }` — Google 과 동일한 `OAuthLoginReq` 사용.
+  - 백엔드가 Apple JWKS 로 서명 검증 + `iss=https://appleid.apple.com` + `aud=<bundle id>` + `exp` 검증.
+  - 첫 로그인에서만 email 이 포함되므로(이후 null) 신규 가입 경로에서 email 누락 시 A03-001 반환.
+  - "내 이메일 가리기" 선택 시 `@privaterelay.appleid.com` 릴레이 주소가 그대로 저장된다.
+  - 서버 환경변수 `APPLE_OAUTH_CLIENT_ID` 에 iOS 앱 Bundle Identifier(`com.d107.doitdo`) 설정 필요.

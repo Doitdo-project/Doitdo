@@ -62,7 +62,7 @@ public class AuthController {
 		return GlobalApiResponse.ok("로그아웃 성공", null);
 	}
 
-	@Operation(summary = "소셜 로그인", description = "카카오/구글 소셜 SDK 토큰을 검증하여 서비스 JWT 발급")
+	@Operation(summary = "소셜 로그인", description = "카카오/구글/애플 소셜 SDK 토큰을 검증하여 서비스 JWT 발급")
 	@PostMapping("/social/{provider}")
 	public GlobalApiResponse<OAuthLoginResp> oauthLogin(
 			@PathVariable OAuthProvider provider,

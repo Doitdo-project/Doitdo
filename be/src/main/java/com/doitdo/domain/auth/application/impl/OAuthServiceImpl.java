@@ -17,8 +17,10 @@ import com.doitdo.domain.user.entity.User;
 import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.domain.user.repository.UserWalletRepository;
+import com.doitdo.global.client.AppleIdTokenVerifierService;
 import com.doitdo.global.client.GoogleIdTokenVerifierService;
 import com.doitdo.global.client.KakaoOAuthClient;
+import com.doitdo.global.client.dto.AppleUserInfo;
 import com.doitdo.global.client.dto.GoogleUserInfo;
 import com.doitdo.global.client.dto.KakaoUserResp;
 import com.doitdo.global.exception.AuthErrorCode;
@@ -41,6 +43,7 @@ public class OAuthServiceImpl implements OAuthService {
 
 	private final KakaoOAuthClient kakaoOAuthClient;
 	private final GoogleIdTokenVerifierService googleIdTokenVerifierService;
+	private final AppleIdTokenVerifierService appleIdTokenVerifierService;
 	private final UserRepository userRepository;
 	private final UserWalletRepository userWalletRepository;
 	private final UserSettingRepository userSettingRepository;
@@ -59,6 +62,7 @@ public class OAuthServiceImpl implements OAuthService {
 		return switch (provider) {
 			case KAKAO -> loginWithKakao(accessToken);
 			case GOOGLE -> loginWithGoogle(accessToken);
+			case APPLE -> loginWithApple(accessToken);
 		};
 	}
 
@@ -139,6 +143,62 @@ public class OAuthServiceImpl implements OAuthService {
 		}
 
 		String username = resolveUniqueUsername(googleUser.name());
+
+		User user = userRepository.save(User.createOAuthUser(email, username));
+		userWalletRepository.save(UserWallet.create(user.getUserId()));
+		userSettingRepository.save(UserSetting.create(user.getUserId()));
+		userStreakRepository.save(UserStreak.create(user.getUserId()));
+		autoProviderRepository.save(AutoProvider.create(user.getUserId(), providerName, providerUid));
+		defaultCategoryRegistrar.registerFor(user.getUserId());
+
+		return issueTokens(user, true);
+	}
+
+	private OAuthLoginResp loginWithApple(String identityToken) {
+		AppleUserInfo appleUser = appleIdTokenVerifierService.verify(identityToken);
+		String providerName = OAuthProvider.APPLE.name();
+		String providerUid = appleUser.sub();
+
+		Optional<User> existingUser = findUserByProvider(providerName, providerUid);
+		if (existingUser.isPresent()) {
+			return issueTokens(existingUser.get(), false);
+		}
+
+		try {
+			return signupWithApple(appleUser, providerName, providerUid);
+		} catch (DataIntegrityViolationException e) {
+			return recoverFromRace(providerName, providerUid);
+		}
+	}
+
+	/**
+	 * Apple 첫 로그인 시에만 identityToken 에 email 이 포함된다(이후 로그인부터는 null).
+	 *
+	 * <p>또한 사용자가 "내 이메일 가리기" 를 선택하면 {@code @privaterelay.appleid.com} 도메인의
+	 * 릴레이 주소가 내려온다 — 우리 서비스에는 이 값을 그대로 저장해 사용한다(Apple 이 실제 주소로 포워딩).
+	 *
+	 * <p>{@link AppleUserInfo#emailVerified()} 는 Apple 자체 검증을 통과한 경우에만 true 다.
+	 */
+	private OAuthLoginResp signupWithApple(AppleUserInfo appleUser, String providerName, String providerUid) {
+		String email = appleUser.email();
+		if (email == null || email.isBlank()) {
+			// 첫 로그인이 아니라 sub 만 받은 상태로 신규 가입 경로에 들어왔다면 데이터 부족 → 에러.
+			throw new CustomException(AuthErrorCode.A03_001,
+					"Apple 계정 이메일이 누락되었습니다. 앱 설정 > Apple ID 사용 중인 앱에서 doitdo 를 제거 후 재시도해주세요.");
+		}
+		if (!Boolean.TRUE.equals(appleUser.emailVerified())) {
+			throw new CustomException(AuthErrorCode.A03_005);
+		}
+
+		Optional<OAuthLoginResp> linked = tryLinkExistingAccount(email, providerName, providerUid);
+		if (linked.isPresent()) {
+			return linked.get();
+		}
+
+		// Apple 은 이름을 identityToken 에 포함하지 않는다(클라이언트에서 별도 전달 필요).
+		// 현재 스키마는 username 만 요구하므로 email local-part 를 기본 닉네임 후보로 사용.
+		String baseNickname = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
+		String username = resolveUniqueUsername(baseNickname);
 
 		User user = userRepository.save(User.createOAuthUser(email, username));
 		userWalletRepository.save(UserWallet.create(user.getUserId()));
