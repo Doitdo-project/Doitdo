@@ -1,6 +1,7 @@
 import 'package:doitdo/core/network/base_repository.dart';
 import 'package:doitdo/data/datasources/user_api.dart';
 import 'package:doitdo/data/models/change_password_request_dto.dart';
+import 'package:doitdo/data/models/withdraw_request_dto.dart';
 import 'package:doitdo/domain/entities/user.dart';
 import 'package:doitdo/domain/repositories/user_repository.dart';
 
@@ -43,4 +44,12 @@ class UserRepositoryImpl extends BaseRepository implements UserRepository {
   @override
   Future<bool> isUsernameAvailable(String username) =>
       safeApiCall(() => _api.checkUsername(username)).then((dto) => dto.available);
+
+  @override
+  Future<void> withdraw({String? currentPassword}) =>
+      safeApiCallVoid(
+        () => _api.withdraw(
+          WithdrawRequestDto(currentPassword: currentPassword),
+        ),
+      );
 }
