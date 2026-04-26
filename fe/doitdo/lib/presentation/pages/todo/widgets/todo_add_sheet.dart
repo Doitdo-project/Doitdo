@@ -32,6 +32,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
   int?      _selectedCategoryId;
   TimeOfDay _selectedTime     = const TimeOfDay(hour: 12, minute: 0);
   bool      _alarmEnabled     = false;
+  bool      _isLoading        = false; // 중복 저장 방지 플래그
 
   @override
   void initState() {
@@ -60,6 +61,9 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
   }
 
   Future<void> _onSave(BuildContext context) async {
+    // 저장 중이면 즉시 차단 — 연타 중복 생성 방지
+    if (_isLoading) return;
+
     final title = _titleController.text.trim();
 
     if (title.isEmpty) {
@@ -74,51 +78,61 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
       return;
     }
 
-    final r = _dateResult;
-    final todo = Todo(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: title,
-      category: TodoCategory.fromName(_selectedCategory),
-      categoryId: _selectedCategoryId,
-      isDone: false,
-      memo: _memoController.text.trim().isEmpty ? null : _memoController.text.trim(),
-      alarmTime:       _alarmEnabled ? _selectedTime : null,
-      alarmEnabled:    _alarmEnabled,
-      dateType:        r?.type ?? TodoDateType.someday,
-      date:            r?.date,
-      rangeStart:      r?.rangeStart,
-      rangeEnd:        r?.rangeEnd,
-      repeatType:      r?.repeatType,
-      repeatStartDate: r?.repeatStartDate,
-      repeatEndDate:   r?.repeatEndDate,
-      period: r?.repeatType == '매주' ? 7 : null,
-      repeatDays:      r?.repeatDays,
-    );
+    // 저장 시작 — 버튼 비활성화
+    setState(() => _isLoading = true);
 
-    await ref.read(todoAddNotifierProvider.notifier).createTodo(todo);
+    try {
+      final r = _dateResult;
+      final todo = Todo(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: title,
+        category: TodoCategory.fromName(_selectedCategory),
+        categoryId: _selectedCategoryId,
+        isDone: false,
+        memo: _memoController.text.trim().isEmpty ? null : _memoController.text.trim(),
+        alarmTime:       _alarmEnabled ? _selectedTime : null,
+        alarmEnabled:    _alarmEnabled,
+        dateType:        r?.type ?? TodoDateType.someday,
+        date:            r?.date,
+        rangeStart:      r?.rangeStart,
+        rangeEnd:        r?.rangeEnd,
+        repeatType:      r?.repeatType,
+        repeatStartDate: r?.repeatStartDate,
+        repeatEndDate:   r?.repeatEndDate,
+        period: r?.repeatType == '매주' ? 7 : null,
+        repeatDays:      r?.repeatDays,
+      );
 
-    final resultState = ref.read(todoAddNotifierProvider);
-    if (resultState.hasError) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('서버 저장 실패: ${resultState.error}'), backgroundColor: Colors.red),
-        );
+      await ref.read(todoAddNotifierProvider.notifier).createTodo(todo);
+
+      final resultState = ref.read(todoAddNotifierProvider);
+      if (resultState.hasError) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('서버 저장 실패: ${resultState.error}'), backgroundColor: Colors.red),
+          );
+        }
+        return;
       }
-      return;
+
+      final vm = ref.read(todoViewModelProvider.notifier);
+      await vm.fetchTodos();
+      await vm.fetchCalendarData();
+
+      // mounted 확인 후 딱 한 번만 pop
+      if (context.mounted) Navigator.of(context).pop();
+
+    } finally {
+      // 성공/실패/예외 무관하게 항상 로딩 해제
+      if (mounted) setState(() => _isLoading = false);
     }
-
-    final vm = ref.read(todoViewModelProvider.notifier);
-    await vm.fetchTodos();
-    await vm.fetchCalendarData();
-
-    if (context.mounted) Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
 
-    // ✅ 동적 카테고리 색상 찾기
+    // 동적 카테고리 색상 찾기
     final categories = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
     Color getCategoryColor(String name) {
       try {
@@ -193,7 +207,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                     const Spacer(),
                     Container(
                       width: 8, height: 8,
-                      // ✅ 동적 카테고리 색상 적용
+                      // 동적 카테고리 색상 적용
                       decoration: BoxDecoration(color: getCategoryColor(_selectedCategory), shape: BoxShape.circle),
                     ),
                     const SizedBox(width: 6),
@@ -236,7 +250,10 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
             ),
             const SizedBox(height: 20),
 
-            DoitdoPrimaryButton(label: '저장하기', onPressed: () => _onSave(context)),
+            DoitdoPrimaryButton(
+              label: _isLoading ? '저장 중...' : '저장하기',
+              onPressed: _isLoading ? null : () => _onSave(context),
+            ),
           ],
         ),
       ),

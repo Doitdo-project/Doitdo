@@ -259,6 +259,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
   late TimeOfDay _selectedTime;
   late bool      _alarmEnabled;
   late TodoDateResult _dateResult;
+  bool           _isLoading = false; // ✅ 연타 방지 플래그
 
   @override
   void initState() {
@@ -292,7 +293,10 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
     return '$period $display:$m';
   }
 
-  void _onSave(BuildContext context) {
+  Future<void> _onSave(BuildContext context) async {
+    // ✅ 연타 방지
+    if (_isLoading) return;
+
     final title = _titleController.text.trim();
     if (title.isEmpty) {
       _titleFocusNode.requestFocus();
@@ -306,28 +310,52 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
       return;
     }
 
-    final r = _dateResult;
-    final updated = widget.todo.copyWith(
-      title:           title,
-      category:        TodoCategory.fromName(_selectedCategory),
-      categoryId:      _selectedCategoryId,
-      memo:            _memoController.text.trim().isEmpty ? null : _memoController.text.trim(),
-      alarmTime:       _alarmEnabled ? _selectedTime : null,
-      alarmEnabled:    _alarmEnabled,
-      dateType:        r.type,
-      date:            r.date,
-      rangeStart:      r.rangeStart,
-      rangeEnd:        r.rangeEnd,
-      repeatType:      r.repeatType,
-      repeatStartDate: r.repeatStartDate,
-      repeatEndDate:   r.repeatEndDate,
-      repeatDays:      r.repeatDays,
-    );
+    // ✅ 수정 시작 — 버튼 비활성화
+    setState(() => _isLoading = true);
 
-    final vm = ref.read(todoViewModelProvider.notifier);
-    widget.isSomeday ? vm.updateSomedayTodo(updated) : vm.updateTodo(updated);
+    try {
+      final r = _dateResult;
+      final updated = widget.todo.copyWith(
+        title:           title,
+        category:        TodoCategory.fromName(_selectedCategory),
+        categoryId:      _selectedCategoryId,
+        memo:            _memoController.text.trim().isEmpty ? null : _memoController.text.trim(),
+        alarmTime:       _alarmEnabled ? _selectedTime : null,
+        alarmEnabled:    _alarmEnabled,
+        dateType:        r.type,
+        date:            r.date,
+        rangeStart:      r.rangeStart,
+        rangeEnd:        r.rangeEnd,
+        repeatType:      r.repeatType,
+        repeatStartDate: r.repeatStartDate,
+        repeatEndDate:   r.repeatEndDate,
+        repeatDays:      r.repeatDays,
+      );
 
-    Navigator.of(context, rootNavigator: true).pop();
+      final vm = ref.read(todoViewModelProvider.notifier);
+
+      // ✅ await로 API 완료까지 대기
+      widget.isSomeday
+          ? await vm.updateSomedayTodo(updated)
+          : await vm.updateTodo(updated);
+
+      // ✅ 수정 후 목록 + 캘린더 재조회
+      await vm.fetchTodos();
+      await vm.fetchCalendarData();
+
+      // ✅ 완료 후 딱 한 번만 pop
+      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('수정 실패: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      // ✅ 성공/실패/예외 무관하게 항상 로딩 해제
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -459,7 +487,10 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
                 ),
               ),
               const SizedBox(height: 20),
-              DoitdoPrimaryButton(label: '수정 완료', onPressed: () => _onSave(context)),
+              DoitdoPrimaryButton(
+                label: _isLoading ? '수정 중...' : '수정 완료',
+                onPressed: _isLoading ? null : () => _onSave(context),
+              ),
             ],
           ),
         ),
