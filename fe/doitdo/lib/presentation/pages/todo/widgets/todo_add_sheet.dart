@@ -143,7 +143,8 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -245,6 +246,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
 
             DoitdoPrimaryButton(label: '저장하기', onPressed: () => _onSave(context)),
           ],
+        ),
         ),
         ),
       ),
