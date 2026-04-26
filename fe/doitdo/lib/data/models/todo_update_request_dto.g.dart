@@ -15,7 +15,11 @@ _$TodoUpdateRequestDtoImpl _$$TodoUpdateRequestDtoImplFromJson(
   type: json['type'] as String,
   startDate: json['startDate'] as String?,
   endDate: json['endDate'] as String?,
-  period: (json['period'] as num?)?.toInt(),
+  daysOfWeek: (json['daysOfWeek'] as List<dynamic>?)
+      ?.map((e) => e as String)
+      .toSet(),
+  alarmTime: json['alertTime'] as String?,
+  clearAlertTime: json['clearAlertTime'] as bool?,
 );
 
 Map<String, dynamic> _$$TodoUpdateRequestDtoImplToJson(
@@ -27,5 +31,7 @@ Map<String, dynamic> _$$TodoUpdateRequestDtoImplToJson(
   'type': instance.type,
   'startDate': instance.startDate,
   'endDate': instance.endDate,
-  'period': instance.period,
+  'daysOfWeek': instance.daysOfWeek?.toList(),
+  'alertTime': instance.alarmTime,
+  'clearAlertTime': instance.clearAlertTime,
 };

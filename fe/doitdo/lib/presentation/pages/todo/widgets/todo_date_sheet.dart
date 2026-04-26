@@ -22,6 +22,7 @@ class TodoDateResult {
     this.repeatStartDate,
     this.repeatEndDate,
     this.repeatType,
+    this.repeatDays, // ✏️ 추가: 선택된 요일 인덱스 (0=일~6=토)
   });
 
   final TodoDateType type;
@@ -37,6 +38,7 @@ class TodoDateResult {
   final DateTime? repeatStartDate;
   final DateTime? repeatEndDate;
   final String? repeatType;
+  final List<int>? repeatDays; // ✏️ 추가
 
   /// todo_add_sheet 기간 행에 표시할 텍스트
   String get displayText {
@@ -56,8 +58,9 @@ class TodoDateResult {
 }
 
 class TodoDateSheet extends StatefulWidget {
-  const TodoDateSheet({super.key, this.initialDate});
+  const TodoDateSheet({super.key, this.initialDate, this.initialResult});
   final DateTime? initialDate;
+  final TodoDateResult? initialResult;
 
   @override
   State<TodoDateSheet> createState() => _TodoDateSheetState();
@@ -82,13 +85,34 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
   @override
   void initState() {
     super.initState();
-    _selectedDay = widget.initialDate ?? DateTime.now();
-    _focusedDay = _selectedDay!;
-    _repeatStartDate = _selectedDay!;
-    // 기간 탭 진입 시 당일이 즉시 시작 날짜로 지정
-    _rangeStart = _selectedDay;
-    _rangeEnd = null;
-    _selectedWeekdays[DateTime.now().weekday % 7] = true;
+    
+    // 초기값 복원
+    final init = widget.initialResult;
+    if (init != null) {
+      _selectedTab = init.type == TodoDateType.range ? 1 : (init.type == TodoDateType.repeat ? 2 : 0);
+      _selectedDay = init.date ?? widget.initialDate ?? DateTime.now();
+      _rangeStart = init.rangeStart;
+      _rangeEnd = init.rangeEnd;
+      _repeatType = init.repeatType ?? '매주';
+      _repeatStartDate = init.repeatStartDate ?? widget.initialDate ?? DateTime.now();
+      _repeatEndDate = init.repeatEndDate;
+      
+      if (init.repeatDays != null && init.repeatDays!.isNotEmpty) {
+        for (var idx in init.repeatDays!) {
+          if (idx >= 0 && idx < 7) _selectedWeekdays[idx] = true;
+        }
+      } else {
+        // 복원할 요일이 없으면 오늘 요일 기본 선택
+        _selectedWeekdays[DateTime.now().weekday == 7 ? 0 : DateTime.now().weekday] = true;
+      }
+    } else {
+      _selectedDay = widget.initialDate ?? DateTime.now();
+      _repeatStartDate = _selectedDay!;
+      _rangeStart = _selectedDay;
+      _selectedWeekdays[DateTime.now().weekday == 7 ? 0 : DateTime.now().weekday] = true;
+    }
+    
+    _focusedDay = _selectedDay ?? DateTime.now();
   }
 
   // ── 달력 공통 스타일 (일반 탭) ─────────────────────
@@ -651,11 +675,17 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
                             rangeEnd: _rangeEnd,
                           );
                         case 2:
+                        // ✏️ 수정: 선택된 요일 인덱스 목록 저장
+                          final selectedDayIndices = [
+                            for (int i = 0; i < 7; i++)
+                              if (_selectedWeekdays[i]) i,
+                          ];
                           result = TodoDateResult(
                             type: TodoDateType.repeat,
                             repeatStartDate: _repeatStartDate,
                             repeatEndDate: _repeatEndDate,
                             repeatType: _repeatType,
+                            repeatDays: selectedDayIndices, // ✏️ 추가
                           );
                         default:
                           result = TodoDateResult(

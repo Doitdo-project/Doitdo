@@ -29,6 +29,10 @@ _$TodoListItemDtoImpl _$$TodoListItemDtoImplFromJson(
   type: json['type'] as String?,
   startDate: json['startDate'] as String?,
   endDate: json['endDate'] as String?,
+  alarmTime: json['alarmTime'] as String?,
+  daysOfWeek: (json['daysOfWeek'] as List<dynamic>?)
+      ?.map((e) => e as String)
+      .toList(),
 );
 
 Map<String, dynamic> _$$TodoListItemDtoImplToJson(
@@ -42,4 +46,6 @@ Map<String, dynamic> _$$TodoListItemDtoImplToJson(
   'type': instance.type,
   'startDate': instance.startDate,
   'endDate': instance.endDate,
+  'alarmTime': instance.alarmTime,
+  'daysOfWeek': instance.daysOfWeek,
 };

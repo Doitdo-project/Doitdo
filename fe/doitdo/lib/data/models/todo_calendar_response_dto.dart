@@ -32,7 +32,7 @@ class CalendarSummaryDto with _$CalendarSummaryDto {
 @freezed
 class CalendarTodoItemDto with _$CalendarTodoItemDto {
   const factory CalendarTodoItemDto({
-    required int todoId,
+    int? todoId,
     required String title,
     required String status, // TODO, IN_PROGRESS, DONE
     bool? isVirtual,

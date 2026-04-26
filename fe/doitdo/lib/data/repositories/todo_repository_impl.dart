@@ -18,45 +18,64 @@ class TodoRepositoryImpl extends BaseRepository implements TodoRepository {
   @override
   Future<void> createTodo(Todo todo) async {
     // ✏️ 수정: dateType 에 맞는 startDate 선택
-    //   NORMAL   → todo.date
-    //   PERIOD   → todo.rangeStart  (기존에 todo.date 를 써서 null 전송되던 버그 수정)
-    //   RECURRING → todo.repeatStartDate
-    final startDateStr = switch (todo.dateType) {
-      TodoDateType.normal => todo.date?.toIso8601String().split('T')[0],
-      TodoDateType.range  => todo.rangeStart?.toIso8601String().split('T')[0],
-      TodoDateType.repeat => todo.repeatStartDate?.toIso8601String().split('T')[0],
-    };
+    DateTime? startDateObj;
+    switch (todo.dateType) {
+      case TodoDateType.normal:
+        startDateObj = todo.date;
+      case TodoDateType.range:
+        startDateObj = todo.rangeStart;
+      case TodoDateType.repeat:
+        startDateObj = todo.repeatStartDate;
+        // ✅ [핵심 수정] 매주 반복 + repeatDays 있으면
+        //    startDate 를 선택 요일 중 repeatStartDate 이후 첫 번째 날로 조정
+        //    이렇게 해야 서버에서 재조회 시 start.weekday 폴백이 올바른 요일을 가리킴
+        if (todo.repeatDays != null &&
+            todo.repeatDays!.isNotEmpty &&
+            todo.repeatStartDate != null) {
+          for (int i = 0; i <= 6; i++) {
+            final candidate = todo.repeatStartDate!.add(Duration(days: i));
+            final flutterWd = candidate.weekday; // 1=월~7=일
+            final appIdx    = flutterWd == 7 ? 0 : flutterWd; // 일→0
+            if (todo.repeatDays!.contains(appIdx)) {
+              startDateObj = candidate;
+              break;
+            }
+          }
+        }
+    }
+
+    final startDateStr = startDateObj?.toIso8601String().split('T')[0];
 
     final endDateStr = todo.rangeEnd?.toIso8601String().split('T')[0] ??
         todo.repeatEndDate?.toIso8601String().split('T')[0];
 
-    int? periodDays;
-    if (todo.dateType == TodoDateType.repeat) {
-      if (todo.repeatType == '매주') {
-        periodDays = 7;
-      } else if (todo.repeatType == '매월') {
-        periodDays = 30;
-      } else if (todo.repeatType == '매년') {
-        periodDays = 365;
-      }
+    // ✏️ 수정: period → daysOfWeek (MON,TUE,... 형식으로 변환)
+    Set<String>? daysOfWeekSet;
+    if (todo.dateType == TodoDateType.repeat && todo.repeatDays != null && todo.repeatDays!.isNotEmpty) {
+      const dayCodeMap = {0: 'SUN', 1: 'MON', 2: 'TUE', 3: 'WED', 4: 'THU', 5: 'FRI', 6: 'SAT'};
+      daysOfWeekSet = todo.repeatDays!.map((i) => dayCodeMap[i]!).toSet();
+    }
+
+    String? formattedAlertTime;
+    if (todo.alarmEnabled && todo.alarmTime != null) {
+      final h = todo.alarmTime!.hour.toString().padLeft(2, '0');
+      final m = todo.alarmTime!.minute.toString().padLeft(2, '0');
+      formattedAlertTime = "$h:$m";
     }
 
     final body = {
       'title': todo.title,
       'content': todo.memo,
       'category': todo.category.name,
-      // ✏️ 수정: TodoDateType → 서버 enum 매핑
-      //   normal → NORMAL
-      //   range  → PERIOD  (RANGE 는 서버에 없음)
-      //   repeat → RECURRING
       'type': switch (todo.dateType) {
         TodoDateType.normal => 'NORMAL',
         TodoDateType.range  => 'PERIOD',
         TodoDateType.repeat => 'RECURRING',
       },
-      'startDate': startDateStr, // 🔥 null이 백엔드로 무사히 넘어감
+      'startDate': startDateStr,
       if (endDateStr != null) 'endDate': endDateStr,
-      if (periodDays != null) 'period': periodDays,
+      if (daysOfWeekSet != null) 'daysOfWeek': daysOfWeekSet.toList(), // ✏️ period 대신 daysOfWeek
+      if (formattedAlertTime != null) 'alertTime': formattedAlertTime,
     };
 
     await safeApiCallNoData(() => _todoApi.createTodo(body));

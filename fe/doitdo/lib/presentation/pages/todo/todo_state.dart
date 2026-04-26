@@ -2,14 +2,15 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 
 class TodoState {
-  final List<Todo> allTodos;         // 날짜가 있는 모든 할 일 원본
-  final List<Todo> todos;            // 현재 화면에 표시되는 (필터링된) 할 일
-  final List<Todo> allSomedayTodos;  // 언제가 할 일 원본 (새로 추가)
-  final List<Todo> somedayTodos;     // 현재 화면에 표시되는 언제가 할 일
+  final List<Todo> allTodos;
+  final List<Todo> todos;
+  final List<Todo> allSomedayTodos;
+  final List<Todo> somedayTodos;
   final DateTime? selectedDay;
   final DateTime focusedDay;
   final CalendarFormat calendarFormat;
-  final String currentFilter;        // 필터 상태 ('all', 'todo', 'done', 'upcoming', 'past')
+  final String currentFilter;
+  final Map<DateTime, List<Todo>> kEvents;
 
   TodoState({
     this.allTodos = const [],
@@ -20,6 +21,7 @@ class TodoState {
     DateTime? focusedDay,
     this.calendarFormat = CalendarFormat.month,
     this.currentFilter = 'all',
+    this.kEvents = const {},
   }) : focusedDay = focusedDay ?? DateTime.now();
 
   TodoState copyWith({
@@ -31,6 +33,8 @@ class TodoState {
     DateTime? focusedDay,
     CalendarFormat? calendarFormat,
     String? currentFilter,
+    // ✅ 3. copyWith 에도 kEvents 추가
+    Map<DateTime, List<Todo>>? kEvents,
   }) {
     return TodoState(
       allTodos: allTodos ?? this.allTodos,
@@ -41,6 +45,7 @@ class TodoState {
       focusedDay: focusedDay ?? this.focusedDay,
       calendarFormat: calendarFormat ?? this.calendarFormat,
       currentFilter: currentFilter ?? this.currentFilter,
+      kEvents: kEvents ?? this.kEvents,
     );
   }
 }

@@ -80,7 +80,11 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
     }
 
     final r = _dateResult;
+
+    // UI 로딩 표시자 등이 필요하다면 여기에 추가 (선택사항)
+
     final todo = Todo(
+      // 어차피 서버에서 생성된 후 찐 ID로 덮어씌워지므로 임시 ID는 중요하지 않음
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       title: title,
       category: TodoCategory.fromName(_selectedCategory),
@@ -90,16 +94,18 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           : _memoController.text.trim(),
       alarmTime:       _alarmEnabled ? _selectedTime : null,
       alarmEnabled:    _alarmEnabled,
-      dateType:        r?.type ?? TodoDateType.normal, // 날짜가 비어있어도 기본 타입은 normal
-      date:            r?.date, // 🔥 언제가 할 일이면 여기서 안전하게 null이 들어감!
+      dateType:        r?.type ?? TodoDateType.normal,
+      date:            r?.date,
       rangeStart:      r?.rangeStart,
       rangeEnd:        r?.rangeEnd,
       repeatType:      r?.repeatType,
       repeatStartDate: r?.repeatStartDate,
       repeatEndDate:   r?.repeatEndDate,
+      period: r?.repeatType == '매주' ? 7 : null,
+      repeatDays:      r?.repeatDays, // ✏️ 추가: 선택된 요일 목록
     );
 
-    // 1. 서버로 전송 요청!
+    // 1. 서버로 전송 요청 (todoAddNotifier 가 내부적으로 POST 수행)
     await ref.read(todoAddNotifierProvider.notifier).createTodo(todo);
 
     // 2. 전송 결과 확인하기
@@ -268,8 +274,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
               child: _OptionRow(
                 icon: Icons.notifications_outlined,
                 label: '알림',
-                valueText: _formatTime(_selectedTime),
-                colors: c,
+                valueText: _alarmEnabled ? _formatTime(_selectedTime) : '없음',                colors: c,
               ),
             ),
             Divider(color: c.divider, height: 1, thickness: 1),
