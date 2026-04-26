@@ -22,9 +22,11 @@ Exception mapDioException(DioException error) {
 
     case DioExceptionType.badResponse:
       final statusCode = error.response?.statusCode ?? -1;
+      // envelope 가 정상이면 거기서 한국어 message 를 뽑고,
+      // 아니면(예: 502 Bad Gateway 의 nginx HTML) statusCode 기반 한국어로 폴백.
+      // DioException.message 는 영문 raw 라 사용자에게 그대로 노출하면 안 된다.
       final message = _extractServerMessage(error.response?.data) ??
-          error.message ??
-          '서버 오류가 발생했습니다.';
+          _defaultMessageFor(statusCode);
       if (statusCode == 401) {
         return UnauthorizedException(message);
       }
@@ -47,4 +49,22 @@ String? _extractServerMessage(Object? responseData) {
     if (value is String && value.isNotEmpty) return value;
   }
   return null;
+}
+
+/// envelope 가 없는 응답(예: 502 nginx HTML, 504 게이트웨이 타임아웃) 에서
+/// statusCode 만 보고 사용자 친화적인 한국어 폴백 메시지를 만든다.
+String _defaultMessageFor(int statusCode) {
+  if (statusCode == 502 || statusCode == 503 || statusCode == 504) {
+    return '서버에 일시적으로 연결할 수 없어요. 잠시 후 다시 시도해 주세요.';
+  }
+  if (statusCode >= 500) {
+    return '서버에 문제가 발생했어요. 잠시 후 다시 시도해 주세요.';
+  }
+  if (statusCode == 404) {
+    return '요청한 정보를 찾을 수 없어요.';
+  }
+  if (statusCode >= 400) {
+    return '요청을 처리할 수 없어요.';
+  }
+  return '서버 오류가 발생했어요.';
 }
