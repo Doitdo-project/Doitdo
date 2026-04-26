@@ -5,8 +5,6 @@ import 'package:doitdo/domain/entities/user.dart';
 ///
 /// 실제 Google/Kakao/Apple SDK 호출, 서버 API 통신, 토큰 저장은
 /// data 레이어의 `AuthRepositoryImpl` 이 담당.
-///
-/// Apple 메서드는 Mac 빌드 환경 준비 및 백엔드 엔드포인트 확정 후 추가 예정.
 abstract class AuthRepository {
   // ── 이메일 계정 ───────────────────────────────────────────────
 
@@ -33,6 +31,13 @@ abstract class AuthRepository {
 
   /// Kakao OAuth 전체 플로우. 반환 규약은 [signInWithGoogle] 과 동일.
   Future<(User, AuthTokens, bool isNewUser)> signInWithKakao();
+
+  /// Apple Sign-In 전체 플로우. 반환 규약은 [signInWithGoogle] 과 동일.
+  ///
+  /// 내부에서 Apple `identityToken` 과 함께 1회용 `authorizationCode` 도 서버로 전송한다.
+  /// 서버는 코드를 Apple `/auth/token` 에 교환해 refresh_token 을 저장 → 회원탈퇴 시
+  /// Apple `/auth/revoke` 호출에 사용한다 (App Store 5.1.1(v) 정책 준수).
+  Future<(User, AuthTokens, bool isNewUser)> signInWithApple();
 
   // ── 세션 관리 ─────────────────────────────────────────────────
 

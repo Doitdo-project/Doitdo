@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart'
+    show SignInWithAppleButton, SignInWithAppleButtonStyle;
 
 import 'package:doitdo/core/errors/exceptions.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
@@ -215,7 +216,8 @@ class _SocialButtons extends StatelessWidget {
         // 이미지(라운드 12) 와 통일감을 주기 위해 패키지 기본 외형을 그대로 사용.
         if (!kIsWeb && Platform.isIOS) ...[
           SignInWithAppleButton(
-            onPressed: () => _handleAppleSignIn(context),
+            onPressed: () =>
+                ref.read(welcomeViewModelProvider.notifier).signInWithApple(),
             style: SignInWithAppleButtonStyle.black,
             text: 'Apple로 로그인',
             height: 48,
@@ -357,42 +359,6 @@ class _SocialButton extends StatelessWidget {
   }
 }
 
-/// Apple Sign In OAuth 플로우를 시작한다.
-///
-/// iOS 네이티브 로그인 시트를 띄우고, 성공 시 `AuthorizationCredentialAppleID` 를 받는다.
-/// 실제 유저 세션 발급은 [credential.identityToken] 을 **서버로 전달 → Apple 공개키로 검증**
-/// 하는 방식으로 처리한다 (백엔드 구현 후 연결).
-///
-/// 최초 로그인 시에만 `fullName`, `email` 이 반환되므로 이 값들은 받자마자 DB 에 저장해야 한다.
-/// 두 번째 이후 로그인에서는 Apple 이 이름/이메일을 주지 않는다.
-Future<void> _handleAppleSignIn(BuildContext context) async {
-  try {
-    final credential = await SignInWithApple.getAppleIDCredential(
-      scopes: const [
-        AppleIDAuthorizationScopes.email,
-        AppleIDAuthorizationScopes.fullName,
-      ],
-    );
-
-    // TODO: credential.identityToken, credential.authorizationCode 를 서버에 전송하여
-    //       Apple 로그인 검증 → 유저 세션 발급 → 로컬 저장까지 처리.
-    //       현재는 임시로 바로 메인 탭으로 이동.
-    debugPrint('[AppleSignIn] user=${credential.userIdentifier}');
-    debugPrint('[AppleSignIn] email=${credential.email}');
-    debugPrint('[AppleSignIn] name=${credential.givenName} ${credential.familyName}');
-
-    if (!context.mounted) return;
-    context.go(AppRoutes.tamagochi);
-  } on SignInWithAppleAuthorizationException catch (e) {
-    if (e.code == AuthorizationErrorCode.canceled) return;
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Apple 로그인 실패: ${e.message}')),
-    );
-  } catch (e) {
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Apple 로그인 중 오류: $e')),
-    );
-  }
-}
+// Apple 로그인 흐름은 Google/Kakao 와 마찬가지로 [WelcomeViewModel.signInWithApple]
+// → [AuthRepositoryImpl.signInWithApple] 에서 통합 관리한다 (SDK 호출 + 서버 교환 + 토큰 저장).
+// 성공/실패 부수효과는 본 파일 상단의 ref.listen 블록이 일괄 처리.
