@@ -24,10 +24,19 @@ class SignUpResponseDto {
         email: json['email'] as String,
       );
 
-  User toEntity() =>
-      User(userId: userId, username: username, email: email);
+  // 일반 가입(이메일+비번) 경로만 SignUp 을 거치므로 hasPassword 는 항상 true.
+  User toEntity() => User(
+        userId: userId,
+        username: username,
+        email: email,
+        hasPassword: true,
+      );
 
   /// 로그인 직후 주입될 예정이라면 UserDto 로 변환해도 된다.
-  UserDto toDto() =>
-      UserDto(userId: userId, username: username, email: email);
+  UserDto toDto() => UserDto(
+        userId: userId,
+        username: username,
+        email: email,
+        hasPassword: true,
+      );
 }
