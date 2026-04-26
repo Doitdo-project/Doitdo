@@ -3,7 +3,7 @@ import 'package:flutter/material.dart'; // TimeOfDay + @immutable
 // ─────────────────────────────────────────────
 // TodoDateType
 // ─────────────────────────────────────────────
-enum TodoDateType { normal, range, repeat }
+enum TodoDateType { normal, someday, range, repeat }
 
 // ─────────────────────────────────────────────
 // CategoryColorKey
@@ -90,6 +90,8 @@ class Todo {
       case TodoDateType.normal:
         if (date == null) return '날짜 없음';
         return '${date!.month}월 ${date!.day}일';
+      case TodoDateType.someday:
+        return '언제가 할 일';
       case TodoDateType.range:
       // rangeStart 우선, 없으면 date 사용
         final start = rangeStart ?? date;

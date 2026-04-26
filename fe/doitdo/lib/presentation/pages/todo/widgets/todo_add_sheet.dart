@@ -39,7 +39,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
     if (widget.initialDate != null) {
       _dateResult = TodoDateResult(type: TodoDateType.normal, date: widget.initialDate!);
     } else {
-      _dateResult = null; // 언제가 할 일은 시작부터 날짜 없음
+      _dateResult = const TodoDateResult(type: TodoDateType.someday); // 언제가 할 일은 SOMEDAY 로 저장
     }
   }
 
@@ -94,7 +94,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           : _memoController.text.trim(),
       alarmTime:       _alarmEnabled ? _selectedTime : null,
       alarmEnabled:    _alarmEnabled,
-      dateType:        r?.type ?? TodoDateType.normal,
+      dateType:        r?.type ?? TodoDateType.someday,
       date:            r?.date,
       rangeStart:      r?.rangeStart,
       rangeEnd:        r?.rangeEnd,

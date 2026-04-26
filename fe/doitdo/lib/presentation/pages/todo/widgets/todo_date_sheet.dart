@@ -46,6 +46,8 @@ class TodoDateResult {
       case TodoDateType.normal:
         if (date == null) return '';
         return '${date!.month}월 ${date!.day}일';
+      case TodoDateType.someday:
+        return '언제가 할 일';
       case TodoDateType.range:
         if (rangeStart == null) return '기간 일정';
         final s = '${rangeStart!.month}월 ${rangeStart!.day}일';

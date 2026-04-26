@@ -98,6 +98,9 @@ class TodoDetailSheet extends ConsumerWidget {
 
           // 기간 텍스트 처리
           String dateDisplay = '미지정';
+          if (detailDto.type == 'SOMEDAY') {
+            dateDisplay = '언제가 할 일';
+          }
           if (detailDto.startDate != null) {
             // "2026-04-24" 형태의 글자를 '-' 기준으로 쪼개서 [2026, 04, 24] 로 만듭니다.
             final sParts = detailDto.startDate!.split('-');
@@ -176,13 +179,19 @@ class TodoDetailSheet extends ConsumerWidget {
                           }
                         }
 
-                        final todoToEdit = Todo(
+                      final todoToEdit = Todo(
                           id: detailDto.todoId.toString(),
                           title: detailDto.title,
                           isDone: isDone,
                           category: catKey,
                           memo: detailDto.content,
-                          dateType: detailDto.type == 'PERIOD' ? TodoDateType.range : (detailDto.type == 'RECURRING' ? TodoDateType.repeat : TodoDateType.normal),
+                          dateType: detailDto.type == 'PERIOD'
+                              ? TodoDateType.range
+                              : (detailDto.type == 'RECURRING'
+                                  ? TodoDateType.repeat
+                                  : (detailDto.type == 'SOMEDAY'
+                                      ? TodoDateType.someday
+                                      : TodoDateType.normal)),
                           date: sDate,
                           rangeEnd: detailDto.endDate != null ? DateTime.tryParse(detailDto.endDate!) : null,
                           alarmTime: detailDto.alarmTime != null ? TimeOfDay(
