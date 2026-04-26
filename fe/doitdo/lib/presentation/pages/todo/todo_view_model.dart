@@ -105,9 +105,14 @@ class TodoViewModel extends StateNotifier<TodoState> {
           final sel = DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
 
           filteredTodos = filteredTodos.where((t) {
-            if (t.date == null) return false;
+            // ✏️ 수정: PERIOD 타입은 date 대신 rangeStart 또는 date 우선 사용
+            final effectiveDate = (t.dateType == TodoDateType.range)
+                ? (t.date ?? t.rangeStart)
+                : t.date;
 
-            final start = DateTime(t.date!.year, t.date!.month, t.date!.day);
+            if (effectiveDate == null) return false;
+
+            final start = DateTime(effectiveDate.year, effectiveDate.month, effectiveDate.day);
 
             // 시작 날짜 이전은 표시 안 함
             if (sel.isBefore(start)) return false;
@@ -198,9 +203,15 @@ class TodoViewModel extends StateNotifier<TodoState> {
             : null,
       )).toList();
 
+      // ✏️ 수정: PERIOD 타입은 rangeStart(또는 date)를 기준으로 분류
+      //   date가 null이어도 rangeEnd가 있으면 날짜 있는 할 일
       state = state.copyWith(
-        allTodos: allFetched.where((t) => t.date != null).toList(),
-        allSomedayTodos: allFetched.where((t) => t.date == null).toList(),
+        allTodos: allFetched
+            .where((t) => t.date != null || t.rangeEnd != null)
+            .toList(),
+        allSomedayTodos: allFetched
+            .where((t) => t.date == null && t.rangeEnd == null)
+            .toList(),
       );
 
       _updateCalendarEvents(state.allTodos);
@@ -212,9 +223,18 @@ class TodoViewModel extends StateNotifier<TodoState> {
     final Map<DateTime, List<Todo>> newEvents = {};
 
     for (var todo in allTodos) {
-      if (todo.date == null) continue;
+      // ✏️ 수정: PERIOD 타입은 date(startDate)가 null이어도 rangeEnd가 있으면 처리
+      //   date 대신 rangeStart 또는 date 중 유효한 것을 사용
+      DateTime? effectiveStart;
+      if (todo.dateType == TodoDateType.range) {
+        effectiveStart = todo.date ?? todo.rangeStart;
+      } else {
+        effectiveStart = todo.date;
+      }
 
-      final start = DateTime(todo.date!.year, todo.date!.month, todo.date!.day);
+      if (effectiveStart == null) continue;
+
+      final start = DateTime(effectiveStart.year, effectiveStart.month, effectiveStart.day);
 
       // ✏️ 수정: PERIOD → rangeEnd, RECURRING → repeatEndDate 각각 사용
       final effectiveEnd = todo.dateType == TodoDateType.range
