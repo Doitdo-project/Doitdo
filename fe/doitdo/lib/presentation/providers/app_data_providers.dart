@@ -22,14 +22,17 @@ import 'package:doitdo/data/datasources/category_api.dart';
 import 'package:doitdo/data/datasources/character_api.dart';
 import 'package:doitdo/data/datasources/notification_api.dart';
 import 'package:doitdo/data/datasources/setting_api.dart';
+import 'package:doitdo/data/datasources/streak_api.dart';
 import 'package:doitdo/data/repositories/category_repository_impl.dart';
 import 'package:doitdo/data/repositories/character_repository_impl.dart';
 import 'package:doitdo/data/repositories/notification_repository_impl.dart';
 import 'package:doitdo/data/repositories/setting_repository_impl.dart';
+import 'package:doitdo/data/repositories/streak_repository_impl.dart';
 import 'package:doitdo/domain/repositories/category_repository.dart';
 import 'package:doitdo/domain/repositories/character_repository.dart';
 import 'package:doitdo/domain/repositories/notification_repository.dart';
 import 'package:doitdo/domain/repositories/setting_repository.dart';
+import 'package:doitdo/domain/repositories/streak_repository.dart';
 
 // 중앙 집중식 DI 선언 파일 (MOA 컨벤션)
 // datasource → repository → service 순서로 Provider 추가.
@@ -137,6 +140,15 @@ final notificationApiProvider = Provider<NotificationApi>(
 
 final notificationRepositoryProvider = Provider<NotificationRepository>(
   (ref) => NotificationRepositoryImpl(ref.watch(notificationApiProvider)),
+);
+
+// ─── Streak: retrofit API → Repository ─────────────────────────
+final streakApiProvider = Provider<StreakApi>(
+  (ref) => StreakApi(ref.watch(dioProvider)),
+);
+
+final streakRepositoryProvider = Provider<StreakRepository>(
+  (ref) => StreakRepositoryImpl(ref.watch(streakApiProvider)),
 );
 
 // ─── FCM: 디바이스 토큰 등록 헬퍼 ───────────────────────────────
