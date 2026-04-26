@@ -33,7 +33,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Todo extends BaseTimeEntity {
 
-	public enum TodoType { NORMAL, RECURRING, PERIOD }
+	public enum TodoType { NORMAL, SOMEDAY, RECURRING, PERIOD }
 
 	public enum TodoStatus { TODO, IN_PROGRESS, DONE }
 
@@ -68,7 +68,7 @@ public class Todo extends BaseTimeEntity {
 	@Column(name = "alert_time", length = 5)
 	private String alertTime;
 
-	@Column(name = "start_date", nullable = false)
+	@Column(name = "start_date")
 	private LocalDate startDate;
 
 	@Column(name = "end_date")
@@ -147,7 +147,11 @@ public class Todo extends BaseTimeEntity {
 		if (content != null) this.content = content;
 		if (categoryId != null) this.categoryId = categoryId;
 		if (type != null) this.type = type;
-		if (startDate != null) this.startDate = startDate;
+		if (type == TodoType.SOMEDAY) {
+			this.startDate = startDate;
+		} else if (startDate != null) {
+			this.startDate = startDate;
+		}
 		if (endDate != null) this.endDate = endDate;
 		if (daysOfWeek != null) setDaysOfWeek(daysOfWeek);
 		if (alertTime != null) this.alertTime = alertTime;
@@ -173,7 +177,7 @@ public class Todo extends BaseTimeEntity {
 				.status(TodoStatus.TODO)
 				.priority(priority)
 				.alertTime(alertTime)
-				.startDate(startDate)
+				.startDate(type == TodoType.SOMEDAY ? null : startDate)
 				.endDate(endDate)
 				.masterTodoId(null)
 				.daysOfWeekRaw(toRawDaysOfWeek(daysOfWeek))

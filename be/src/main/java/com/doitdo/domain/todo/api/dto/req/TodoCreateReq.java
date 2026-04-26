@@ -2,7 +2,6 @@ package com.doitdo.domain.todo.api.dto.req;
 
 import com.doitdo.domain.todo.entity.Todo.TodoType;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.time.LocalDate;
 import java.util.Set;
@@ -16,10 +15,8 @@ public record TodoCreateReq(
 
 		String category,
 
-		@NotNull
 		TodoType type,
 
-		@NotNull
 		LocalDate startDate,
 
 		LocalDate endDate,
