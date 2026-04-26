@@ -26,6 +26,12 @@ google:
   oauth:
     client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
 
+apple:
+  oauth:
+    # iOS 네이티브 Sign in with Apple 의 audience(앱 Bundle Identifier).
+    # Web/Service ID 등 다른 클라이언트가 추가되면 다중 audience 지원으로 확장 필요.
+    client-id: ${APPLE_OAUTH_CLIENT_ID:}
+
 firebase:
   enabled: ${FIREBASE_ENABLED:false}
   service-account-path: ${FIREBASE_SERVICE_ACCOUNT_PATH:}
