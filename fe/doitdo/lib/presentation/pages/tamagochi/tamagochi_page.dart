@@ -236,10 +236,16 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     // 시 중복 호출되지 않도록 "false→true" 순간에만 호출한다.
     ref.listen<AsyncValue<Character?>>(characterViewModelProvider,
         (prev, next) {
-      next.whenOrNull(error: (err, _) {
-        if (!mounted) return;
+      // 첫 로드(loading→error) 는 dio 의 토큰 refresh / 자동 재시도가 끼어들면서
+      // 잠깐 error 로 빠졌다 곧 회복되는 경우가 많다. 깜빡 떴다 사라지는 스낵바를
+      // 막기 위해, "한 번이라도 데이터를 보여준 적이 있는데 다시 실패" 한 경우
+      // (= data → error regression) 에만 알림. 진짜 영구 실패는 캐릭터 카드의
+      // 빈 상태 UI 가 처리하므로 사용자가 모르고 지나치진 않는다.
+      final wasShowingData =
+          prev != null && prev.hasValue && prev.value != null;
+      if (next.hasError && wasShowingData && mounted) {
         _showComingSoon(context, '캐릭터 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
-      });
+      }
 
       final prevChar = prev?.valueOrNull;
       final nextChar = next.valueOrNull;
