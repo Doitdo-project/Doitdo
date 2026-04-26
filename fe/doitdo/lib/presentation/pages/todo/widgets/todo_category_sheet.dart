@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
 
-class TodoCategorySheet extends StatefulWidget {
+import 'package:doitdo/data/models/category_dto.dart';
+import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
+import 'package:doitdo/presentation/pages/setting/category/category_page.dart';
+
+class TodoCategorySheet extends ConsumerStatefulWidget {
   const TodoCategorySheet({
     super.key,
     this.selectedCategory,
@@ -15,32 +20,24 @@ class TodoCategorySheet extends StatefulWidget {
   });
   final String? selectedCategory;
 
-  /// 외부 바텀시트(TodoAddSheet 등) 안에 임베드되어 렌더링될지 여부.
-  /// true 면 바깥 surface Container · 드래그 핸들을 생략하고, 결과는 [onConfirm]/[onBack]
-  /// 콜백으로 돌려준다.
+  /// 외부 바텀시트 안에 임베드되어 렌더링될지 여부.
   final bool embedded;
-  final ValueChanged<String>? onConfirm;
+
+  final ValueChanged<CategoryResp>? onConfirm;
   final VoidCallback? onBack;
 
   @override
-  State<TodoCategorySheet> createState() => _TodoCategorySheetState();
+  ConsumerState<TodoCategorySheet> createState() => _TodoCategorySheetState();
 }
 
-class _TodoCategorySheetState extends State<TodoCategorySheet> {
-  late String _selected;
-
-  static const List<Map<String, dynamic>> _categories = [
-    {'name': '공부', 'color': AppColors.category1},
-    {'name': '운동', 'color': AppColors.category2},
-    {'name': '업무', 'color': AppColors.category3},
-    {'name': '건강', 'color': AppColors.category4},
-    {'name': '취미', 'color': AppColors.category5},
-  ];
+class _TodoCategorySheetState extends ConsumerState<TodoCategorySheet> {
+  String? _selectedName;
+  CategoryResp? _selectedObj;
 
   @override
   void initState() {
     super.initState();
-    _selected = widget.selectedCategory ?? '공부';
+    _selectedName = widget.selectedCategory;
   }
 
   @override
@@ -49,18 +46,55 @@ class _TodoCategorySheetState extends State<TodoCategorySheet> {
     final embedded = widget.embedded;
     final chipWidth = (MediaQuery.of(context).size.width - 40 - 12) / 2;
 
-    final mascot = const _MascotBubble(message: '어떤 카테고리야?');
+    final asyncCategories = ref.watch(categoryViewModelProvider);
 
-    final chipsWrap = Wrap(
-      spacing: 12,
-      runSpacing: 12,
+    // 상단 헤더: 마스코트 말풍선 + '수정' 버튼
+    final headerRow = Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        ..._categories.map((cat) {
-          final name = cat['name'] as String;
-          final dotColor = cat['color'] as Color;
-          final isSelected = _selected == name;
+        const _MascotBubble(message: '어떤 카테고리야?'),
+        GestureDetector(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const CategoryPage()),
+            );
+          },
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 4.0, top: 8.0, bottom: 8.0),
+            child: Text(
+              '수정',
+              style: AppTextStyles.labelMedium.copyWith(color: colors.textSecondary),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    Widget buildContent(List<CategoryResp> categories) {
+      // 삭제 대비 안전장치: 현재 선택된 카테고리가 없으면 첫 번째 항목으로 폴백
+      if (_selectedObj == null && _selectedName != null) {
+        try {
+          _selectedObj = categories.firstWhere((c) => c.categoryName == _selectedName);
+        } catch (_) {
+          if (categories.isNotEmpty) {
+            _selectedObj = categories.first;
+            _selectedName = categories.first.categoryName;
+          }
+        }
+      }
+
+      // ✅ + 추가 버튼 제거 — 카테고리 칩만 표시
+      final chipsWrap = Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: categories.map((cat) {
+          final isSelected = _selectedName == cat.categoryName;
           return GestureDetector(
-            onTap: () => setState(() => _selected = name),
+            onTap: () => setState(() {
+              _selectedName = cat.categoryName;
+              _selectedObj = cat;
+            }),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               width: chipWidth,
@@ -75,12 +109,12 @@ class _TodoCategorySheetState extends State<TodoCategorySheet> {
                   Container(
                     width: 8, height: 8,
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.white70 : dotColor,
+                      color: isSelected ? Colors.white70 : cat.color,
                       shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Text(name,
+                  Text(cat.categoryName,
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: isSelected ? Colors.white : colors.textPrimary,
                     ),
@@ -89,107 +123,81 @@ class _TodoCategorySheetState extends State<TodoCategorySheet> {
               ),
             ),
           );
-        }),
-        GestureDetector(
-          onTap: () {},
-          child: Container(
-            width: chipWidth,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              color: colors.surfaceAlt,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.add, size: 16, color: colors.textSecondary),
-                const SizedBox(width: 4),
-                Text('추가', style: AppTextStyles.bodyMedium.copyWith(color: colors.textSecondary)),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
+        }).toList(),
+      );
 
-    final buttonRow = Row(
-      children: [
-        Expanded(
-          child: _PrevButton(
-            onTap: embedded ? widget.onBack : null,
+      final buttonRow = Row(
+        children: [
+          Expanded(
+            child: _PrevButton(onTap: embedded ? widget.onBack : null),
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: DoitdoPrimaryButton(
-            label: '확인',
-            onPressed: () {
-              if (embedded) {
-                widget.onConfirm?.call(_selected);
-              } else {
-                Navigator.of(context).pop(_selected);
-              }
-            },
+          const SizedBox(width: 8),
+          Expanded(
+            child: DoitdoPrimaryButton(
+              label: '확인',
+              onPressed: () {
+                final result = _selectedObj ?? (categories.isNotEmpty ? categories.first : null);
+                if (result == null) return;
+                if (embedded) {
+                  widget.onConfirm?.call(result);
+                } else {
+                  Navigator.of(context).pop(result);
+                }
+              },
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
 
-    // ── 임베드 모드 ──
-    // 레이아웃: 말풍선(상단 고정) → 칩 그리드(Expanded · 세로 중앙) → 버튼(하단 고정)
-    // 부모(TodoAddSheet) 가 위쪽 20dp 여백과 bounded height 를 제공한다.
-    if (embedded) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      if (embedded) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.max,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              headerRow,
+              Expanded(child: Center(child: chipsWrap)),
+              buttonRow,
+            ],
+          ),
+        );
+      }
+
+      return Container(
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
         child: Column(
-          mainAxisSize: MainAxisSize.max,
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── 상단 고정 ──
-            mascot,
-
-            // ── 유연 본문 ──
-            // 칩이 5~6개라 작은 폰에서도 한 화면에 들어오므로 Center 로 세로 중앙.
-            // 칩이 늘어나면 Wrap 이 자연스럽게 행을 더 추가한다.
-            Expanded(
-              child: Center(child: chipsWrap),
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: colors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             ),
-
-            // ── 하단 고정 ──
+            const SizedBox(height: 16),
+            headerRow,
+            const SizedBox(height: 20),
+            chipsWrap,
+            const SizedBox(height: 24),
             buttonRow,
           ],
         ),
       );
     }
 
-    // 기존 독립 바텀시트 경로
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Container(
-              width: 40, height: 4,
-              decoration: BoxDecoration(
-                color: colors.border,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          mascot,
-          const SizedBox(height: 20),
-          chipsWrap,
-          const SizedBox(height: 24),
-          buttonRow,
-        ],
-      ),
+    return asyncCategories.when(
+      loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: AppColors.calendarPoint))),
+      error: (e, _) => SizedBox(height: 200, child: Center(child: Text('불러오기 실패\n$e', style: AppTextStyles.bodyMedium))),
+      data: (categories) => buildContent(categories),
     );
   }
 }
@@ -227,8 +235,6 @@ class _MascotBubble extends StatelessWidget {
 
 class _PrevButton extends StatelessWidget {
   const _PrevButton({this.onTap});
-
-  /// null 이면 Navigator.pop, 임베드 모드에서는 부모가 단계 전환을 처리한다.
   final VoidCallback? onTap;
 
   @override
