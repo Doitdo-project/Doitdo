@@ -53,6 +53,7 @@ class Todo {
     required this.id,
     required this.title,
     required this.category,
+    this.categoryId, // ✏️ 추가: 서버와 통신할 진짜 카테고리 ID
     required this.isDone,
     this.memo,
     this.alarmTime,
@@ -65,12 +66,13 @@ class Todo {
     this.repeatStartDate,
     this.repeatEndDate,
     this.period,
-    this.repeatDays, // ✏️ 추가: 반복 요일 배열 (0=일,1=월,...,6=토)
+    this.repeatDays,
   });
 
   final String id;
   final String title;
   final TodoCategory category;
+  final int? categoryId; // ✏️ 추가
   final bool isDone;
   final String? memo;
   final TimeOfDay? alarmTime;
@@ -83,7 +85,7 @@ class Todo {
   final DateTime? repeatStartDate;
   final DateTime? repeatEndDate;
   final int? period;
-  final List<int>? repeatDays; // ✏️ 추가: 선택된 요일 인덱스 목록
+  final List<int>? repeatDays;
 
   String get dateDisplayText {
     switch (dateType) {
@@ -93,7 +95,6 @@ class Todo {
       case TodoDateType.someday:
         return '언제가 할 일';
       case TodoDateType.range:
-      // rangeStart 우선, 없으면 date 사용
         final start = rangeStart ?? date;
         if (start == null) return '기간 미설정';
         final s = '${start.month}월 ${start.day}일';
@@ -124,6 +125,7 @@ class Todo {
     String? id,
     String? title,
     TodoCategory? category,
+    int? categoryId, // ✏️ 추가
     bool? isDone,
     String? memo,
     TimeOfDay? alarmTime,
@@ -136,12 +138,13 @@ class Todo {
     DateTime? repeatStartDate,
     DateTime? repeatEndDate,
     int? period,
-    List<int>? repeatDays, // ✏️ 추가
+    List<int>? repeatDays,
   }) {
     return Todo(
       id: id ?? this.id,
       title: title ?? this.title,
       category: category ?? this.category,
+      categoryId: categoryId ?? this.categoryId, // ✏️ 추가
       isDone: isDone ?? this.isDone,
       memo: memo ?? this.memo,
       alarmTime: alarmTime ?? this.alarmTime,
@@ -154,7 +157,7 @@ class Todo {
       repeatStartDate: repeatStartDate ?? this.repeatStartDate,
       repeatEndDate: repeatEndDate ?? this.repeatEndDate,
       period: period ?? this.period,
-      repeatDays: repeatDays ?? this.repeatDays, // ✏️ 추가
+      repeatDays: repeatDays ?? this.repeatDays,
     );
   }
 }

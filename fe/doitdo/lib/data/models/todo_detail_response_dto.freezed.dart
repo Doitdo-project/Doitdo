@@ -28,6 +28,7 @@ mixin _$TodoDetailResponseDto {
   String? get content => throw _privateConstructorUsedError;
   String get status => throw _privateConstructorUsedError;
   String? get category => throw _privateConstructorUsedError;
+  int? get categoryId => throw _privateConstructorUsedError; // ← 이 줄 추가
   String get type => throw _privateConstructorUsedError;
   int get priority => throw _privateConstructorUsedError;
   String? get startDate => throw _privateConstructorUsedError;
@@ -60,6 +61,7 @@ abstract class $TodoDetailResponseDtoCopyWith<$Res> {
     String? content,
     String status,
     String? category,
+    int? categoryId,
     String type,
     int priority,
     String? startDate,
@@ -92,6 +94,7 @@ class _$TodoDetailResponseDtoCopyWithImpl<
     Object? content = freezed,
     Object? status = null,
     Object? category = freezed,
+    Object? categoryId = freezed,
     Object? type = null,
     Object? priority = null,
     Object? startDate = freezed,
@@ -121,6 +124,10 @@ class _$TodoDetailResponseDtoCopyWithImpl<
                 ? _value.category
                 : category // ignore: cast_nullable_to_non_nullable
                       as String?,
+            categoryId: freezed == categoryId
+                ? _value.categoryId
+                : categoryId // ignore: cast_nullable_to_non_nullable
+                      as int?,
             type: null == type
                 ? _value.type
                 : type // ignore: cast_nullable_to_non_nullable
@@ -166,6 +173,7 @@ abstract class _$$TodoDetailResponseDtoImplCopyWith<$Res>
     String? content,
     String status,
     String? category,
+    int? categoryId,
     String type,
     int priority,
     String? startDate,
@@ -195,6 +203,7 @@ class __$$TodoDetailResponseDtoImplCopyWithImpl<$Res>
     Object? content = freezed,
     Object? status = null,
     Object? category = freezed,
+    Object? categoryId = freezed,
     Object? type = null,
     Object? priority = null,
     Object? startDate = freezed,
@@ -224,6 +233,10 @@ class __$$TodoDetailResponseDtoImplCopyWithImpl<$Res>
             ? _value.category
             : category // ignore: cast_nullable_to_non_nullable
                   as String?,
+        categoryId: freezed == categoryId
+            ? _value.categoryId
+            : categoryId // ignore: cast_nullable_to_non_nullable
+                  as int?,
         type: null == type
             ? _value.type
             : type // ignore: cast_nullable_to_non_nullable
@@ -262,6 +275,7 @@ class _$TodoDetailResponseDtoImpl implements _TodoDetailResponseDto {
     this.content,
     required this.status,
     this.category,
+    this.categoryId,
     required this.type,
     required this.priority,
     this.startDate,
@@ -283,6 +297,9 @@ class _$TodoDetailResponseDtoImpl implements _TodoDetailResponseDto {
   final String status;
   @override
   final String? category;
+  @override
+  final int? categoryId;
+  // ← 이 줄 추가
   @override
   final String type;
   @override
@@ -308,7 +325,7 @@ class _$TodoDetailResponseDtoImpl implements _TodoDetailResponseDto {
 
   @override
   String toString() {
-    return 'TodoDetailResponseDto(todoId: $todoId, title: $title, content: $content, status: $status, category: $category, type: $type, priority: $priority, startDate: $startDate, endDate: $endDate, daysOfWeek: $daysOfWeek, alarmTime: $alarmTime)';
+    return 'TodoDetailResponseDto(todoId: $todoId, title: $title, content: $content, status: $status, category: $category, categoryId: $categoryId, type: $type, priority: $priority, startDate: $startDate, endDate: $endDate, daysOfWeek: $daysOfWeek, alarmTime: $alarmTime)';
   }
 
   @override
@@ -322,6 +339,8 @@ class _$TodoDetailResponseDtoImpl implements _TodoDetailResponseDto {
             (identical(other.status, status) || other.status == status) &&
             (identical(other.category, category) ||
                 other.category == category) &&
+            (identical(other.categoryId, categoryId) ||
+                other.categoryId == categoryId) &&
             (identical(other.type, type) || other.type == type) &&
             (identical(other.priority, priority) ||
                 other.priority == priority) &&
@@ -345,6 +364,7 @@ class _$TodoDetailResponseDtoImpl implements _TodoDetailResponseDto {
     content,
     status,
     category,
+    categoryId,
     type,
     priority,
     startDate,
@@ -378,6 +398,7 @@ abstract class _TodoDetailResponseDto implements TodoDetailResponseDto {
     final String? content,
     required final String status,
     final String? category,
+    final int? categoryId,
     required final String type,
     required final int priority,
     final String? startDate,
@@ -399,6 +420,8 @@ abstract class _TodoDetailResponseDto implements TodoDetailResponseDto {
   String get status;
   @override
   String? get category;
+  @override
+  int? get categoryId; // ← 이 줄 추가
   @override
   String get type;
   @override
