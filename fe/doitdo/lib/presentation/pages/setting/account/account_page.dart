@@ -8,6 +8,8 @@ import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/setting/account/account_view_model.dart';
 import 'package:doitdo/presentation/pages/setting/account/widgets/password_change_dialog.dart';
+import 'package:doitdo/presentation/pages/setting/widgets/withdraw_password_sheet.dart';
+import 'package:doitdo/presentation/providers/app_data_providers.dart';
 import 'package:doitdo/presentation/providers/current_user_provider.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_dialog.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_top_bar.dart';
@@ -16,9 +18,10 @@ import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
 
 /// 설정 > 계정 설정 화면.
 ///
-/// 2개 섹션 구성:
+/// 2개 섹션 + 하단 회원탈퇴 링크 구성:
 ///   1) 로그인 정보 — 이메일 + 비밀번호 변경 진입
 ///   2) 기타 — 로그아웃
+///   3) 회원탈퇴 — 파괴적 액션. 카드 외 작은 텍스트 링크로 노출 우선순위 낮춤.
 ///
 /// 상세/하위 화면이므로 `DoitdoTopBar` 를 두고 자동 back 버튼 활성.
 class AccountPage extends ConsumerWidget {
@@ -98,6 +101,29 @@ class AccountPage extends ConsumerWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 24),
+            // 회원탈퇴 — 파괴적이지만 노출 우선순위 낮게. 카드/아이콘 없이
+            // 작은 회색 텍스트로 두어 일반 메뉴와 시각적으로 구분.
+            Center(
+              child: InkWell(
+                onTap: () => _handleWithdraw(context, ref),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Text(
+                    '회원탈퇴',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: context.colors.textHint,
+                      decoration: TextDecoration.underline,
+                      decorationColor: context.colors.textHint,
+                    ),
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: 40),
           ],
         ),
@@ -119,6 +145,39 @@ Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
   // signOut 시작만 알리고 결과는 View 의 ref.listen 이 처리.
   // (성공 시 웰컴으로 이동, 실패 시 스낵바)
   ref.read(accountViewModelProvider.notifier).signOut();
+}
+
+/// 회원탈퇴 핸들러.
+///
+/// 흐름: 확인 다이얼로그 → 비밀번호 시트(시트가 DELETE 까지 self-contained) →
+///       성공 시 AuthRepository.signOut → Welcome 으로 이동.
+///
+/// 비번 입력 검증 및 백엔드 호출/에러 표시는 모두 시트 안에서 처리되므로
+/// 여기서는 시트가 true 를 돌려준 경우(=탈퇴 성공)만 후속 정리한다.
+Future<void> _handleWithdraw(BuildContext context, WidgetRef ref) async {
+  final ok = await showDoitdoDialog(
+    context: context,
+    title: '정말 탈퇴하시겠어요?',
+    message: '계정을 탈퇴하면 모든 할 일과 캐릭터 정보가 삭제되며 되돌릴 수 없어요.',
+    confirmLabel: '탈퇴',
+    cancelLabel: '취소',
+  );
+  if (ok != true) return;
+  if (!context.mounted) return;
+
+  final success = await showWithdrawPasswordSheet(context);
+  if (success != true) return;
+  if (!context.mounted) return;
+
+  // 탈퇴 성공 → 로컬 토큰 + SDK 세션 정리.
+  // signOut 안의 서버 logout 호출은 이미 세션이 정리된 상태라 401 떨어질 수 있는데,
+  // signOut 이 try/catch 로 무시하도록 설계돼 있어 영향 없음.
+  await ref.read(authRepositoryProvider).signOut();
+  if (!context.mounted) return;
+  context.go(AppRoutes.welcome);
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('회원탈퇴가 완료되었어요.')),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────
