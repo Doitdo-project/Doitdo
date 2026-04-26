@@ -40,5 +40,15 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+
+    # permission_handler iOS 빌드 시 권한별 코드 활성화 매크로.
+    # 매크로가 없으면 해당 권한 코드가 컴파일에서 제외되어 늘 denied 가 떨어진다.
+    # 알림 설정 페이지의 푸시알림 토글이 iOS 에서 동작하려면 NOTIFICATIONS 필수.
+    target.build_configurations.each do |config|
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
+        '$(inherited)',
+        'PERMISSION_NOTIFICATIONS=1',
+      ]
+    end
   end
 end
