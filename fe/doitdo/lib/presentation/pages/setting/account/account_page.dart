@@ -16,28 +16,16 @@ import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
 
 /// 설정 > 계정 설정 화면.
 ///
-/// 3개 섹션 구성:
+/// 2개 섹션 구성:
 ///   1) 로그인 정보 — 이메일 + 비밀번호 변경 진입
-///   2) 소셜 계정 연동 — 카카오 / 구글 연결 상태 및 연결/해제
-///   3) 기타 — 로그아웃
+///   2) 기타 — 로그아웃
 ///
 /// 상세/하위 화면이므로 `DoitdoTopBar` 를 두고 자동 back 버튼 활성.
-///
-/// 소셜 연결 상태는 로컬 [StatefulWidget] 상태로만 관리 (mock).
-/// 실제 AuthRepository 연결 플로우가 붙으면 ViewModel / provider 로 승격.
-class AccountPage extends ConsumerStatefulWidget {
+class AccountPage extends ConsumerWidget {
   const AccountPage({super.key});
 
   @override
-  ConsumerState<AccountPage> createState() => _AccountPageState();
-}
-
-class _AccountPageState extends ConsumerState<AccountPage> {
-  bool _kakaoConnected = false;
-  bool _googleConnected = false;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // 로그아웃 결과 부수효과.
     // state 가 `bool?` 이라 data 가 `true` 인 경우만 "signOut 성공" 으로 판단한다.
     // `null` 은 초기 진입이라 무시 — void 로 두면 초기 build 전이도 성공으로 오인됨.
@@ -86,34 +74,6 @@ class _AccountPageState extends ConsumerState<AccountPage> {
               ],
             ),
             const SizedBox(height: 24),
-            const _SectionLabel('소셜 계정 연동'),
-            const SizedBox(height: 8),
-            _AccountCard(
-              children: [
-                _SocialAccountRow(
-                  provider: _SocialProvider.kakao,
-                  isConnected: _kakaoConnected,
-                  onConnect: () {
-                    // TODO: 실제 Kakao 계정 연결 플로우 (AuthRepository 확장 후).
-                    setState(() => _kakaoConnected = true);
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _AccountCard(
-              children: [
-                _SocialAccountRow(
-                  provider: _SocialProvider.google,
-                  isConnected: _googleConnected,
-                  onConnect: () {
-                    // TODO: 실제 Google 계정 연결 플로우.
-                    setState(() => _googleConnected = true);
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
             const _SectionLabel('기타'),
             const SizedBox(height: 8),
             _AccountCard(
@@ -151,7 +111,7 @@ Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// 섹션 라벨 (회색, 작은 글씨) — "로그인 정보" / "소셜 계정 연동" / "기타".
+// 섹션 라벨 (회색, 작은 글씨) — "로그인 정보" / "기타".
 // ─────────────────────────────────────────────────────────────────
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
@@ -295,135 +255,6 @@ class _ChevronTile extends StatelessWidget {
               color: colors.textHint,
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────
-// 소셜 계정 행 — 좌측 원형 아이콘 + 라벨 + 우측 "연결됨" / "연결하기".
-// ─────────────────────────────────────────────────────────────────
-enum _SocialProvider { kakao, google }
-
-class _SocialAccountRow extends StatelessWidget {
-  const _SocialAccountRow({
-    required this.provider,
-    required this.isConnected,
-    required this.onConnect,
-  });
-
-  final _SocialProvider provider;
-  final bool isConnected;
-  final VoidCallback onConnect;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final (label, iconAsset, iconBg) = switch (provider) {
-      // 카카오 공식 브랜드 옐로우 고정 (#FEE500) — 다크모드에서도 동일하게 노출되어야 브랜드 가이드 준수.
-      _SocialProvider.kakao => (
-          '카카오톡',
-          'assets/images/kakao.png',
-          const Color(0xFFFEE500),
-        ),
-      _SocialProvider.google => (
-          '구글',
-          'assets/images/google.png',
-          colors.surface,
-        ),
-    };
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          _SocialIconBadge(iconAsset: iconAsset, backgroundColor: iconBg),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              label,
-              style: AppTextStyles.bodyLarge.copyWith(
-                color: colors.textPrimary,
-              ),
-            ),
-          ),
-          if (isConnected)
-            Text(
-              '연결됨',
-              style: AppTextStyles.bodyMedium.copyWith(
-                // 시안 고정 톤 — 연결 완료를 은은한 베이지 브라운으로.
-                color: const Color(0xFFD8C2B6),
-              ),
-            )
-          else
-            _ConnectButton(onPressed: onConnect),
-        ],
-      ),
-    );
-  }
-}
-
-/// 소셜 아이콘 동그라미 배경 + 에셋 로고.
-class _SocialIconBadge extends StatelessWidget {
-  const _SocialIconBadge({
-    required this.iconAsset,
-    required this.backgroundColor,
-  });
-
-  final String iconAsset;
-  final Color backgroundColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final isNeutralBg = backgroundColor == colors.surface;
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: backgroundColor,
-        // 배경이 흰색(surface) 인 경우만 가시성 확보를 위한 얇은 테두리.
-        border: isNeutralBg ? Border.all(color: colors.border) : null,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Image.asset(iconAsset, fit: BoxFit.contain),
-      ),
-    );
-  }
-}
-
-/// 우측 "연결하기" 버튼.
-class _ConnectButton extends StatelessWidget {
-  const _ConnectButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return SizedBox(
-      height: 28,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: colors.primary,
-          foregroundColor: colors.onPrimary,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          minimumSize: Size.zero,
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: Text(
-          '연결하기',
-          style: AppTextStyles.labelMedium.copyWith(
-            color: colors.onPrimary,
-          ),
         ),
       ),
     );
