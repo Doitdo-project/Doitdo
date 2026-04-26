@@ -1,5 +1,7 @@
 package com.doitdo.domain.user.application.impl;
 
+import com.doitdo.domain.auth.entity.AutoProvider;
+import com.doitdo.domain.auth.entity.OAuthProvider;
 import com.doitdo.domain.auth.repository.AutoProviderRepository;
 import com.doitdo.domain.auth.repository.RefreshTokenRepository;
 import com.doitdo.domain.inventory.repository.UserItemRepository;
@@ -20,13 +22,17 @@ import com.doitdo.domain.user.application.UserService;
 import com.doitdo.domain.user.entity.User;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.domain.user.repository.UserWalletRepository;
+import com.doitdo.global.client.AppleOAuthClient;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.UserErrorCode;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -46,6 +52,7 @@ public class UserServiceImpl implements UserService {
 	private final UserSettingRepository userSettingRepository;
 	private final CharacterUnlockRepository characterUnlockRepository;
 	private final PasswordEncoder passwordEncoder;
+	private final AppleOAuthClient appleOAuthClient;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -111,6 +118,9 @@ public class UserServiceImpl implements UserService {
 		}
 
 		// 2. 세션/자격 자료 정리 (hard delete)
+		// 2-a. Apple Sign-In 토큰 revoke — App Store 정책 5.1.1(v) + Apple Developer 가이드 충족.
+		//      베스트 에포트: 호출 실패해도 회원탈퇴 자체는 정상 완료. 우리 DB 의 행은 어차피 아래에서 삭제.
+		revokeAppleTokensIfPresent(userId);
 		refreshTokenRepository.deleteByUserId(userId);
 		autoProviderRepository.deleteAllByUserId(userId);
 		deviceTokenRepository.deleteAllByUserId(userId);
@@ -138,5 +148,31 @@ public class UserServiceImpl implements UserService {
 		//       dirty-checking 만으로는 변경이 flush 되지 않으므로 saveAndFlush 로 merge + 즉시 flush.
 		user.withdraw();
 		userRepository.saveAndFlush(user);
+	}
+
+	/**
+	 * Apple 로 가입한 유저의 refresh_token 을 Apple {@code /auth/revoke} 로 무효화.
+	 *
+	 * <p>한 유저가 동일 provider 로 여러 행을 가질 일은 없지만(uk_provider_uid),
+	 * 방어적으로 {@code findAllByUserIdAndProvider} 결과 전체를 순회한다.
+	 * {@code apple_refresh_token} 이 null 인 행은 skip.
+	 *
+	 * <p>개별 호출 실패는 로그만 남기고 계속 진행 — 회원탈퇴 자체를 막지 않는다.
+	 */
+	private void revokeAppleTokensIfPresent(Long userId) {
+		autoProviderRepository.findAllByUserIdAndProvider(userId, OAuthProvider.APPLE.name())
+				.stream()
+				.map(AutoProvider::getAppleRefreshToken)
+				.filter(Objects::nonNull)
+				.filter(token -> !token.isBlank())
+				.forEach(token -> {
+					try {
+						appleOAuthClient.revokeRefreshToken(token);
+						log.info("Apple revoke 성공: userId={}", userId);
+					} catch (Exception e) {
+						log.warn("Apple revoke 실패 — 회원탈퇴는 계속 진행: userId={}, reason={}",
+								userId, e.getMessage());
+					}
+				});
 	}
 }
