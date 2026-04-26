@@ -27,7 +27,7 @@ class TodoDetailSheet extends ConsumerWidget {
     final vm = ref.read(todoViewModelProvider.notifier);
     final detailAsync = ref.watch(todoDetailProvider(todoId));
 
-    // ✅ 동적 카테고리 색상 찾기
+    // 동적 카테고리 색상: 서버 카테고리 목록에서 이름으로 색을 찾는다.
     final categories = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
     Color getCategoryColor(String name) {
       try {
@@ -37,7 +37,11 @@ class TodoDetailSheet extends ConsumerWidget {
       }
     }
 
-    return Container(
+    // SafeArea(top: false) 가 시스템 네비바 영역만큼 padding 을 더해 시트 하단이
+    // 시스템바와 절대 겹치지 않게 한다. 호출부의 useSafeArea: true 와 짝.
+    return SafeArea(
+      top: false,
+      child: Container(
       decoration: BoxDecoration(
         color: c.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -138,7 +142,7 @@ class TodoDetailSheet extends ConsumerWidget {
 
                         Navigator.of(context, rootNavigator: true).pop();
                         showModalBottomSheet(
-                          context: context, isScrollControlled: true, backgroundColor: Colors.transparent, useRootNavigator: true,
+                          context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent, useRootNavigator: true,
                           builder: (_) => TodoEditSheet(todo: todoToEdit, isSomeday: isSomeday),
                         );
                       },
@@ -236,6 +240,7 @@ class TodoDetailSheet extends ConsumerWidget {
             ),
           );
         },
+      ),
       ),
     );
   }
@@ -362,7 +367,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
   Widget build(BuildContext context) {
     final c = context.colors;
 
-    // ✅ 동적 카테고리 색상
+    // 동적 카테고리 색상.
     final categories = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
     Color getCategoryColor(String name) {
       try {
@@ -372,9 +377,15 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
       }
     }
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
+    // SafeArea(top: false): 시스템 네비바 영역만큼 padding 을 더해 시트 하단이
+    // 시스템바와 절대 겹치지 않게 한다. 호출부의 useSafeArea: true 와 짝.
+    // Padding(viewInsets.bottom): 키보드가 올라왔을 때 그 높이만큼 컨텐츠를 위로.
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
         decoration: BoxDecoration(
           color: c.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -419,7 +430,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
               GestureDetector(
                 onTap: () async {
                   final result = await showModalBottomSheet<TodoDateResult>(
-                    context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+                    context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
                     builder: (_) => TodoDateSheet(initialDate: _dateResult.date ?? DateTime.now(), initialResult: _dateResult),
                   );
                   if (result != null) setState(() => _dateResult = result);
@@ -430,7 +441,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
               GestureDetector(
                 onTap: () async {
                   final result = await showModalBottomSheet<dynamic>(
-                    context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+                    context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
                     builder: (_) => TodoCategorySheet(selectedCategory: _selectedCategory),
                   );
                   if (result != null && result is CategoryResp) {
@@ -461,7 +472,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
               GestureDetector(
                 onTap: () async {
                   final result = await showModalBottomSheet<TodoAlarmResult>(
-                    context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+                    context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
                     builder: (_) => TodoTimeSheet(initialTime: _selectedTime, initialEnabled: _alarmEnabled),
                   );
                   if (result != null) {
@@ -493,6 +504,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

@@ -50,10 +50,29 @@ final _settingNavigatorKey = GlobalKey<NavigatorState>();
 final GoRouter appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: AppRoutes.splash,
+  // 외부 진입(홈스크린 위젯 / 푸시 알림 / 카카오·구글 OAuth 콜백 등) 이 보낸 URL 은
+  // path 가 우리 라우트 목록에 없어 GoException 으로 떨어질 수 있다.
+  // 위젯 진입(`doitdo://widget/...`) 만큼은 안전하게 splash 로 흡수해서 부팅 흐름 재사용.
+  redirect: (context, state) {
+    final raw = state.uri.toString();
+    final path = state.uri.path;
+    if (raw.startsWith('doitdo://widget') || path.startsWith('/widget')) {
+      return AppRoutes.splash;
+    }
+    return null;
+  },
   routes: [
     GoRoute(
       path: AppRoutes.splash,
       builder: (context, state) => const SplashPage(),
+    ),
+
+    // 홈스크린 위젯에서 진입(`doitdo://widget/open`) 시 받는 라우트.
+    // 자체 페이지를 가지지 않고 splash 로 redirect — 거기서 토큰 유무에 따라
+    // 메인/로그인 화면으로 분기되는 기존 부팅 흐름을 그대로 재사용한다.
+    GoRoute(
+      path: '/widget/open',
+      redirect: (context, state) => AppRoutes.splash,
     ),
 
     // 인증 플로우 (탭 셸 바깥)

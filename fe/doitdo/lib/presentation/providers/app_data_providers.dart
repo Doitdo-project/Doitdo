@@ -8,6 +8,7 @@ import 'package:doitdo/core/network/api_client.dart';
 import 'package:doitdo/core/network/auth_interceptor.dart';
 import 'package:doitdo/core/notifications/fcm_token_registrar.dart';
 import 'package:doitdo/core/utils/app_env.dart';
+import 'package:doitdo/core/widget_sync/widget_sync_service.dart';
 import 'package:doitdo/data/datasources/auth_api.dart';
 import 'package:doitdo/data/datasources/auth_local_data_source.dart';
 import 'package:doitdo/data/datasources/user_api.dart';
@@ -22,14 +23,17 @@ import 'package:doitdo/data/datasources/category_api.dart';
 import 'package:doitdo/data/datasources/character_api.dart';
 import 'package:doitdo/data/datasources/notification_api.dart';
 import 'package:doitdo/data/datasources/setting_api.dart';
+import 'package:doitdo/data/datasources/streak_api.dart';
 import 'package:doitdo/data/repositories/category_repository_impl.dart';
 import 'package:doitdo/data/repositories/character_repository_impl.dart';
 import 'package:doitdo/data/repositories/notification_repository_impl.dart';
 import 'package:doitdo/data/repositories/setting_repository_impl.dart';
+import 'package:doitdo/data/repositories/streak_repository_impl.dart';
 import 'package:doitdo/domain/repositories/category_repository.dart';
 import 'package:doitdo/domain/repositories/character_repository.dart';
 import 'package:doitdo/domain/repositories/notification_repository.dart';
 import 'package:doitdo/domain/repositories/setting_repository.dart';
+import 'package:doitdo/domain/repositories/streak_repository.dart';
 
 // 중앙 집중식 DI 선언 파일 (MOA 컨벤션)
 // datasource → repository → service 순서로 Provider 추가.
@@ -81,12 +85,21 @@ final authLocalDataSourceProvider = Provider<AuthLocalDataSource>(
   (ref) => AuthLocalDataSource(ref.watch(secureStorageProvider)),
 );
 
+// ─── 홈스크린 위젯 동기화 ────────────────────────────────────────
+// 앱 ↔ iOS 위젯 extension / Android AppWidget Provider 간 데이터 다리.
+// AuthRepository / TodoRepository 변경 지점에서 주입받아 호출하므로 여기 단일 인스턴스 등록.
+final widgetSyncServiceProvider = Provider<WidgetSyncService>(
+  (ref) => WidgetSyncService(),
+);
+
 // ─── Repository ────────────────────────────────────────────────
 final authRepositoryProvider = Provider<AuthRepository>(
   (ref) => AuthRepositoryImpl(
     authApi: ref.watch(authApiProvider),
     local: ref.watch(authLocalDataSourceProvider),
     googleSignIn: ref.watch(googleSignInProvider),
+    widgetSync: ref.watch(widgetSyncServiceProvider),
+    apiBaseUrl: AppEnv.optional('API_BASE_URL'),
   ),
 );
 
@@ -137,6 +150,15 @@ final notificationApiProvider = Provider<NotificationApi>(
 
 final notificationRepositoryProvider = Provider<NotificationRepository>(
   (ref) => NotificationRepositoryImpl(ref.watch(notificationApiProvider)),
+);
+
+// ─── Streak: retrofit API → Repository ─────────────────────────
+final streakApiProvider = Provider<StreakApi>(
+  (ref) => StreakApi(ref.watch(dioProvider)),
+);
+
+final streakRepositoryProvider = Provider<StreakRepository>(
+  (ref) => StreakRepositoryImpl(ref.watch(streakApiProvider)),
 );
 
 // ─── FCM: 디바이스 토큰 등록 헬퍼 ───────────────────────────────

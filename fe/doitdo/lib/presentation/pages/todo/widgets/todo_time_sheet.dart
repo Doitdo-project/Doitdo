@@ -53,7 +53,11 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
   Widget build(BuildContext context) {
     final colors = context.colors;
 
-    return Container(
+    // SafeArea(top: false): 시스템 네비바 영역만큼 padding 을 더해 시트 하단이
+    // 시스템바와 절대 겹치지 않게 한다. 호출부의 useSafeArea: true 와 짝.
+    return SafeArea(
+      top: false,
+      child: Container(
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -153,6 +157,7 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
             ],
           ),
         ],
+      ),
       ),
     );
   }

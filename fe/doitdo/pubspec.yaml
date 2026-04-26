@@ -81,6 +81,13 @@ dependencies:
   # iOS 는 Info.plist 에 NSCameraUsageDescription / NSPhotoLibraryUsageDescription 필요 (Mac 빌드 시).
   image_picker: ^1.1.2
 
+  # 홈스크린 위젯 ↔ Flutter 데이터 공유.
+  # iOS 는 App Group UserDefaults, Android 는 SharedPreferences 를 통해 위젯 extension/provider 와
+  # 공유 영역에 JSON 직렬화한 TODO 목록과 인증 토큰을 저장한다.
+  # 위젯 자체 UI 는 SwiftUI(iOS)/RemoteViews(Android) 로 별도 작성. 본 패키지는 데이터 다리 + 갱신 트리거 역할만.
+  # iOS App Group ID: group.com.d107.doitdo (Apple Developer Console + Xcode 양쪽 capability 등록 필요)
+  home_widget: ^0.7.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

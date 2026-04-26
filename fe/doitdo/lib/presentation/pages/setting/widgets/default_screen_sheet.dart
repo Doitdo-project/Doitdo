@@ -101,8 +101,9 @@ class _DefaultScreenSheetState extends State<_DefaultScreenSheet> {
 
 /// 선택지 카드 — 좌측 체크 인디케이터 + 제목 + 설명.
 ///
-/// 시안 색상(raw hex) 은 선택 상태를 시각적으로 강조하기 위한 브랜드 톤이라
-/// 시맨틱 토큰 대신 고정값 사용 (`#FFEBD5` @50%, `#B3B3B3`).
+/// 선택 상태 강조: primary 색의 8% 알파를 카드 배경에 깔아 라이트에선 크림톤,
+/// 다크에선 다크 surface 위 살짝 오렌지 톤이 자동으로 적응되도록 한다.
+/// 보더는 시맨틱 토큰(`colors.border`) 사용 — 다크 모드에서도 가독성 확보.
 class _ScreenOption extends StatelessWidget {
   const _ScreenOption({
     required this.title,
@@ -126,15 +127,14 @@ class _ScreenOption extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 17),
         decoration: BoxDecoration(
-          // 반투명(#FFEBD5 @ 50%) 을 흰색과 직접 합성한 단색. 투명도가 테두리와 겹치며
-          // 부드러운 이중 경계처럼 보이는 착시를 없애기 위해 단색으로 고정.
+          // 선택 시: primary 알파 8% — 라이트/다크 모두 자연스러운 톤.
           color: isSelected
-              ? const Color(0xFFFFF5EA)
+              ? colors.primary.withOpacity(0.08)
               : colors.surface,
           borderRadius: BorderRadius.circular(12),
           // 선택/비선택 동일한 2px 로 유지 — 두께 전환으로 인한 레이아웃 점프 방지.
           border: Border.all(
-            color: isSelected ? colors.primary : const Color(0xFFE5E5E5),
+            color: isSelected ? colors.primary : colors.border,
             width: 2,
           ),
         ),
@@ -183,9 +183,7 @@ class _CheckIndicator extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: isSelected ? colors.primary : colors.surface,
-        border: isSelected
-            ? null
-            : Border.all(color: const Color(0xFFB3B3B3)),
+        border: isSelected ? null : Border.all(color: colors.border),
       ),
       child: isSelected
           ? const Icon(Icons.check, size: 18, color: Colors.white)

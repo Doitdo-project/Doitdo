@@ -132,7 +132,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
   Widget build(BuildContext context) {
     final c = context.colors;
 
-    // 동적 카테고리 색상 찾기
+    // 동적 카테고리 색상: 서버에서 받은 카테고리 목록에서 이름으로 색을 찾는다.
     final categories = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
     Color getCategoryColor(String name) {
       try {
@@ -142,119 +142,124 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
       }
     }
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-        decoration: BoxDecoration(
-          color: c.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(2)))),
-            const SizedBox(height: 32),
-            _MascotBubble(message: widget.initialDate == null ? '언제가 하고 싶은 일은?' : '이날 어떤 일을 계획해볼까?'),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: TextField(
-                controller: _titleController, focusNode: _titleFocusNode,
-                style: AppTextStyles.titleLarge.copyWith(fontFamily: 'GmarketSansMedium', fontWeight: FontWeight.w500, color: c.textPrimary),
-                decoration: InputDecoration(
-                  hintText: '할 일을 입력해주세요.',
-                  hintStyle: AppTextStyles.titleLarge.copyWith(fontFamily: 'GmarketSansMedium', fontWeight: FontWeight.w500, color: const Color(0xFFD6D3D1)),
-                  border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            GestureDetector(
-              onTap: () async {
-                final result = await showModalBottomSheet<TodoDateResult>(
-                  context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-                  builder: (_) => TodoDateSheet(initialDate: _dateResult?.date ?? DateTime.now(), initialResult: _dateResult),
-                );
-                if (result != null) setState(() => _dateResult = result);
-              },
-              child: _OptionRow(icon: Icons.calendar_today_outlined, label: '기간', valueText: _dateResult?.displayText ?? '미지정', colors: c),
-            ),
-            Divider(color: c.divider, height: 1, thickness: 1),
-
-            GestureDetector(
-              onTap: () async {
-                final result = await showModalBottomSheet<dynamic>(
-                  context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-                  builder: (_) => TodoCategorySheet(selectedCategory: _selectedCategory, embedded: false),
-                );
-                if (result != null && result is CategoryResp) {
-                  setState(() {
-                    _selectedCategory = result.categoryName;
-                    _selectedCategoryId = result.categoryId;
-                  });
-                }
-              },
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 20, 0, 20),
-                child: Row(
-                  children: [
-                    const Icon(Icons.category_outlined, size: 18, color: Color(0xFFC8966E)),
-                    const SizedBox(width: 12),
-                    Text('카테고리', style: AppTextStyles.bodyMedium.copyWith(color: c.textSecondary)),
-                    const Spacer(),
-                    Container(
-                      width: 8, height: 8,
-                      // 동적 카테고리 색상 적용
-                      decoration: BoxDecoration(color: getCategoryColor(_selectedCategory), shape: BoxShape.circle),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          decoration: BoxDecoration(
+            color: c.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(2)))),
+                const SizedBox(height: 32),
+                _MascotBubble(message: widget.initialDate == null ? '언제가 하고 싶은 일은?' : '이날 어떤 일을 계획해볼까?'),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: TextField(
+                    controller: _titleController, focusNode: _titleFocusNode,
+                    style: AppTextStyles.titleLarge.copyWith(fontFamily: 'GmarketSansMedium', fontWeight: FontWeight.w500, color: c.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: '할 일을 입력해주세요.',
+                      hintStyle: AppTextStyles.titleLarge.copyWith(fontFamily: 'GmarketSansMedium', fontWeight: FontWeight.w500, color: const Color(0xFFD6D3D1)),
+                      border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
                     ),
-                    const SizedBox(width: 6),
-                    Text(_selectedCategory, style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary)),
-                    const SizedBox(width: 2),
-                    Icon(Icons.chevron_right, size: 16, color: c.textHint),
-                  ],
+                  ),
                 ),
-              ),
-            ),
+                const SizedBox(height: 32),
 
-            GestureDetector(
-              onTap: () async {
-                final result = await showModalBottomSheet<TodoAlarmResult>(
-                  context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-                  builder: (_) => TodoTimeSheet(initialTime: _selectedTime, initialEnabled: _alarmEnabled),
-                );
-                if (result != null) {
-                  setState(() {
-                    _selectedTime = result.time;
-                    _alarmEnabled = result.enabled;
-                  });
-                }
-              },
-              child: _OptionRow(icon: Icons.notifications_outlined, label: '알림', valueText: _alarmEnabled ? _formatTime(_selectedTime) : '없음', colors: c),
-            ),
-            Divider(color: c.divider, height: 1, thickness: 1),
-
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: TextField(
-                controller: _memoController, minLines: 5, maxLines: null, keyboardType: TextInputType.multiline,
-                style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary),
-                decoration: InputDecoration(
-                  hintText: '메모를 입력해 보세요.', hintStyle: AppTextStyles.bodyMedium.copyWith(color: c.textHint),
-                  border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
+                GestureDetector(
+                  onTap: () async {
+                    final result = await showModalBottomSheet<TodoDateResult>(
+                      context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
+                      builder: (_) => TodoDateSheet(initialDate: _dateResult?.date ?? DateTime.now(), initialResult: _dateResult),
+                    );
+                    if (result != null) setState(() => _dateResult = result);
+                  },
+                  child: _OptionRow(icon: Icons.calendar_today_outlined, label: '기간', valueText: _dateResult?.displayText ?? '미지정', colors: c),
                 ),
-              ),
-            ),
-            const SizedBox(height: 20),
+                Divider(color: c.divider, height: 1, thickness: 1),
 
-            DoitdoPrimaryButton(
-              label: _isLoading ? '저장 중...' : '저장하기',
-              onPressed: _isLoading ? null : () => _onSave(context),
+                GestureDetector(
+                  onTap: () async {
+                    final result = await showModalBottomSheet<dynamic>(
+                      context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
+                      builder: (_) => TodoCategorySheet(selectedCategory: _selectedCategory, embedded: false),
+                    );
+                    if (result != null && result is CategoryResp) {
+                      setState(() {
+                        _selectedCategory = result.categoryName;
+                        _selectedCategoryId = result.categoryId;
+                      });
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 20, 0, 20),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.category_outlined, size: 18, color: Color(0xFFC8966E)),
+                        const SizedBox(width: 12),
+                        Text('카테고리', style: AppTextStyles.bodyMedium.copyWith(color: c.textSecondary)),
+                        const Spacer(),
+                        Container(
+                          width: 8, height: 8,
+                          // 동적 카테고리 색상 적용
+                          decoration: BoxDecoration(color: getCategoryColor(_selectedCategory), shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(_selectedCategory, style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary)),
+                        const SizedBox(width: 2),
+                        Icon(Icons.chevron_right, size: 16, color: c.textHint),
+                      ],
+                    ),
+                  ),
+                ),
+
+                GestureDetector(
+                  onTap: () async {
+                    final result = await showModalBottomSheet<TodoAlarmResult>(
+                      context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
+                      builder: (_) => TodoTimeSheet(initialTime: _selectedTime, initialEnabled: _alarmEnabled),
+                    );
+                    if (result != null) {
+                      setState(() {
+                        _selectedTime = result.time;
+                        _alarmEnabled = result.enabled;
+                      });
+                    }
+                  },
+                  child: _OptionRow(icon: Icons.notifications_outlined, label: '알림', valueText: _alarmEnabled ? _formatTime(_selectedTime) : '없음', colors: c),
+                ),
+                Divider(color: c.divider, height: 1, thickness: 1),
+
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: TextField(
+                    controller: _memoController, minLines: 5, maxLines: null, keyboardType: TextInputType.multiline,
+                    style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: '메모를 입력해 보세요.', hintStyle: AppTextStyles.bodyMedium.copyWith(color: c.textHint),
+                      border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                DoitdoPrimaryButton(
+                  label: _isLoading ? '저장 중...' : '저장하기',
+                  onPressed: _isLoading ? null : () => _onSave(context),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
