@@ -394,7 +394,11 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
   Widget build(BuildContext context) {
     final c = context.colors;
 
-    return Container(
+    // SafeArea(top: false) 가 시스템 네비바 영역만큼 padding 을 더해 시트 하단이
+    // 시스템바와 절대 겹치지 않게 한다. 호출부의 useSafeArea: true 와 짝.
+    return SafeArea(
+      top: false,
+      child: Container(
       decoration: BoxDecoration(
         color: c.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -711,6 +715,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
