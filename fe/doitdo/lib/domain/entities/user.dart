@@ -9,6 +9,7 @@ class User {
     required this.userId,
     required this.username,
     required this.email,
+    required this.hasPassword,
   });
 
   /// 서버 PK (`userId`).
@@ -20,10 +21,23 @@ class User {
   /// 이메일 주소.
   final String email;
 
-  User copyWith({int? userId, String? username, String? email}) => User(
+  /// 이 계정이 자체 비밀번호를 가지고 있는지 여부.
+  ///
+  /// 백엔드의 `password` 필드가 null 이 아니면 true (= 일반 이메일 가입).
+  /// 소셜(Kakao/Google/Apple) 전용 가입자는 false → "비밀번호 변경" 진입을 숨겨야 한다.
+  final bool hasPassword;
+
+  User copyWith({
+    int? userId,
+    String? username,
+    String? email,
+    bool? hasPassword,
+  }) =>
+      User(
         userId: userId ?? this.userId,
         username: username ?? this.username,
         email: email ?? this.email,
+        hasPassword: hasPassword ?? this.hasPassword,
       );
 
   @override
@@ -33,8 +47,9 @@ class User {
           runtimeType == other.runtimeType &&
           userId == other.userId &&
           username == other.username &&
-          email == other.email;
+          email == other.email &&
+          hasPassword == other.hasPassword;
 
   @override
-  int get hashCode => Object.hash(userId, username, email);
+  int get hashCode => Object.hash(userId, username, email, hasPassword);
 }

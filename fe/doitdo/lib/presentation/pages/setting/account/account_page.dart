@@ -66,25 +66,36 @@ class _AccountPageState extends ConsumerState<AccountPage> {
           children: [
             const _SectionLabel('로그인 정보'),
             const SizedBox(height: 8),
-            _AccountCard(
-              children: [
-                _EmailRow(
-                  // 전역 currentUserProvider 구독 — 로그인 상태의 실제 이메일 표시.
-                  // 로딩 중엔 빈 문자열, 에러면 "-" 로 페일세이프 (계정 화면에서
-                  // 에러 메시지까지 노출하면 본질이 흐려지므로 축약).
-                  email: ref.watch(currentUserProvider).when(
-                        data: (user) => user?.email ?? '',
-                        loading: () => '',
-                        error: (_, __) => '-',
-                      ),
-                ),
-                const _CardDivider(),
-                _ChevronTile(
-                  label: '비밀번호 변경',
-                  onTap: () => showPasswordChangeDialog(context),
-                ),
-              ],
-            ),
+            // 전역 currentUserProvider 구독 — 이메일 표시 + hasPassword 분기.
+            // 로딩 중엔 빈 문자열 / 에러면 "-" 로 페일세이프 (계정 화면에서 에러 메시지까지
+            // 노출하면 본질이 흐려지므로 축약). hasPassword 도 로딩/에러 시엔 false 로 폴백 →
+            // "비밀번호 변경" 진입을 일단 숨기는 게 보수적으로 안전.
+            Builder(builder: (_) {
+              final userAsync = ref.watch(currentUserProvider);
+              final email = userAsync.when(
+                data: (u) => u?.email ?? '',
+                loading: () => '',
+                error: (_, __) => '-',
+              );
+              final hasPassword = userAsync.maybeWhen(
+                data: (u) => u?.hasPassword ?? false,
+                orElse: () => false,
+              );
+              return _AccountCard(
+                children: [
+                  _EmailRow(email: email),
+                  // 소셜 전용 가입자(hasPassword=false) 는 "비밀번호 변경" 자체를 숨긴다.
+                  // 백엔드도 시도 시 U03-001 으로 거절하므로 진입 자체를 막는 게 UX 정합.
+                  if (hasPassword) ...[
+                    const _CardDivider(),
+                    _ChevronTile(
+                      label: '비밀번호 변경',
+                      onTap: () => showPasswordChangeDialog(context),
+                    ),
+                  ],
+                ],
+              );
+            }),
             const SizedBox(height: 24),
             const _SectionLabel('소셜 계정 연동'),
             const SizedBox(height: 8),

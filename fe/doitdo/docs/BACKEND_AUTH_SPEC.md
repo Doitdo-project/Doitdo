@@ -55,14 +55,18 @@ Content-Type: application/json
   "accessToken": "우리 서비스 JWT",
   "refreshToken": "리프레시 토큰",
   "user": {
-    "id": 1,
-    "nickname": "...",
-    "email": "..."
+    "userId": 1,
+    "username": "...",
+    "email": "...",
+    "hasPassword": true
   }
 }
 ```
 
 > 실제 응답 포맷(필드명)은 백엔드 확정 후 `AuthResponseDto.fromJson` 매핑 조정 필요.
+>
+> `hasPassword` — 일반 가입자(이메일/비번)는 true, 소셜 전용 가입자는 false.
+> 프론트는 이 값으로 "비밀번호 변경" 진입을 분기한다(소셜 전용은 행 자체를 숨김).
 
 ## 프론트에서 토큰 사용
 
