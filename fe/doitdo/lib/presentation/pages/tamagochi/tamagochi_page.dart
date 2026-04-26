@@ -368,6 +368,8 @@ bool _isTodayTodo(Todo todo, DateTime today) {
   switch (todo.dateType) {
     case TodoDateType.normal:
       return todo.date != null && sameDay(todo.date!, today);
+    case TodoDateType.someday:
+      return false;
     case TodoDateType.range:
       final start = todo.rangeStart;
       final end = todo.rangeEnd;

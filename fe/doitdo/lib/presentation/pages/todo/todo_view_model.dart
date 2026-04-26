@@ -36,6 +36,7 @@ class TodoViewModel extends StateNotifier<TodoState> {
   TodoDateType _mapTypeFromServer(String? type) {
     if (type == 'PERIOD') return TodoDateType.range;
     if (type == 'RECURRING') return TodoDateType.repeat;
+    if (type == 'SOMEDAY') return TodoDateType.someday;
     return TodoDateType.normal;
   }
 
@@ -58,6 +59,8 @@ class TodoViewModel extends StateNotifier<TodoState> {
           switch (t.dateType) {
             case TodoDateType.normal:
               return !start.isBefore(today);
+            case TodoDateType.someday:
+              return false;
 
             case TodoDateType.range:
               if (t.rangeEnd == null) return !start.isBefore(today);
@@ -83,6 +86,8 @@ class TodoViewModel extends StateNotifier<TodoState> {
             case TodoDateType.normal:
             // NORMAL: 오늘 이전 날짜
               return start.isBefore(today);
+            case TodoDateType.someday:
+              return false;
 
             case TodoDateType.range:
             // PERIOD: endDate가 오늘 이전이어야 완전히 지난 것
@@ -142,6 +147,8 @@ class TodoViewModel extends StateNotifier<TodoState> {
               // ✅ PERIOD: 범위 내에 있으면 표시
               return !sel.isBefore(start) &&
                   (endDay == null || !sel.isAfter(endDay));
+            } else if (t.dateType == TodoDateType.someday) {
+              return false;
             } else {
               // NORMAL: 날짜 일치
               return isSameDay(t.date!, selectedDay);
@@ -207,10 +214,10 @@ class TodoViewModel extends StateNotifier<TodoState> {
       //   date가 null이어도 rangeEnd가 있으면 날짜 있는 할 일
       state = state.copyWith(
         allTodos: allFetched
-            .where((t) => t.date != null || t.rangeEnd != null)
+            .where((t) => t.dateType != TodoDateType.someday)
             .toList(),
         allSomedayTodos: allFetched
-            .where((t) => t.date == null && t.rangeEnd == null)
+            .where((t) => t.dateType == TodoDateType.someday)
             .toList(),
       );
 
@@ -379,6 +386,7 @@ class TodoViewModel extends StateNotifier<TodoState> {
         category:  finalTodo.category.name,
         type: switch (finalTodo.dateType) {
           TodoDateType.normal => 'NORMAL',
+          TodoDateType.someday => 'SOMEDAY',
           TodoDateType.range  => 'PERIOD',
           TodoDateType.repeat => 'RECURRING',
         },
@@ -446,23 +454,35 @@ class TodoViewModel extends StateNotifier<TodoState> {
   }
 
   Future<void> updateSomedayTodo(Todo updated) async {
+    final normalized = updated.copyWith(
+      dateType: TodoDateType.someday,
+      date: null,
+      rangeStart: null,
+      rangeEnd: null,
+      repeatType: null,
+      repeatStartDate: null,
+      repeatEndDate: null,
+      period: null,
+      repeatDays: null,
+    );
+
     state = state.copyWith(
       allSomedayTodos: state.allSomedayTodos
-          .map((t) => t.id == updated.id ? updated : t)
+          .map((t) => t.id == normalized.id ? normalized : t)
           .toList(),
     );
     _updateDisplayedTodos();
 
     await AsyncValue.guard(() => _repository.updateTodo(
-      updated.id,
+      normalized.id,
       TodoUpdateRequestDto(
-        title:     updated.title,
-        category:  updated.category.name,
-        type:      'NORMAL',
+        title:     normalized.title,
+        category:  normalized.category.name,
+        type:      'SOMEDAY',
         startDate: null,
         endDate:   null,
-        alarmTime: updated.alarmEnabled ? _formatTime(updated.alarmTime) : null,
-        clearAlertTime: updated.alarmEnabled ? null : true, // ✏️ 추가
+        alarmTime: normalized.alarmEnabled ? _formatTime(normalized.alarmTime) : null,
+        clearAlertTime: normalized.alarmEnabled ? null : true, // ✏️ 추가
       ),
     ));
   }

@@ -22,6 +22,8 @@ class TodoRepositoryImpl extends BaseRepository implements TodoRepository {
     switch (todo.dateType) {
       case TodoDateType.normal:
         startDateObj = todo.date;
+      case TodoDateType.someday:
+        startDateObj = null;
       case TodoDateType.range:
         startDateObj = todo.rangeStart;
       case TodoDateType.repeat:
@@ -69,6 +71,7 @@ class TodoRepositoryImpl extends BaseRepository implements TodoRepository {
       'category': todo.category.name,
       'type': switch (todo.dateType) {
         TodoDateType.normal => 'NORMAL',
+        TodoDateType.someday => 'SOMEDAY',
         TodoDateType.range  => 'PERIOD',
         TodoDateType.repeat => 'RECURRING',
       },
