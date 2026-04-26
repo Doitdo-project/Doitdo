@@ -200,7 +200,8 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                   isScrollControlled: true,
                   backgroundColor: Colors.transparent,
                   builder: (_) => TodoDateSheet(
-                      initialDate: _dateResult?.date ?? DateTime.now()),
+                      initialDate: _dateResult?.date ?? DateTime.now(),
+                      initialResult: _dateResult),
                 );
                 if (result != null) setState(() => _dateResult = result);
               },

@@ -124,12 +124,12 @@ public class TodoServiceImpl implements TodoService {
 
 	private Sort resolveSort(String sortParam) {
 		if (sortParam == null) {
-			return Sort.by(Order.asc("startDate").nullsLast(), Order.asc("todoId"));
+			return Sort.by(Order.asc("startDate"), Order.asc("todoId"));
 		}
 		return switch (sortParam.toLowerCase()) {
-			case "category" -> Sort.by(Order.asc("categoryId"), Order.asc("startDate").nullsLast(), Order.asc("todoId"));
-			case "priority" -> Sort.by(Order.desc("priority"), Order.asc("startDate").nullsLast(), Order.asc("todoId"));
-			default -> Sort.by(Order.asc("startDate").nullsLast(), Order.asc("todoId"));
+			case "category" -> Sort.by(Order.asc("categoryId"), Order.asc("startDate"), Order.asc("todoId"));
+			case "priority" -> Sort.by(Order.desc("priority"), Order.asc("startDate"), Order.asc("todoId"));
+			default -> Sort.by(Order.asc("startDate"), Order.asc("todoId"));
 		};
 	}
 
@@ -364,8 +364,8 @@ public class TodoServiceImpl implements TodoService {
 
 	private Sort resolveSearchSort(String sortParam) {
 		return switch (sortParam.toLowerCase()) {
-			case "category" -> Sort.by(Order.asc("categoryId").nullsLast(), Order.asc("startDate").nullsLast(), Order.asc("todoId"));
-			default -> Sort.by(Order.asc("startDate").nullsLast(), Order.asc("todoId"));
+			case "category" -> Sort.by(Order.asc("categoryId"), Order.asc("startDate"), Order.asc("todoId"));
+			default -> Sort.by(Order.asc("startDate"), Order.asc("todoId"));
 		};
 	}
 
