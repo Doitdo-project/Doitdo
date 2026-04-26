@@ -6,15 +6,17 @@ import android.content.SharedPreferences
 /**
  * Flutter 앱 ↔ AppWidget 간 데이터 공유 추상화.
  *
- * `home_widget` 패키지(0.7.x)는 Android 측에서 키-값을 그대로 SharedPreferences
- * `${packageName}.HomeWidgetPreferences` 에 저장한다 (prefix 없음). 위젯에서도
- * 동일한 raw key 로 읽으면 된다.
+ * `home_widget` 패키지(0.7.0+1) 의 `HomeWidgetPlugin.PREFERENCES` 상수와 동일한
+ * SharedPreferences 이름(`"HomeWidgetPreferences"` — packageName prefix 없음)
+ * 으로 read 해야 같은 영역을 공유한다. 잘못된 이름으로 열면 공백으로만 보여
+ * "로그인이 필요해요" 안내가 계속 뜸.
  *
  * 모든 키 상수는 Dart 의 `WidgetSyncService._keyXxx` 와 1:1 일치 — 변경 시
  * 양쪽 동기화 필수.
  */
 object WidgetSharedStore {
-    private const val PREFS_NAME = "com.d107.doitdo.HomeWidgetPreferences"
+    // home_widget 0.7.0+1 의 HomeWidgetPlugin.PREFERENCES 와 동일해야 한다.
+    private const val PREFS_NAME = "HomeWidgetPreferences"
 
     // Dart `WidgetSyncService` 의 _keyXxx 와 동일.
     const val KEY_PAYLOAD = "doitdo.widget.payload"
