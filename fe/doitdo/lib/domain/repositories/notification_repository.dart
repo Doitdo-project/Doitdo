@@ -27,4 +27,7 @@ abstract class NotificationRepository {
 
   /// 단일 알림 삭제 (소프트 삭제).
   Future<void> deleteNotification(int notificationId);
+
+  /// 본인의 모든 알림 소프트 삭제.
+  Future<void> deleteAllNotifications();
 }
