@@ -6,6 +6,8 @@ import 'package:doitdo/data/models/change_password_request_dto.dart';
 import 'package:doitdo/data/models/check_email_response_dto.dart';
 import 'package:doitdo/data/models/check_username_response_dto.dart';
 import 'package:doitdo/data/models/empty_data_dto.dart';
+import 'package:doitdo/data/models/register_agreements_request_dto.dart';
+import 'package:doitdo/data/models/register_birth_date_request_dto.dart';
 import 'package:doitdo/data/models/user_dto.dart';
 import 'package:doitdo/data/models/withdraw_request_dto.dart';
 
@@ -23,7 +25,7 @@ part 'user_api.g.dart';
 abstract class UserApi {
   factory UserApi(Dio dio, {String baseUrl}) = _UserApi;
 
-  /// 내 정보 조회. 로그인된 사용자의 최신 `{userId, username, email}` 을 반환.
+  /// 내 정보 조회. 로그인된 사용자의 최신 `UserInfoResp` 를 반환.
   /// 인증 필요(Bearer). `AuthInterceptor` 가 자동 주입.
   @GET('/api/users/me')
   Future<ApiResponse<UserDto>> getMe();
@@ -33,6 +35,22 @@ abstract class UserApi {
   @POST('/api/users/me/password')
   Future<ApiResponse<EmptyDataDto>> changePassword(
     @Body() ChangePasswordRequestDto body,
+  );
+
+  /// 온보딩 1단계 — 생년월일 등록.
+  /// 만 14세 미만이면 서버가 계정 hard delete 후 403 (G00-003) 반환 → 토큰 무효화 처리.
+  /// 성공 시 갱신된 [UserDto] 가 내려온다 (birthDateRegistered=true).
+  @POST('/api/users/me/birth-date')
+  Future<ApiResponse<UserDto>> registerBirthDate(
+    @Body() RegisterBirthDateRequestDto body,
+  );
+
+  /// 온보딩 2단계 — 약관 동의 등록.
+  /// 이용약관/개인정보처리방침 동의는 필수(true), 마케팅은 선택. 서버에서 한 번 더 검증.
+  /// 성공 시 갱신된 [UserDto] 가 내려온다 (agreementsAccepted=true).
+  @POST('/api/users/me/agreements')
+  Future<ApiResponse<UserDto>> registerAgreements(
+    @Body() RegisterAgreementsRequestDto body,
   );
 
   /// 이메일 중복 확인. `data.available == true` 면 가입 가능.

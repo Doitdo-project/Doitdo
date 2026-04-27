@@ -10,6 +10,8 @@ class User {
     required this.username,
     required this.email,
     required this.hasPassword,
+    required this.birthDateRegistered,
+    required this.agreementsAccepted,
   });
 
   /// 서버 PK (`userId`).
@@ -27,17 +29,36 @@ class User {
   /// 소셜(Kakao/Google/Apple) 전용 가입자는 false → "비밀번호 변경" 진입을 숨겨야 한다.
   final bool hasPassword;
 
+  /// 온보딩 1단계 — 생년월일 등록 완료 여부.
+  ///
+  /// 첫 로그인(이메일/소셜 가리지 않고) 시점에 false 면 BirthDate 온보딩 화면으로 보낸다.
+  /// 서버 스펙: `UserInfoResp.birthDateRegistered`.
+  final bool birthDateRegistered;
+
+  /// 온보딩 2단계 — 약관(이용약관/개인정보처리방침/마케팅) 동의 완료 여부.
+  ///
+  /// 1단계가 끝났는데 false 면 Agreements 화면으로 보낸다.
+  /// 서버 스펙: `UserInfoResp.agreementsAccepted`.
+  final bool agreementsAccepted;
+
+  /// 두 단계 모두 끝난 사용자만 메인 탭으로 진입시킨다.
+  bool get isOnboardingComplete => birthDateRegistered && agreementsAccepted;
+
   User copyWith({
     int? userId,
     String? username,
     String? email,
     bool? hasPassword,
+    bool? birthDateRegistered,
+    bool? agreementsAccepted,
   }) =>
       User(
         userId: userId ?? this.userId,
         username: username ?? this.username,
         email: email ?? this.email,
         hasPassword: hasPassword ?? this.hasPassword,
+        birthDateRegistered: birthDateRegistered ?? this.birthDateRegistered,
+        agreementsAccepted: agreementsAccepted ?? this.agreementsAccepted,
       );
 
   @override
@@ -48,8 +69,17 @@ class User {
           userId == other.userId &&
           username == other.username &&
           email == other.email &&
-          hasPassword == other.hasPassword;
+          hasPassword == other.hasPassword &&
+          birthDateRegistered == other.birthDateRegistered &&
+          agreementsAccepted == other.agreementsAccepted;
 
   @override
-  int get hashCode => Object.hash(userId, username, email, hasPassword);
+  int get hashCode => Object.hash(
+        userId,
+        username,
+        email,
+        hasPassword,
+        birthDateRegistered,
+        agreementsAccepted,
+      );
 }
