@@ -100,8 +100,20 @@ dev_dependencies:
   riverpod_generator: ^2.6.4
   retrofit_generator: ^9.7.0
 
+  # 앱 아이콘 자동 생성 (iOS / Android).
+  # 실행: `dart run flutter_launcher_icons`
+  # 안드로이드 아이콘은 이미 수동으로 적용되어 있어 ios: true / android: false 로 둔다.
+  # 안드로이드까지 재생성하려면 android: "ic_launcher" 로 바꾸고 adaptive_icon_* 옵션 활성화.
+  flutter_launcher_icons: ^0.14.4
+
   # 테스트
   mockito: ^5.4.5
+
+flutter_launcher_icons:
+  ios: true
+  android: false
+  image_path: "assets/icons/app_icon.png"
+  remove_alpha_ios: true
 
 flutter:
   uses-material-design: true
