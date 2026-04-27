@@ -1,17 +1,178 @@
+import 'dart:async';
+import 'dart:math';
+
+import 'package:flutter/painting.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:doitdo/core/utils/app_logger.dart';
+import 'package:doitdo/domain/entities/character.dart';
+import 'package:doitdo/domain/repositories/character_repository.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
+import 'package:doitdo/presentation/providers/app_data_providers.dart';
 
 /// 다마고치 메인 화면의 ViewModel.
 ///
 /// 캐릭터(이름/성장률) 는 `characterViewModelProvider`, 할 일 목록은
 /// `todoViewModelProvider` 에서 직접 watch 한다. 이 ViewModel 에는 BE 엔드포인트가
-/// 아직 없는 말풍선 / 스트릭 상태만 남아있다.
+/// 아직 없는 말풍선 / 화면 전용 인터랙션 상태만 남아있다.
 class TamagochiViewModel extends StateNotifier<TamagochiState> {
-  TamagochiViewModel() : super(TamagochiState.initial);
+  TamagochiViewModel(this._characterRepository)
+      : super(
+          // 진입 직후엔 캐릭터 탭이 가능한지를 사용자가 모르기 때문에 가벼운
+          // 가이드 문구를 깔아두고, 실제 탭이 오면 랜덤 풀로 교체한다.
+          const TamagochiState(speechBubble: '나를 한 번 눌러봐!'),
+        );
+
+  final CharacterRepository _characterRepository;
+
+  /// 캐릭터 탭 인터랙션 in-flight 여부. 빠른 연타 시 같은 action 으로 중복 핑이
+  /// 나가지 않게 막는 용도(말풍선 자체는 매 탭마다 즉시 업데이트되므로 UX 손해 없음).
+  bool _tapping = false;
+
+  /// action gif 를 [_actionDuration] 동안만 보여주고 정적 png 로 되돌릴 때 쓰는 타이머.
+  /// 재탭/새 응답이 오면 cancel 후 다시 스케줄해서 항상 "마지막 응답 기준 N초" 가 되게 한다.
+  Timer? _revertTimer;
+  static const Duration _actionDuration = Duration(seconds: 2);
+
+  static final Random _rng = Random();
+
+  @override
+  void dispose() {
+    _revertTimer?.cancel();
+    super.dispose();
+  }
+
+  /// 홈 캐릭터 슬롯이 탭됐을 때 호출.
+  ///
+  /// 동작:
+  ///   1. 다음 action 결정 — 마지막이 eye 였으면 idle, 그 외엔 eye (현 시점은
+  ///      idle ↔ eye 만 토글). null 상태(첫 탭)는 eye 부터 시작해 "방금 눌렀다"
+  ///      는 시각적 상호작용이 이미지 변화로 드러나게 한다.
+  ///   2. 즉시 state 의 [TamagochiState.speechBubble] 을 랜덤 메시지로 갱신
+  ///      (네트워크보다 먼저 사용자에게 반응을 보여준다).
+  ///   3. 백그라운드에서 `GET /api/characters/me/actions/{actionType}` 호출.
+  ///      현재는 응답을 UI 에 반영하지 않고 로그만 남긴다 — 실패해도 말풍선은
+  ///      그대로 유지되어 인터랙션이 끊겨 보이지 않는다.
+  ///
+  /// [remainingTodayTodos] 는 "오늘의 할 일" 미완료 개수. 0 이면 칭찬 풀,
+  /// 1 이상이면 잔여 todo 풀이 메시지 후보에 추가된다.
+  void onCharacterTap({required int remainingTodayTodos}) {
+    final nextAction = switch (state.lastTapAction) {
+      CharacterAction.eye => CharacterAction.idle,
+      _ => CharacterAction.eye,
+    };
+    final message = _pickSpeechBubble(remainingTodayTodos);
+    state = state.copyWith(
+      speechBubble: message,
+      lastTapAction: nextAction,
+    );
+
+    if (_tapping) return;
+    _tapping = true;
+    _triggerActionAsync(nextAction).whenComplete(() => _tapping = false);
+  }
+
+  Future<void> _triggerActionAsync(CharacterAction action) async {
+    try {
+      final url = await _characterRepository.triggerAction(action);
+      if (!mounted) return;
+      if (url.isEmpty) return;
+      // gif 를 ImageCache 에 먼저 적재 → state 를 바꿔 위젯이 mount 될 때
+      // Image.network 가 즉시 첫 프레임을 그려 빈 영역(깜빡임) 이 안 생긴다.
+      await _precacheNetworkImage(url);
+      if (!mounted) return;
+      // 같은 url 이 다시 와도 위젯 key 가 바뀌면 gif 가 처음부터 재생된다.
+      state = state.copyWith(
+        actionUrl: url,
+        actionTick: state.actionTick + 1,
+      );
+      // 응답 도착 시점부터 2초 카운트 — 재탭/새 응답이 오면 새 타이머로 교체된다.
+      _revertTimer?.cancel();
+      _revertTimer = Timer(_actionDuration, () {
+        if (!mounted) return;
+        if (state.actionUrl == null) return;
+        state = state.copyWith(clearActionUrl: true);
+      });
+    } catch (e, st) {
+      // 인터랙션 핑이라 실패해도 사용자 알림은 안 띄운다 — 무한 스팸 방지 +
+      // 화면이 멀쩡히 동작하는데 에러만 뜨는 어색함을 피하려는 의도.
+      appLogger.d(
+        'character action ping failed: ${action.serverValue}',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  /// [precacheImage] 를 BuildContext 없이 호출하기 위한 헬퍼.
+  /// 첫 프레임 디코드까지 끝나면 resolve, 실패해도 그냥 통과시켜 후속 swap 을
+  /// 막지 않는다(그 경우 Image.network 가 직접 로드하므로 결과적으로 동일).
+  Future<void> _precacheNetworkImage(String url) async {
+    final completer = Completer<void>();
+    final stream = NetworkImage(url).resolve(ImageConfiguration.empty);
+    late ImageStreamListener listener;
+    listener = ImageStreamListener(
+      (_, _) {
+        stream.removeListener(listener);
+        if (!completer.isCompleted) completer.complete();
+      },
+      onError: (_, _) {
+        stream.removeListener(listener);
+        if (!completer.isCompleted) completer.complete();
+      },
+    );
+    stream.addListener(listener);
+    return completer.future;
+  }
+
+  String _pickSpeechBubble(int remainingTodayTodos) {
+    final pool = <String>[
+      ..._guideMessages,
+      ..._moodMessages,
+      if (remainingTodayTodos <= 0)
+        ..._allDoneMessages
+      else ...[
+        ..._remainingMessages,
+        '오늘 할 일이 $remainingTodayTodos개 남았어!',
+        '$remainingTodayTodos개만 더 끝내면 돼!',
+      ],
+    ];
+    return pool[_rng.nextInt(pool.length)];
+  }
+
+  // ─── 말풍선 풀 ──────────────────────────────────────────────────
+  // 문구는 가볍게/짧게 유지(말풍선 폭이 좁음). 16~20자 이내.
+
+  static const List<String> _guideMessages = [
+    '나 자주 눌러줘!',
+    '쓰담쓰담 좋아~',
+    '여기 눌러봐, 반응할게!',
+    '심심하면 또 눌러줘',
+  ];
+
+  static const List<String> _moodMessages = [
+    '오늘 기분 어때?',
+    '같이 있어서 좋아!',
+    '졸린 듯... 말 듯...',
+    '뭔가 신난다!',
+  ];
+
+  static const List<String> _remainingMessages = [
+    '아직 할 일이 남았어!',
+    '할 일 끝내고 같이 놀자!',
+    '오늘도 화이팅이야!',
+    '조금만 더 힘내봐~',
+  ];
+
+  static const List<String> _allDoneMessages = [
+    '오늘 할 일 다 끝냈네!',
+    '오늘 정말 멋졌어!',
+    '수고했어, 푹 쉬자~',
+    '같이 빈둥거려볼까?',
+  ];
 }
 
 final tamagochiViewModelProvider =
     StateNotifierProvider.autoDispose<TamagochiViewModel, TamagochiState>(
-  (ref) => TamagochiViewModel(),
+  (ref) => TamagochiViewModel(ref.watch(characterRepositoryProvider)),
 );

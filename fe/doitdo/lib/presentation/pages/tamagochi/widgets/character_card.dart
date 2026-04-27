@@ -24,6 +24,7 @@ class CharacterCard extends StatelessWidget {
     this.onTapShop,
     this.onTapCollection,
     this.onEggTap,
+    this.onCharacterTap,
     this.topSafePadding = 0,
   });
 
@@ -38,6 +39,10 @@ class CharacterCard extends StatelessWidget {
 
   /// 알을 탭했을 때 호출. 부화 페이지로 이동 + 복귀 시 재조회는 부모가 담당.
   final VoidCallback? onEggTap;
+
+  /// 부화 이후 캐릭터 본체를 탭했을 때 호출. 서버에 액션 핑을 보내고 말풍선을
+  /// 갱신하는 인터랙션. 알 단계에서는 [onEggTap] 으로 라우팅된다.
+  final VoidCallback? onCharacterTap;
 
   /// 카드가 상태바 영역까지 확장될 때 content 가 상태바 아이콘과 겹치지 않도록
   /// 밀어낼 상단 여백. 배경(grass) 은 이 영역까지 그대로 이어지고, 내부 content
@@ -96,7 +101,6 @@ class CharacterCard extends StatelessWidget {
               children: [
                 if (_speechText != null) ...[
                   _SpeechBubble(text: _speechText!),
-                  SizedBox(height: 6.h),
                 ],
                 _buildCharacterSlot(),
               ],
@@ -248,7 +252,19 @@ class CharacterCard extends StatelessWidget {
     if (c.isEgg) {
       return _EggSlot(imageUrl: c.thumbnailUrl, onTap: onEggTap);
     }
-    return _GrownCharacter(thumbnailUrl: c.thumbnailUrl);
+    // 탭 후 서버가 내려준 동작 gif 가 있으면 그 url 로 잠시 swap.
+    // tick 을 key 에 섞어 같은 url 이 다시 와도 처음부터 재생되게 한다.
+    // 정적 png 와 액션 gif 는 캔버스 비율이 달라 같은 height 로 그리면 gif 쪽
+    // 캐릭터가 작아 보인다 — 그래서 액션 표시 동안만 살짝 키워준다.
+    final overrideUrl = state.actionUrl;
+    final isAction = overrideUrl != null && overrideUrl.isNotEmpty;
+    final imageUrl = isAction ? overrideUrl : c.thumbnailUrl;
+    return _GrownCharacter(
+      key: ValueKey('grown-$imageUrl-${state.actionTick}'),
+      thumbnailUrl: imageUrl,
+      imageHeight: isAction ? 120.h : 94.h,
+      onTap: onCharacterTap,
+    );
   }
 }
 
@@ -475,22 +491,52 @@ class _StageBadge extends StatelessWidget {
 
 /// 이미 부화한 (egg 이외의) 캐릭터. **항상** 서버 thumbnailUrl 을 사용.
 /// url 이 비었거나 로드 실패 시에만 중립 플레이스홀더로 대체.
+///
+/// [onTap] 이 주어지면 캐릭터 영역을 탭으로 받아 인터랙션 핑(IDLE/EYE) + 말풍선
+/// 랜덤 갱신을 트리거한다. plceholder/이미지 어느 쪽이든 동일 hit area 가 잡히도록
+/// HitTestBehavior.opaque 로 묶는다.
 class _GrownCharacter extends StatelessWidget {
-  const _GrownCharacter({required this.thumbnailUrl});
+  const _GrownCharacter({
+    super.key,
+    required this.thumbnailUrl,
+    required this.imageHeight,
+    this.onTap,
+  });
 
   final String thumbnailUrl;
 
+  /// 실제 이미지가 그려지는 height. 정적 png 와 액션 gif 의 캔버스 padding 이
+  /// 달라 같은 height 면 캐릭터 사이즈가 달라 보여 호출자가 직접 결정한다.
+  /// 슬롯 자체 박스는 [_slotHeight] 로 고정해 png ↔ gif 전환 시 위 말풍선이
+  /// 흔들리지 않게 한다.
+  final double imageHeight;
+
+  final VoidCallback? onTap;
+
+  /// 캐릭터 슬롯이 차지하는 고정 box height. png(80.h) / gif(120.h) 중 큰 값으로
+  /// 잡아 두면 어느 쪽을 그리든 위·아래 레이아웃이 움직이지 않는다.
+  static double get _slotHeight => 120.0.h;
+
   @override
   Widget build(BuildContext context) {
-    if (thumbnailUrl.isEmpty) {
-      return const _CharacterPlaceholder();
-    }
-    return Image.network(
-      thumbnailUrl,
-      height: 80.h,
-      fit: BoxFit.contain,
-      filterQuality: FilterQuality.medium,
-      errorBuilder: (_, _, _) => const _CharacterPlaceholder(),
+    final image = thumbnailUrl.isEmpty
+        ? const _CharacterPlaceholder()
+        : Image.network(
+            thumbnailUrl,
+            height: imageHeight,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.medium,
+            errorBuilder: (_, _, _) => const _CharacterPlaceholder(),
+          );
+    final slot = SizedBox(
+      height: _slotHeight,
+      child: Center(child: image),
+    );
+    if (onTap == null) return slot;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: slot,
     );
   }
 }
