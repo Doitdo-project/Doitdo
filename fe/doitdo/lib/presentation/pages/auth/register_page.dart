@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:doitdo/core/theme/app_text_styles.dart';
+import 'package:doitdo/core/theme/app_theme.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/domain/entities/user.dart';
@@ -180,6 +181,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 인증 화면은 브랜드 크림 톤 일러스트 기반이라 themeMode 와 무관하게 라이트 강제.
+    return Theme(
+      data: AppTheme.light,
+      child: Builder(builder: (context) => _buildBody(context)),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
     final colors = context.colors;
     // 중복체크 결과도 구독해 "사용 가능" 체크 아이콘·에러 메시지가 실시간 갱신되게.
     ref.watch(emailAvailabilityProvider);
