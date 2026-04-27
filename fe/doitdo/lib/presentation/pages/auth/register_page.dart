@@ -11,6 +11,7 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/domain/entities/user.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
+import 'package:doitdo/presentation/navigation/post_auth_destination.dart';
 import 'package:doitdo/presentation/pages/auth/register_view_model.dart';
 import 'package:doitdo/presentation/pages/auth/widgets/auth_pill_button.dart';
 import 'package:doitdo/presentation/pages/auth/widgets/auth_text_field.dart';
@@ -189,7 +190,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         data: (user) {
           if (user == null) return;
           if (!mounted) return;
-          context.go(AppRoutes.tamagochi);
+          // 회원가입 직후엔 birthDate/agreements 가 false 인 신규 계정 → 온보딩으로.
+          context.go(resolvePostAuthDestination(ref, user));
         },
         error: (error, _) {
           if (!mounted) return;

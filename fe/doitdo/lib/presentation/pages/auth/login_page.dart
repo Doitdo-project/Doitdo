@@ -10,6 +10,7 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/domain/entities/user.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
+import 'package:doitdo/presentation/navigation/post_auth_destination.dart';
 import 'package:doitdo/presentation/pages/auth/login_view_model.dart';
 import 'package:doitdo/presentation/pages/auth/widgets/auth_pill_button.dart';
 import 'package:doitdo/presentation/pages/auth/widgets/auth_text_field.dart';
@@ -71,7 +72,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         data: (user) {
           if (user == null) return;
           if (!mounted) return;
-          context.go(AppRoutes.tamagochi);
+          // 온보딩(생년월일/약관) 미완료 사용자는 메인 탭이 아니라 온보딩 단계로 보낸다.
+          context.go(resolvePostAuthDestination(ref, user));
         },
         error: (error, _) {
           if (!mounted) return;
