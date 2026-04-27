@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
+import com.doitdo.domain.tamagotchi.api.dto.resp.CharacterActionUrlResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaDetailCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaDetailResp;
@@ -27,6 +28,7 @@ import com.doitdo.domain.tamagotchi.application.TamagotchiService;
 import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
 import com.doitdo.domain.tamagotchi.entity.UserCharacterHistory;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
+import com.doitdo.domain.tamagotchi.repository.CharacterActionRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterSpeciesBackgroundRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
@@ -42,6 +44,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TamagotchiServiceImpl implements TamagotchiService {
 
+	private final CharacterActionRepository characterActionRepository;
 	private final CharacterRepository characterRepository;
 	private final CharacterUnlockRepository characterUnlockRepository;
 	private final UserCharacterRepository userCharacterRepository;
@@ -404,6 +407,20 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 				com.doitdo.domain.tamagotchi.entity.Character.Stage.EGG
 			)
 		);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public CharacterActionUrlResp getMyCharacterActionUrl(Long userId, String actionType) {
+		UserCharacter userCharacter = userCharacterRepository
+			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
+
+		com.doitdo.domain.tamagotchi.entity.CharacterAction action = characterActionRepository
+			.findByCharacterIdAndActionType(userCharacter.getCharacterId(), actionType)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M09_002));
+
+		return new CharacterActionUrlResp(action.getActionUrl());
 	}
 
 	private com.doitdo.domain.tamagotchi.entity.Character randomEggCharacter(TamagotchiErrorCode errorCode) {

@@ -1,5 +1,6 @@
 package com.doitdo.domain.tamagotchi.application;
 
+import com.doitdo.domain.tamagotchi.api.dto.resp.CharacterActionUrlResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaDetailResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
@@ -25,4 +26,6 @@ public interface TamagotchiService {
 	EvolutionResp evolve(Long userId, Long userCharacterId);
 
 	FarewellResp approveIndependence(Long userId, Boolean approved);
+
+	CharacterActionUrlResp getMyCharacterActionUrl(Long userId, String actionType);
 }

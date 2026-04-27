@@ -138,6 +138,14 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 | `TODO_RECURRING_DAYS_OF_WEEK_REQUIRED` | `T14-001` | 400 | 반복 TODO는 daysOfWeek가 필요함 |
 | `TODO_RECURRING_START_DATE_DAY_MISMATCH` | `T14-002` | 400 | 반복 TODO의 startDate 요일이 daysOfWeek에 포함되어야 함 |
 
+### `TamagotchiErrorCode` 추가 코드 (character action url, 2026-04)
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `M09_001` | `M09-001` | 401 | 인증 토큰이 없거나 유효하지 않음 |
+| `M09_002` | `M09-002` | 404 | 해당 캐릭터의 요청 액션을 찾을 수 없음 |
+| `M09_003` | `M09-003` | 500 | 서버 내부 오류 |
+
 ## 5. 새 코드 추가 절차
 
 1. 노션 API 명세서에서 코드 충돌 여부 확인 (외부 SSOT).
