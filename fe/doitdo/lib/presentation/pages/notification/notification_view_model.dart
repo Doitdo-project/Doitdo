@@ -7,31 +7,54 @@ import 'package:doitdo/presentation/providers/app_data_providers.dart';
 
 // ─────────────────────────────────────────────
 // 알림 유형 (서버 enum → 앱 내부 enum)
+//
+// 서버 type 은 7종 (swagger 기준):
+//   REMINDER_EVENING / REMINDER_MORNING
+//   TODO_DONE / TODO_REMINDER / TODO_SNOOZED
+//   TAMAGOTCHI_FAREWELL / TAMAGOTCHI_GROWTH
 // ─────────────────────────────────────────────
 enum NotificationType {
-  evening,           // REMINDER_EVENING
-  morning,           // REMINDER_MORNING
-  todoUnlock,        // TODO_UNLOCK
-  tamagochiFarewell, // TAMAGOTCHI_FAREWELL
+  evening,            // REMINDER_EVENING
+  morning,            // REMINDER_MORNING
+  todoDone,           // TODO_DONE
+  todoReminder,       // TODO_REMINDER
+  todoSnoozed,        // TODO_SNOOZED
+  tamagochiFarewell,  // TAMAGOTCHI_FAREWELL
+  tamagochiGrowth,    // TAMAGOTCHI_GROWTH
+  unknown,            // 미래 type 안전 폴백
 }
 
 extension NotificationTypeX on NotificationType {
   String get label {
     switch (this) {
-      case NotificationType.evening:          return '저녁 회고';
-      case NotificationType.morning:          return '아침 명상';
-      case NotificationType.todoUnlock:       return '할 일 해제';
-      case NotificationType.tamagochiFarewell: return '작별 인사';
+      case NotificationType.evening:            return '저녁 회고';
+      case NotificationType.morning:            return '아침 리마인드';
+      case NotificationType.todoDone:           return '할 일 완료';
+      case NotificationType.todoReminder:       return '할 일 알림';
+      case NotificationType.todoSnoozed:        return '할 일 미루기';
+      case NotificationType.tamagochiFarewell:  return '작별 인사';
+      case NotificationType.tamagochiGrowth:    return '다마고치 성장';
+      case NotificationType.unknown:            return '알림';
     }
   }
+
+  /// 화면 필터(NotiFilter.todoTask) 에 묶일 "할 일" 카테고리 여부.
+  bool get isTodoCategory =>
+      this == NotificationType.todoDone ||
+      this == NotificationType.todoReminder ||
+      this == NotificationType.todoSnoozed;
 }
 
 NotificationType _toAppType(NotificationTypeDto dto) {
   switch (dto) {
     case NotificationTypeDto.reminderEvening:   return NotificationType.evening;
     case NotificationTypeDto.reminderMorning:   return NotificationType.morning;
-    case NotificationTypeDto.todoUnlock:        return NotificationType.todoUnlock;
+    case NotificationTypeDto.todoDone:          return NotificationType.todoDone;
+    case NotificationTypeDto.todoReminder:      return NotificationType.todoReminder;
+    case NotificationTypeDto.todoSnoozed:       return NotificationType.todoSnoozed;
     case NotificationTypeDto.tamagochiFarewell: return NotificationType.tamagochiFarewell;
+    case NotificationTypeDto.tamagochiGrowth:   return NotificationType.tamagochiGrowth;
+    case NotificationTypeDto.unknown:           return NotificationType.unknown;
   }
 }
 
@@ -76,23 +99,24 @@ class NotificationItem {
 
 // ─────────────────────────────────────────────
 // 필터 칩 enum
+// "할 일" 필터는 todoDone / todoReminder / todoSnoozed 3종을 묶어 표시.
 // ─────────────────────────────────────────────
 enum NotiFilter {
-  all,        // 전체
-  unread,     // 안 읽음
-  evening,    // 저녁
-  morning,    // 아침
-  todoUnlock, // 할 일
+  all,      // 전체
+  unread,   // 안 읽음
+  evening,  // 저녁
+  morning,  // 아침
+  todoTask, // 할 일 (TODO_DONE + TODO_REMINDER + TODO_SNOOZED)
 }
 
 extension NotiFilterX on NotiFilter {
   String get label {
     switch (this) {
-      case NotiFilter.all:        return '전체';
-      case NotiFilter.unread:     return '안 읽음';
-      case NotiFilter.evening:    return '저녁';
-      case NotiFilter.morning:    return '아침';
-      case NotiFilter.todoUnlock: return '할 일';
+      case NotiFilter.all:      return '전체';
+      case NotiFilter.unread:   return '안 읽음';
+      case NotiFilter.evening:  return '저녁';
+      case NotiFilter.morning:  return '아침';
+      case NotiFilter.todoTask: return '할 일';
     }
   }
 }
@@ -127,8 +151,8 @@ class NotificationState {
         return items.where((n) => n.type == NotificationType.evening).toList();
       case NotiFilter.morning:
         return items.where((n) => n.type == NotificationType.morning).toList();
-      case NotiFilter.todoUnlock:
-        return items.where((n) => n.type == NotificationType.todoUnlock).toList();
+      case NotiFilter.todoTask:
+        return items.where((n) => n.type.isTodoCategory).toList();
     }
   }
 
