@@ -59,7 +59,7 @@ e2e 테스트로 DB 에 남은 계정·연관 데이터를 일괄 삭제.
 ```bash
 python3 be/scripts/e2e/cleanup.py              # dry-run (영향 범위만 보고)
 python3 be/scripts/e2e/cleanup.py --yes        # 실제 삭제
-python3 be/scripts/e2e/cleanup.py --env-file be/env/dev.env --yes
+python3 be/scripts/e2e/cleanup.py --env-file be/env/.env.dev --yes
 ```
 
 로컬 Docker 환경 (포트 3307, `be/env/local.env`):

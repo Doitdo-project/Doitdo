@@ -22,7 +22,7 @@
 - [`swagger.md`](api/swagger.md) — 컨트롤러 작성 가이드 (핵심 산출물)
 
 ### ops/ — 환경/실행
-- [`env-setup.md`](ops/env-setup.md) — JDK 21 + `env/dev.env` 셋업
+- [`env-setup.md`](ops/env-setup.md) — JDK 21 + `env/.env.dev` 셋업
 - [`run-local.md`](ops/run-local.md) — `bootRun` + 헬스체크 + Swagger UI
 - [`deployment.md`](ops/deployment.md) — 배포 절차 (placeholder, INFRA 팀 자료 후속 정리)
 

@@ -37,7 +37,7 @@ out/
 .vscode/
 
 ### Local env files ###
-env/dev.env
+env/.env.dev
 env/prod.env
 env/local.env
 

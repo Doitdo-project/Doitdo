@@ -17,23 +17,23 @@
 DB 접속정보는 git에 올리지 않는다. 템플릿을 복사해 채워 사용한다.
 
 ```bash
-cp be/env/dev.env.example be/env/dev.env
+cp be/env/dev.env.example be/env/.env.dev
 # 편집기로 열어서 DB 호스트/유저/비밀번호 입력
 ```
 
 | 파일 | 용도 | git 추적 |
 |---|---|---|
 | `env/dev.env.example` | 템플릿 (키만, 값 비움) | O |
-| `env/dev.env` | 로컬 dev 프로파일 실제 값 | X (gitignore) |
+| `env/.env.dev` | 로컬 dev 프로파일 실제 값 | X (gitignore) |
 | `env/prod.env.example` | 운영용 템플릿 | O |
 
-로딩 위치: `src/main/resources/application-dev.yml` 의 `spring.config.import` 가 `env/dev.env` 를 읽는다.
+로딩 위치: `src/main/resources/application-dev.yml` 의 `spring.config.import` 가 `env/.env.dev` 를 읽는다.
 
 ## 2-1. 선택 env 키
 
 | 키 | 기본값 | 허용값 | 용도 |
 |---|---|---|---|
-| `jpa.ddl.auto` | `update` | `validate` / `update` / `create` / `create-drop` / `none` | Hibernate 스키마 전략. 공용 dev DB 에 영향 가므로 개인 환경에선 `validate` 권장. `env/dev.env` 에 지정. |
+| `jpa.ddl.auto` | `update` | `validate` / `update` / `create` / `create-drop` / `none` | Hibernate 스키마 전략. 공용 dev DB 에 영향 가므로 개인 환경에선 `validate` 권장. `env/.env.dev` 에 지정. |
 
 ## 2-2. Firebase (FCM push) 설정
 
@@ -52,7 +52,7 @@ chmod 600 be/secrets/firebase-service-account-dev.json
 
 ### env 설정
 
-로컬 (`be/env/dev.env`, kebab-case dot 포맷):
+로컬 (`be/env/.env.dev`, kebab-case dot 포맷):
 
 ```properties
 firebase.enabled=true
@@ -60,7 +60,7 @@ firebase.service-account-path=/absolute/path/to/be/secrets/firebase-service-acco
 firebase.project-id=doitdo-c3fcd
 ```
 
-운영/테스트 서버의 Docker env_file (`/home/ubuntu/app/env/dev.env`, env var 포맷 — relaxed binding 으로 동일 key 에 매핑됨):
+운영/테스트 서버의 Docker env_file (`/home/ubuntu/app/env/.env.dev`, env var 포맷 — relaxed binding 으로 동일 key 에 매핑됨):
 
 ```properties
 FIREBASE_ENABLED=true
