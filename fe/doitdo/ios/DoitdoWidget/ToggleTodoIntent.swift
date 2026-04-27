@@ -58,11 +58,18 @@ struct ToggleTodoIntent: AppIntent {
                 ? WidgetTodo(id: $0.id, title: $0.title, isDone: willBeDone, isSomeday: $0.isSomeday)
                 : $0
         }
+        // updatedAt 을 현재 시각으로 갱신 — TimelineProvider 가 "최근 토글" 로 인지해
+        // SharedStore cleanup 을 윈도우 동안 보류 → 두 번 호출되어도 동일 transition 보장.
+        let nowISO: String = {
+            let f = ISO8601DateFormatter()
+            f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            return f.string(from: Date())
+        }()
         SharedStore.savePayload(
             WidgetPayload(
                 todayTodos: updatedToday,
                 somedayTodos: updatedSomeday,
-                updatedAt: payload.updatedAt
+                updatedAt: nowISO
             )
         )
 
