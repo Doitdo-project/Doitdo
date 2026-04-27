@@ -2,6 +2,8 @@ package com.doitdo.domain.user.api.controller;
 
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.user.api.dto.req.PasswordChangeReq;
+import com.doitdo.domain.user.api.dto.req.RegisterAgreementsReq;
+import com.doitdo.domain.user.api.dto.req.RegisterBirthDateReq;
 import com.doitdo.domain.user.api.dto.req.WithdrawReq;
 import com.doitdo.domain.user.api.dto.resp.CheckDuplicateResp;
 import com.doitdo.domain.user.api.dto.resp.UserInfoResp;
@@ -69,5 +71,25 @@ public class UserController {
 			@Valid @RequestBody(required = false) WithdrawReq req) {
 		userService.withdraw(userDetails.getUserId(), req);
 		return GlobalApiResponse.noContent("회원탈퇴 완료");
+	}
+
+	@Operation(summary = "생년월일 등록 (온보딩 1단계)",
+			description = "만 14세 미만이면 계정 hard delete 후 403 반환. 이상이면 birthDate 저장.")
+	@PostMapping("/me/birth-date")
+	public GlobalApiResponse<UserInfoResp> registerBirthDate(
+			@AuthenticationPrincipal CustomUserDetails userDetails,
+			@Valid @RequestBody RegisterBirthDateReq req) {
+		UserInfoResp resp = userService.registerBirthDate(userDetails.getUserId(), req);
+		return GlobalApiResponse.ok("생년월일 등록 완료", resp);
+	}
+
+	@Operation(summary = "약관 동의 등록 (온보딩 2단계)",
+			description = "이용약관/개인정보처리방침 동의는 필수(true). 마케팅 동의는 선택.")
+	@PostMapping("/me/agreements")
+	public GlobalApiResponse<UserInfoResp> registerAgreements(
+			@AuthenticationPrincipal CustomUserDetails userDetails,
+			@Valid @RequestBody RegisterAgreementsReq req) {
+		UserInfoResp resp = userService.registerAgreements(userDetails.getUserId(), req);
+		return GlobalApiResponse.ok("약관 동의 등록 완료", resp);
 	}
 }

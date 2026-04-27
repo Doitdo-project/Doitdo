@@ -21,3 +21,15 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+
+apple:
+  signin:
+    # 테스트 전용 더미 Apple Sign-in 설정. 실제 Apple Developer 키가 아니다.
+    team-id: TESTTEAMID
+    key-id: TESTKEYID
+    key-path: src/test/resources/apple-test-key.p8
+    client-id: com.d107.doitdo.test
+
+app:
+  terms:
+    version: "1.0"

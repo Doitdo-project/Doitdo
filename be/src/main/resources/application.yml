@@ -63,3 +63,5 @@ notification:
 app:
   cors:
     allowed-origins: ""
+  terms:
+    version: "1.0"
