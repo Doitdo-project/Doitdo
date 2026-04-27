@@ -66,10 +66,13 @@ pipeline {
                         fi
 
                         scp -i "$PROD_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$JAR_PATH" "${PROD_SSH_USER}@${PROD_HOST}:${PROD_APP_PATH}/app.jar"
+                        scp -i "$PROD_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null be/env/prod.env "${PROD_SSH_USER}@${PROD_HOST}:${PROD_APP_PATH}/env/prod.env"
+                        scp -i "$PROD_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null be/secrets/apple-signin-key.p8 "${PROD_SSH_USER}@${PROD_HOST}:${PROD_APP_PATH}/secrets/apple-signin-key.p8"
 
                         ssh -i "$PROD_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PROD_SSH_USER}@${PROD_HOST}" '
                             set -eu
                             cd /home/ubuntu/app
+                            chmod 600 env/prod.env secrets/apple-signin-key.p8
                             sudo docker compose build app
                             sudo docker rm -f doitdo-app || true
                             sudo docker compose up -d --no-deps app
