@@ -25,7 +25,13 @@ class WidgetSyncService {
 
   static const String _iOSAppGroupId = 'group.com.d107.doitdo';
   static const String _iOSWidgetName = 'DoitdoWidget';
-  static const String _androidWidgetProvider = 'DoitdoWidgetProvider';
+  // home_widget 0.7.x 의 `name`/`androidName` 인자는 dot 유무와 무관하게 항상
+  // `${packageName}.${name}` 형태로 prepend 된 뒤 Class.forName 으로 조회된다
+  // (HomeWidgetPlugin.kt:105). 이 provider 는 `com.d107.doitdo.widget` 서브패키지에
+  // 있어서 단순 prepend 로는 도달 못 함 → 반드시 `qualifiedAndroidName` 인자로
+  // fully-qualified 경로를 그대로 넘겨야 한다.
+  static const String _androidWidgetProvider =
+      'com.d107.doitdo.widget.DoitdoWidgetProvider';
 
   // App Group / SharedPreferences 키.
   // 네이티브(Swift / Kotlin) 코드에서도 동일 키로 read 한다 — 변경 시 양쪽 동기화 필수.
@@ -110,7 +116,7 @@ class WidgetSyncService {
   Future<void> _refreshWidget() async {
     try {
       await HomeWidget.updateWidget(
-        name: _androidWidgetProvider,
+        qualifiedAndroidName: _androidWidgetProvider,
         iOSName: _iOSWidgetName,
       );
     } catch (e, st) {

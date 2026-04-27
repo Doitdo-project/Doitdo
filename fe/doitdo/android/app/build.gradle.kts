@@ -84,4 +84,8 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // 위젯의 BroadcastReceiver 컨텍스트에서 BE 로 진짜 PATCH 요청을 보내야 한다.
+    // HttpURLConnection 의 PATCH reflection 우회는 Android 12+ 의 SDK 제한으로 silent
+    // 무시되는 경우가 있어 신뢰할 수 없음 — OkHttp 의 정식 PATCH 사용으로 교체.
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }

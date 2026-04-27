@@ -3,11 +3,8 @@ package com.d107.doitdo.widget
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
-import android.graphics.Paint
 import android.os.Build
 import android.text.SpannableString
 import android.text.style.StrikethroughSpan
@@ -16,24 +13,25 @@ import com.d107.doitdo.MainActivity
 import com.d107.doitdo.R
 
 /**
- * doitdo 홈 위젯 (Medium 사이즈 단일).
+ * doitdo 홈 위젯 (4x2 셀, 좌우 2단).
  *
- * iOS DoitdoWidget.swift 와 동일한 정보 구조:
  * - 인증 토큰 없음 → "로그인이 필요해요" 안내
  * - payload 비어있음 → "오늘 할 일이 없어요!" 안내
- * - 데이터 있음 → 오늘(최대 4) + 나중에(최대 1) 행
+ * - 미완료 todo 만 화면에 노출 (완료 항목은 필터로 제외).
+ * - 좌(오늘) / 우(언젠간) 각 최대 4행 + 초과 시 "+N개 더" 푸터.
+ *   실제 위젯 높이가 작은 런처에선 OS 가 하단 행을 자연스럽게 클립.
  *
- * 행 별 체크 아이콘은 [ToggleTodoReceiver] 로 broadcast PendingIntent 연결.
+ * 행의 체크 아이콘은 [ToggleTodoReceiver] 로 broadcast PendingIntent 연결.
  * 카드 배경 탭은 [MainActivity] 진입(딥링크 doitdo://widget/open).
  */
 class DoitdoWidgetProvider : AppWidgetProvider() {
 
     companion object {
-        private const val MAX_TODAY_ROWS = 4
-        private const val MAX_SOMEDAY_ROWS = 1
+        // 컬럼당 채울 수 있는 최대 행 수.
+        // 위젯 실제 높이가 작은 런처에선 하단 행이 자연스럽게 잘려나간다(visibility 는 VISIBLE
+        // 이지만 부모 RemoteViews 가 짧으면 OS 가 클립). 큰 위젯에선 모두 보임.
+        private const val MAX_ROWS_PER_COLUMN = 4
 
-        // 행/체크/제목 ID 를 인덱스로 lookup 하기 위한 매핑.
-        // RemoteViews 는 R.id 정수만 받으므로 layout XML 의 id 와 1:1 매칭.
         private val TODAY_ROW_IDS = intArrayOf(
             R.id.row_today_0, R.id.row_today_1, R.id.row_today_2, R.id.row_today_3
         )
@@ -43,9 +41,15 @@ class DoitdoWidgetProvider : AppWidgetProvider() {
         private val TODAY_TITLE_IDS = intArrayOf(
             R.id.title_today_0, R.id.title_today_1, R.id.title_today_2, R.id.title_today_3
         )
-        private val SOMEDAY_ROW_IDS = intArrayOf(R.id.row_someday_0)
-        private val SOMEDAY_CHECK_IDS = intArrayOf(R.id.check_someday_0)
-        private val SOMEDAY_TITLE_IDS = intArrayOf(R.id.title_someday_0)
+        private val SOMEDAY_ROW_IDS = intArrayOf(
+            R.id.row_someday_0, R.id.row_someday_1, R.id.row_someday_2, R.id.row_someday_3
+        )
+        private val SOMEDAY_CHECK_IDS = intArrayOf(
+            R.id.check_someday_0, R.id.check_someday_1, R.id.check_someday_2, R.id.check_someday_3
+        )
+        private val SOMEDAY_TITLE_IDS = intArrayOf(
+            R.id.title_someday_0, R.id.title_someday_1, R.id.title_someday_2, R.id.title_someday_3
+        )
     }
 
     override fun onUpdate(
@@ -67,11 +71,16 @@ class DoitdoWidgetProvider : AppWidgetProvider() {
 
         val hasToken = WidgetSharedStore.accessToken(context) != null
         val payload = WidgetSharedStore.payload(context)
+        // 위젯에서 직전에 체크된 todo 는 ToggleTodoReceiver 가 잠깐 fading 마크해 둔다.
+        // 그 todo 만 done 상태에서도 한 프레임 더 보여서 "체크 → 사라짐" 전환 효과를 만든다.
+        val fadingId = WidgetSharedStore.fadingTodoId(context)
+        val activeToday = payload?.todayTodos.orEmpty()
+            .filter { !it.isDone || it.id == fadingId }
+        val activeSomeday = payload?.somedayTodos.orEmpty()
+            .filter { !it.isDone || it.id == fadingId }
 
         // 카드 전체 탭 → 앱 진입 (딥링크 doitdo://widget/open).
-        // 모든 컨텐츠 위에 깔리는 root LinearLayout 에 click 을 걸어두면 빈 영역
-        // 어디를 눌러도 앱이 열린다. 행의 체크박스는 따로 별도 PendingIntent 로
-        // 덮어써 토글 우선.
+        // 행의 체크박스는 별도 PendingIntent 로 덮어써 토글 우선.
         views.setOnClickPendingIntent(R.id.widget_root, openAppPendingIntent(context))
 
         when {
@@ -85,12 +94,12 @@ class DoitdoWidgetProvider : AppWidgetProvider() {
                 title = "아직 데이터가 없어요",
                 subtitle = "탭해서 doitdo 열기",
             )
-            payload.todayTodos.isEmpty() && payload.somedayTodos.isEmpty() -> renderEmptyState(
+            activeToday.isEmpty() && activeSomeday.isEmpty() -> renderEmptyState(
                 views,
                 title = "오늘 할 일이 없어요!",
                 subtitle = "탭해서 추가하기",
             )
-            else -> renderContent(context, views, payload)
+            else -> renderContent(context, views, activeToday, activeSomeday)
         }
 
         appWidgetManager.updateAppWidget(appWidgetId, views)
@@ -103,49 +112,73 @@ class DoitdoWidgetProvider : AppWidgetProvider() {
         views.setTextViewText(R.id.empty_subtitle, subtitle)
     }
 
-    private fun renderContent(context: Context, views: RemoteViews, payload: WidgetPayload) {
+    private fun renderContent(
+        context: Context,
+        views: RemoteViews,
+        activeToday: List<WidgetTodo>,
+        activeSomeday: List<WidgetTodo>,
+    ) {
         views.setViewVisibility(R.id.empty_state, android.view.View.GONE)
         views.setViewVisibility(R.id.content_state, android.view.View.VISIBLE)
 
-        // 오늘 헤더 카운트 — 잘리지 않은 전체 개수 노출.
-        views.setTextViewText(R.id.today_count, payload.todayTodos.size.toString())
+        renderColumn(
+            context, views,
+            todos = activeToday,
+            rowIds = TODAY_ROW_IDS,
+            checkIds = TODAY_CHECK_IDS,
+            titleIds = TODAY_TITLE_IDS,
+            moreId = R.id.today_more,
+            emptyHintId = R.id.today_empty_hint,
+        )
+        renderColumn(
+            context, views,
+            todos = activeSomeday,
+            rowIds = SOMEDAY_ROW_IDS,
+            checkIds = SOMEDAY_CHECK_IDS,
+            titleIds = SOMEDAY_TITLE_IDS,
+            moreId = R.id.someday_more,
+            emptyHintId = R.id.someday_empty_hint,
+        )
+    }
 
-        // 오늘 행 채우기 (최대 MAX_TODAY_ROWS).
-        val today = payload.todayTodos.take(MAX_TODAY_ROWS)
-        for (i in TODAY_ROW_IDS.indices) {
-            if (i < today.size) {
+    private fun renderColumn(
+        context: Context,
+        views: RemoteViews,
+        todos: List<WidgetTodo>,
+        rowIds: IntArray,
+        checkIds: IntArray,
+        titleIds: IntArray,
+        moreId: Int,
+        emptyHintId: Int,
+    ) {
+        // 빈 컬럼 안내 — 미완료 0개일 때.
+        views.setViewVisibility(
+            emptyHintId,
+            if (todos.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE,
+        )
+
+        // 행 채우기 (최대 MAX_ROWS_PER_COLUMN).
+        val visible = todos.take(MAX_ROWS_PER_COLUMN)
+        for (i in rowIds.indices) {
+            if (i < visible.size) {
                 fillRow(
-                    context, views, today[i],
-                    rowId = TODAY_ROW_IDS[i],
-                    checkId = TODAY_CHECK_IDS[i],
-                    titleId = TODAY_TITLE_IDS[i],
+                    context, views, visible[i],
+                    rowId = rowIds[i],
+                    checkId = checkIds[i],
+                    titleId = titleIds[i],
                 )
             } else {
-                views.setViewVisibility(TODAY_ROW_IDS[i], android.view.View.GONE)
+                views.setViewVisibility(rowIds[i], android.view.View.GONE)
             }
         }
 
-        // 나중에 섹션 — 데이터 있으면 헤더 + 행 노출.
-        val someday = payload.somedayTodos.take(MAX_SOMEDAY_ROWS)
-        if (someday.isNotEmpty()) {
-            views.setViewVisibility(R.id.someday_header, android.view.View.VISIBLE)
-            for (i in SOMEDAY_ROW_IDS.indices) {
-                if (i < someday.size) {
-                    fillRow(
-                        context, views, someday[i],
-                        rowId = SOMEDAY_ROW_IDS[i],
-                        checkId = SOMEDAY_CHECK_IDS[i],
-                        titleId = SOMEDAY_TITLE_IDS[i],
-                    )
-                } else {
-                    views.setViewVisibility(SOMEDAY_ROW_IDS[i], android.view.View.GONE)
-                }
-            }
+        // "+N개 더" 푸터 — 잘려나간 미완료 잔여분이 있을 때만.
+        val overflow = todos.size - MAX_ROWS_PER_COLUMN
+        if (overflow > 0) {
+            views.setTextViewText(moreId, "+${overflow}개 더")
+            views.setViewVisibility(moreId, android.view.View.VISIBLE)
         } else {
-            views.setViewVisibility(R.id.someday_header, android.view.View.GONE)
-            for (id in SOMEDAY_ROW_IDS) {
-                views.setViewVisibility(id, android.view.View.GONE)
-            }
+            views.setViewVisibility(moreId, android.view.View.GONE)
         }
     }
 
@@ -158,22 +191,19 @@ class DoitdoWidgetProvider : AppWidgetProvider() {
         titleId: Int,
     ) {
         views.setViewVisibility(rowId, android.view.View.VISIBLE)
-        views.setImageViewResource(
-            checkId,
-            if (todo.isDone) R.drawable.widget_check_done else R.drawable.widget_check_inactive,
-        )
-        // 완료된 항목은 취소선 + 흐린 색.
         if (todo.isDone) {
+            // fading 중인 todo — 채워진 원 + 취소선 + 흐린 색으로 잠깐 보여줬다가 사라진다.
+            views.setImageViewResource(checkId, R.drawable.widget_check_done)
             val span = SpannableString(todo.title)
             span.setSpan(StrikethroughSpan(), 0, span.length, 0)
             views.setTextViewText(titleId, span)
             views.setTextColor(titleId, color(context, R.color.widget_text_done))
         } else {
+            views.setImageViewResource(checkId, R.drawable.widget_check_inactive)
             views.setTextViewText(titleId, todo.title)
             views.setTextColor(titleId, color(context, R.color.widget_text_primary))
         }
         // 체크 아이콘 탭 → ToggleTodoReceiver 로 broadcast.
-        // PendingIntent 의 requestCode 를 todoId 로 두면 같은 위젯 안에서 todo 별로 별도 instance.
         views.setOnClickPendingIntent(checkId, togglePendingIntent(context, todo.id))
     }
 
