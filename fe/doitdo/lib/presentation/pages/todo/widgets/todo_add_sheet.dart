@@ -300,7 +300,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           // ── 상단 anchor: 마스코트 + 제목 입력
           _MascotBubble(
             message: widget.initialDate == null
-                ? '언제가 하고 싶은 일은?'
+                ? '언젠가 하고 싶은 일은?'
                 : '이날 어떤 일을 계획해볼까?',
           ),
           const SizedBox(height: 16),
@@ -474,7 +474,7 @@ class _MascotBubble extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Image.asset('assets/images/Dooit.png', width: 36, height: 36),
+        Image.asset('assets/images/tama_hanrabong.png', width: 30, height: 30),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

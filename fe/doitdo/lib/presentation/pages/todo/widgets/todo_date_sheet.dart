@@ -47,7 +47,7 @@ class TodoDateResult {
         if (date == null) return '';
         return '${date!.month}월 ${date!.day}일';
       case TodoDateType.someday:
-        return '언제가 할 일';
+        return '언젠가 할 일';
       case TodoDateType.range:
         if (rangeStart == null) return '기간 일정';
         final s = '${rangeStart!.month}월 ${rangeStart!.day}일';
@@ -988,9 +988,9 @@ class _MascotBubble extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Image.asset(
-          'assets/images/Dooit.png',
-          width: 36,
-          height: 36,
+          'assets/images/tama_hanrabong.png',
+          width: 30,
+          height: 30,
         ),
         const SizedBox(width: 8),
         Container(

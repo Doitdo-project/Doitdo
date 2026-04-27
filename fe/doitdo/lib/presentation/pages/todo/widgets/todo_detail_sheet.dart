@@ -84,7 +84,7 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
 
             String dateDisplay = '미지정';
             if (detailDto.type == 'SOMEDAY') {
-              dateDisplay = '언제가 할 일';
+              dateDisplay = '언젠가 할 일';
             } else if (detailDto.startDate != null) {
               final sParts = detailDto.startDate!.split('-');
               if (sParts.length == 3) {
@@ -110,7 +110,7 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                   const SizedBox(height: 32),
                   Row(
                     children: [
-                      Image.asset('assets/images/Dooit.png', width: 36, height: 36),
+                      Image.asset('assets/images/tama_hanrabong.png', width: 30, height: 30),
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -431,7 +431,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Image.asset('assets/images/Dooit.png', width: 36, height: 36),
+                    Image.asset('assets/images/tama_hanrabong.png', width: 30, height: 30),
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
