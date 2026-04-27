@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:doitdo/presentation/models/todo.dart';
+import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart'; // ✅ 중앙 DI 파일 임포트
 
 // ============================================================================
@@ -17,20 +18,27 @@ class TodoAddNotifier extends AsyncNotifier<void> {
   }
 
   /// 새로운 할 일을 서버에 생성하도록 요청합니다.
+  ///
+  /// 성공 시 [TodoViewModel] 의 목록과 캘린더 데이터를 함께 갱신해서
+  /// 호출자(시트)의 lifecycle / context.mounted 와 무관하게 홈/투두 양쪽이
+  /// 동일한 최신 상태를 보게 한다.
   Future<void> createTodo(Todo newTodo) async {
     // 1. 로딩 상태로 변경 (UI에서 로딩 스피너를 보여줄 수 있음)
     state = const AsyncValue.loading();
 
     // 2. API 호출 및 예외 처리 자동화 (guard)
     state = await AsyncValue.guard(() async {
-      // ✅ 중앙에 등록된 '진짜' 통신 Provider 호출!
       final repository = ref.read(todoRepositoryProvider);
 
       // 서버로 데이터 전송
       await repository.createTodo(newTodo);
 
-      // TODO: 성공적으로 저장된 후, 메인 캘린더 화면의 목록을 갱신하는 로직이 필요합니다.
-      // 예: ref.read(todoViewModelProvider.notifier).fetchTodos();
+      // ✅ 성공 후 즉시 갱신 — 홈(다마고치) / 투두 페이지 양쪽이 같은
+      //    todoViewModelProvider 를 watch 하고 있으므로 한 번만 갱신해도
+      //    두 화면 모두 최신 상태로 리빌드된다.
+      final vm = ref.read(todoViewModelProvider.notifier);
+      await vm.fetchTodos();
+      await vm.fetchCalendarData();
     });
   }
 }
