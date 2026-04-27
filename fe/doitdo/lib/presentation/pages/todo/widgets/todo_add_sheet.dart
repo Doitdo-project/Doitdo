@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
-import 'package:doitdo/data/models/category_dto.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
 import 'package:doitdo/presentation/pages/todo/todo_add_notifier.dart';
+import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_category_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_date_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_time_sheet.dart';
@@ -23,7 +23,7 @@ class TodoAddSheet extends ConsumerStatefulWidget {
 
 /// 시트 내부 단계.
 /// 시트 위에 시트가 겹치는 대신 한 시트 안에서 view 만 전환하고
-/// `AnimatedSize` 가 단계별 높이 차를 부드럽게 보간한다.
+/// AnimatedSwitcher 가 단계별 전환을 부드럽게 처리한다.
 enum _Step { main, datePicker, categoryPicker, alertPicker }
 
 class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
@@ -34,10 +34,11 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
   _Step _step = _Step.main;
 
   TodoDateResult? _dateResult;
-  String    _selectedCategory = '공부';
+  String    _selectedCategory   = '공부';
   int?      _selectedCategoryId;
-  TimeOfDay _selectedTime     = const TimeOfDay(hour: 12, minute: 0);
-  bool      _alarmEnabled     = false;
+  TimeOfDay _selectedTime       = const TimeOfDay(hour: 12, minute: 0);
+  bool      _alarmEnabled       = false;
+  bool      _isLoading          = false; // ✅ 연타 중복 저장 방지
 
   @override
   void initState() {
@@ -49,7 +50,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
     }
   }
 
-  /// 단계 전환 — 키보드 닫고 setState. 메인↔서브 모두 이걸로.
+  /// 단계 전환 — 키보드 닫고 setState.
   void _goToStep(_Step next) {
     FocusScope.of(context).unfocus();
     setState(() => _step = next);
@@ -72,9 +73,8 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
   }
 
   Future<void> _onSave(BuildContext context) async {
-    // 이미 저장 진행 중이면 무시 — 같은 프레임 내 더블탭으로 두 번 호출되는 케이스 방어.
-    // (UI 의 isSaving 가드만으로는 동일 프레임 race 를 못 막음.)
-    if (ref.read(todoAddNotifierProvider).isLoading) return;
+    // ✅ 저장 중이면 즉시 차단 — 연타 중복 생성 방지
+    if (_isLoading) return;
 
     final title = _titleController.text.trim();
 
@@ -82,50 +82,77 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
       _titleFocusNode.requestFocus();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('할 일을 입력해주세요.', style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)),
-          backgroundColor: AppColors.calendarPoint, behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), margin: const EdgeInsets.all(16), duration: const Duration(seconds: 2),
+          content: Text('할 일을 입력해주세요.',
+              style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)),
+          backgroundColor: AppColors.calendarPoint,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 2),
         ),
       );
       return;
     }
 
-    final r = _dateResult;
-    final todo = Todo(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: title,
-      category: TodoCategory.fromName(_selectedCategory),
-      categoryId: _selectedCategoryId,
-      isDone: false,
-      memo: _memoController.text.trim().isEmpty ? null : _memoController.text.trim(),
-      alarmTime:       _alarmEnabled ? _selectedTime : null,
-      alarmEnabled:    _alarmEnabled,
-      dateType:        r?.type ?? TodoDateType.someday,
-      date:            r?.date,
-      rangeStart:      r?.rangeStart,
-      rangeEnd:        r?.rangeEnd,
-      repeatType:      r?.repeatType,
-      repeatStartDate: r?.repeatStartDate,
-      repeatEndDate:   r?.repeatEndDate,
-      period: r?.repeatType == '매주' ? 7 : null,
-      repeatDays:      r?.repeatDays,
-    );
+    // ✅ 저장 시작 — 버튼 비활성화
+    setState(() => _isLoading = true);
 
-    await ref.read(todoAddNotifierProvider.notifier).createTodo(todo);
+    try {
+      final r = _dateResult;
+      final todo = Todo(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: title,
+        category: TodoCategory.fromName(_selectedCategory),
+        categoryId: _selectedCategoryId,
+        isDone: false,
+        memo: _memoController.text.trim().isEmpty ? null : _memoController.text.trim(),
+        alarmTime:       _alarmEnabled ? _selectedTime : null,
+        alarmEnabled:    _alarmEnabled,
+        dateType:        r?.type ?? TodoDateType.someday,
+        date:            r?.date,
+        rangeStart:      r?.rangeStart,
+        rangeEnd:        r?.rangeEnd,
+        repeatType:      r?.repeatType,
+        repeatStartDate: r?.repeatStartDate,
+        repeatEndDate:   r?.repeatEndDate,
+        period:          r?.repeatType == '매주' ? 7 : null,
+        repeatDays:      r?.repeatDays,
+      );
 
-    final resultState = ref.read(todoAddNotifierProvider);
-    if (resultState.hasError) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('서버 저장 실패: ${resultState.error}'), backgroundColor: Colors.red),
-        );
+      await ref.read(todoAddNotifierProvider.notifier).createTodo(todo);
+
+      final resultState = ref.read(todoAddNotifierProvider);
+      if (resultState.hasError) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('서버 저장 실패: ${resultState.error}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
       }
-      return;
-    }
 
-    // 홈/투두 갱신은 TodoAddNotifier.createTodo 안에서 이미 끝났음.
-    // 시트는 닫기만.
-    if (context.mounted) Navigator.of(context).pop();
+      // ✅ 노티파이어 내부에서 fetchTodos/fetchCalendarData 가 실행됨.
+      // 구버전 노티파이어 대비 안전망으로 한 번 더 호출.
+      if (context.mounted) {
+        try {
+          final vm = ref.read(todoViewModelProvider.notifier);
+          await vm.fetchTodos();
+          await vm.fetchCalendarData();
+        } catch (_) {
+          // 갱신 실패해도 닫기는 진행
+        }
+      }
+
+      // ✅ mounted 확인 후 딱 한 번만 pop
+      if (context.mounted) Navigator.of(context).pop();
+
+    } finally {
+      // ✅ 성공/실패/예외 무관하게 항상 로딩 해제
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -224,7 +251,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
             embedded: true,
             onConfirm: (result) {
               setState(() {
-                _selectedCategory = result.categoryName;
+                _selectedCategory   = result.categoryName;
                 _selectedCategoryId = result.categoryId;
                 _step = _Step.main;
               });
@@ -236,7 +263,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
         return KeyedSubtree(
           key: const ValueKey('alert'),
           child: TodoTimeSheet(
-            initialTime: _selectedTime,
+            initialTime:    _selectedTime,
             initialEnabled: _alarmEnabled,
             embedded: true,
             onConfirm: (result) {
@@ -263,9 +290,6 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
       }
     }
 
-    // 저장 진행 상태 watch — 저장 중에는 버튼 disable + 라벨 '저장 중...' 으로
-    // 바꿔서 더블탭 / 동일 todo 중복 생성 방지.
-    final isSaving = ref.watch(todoAddNotifierProvider).isLoading;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
@@ -273,7 +297,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
         mainAxisSize: MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── 상단 anchor: 마스코트 + 제목 입력 ─────────────
+          // ── 상단 anchor: 마스코트 + 제목 입력
           _MascotBubble(
             message: widget.initialDate == null
                 ? '언제가 하고 싶은 일은?'
@@ -284,7 +308,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
             padding: const EdgeInsets.only(left: 8),
             child: TextField(
               controller: _titleController,
-              focusNode: _titleFocusNode,
+              focusNode:  _titleFocusNode,
               style: AppTextStyles.titleLarge.copyWith(
                 fontFamily: 'GmarketSansMedium',
                 fontWeight: FontWeight.w500,
@@ -305,14 +329,14 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           ),
           const SizedBox(height: 24),
 
-          // ── 본문: 옵션들 + 메모. 키보드 올라와도 스크롤 가능. ──
+          // ── 본문: 옵션들 + 메모. 키보드 올라와도 스크롤 가능.
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 기간 — 시트 띄우는 대신 step 전환.
+                  // 기간 — step 전환
                   GestureDetector(
                     onTap: () => _goToStep(_Step.datePicker),
                     child: _OptionRow(
@@ -324,7 +348,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                   ),
                   Divider(color: c.divider, height: 1, thickness: 1),
 
-                  // 카테고리 — step 전환.
+                  // 카테고리 — step 전환
                   GestureDetector(
                     onTap: () => _goToStep(_Step.categoryPicker),
                     child: Padding(
@@ -357,14 +381,13 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                     ),
                   ),
 
-                  // 알림 — step 전환.
+                  // 알림 — step 전환
                   GestureDetector(
                     onTap: () => _goToStep(_Step.alertPicker),
                     child: _OptionRow(
                       icon: Icons.notifications_outlined,
                       label: '알림',
-                      valueText:
-                      _alarmEnabled ? _formatTime(_selectedTime) : '없음',
+                      valueText: _alarmEnabled ? _formatTime(_selectedTime) : '없음',
                       colors: c,
                     ),
                   ),
@@ -378,8 +401,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                       minLines: 4,
                       maxLines: null,
                       keyboardType: TextInputType.multiline,
-                      style: AppTextStyles.bodyMedium
-                          .copyWith(color: c.textPrimary),
+                      style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary),
                       decoration: InputDecoration(
                         hintText: '메모를 입력해 보세요.',
                         hintStyle: AppTextStyles.bodyMedium
@@ -398,10 +420,11 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           // ── 하단 anchor: 저장 버튼 ────────────────────
           // 저장 중에는 onPressed=null 로 disable + 라벨 변경.
           const SizedBox(height: 12),
+          // ✅ _isLoading 상태에 따라 버튼 비활성화 + 라벨 변경
           DoitdoPrimaryButton(
             height: 48,
-            label: isSaving ? '저장 중...' : '저장하기',
-            onPressed: isSaving ? null : () => _onSave(context),
+            label: _isLoading ? '저장 중...' : '저장하기',
+            onPressed: _isLoading ? null : () => _onSave(context),
           ),
         ],
       ),
@@ -410,7 +433,12 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
 }
 
 class _OptionRow extends StatelessWidget {
-  const _OptionRow({required this.icon, required this.label, required this.valueText, required this.colors});
+  const _OptionRow({
+    required this.icon,
+    required this.label,
+    required this.valueText,
+    required this.colors,
+  });
   final IconData icon;
   final String label;
   final String valueText;
@@ -424,9 +452,11 @@ class _OptionRow extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: const Color(0xFFC8966E)),
           const SizedBox(width: 12),
-          Text(label, style: AppTextStyles.bodyMedium.copyWith(color: colors.textSecondary)),
+          Text(label,
+              style: AppTextStyles.bodyMedium.copyWith(color: colors.textSecondary)),
           const Spacer(),
-          Text(valueText, style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary)),
+          Text(valueText,
+              style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary)),
           const SizedBox(width: 2),
           Icon(Icons.chevron_right, size: 16, color: colors.textHint),
         ],
@@ -451,11 +481,16 @@ class _MascotBubble extends StatelessWidget {
           decoration: const BoxDecoration(
             color: AppColors.bubbleBg,
             borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(4), topRight: Radius.circular(12),
-              bottomLeft: Radius.circular(12), bottomRight: Radius.circular(12),
+              topLeft: Radius.circular(4),
+              topRight: Radius.circular(12),
+              bottomLeft: Radius.circular(12),
+              bottomRight: Radius.circular(12),
             ),
           ),
-          child: Text(message, style: AppTextStyles.bodySmall.copyWith(color: AppColors.calendarDateText)),
+          child: Text(
+            message,
+            style: AppTextStyles.bodySmall.copyWith(color: AppColors.calendarDateText),
+          ),
         ),
       ],
     );
