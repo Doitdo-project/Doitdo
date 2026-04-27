@@ -321,7 +321,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                     ),
                     calendarStyle: CalendarStyle(
                       markersMaxCount: 0,
-                      todayDecoration: const BoxDecoration(color: AppColors.homeCalendarSelectedBg, shape: BoxShape.circle),
+                      todayDecoration: BoxDecoration(color: colors.calendarRangeHighlight, shape: BoxShape.circle),
                       todayTextStyle: AppTextStyles.labelMedium.copyWith(color: AppColors.calendarPoint),
                       selectedDecoration: const BoxDecoration(color: AppColors.calendarPoint, shape: BoxShape.circle),
                       selectedTextStyle: AppTextStyles.labelMedium.copyWith(color: Colors.white),
