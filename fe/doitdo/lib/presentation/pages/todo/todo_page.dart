@@ -415,7 +415,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Image.asset('assets/images/tama_hanrabong.png', width: 26, height: 26),
+                Image.asset('assets/images/Dooit.png', width: 26, height: 26),
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

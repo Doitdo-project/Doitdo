@@ -110,7 +110,7 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                   const SizedBox(height: 32),
                   Row(
                     children: [
-                      Image.asset('assets/images/tama_hanrabong.png', width: 30, height: 30),
+                      Image.asset('assets/images/Dooit.png', width: 30, height: 30),
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -431,7 +431,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Image.asset('assets/images/tama_hanrabong.png', width: 30, height: 30),
+                    Image.asset('assets/images/Dooit.png', width: 30, height: 30),
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

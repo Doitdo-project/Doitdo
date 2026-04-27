@@ -76,7 +76,7 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
     final headerRow = Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Image.asset('assets/images/tama_hanrabong.png', width: 30, height: 30),
+        Image.asset('assets/images/Dooit.png', width: 30, height: 30),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

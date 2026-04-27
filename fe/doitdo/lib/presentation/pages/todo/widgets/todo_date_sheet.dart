@@ -988,7 +988,7 @@ class _MascotBubble extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Image.asset(
-          'assets/images/tama_hanrabong.png',
+          'assets/images/Dooit.png',
           width: 30,
           height: 30,
         ),
