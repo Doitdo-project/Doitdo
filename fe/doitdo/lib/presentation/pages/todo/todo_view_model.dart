@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:doitdo/core/widget_sync/widget_sync_service.dart';
+import 'package:doitdo/core/widget_sync/widget_todo_dto.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/pages/todo/todo_state.dart';
 import 'package:doitdo/domain/repositories/todo_repository.dart';
@@ -8,18 +12,23 @@ import 'package:doitdo/presentation/providers/app_data_providers.dart';
 import 'package:doitdo/data/models/todo_update_request_dto.dart';
 
 class TodoViewModel extends StateNotifier<TodoState> {
-  TodoViewModel(this._repository)
+  TodoViewModel(this._repository, this._widgetSync)
       : super(TodoState(
     selectedDay: DateTime(
         DateTime.now().year, DateTime.now().month, DateTime.now().day),
     focusedDay: DateTime(
         DateTime.now().year, DateTime.now().month, DateTime.now().day),
   )) {
+    // 모든 state 변경에 위젯 동기화 — addListener 가 매 set 때마다 발화하므로
+    // 각 mutation 메서드에서 별도 호출 불필요. fireImmediately false 로 초기 빈
+    // 상태는 sync 하지 않고, fetchTodos 가 채워준 직후부터 위젯이 갱신됨.
+    addListener(_syncWidget, fireImmediately: false);
     fetchTodos();
     fetchCalendarData();
   }
 
   final TodoRepository _repository;
+  final WidgetSyncService _widgetSync;
 
   static CategoryColorKey _colorKey(String? category) {
     switch (category) {
@@ -586,9 +595,67 @@ class TodoViewModel extends StateNotifier<TodoState> {
         .whereType<String>()
         .toSet();
   }
+
+  // ── 위젯 동기화 ──────────────────────────────────────────────
+  // addListener 로 매 state 변경마다 호출됨. 홈스크린 위젯이 보여줄 형태
+  // (오늘 + 나중에) 로 가공해 SharedPreferences 에 push.
+  // 네트워크/디스크 I/O 가 살짝 들어가지만 await 하지 않고 unawaited 처리해
+  // ViewModel 의 reactive 흐름은 막지 않는다.
+  void _syncWidget(TodoState s) {
+    final today = DateTime.now();
+    final todayTodos = s.allTodos
+        .where((t) => _isTodayForWidget(t, today))
+        .map(_toWidgetDto)
+        .toList(growable: false);
+    final somedayTodos =
+        s.allSomedayTodos.map(_toWidgetDto).toList(growable: false);
+    unawaited(_widgetSync.syncTodos(
+      todayTodos: todayTodos,
+      somedayTodos: somedayTodos,
+    ));
+  }
+
+  static WidgetTodoDto _toWidgetDto(Todo t) => WidgetTodoDto(
+        id: int.tryParse(t.id) ?? 0,
+        title: t.title,
+        isDone: t.isDone,
+        isSomeday: t.dateType == TodoDateType.someday,
+      );
+
+  /// `tamagochi_page._isTodayTodo` 와 동일 로직 — 위젯 "오늘" 섹션 필터.
+  /// 단일=오늘, 기간=오늘이 시작~종료 사이, 반복=시작 이후 + 종료 이내.
+  static bool _isTodayForWidget(Todo todo, DateTime today) {
+    bool sameDay(DateTime a, DateTime b) =>
+        a.year == b.year && a.month == b.month && a.day == b.day;
+    bool onOrBefore(DateTime a, DateTime b) =>
+        a.isBefore(b) || sameDay(a, b);
+    switch (todo.dateType) {
+      case TodoDateType.normal:
+        return todo.date != null && sameDay(todo.date!, today);
+      case TodoDateType.someday:
+        return false;
+      case TodoDateType.range:
+        final start = todo.rangeStart;
+        final end = todo.rangeEnd;
+        if (start == null) return false;
+        if (!onOrBefore(start, today)) return false;
+        if (end == null) return true;
+        return onOrBefore(today, end);
+      case TodoDateType.repeat:
+        final start = todo.repeatStartDate;
+        final end = todo.repeatEndDate;
+        if (start == null) return false;
+        if (!onOrBefore(start, today)) return false;
+        if (end == null) return true;
+        return onOrBefore(today, end);
+    }
+  }
 }
 
 final todoViewModelProvider =
 StateNotifierProvider.autoDispose<TodoViewModel, TodoState>((ref) {
-  return TodoViewModel(ref.read(todoRepositoryProvider));
+  return TodoViewModel(
+    ref.read(todoRepositoryProvider),
+    ref.read(widgetSyncServiceProvider),
+  );
 });
