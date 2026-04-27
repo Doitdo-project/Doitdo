@@ -44,7 +44,9 @@ class _TodoCategorySheetState extends ConsumerState<TodoCategorySheet> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final embedded = widget.embedded;
-    final chipWidth = (MediaQuery.of(context).size.width - 40 - 12) / 2;
+    // 칩 가로폭은 LayoutBuilder 가 알려주는 실제 본문 너비 기준으로 계산.
+    // (embedded / standalone 의 외곽 padding 이 달라 화면 너비 기반은 부정확.)
+    const chipSpacing = 12.0;
 
     final asyncCategories = ref.watch(categoryViewModelProvider);
 
@@ -84,46 +86,68 @@ class _TodoCategorySheetState extends ConsumerState<TodoCategorySheet> {
         }
       }
 
-      // ✅ + 추가 버튼 제거 — 카테고리 칩만 표시
-      final chipsWrap = Wrap(
-        spacing: 12,
-        runSpacing: 12,
-        children: categories.map((cat) {
-          final isSelected = _selectedName == cat.categoryName;
-          return GestureDetector(
-            onTap: () => setState(() {
-              _selectedName = cat.categoryName;
-              _selectedObj = cat;
-            }),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: chipWidth,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.calendarPoint : colors.surfaceAlt,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 8, height: 8,
-                    decoration: BoxDecoration(
-                      color: isSelected ? Colors.white70 : cat.color,
-                      shape: BoxShape.circle,
-                    ),
+      // ✅ + 추가 버튼 제거 — 카테고리 칩만 표시.
+      // LayoutBuilder 로 실제 가용 너비 기준 3열 정사각형 카드 분배.
+      // 카드 안: 가운데 색상 원 + 그 아래 카테고리명 (세로 배치).
+      final chipsWrap = LayoutBuilder(
+        builder: (context, constraints) {
+          // 한 줄 3개 → 사이 간격 2개 분량 빼고 3등분.
+          final chipWidth =
+              (constraints.maxWidth - chipSpacing * 2) / 3;
+          return Wrap(
+            spacing: chipSpacing,
+            runSpacing: chipSpacing,
+            children: categories.map((cat) {
+              final isSelected = _selectedName == cat.categoryName;
+              return GestureDetector(
+                onTap: () => setState(() {
+                  _selectedName = cat.categoryName;
+                  _selectedObj = cat;
+                }),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: chipWidth,
+                  height: chipWidth, // 정사각형
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.calendarPoint
+                        : colors.surfaceAlt,
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  const SizedBox(width: 6),
-                  Text(cat.categoryName,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: isSelected ? Colors.white : colors.textPrimary,
-                    ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: isSelected ? Colors.white70 : cat.color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Padding(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 6),
+                        child: Text(
+                          cat.categoryName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: isSelected
+                                ? Colors.white
+                                : colors.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            }).toList(),
           );
-        }).toList(),
+        },
       );
 
       final buttonRow = Row(
@@ -150,14 +174,35 @@ class _TodoCategorySheetState extends ConsumerState<TodoCategorySheet> {
       );
 
       if (embedded) {
+        // 부모(todo_add_sheet) 가 StackFit.expand 로 잔여 높이를 통째로 넘김.
+        // mainAxisSize.max + Expanded 로 마스코트(상단)/버튼(하단) anchor.
+        // 본문은 Center 로 가운데 배치 — 알림 시트 휠과 동일한 시각 패턴.
+        // 카테고리가 많아져 잔여 높이를 넘치면 LayoutBuilder + ConstrainedBox 로 스크롤 폴백.
+        // 좌우/상단 padding 24/16 — todo_add_sheet 메인폼과 동일하게 맞춰
+        // 마스코트 위치를 일치시킨다.
         return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
           child: Column(
             mainAxisSize: MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               headerRow,
-              Expanded(child: Center(child: chipsWrap)),
+              const SizedBox(height: 16),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
+                        ),
+                        child: Center(child: chipsWrap),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
               buttonRow,
             ],
           ),
@@ -207,6 +252,7 @@ class _TodoCategorySheetState extends ConsumerState<TodoCategorySheet> {
   }
 }
 
+/// todo_add_sheet 와 동일 스펙(36×36 + 꼬리형 BorderRadius).
 class _MascotBubble extends StatelessWidget {
   const _MascotBubble({required this.message});
   final String message;
@@ -216,13 +262,13 @@ class _MascotBubble extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Image.asset('assets/images/Dooit.png', width: 32, height: 32),
+        Image.asset('assets/images/Dooit.png', width: 36, height: 36),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: AppColors.bubbleBg,
-            borderRadius: const BorderRadius.only(
+            borderRadius: BorderRadius.only(
               topLeft: Radius.circular(4),
               topRight: Radius.circular(12),
               bottomLeft: Radius.circular(12),

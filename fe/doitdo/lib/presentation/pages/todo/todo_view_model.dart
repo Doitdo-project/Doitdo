@@ -1,4 +1,4 @@
-import 'dart:async' show unawaited;
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,6 +19,10 @@ class TodoViewModel extends StateNotifier<TodoState> {
     focusedDay: DateTime(
         DateTime.now().year, DateTime.now().month, DateTime.now().day),
   )) {
+    // 모든 state 변경에 위젯 동기화 — addListener 가 매 set 때마다 발화하므로
+    // 각 mutation 메서드에서 별도 호출 불필요. fireImmediately false 로 초기 빈
+    // 상태는 sync 하지 않고, fetchTodos 가 채워준 직후부터 위젯이 갱신됨.
+    addListener(_syncWidget, fireImmediately: false);
     fetchTodos();
     fetchCalendarData();
   }
@@ -176,45 +180,6 @@ class TodoViewModel extends StateNotifier<TodoState> {
     state = state.copyWith(
       todos: filteredTodos,
       somedayTodos: filteredSomeday,
-    );
-
-    // 화면 갱신과 함께 홈스크린 위젯에도 최신 TODO push.
-    // _updateDisplayedTodos 는 fetch / 변경 / 필터 변경 등 모든 갱신 경로의 단일 출구라
-    // 여기 한 곳만 hook 하면 위젯 동기화가 누락 없이 발생한다.
-    unawaited(_pushToWidget());
-  }
-
-  /// 위젯의 "오늘" 섹션은 calendar events map(`kEvents`) 의 오늘 키 — 모든 type
-  /// (normal/range/repeat) 의 오늘 활성 TODO 를 이미 OR 처리해 모아놨다.
-  /// "나중에" 섹션은 별도로 분리된 SOMEDAY 목록 그대로.
-  Future<void> _pushToWidget() async {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final todayList = state.kEvents[today] ?? const <Todo>[];
-
-    final todayDtos = todayList
-        .map((t) => WidgetTodoDto(
-              id: int.tryParse(t.id) ?? 0,
-              title: t.title,
-              isDone: t.isDone,
-              isSomeday: false,
-            ))
-        .where((t) => t.id != 0)
-        .toList();
-
-    final somedayDtos = state.allSomedayTodos
-        .map((t) => WidgetTodoDto(
-              id: int.tryParse(t.id) ?? 0,
-              title: t.title,
-              isDone: t.isDone,
-              isSomeday: true,
-            ))
-        .where((t) => t.id != 0)
-        .toList();
-
-    await _widgetSync.syncTodos(
-      todayTodos: todayDtos,
-      somedayTodos: somedayDtos,
     );
   }
 
@@ -629,6 +594,61 @@ class TodoViewModel extends StateNotifier<TodoState> {
         .map((i) => indexToCode[i])
         .whereType<String>()
         .toSet();
+  }
+
+  // ── 위젯 동기화 ──────────────────────────────────────────────
+  // addListener 로 매 state 변경마다 호출됨. 홈스크린 위젯이 보여줄 형태
+  // (오늘 + 나중에) 로 가공해 SharedPreferences 에 push.
+  // 네트워크/디스크 I/O 가 살짝 들어가지만 await 하지 않고 unawaited 처리해
+  // ViewModel 의 reactive 흐름은 막지 않는다.
+  void _syncWidget(TodoState s) {
+    final today = DateTime.now();
+    final todayTodos = s.allTodos
+        .where((t) => _isTodayForWidget(t, today))
+        .map(_toWidgetDto)
+        .toList(growable: false);
+    final somedayTodos =
+        s.allSomedayTodos.map(_toWidgetDto).toList(growable: false);
+    unawaited(_widgetSync.syncTodos(
+      todayTodos: todayTodos,
+      somedayTodos: somedayTodos,
+    ));
+  }
+
+  static WidgetTodoDto _toWidgetDto(Todo t) => WidgetTodoDto(
+        id: int.tryParse(t.id) ?? 0,
+        title: t.title,
+        isDone: t.isDone,
+        isSomeday: t.dateType == TodoDateType.someday,
+      );
+
+  /// `tamagochi_page._isTodayTodo` 와 동일 로직 — 위젯 "오늘" 섹션 필터.
+  /// 단일=오늘, 기간=오늘이 시작~종료 사이, 반복=시작 이후 + 종료 이내.
+  static bool _isTodayForWidget(Todo todo, DateTime today) {
+    bool sameDay(DateTime a, DateTime b) =>
+        a.year == b.year && a.month == b.month && a.day == b.day;
+    bool onOrBefore(DateTime a, DateTime b) =>
+        a.isBefore(b) || sameDay(a, b);
+    switch (todo.dateType) {
+      case TodoDateType.normal:
+        return todo.date != null && sameDay(todo.date!, today);
+      case TodoDateType.someday:
+        return false;
+      case TodoDateType.range:
+        final start = todo.rangeStart;
+        final end = todo.rangeEnd;
+        if (start == null) return false;
+        if (!onOrBefore(start, today)) return false;
+        if (end == null) return true;
+        return onOrBefore(today, end);
+      case TodoDateType.repeat:
+        final start = todo.repeatStartDate;
+        final end = todo.repeatEndDate;
+        if (start == null) return false;
+        if (!onOrBefore(start, today)) return false;
+        if (end == null) return true;
+        return onOrBefore(today, end);
+    }
   }
 }
 

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  doitdo 위젯 메타데이터.
+  iOS Medium(약 4x2 셀) 와 비슷한 사이즈로 설정.
+
+  - minWidth/minHeight: 첫 배치 시 강제 크기
+  - targetCellWidth/targetCellHeight (API 31+): 셀 단위 권장 크기
+  - resizeMode none: 디자인 깨짐 방지 (iOS 도 systemMedium 단일)
+  - updatePeriodMillis 0: OS 자동 갱신 안 함 (앱이 명시적으로 reload trigger)
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:initialLayout="@layout/doitdo_widget"
+    android:previewLayout="@layout/doitdo_widget"
+    android:resizeMode="none"
+    android:widgetCategory="home_screen"
+    android:updatePeriodMillis="0" />

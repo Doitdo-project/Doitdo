@@ -98,7 +98,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
 
   void _openAddSheet(BuildContext context, DateTime? date) {
     showModalBottomSheet(
-      context: context, isScrollControlled: true, useSafeArea: true,
+      context: context, isScrollControlled: true,
       backgroundColor: Colors.transparent, useRootNavigator: true,
       builder: (_) => TodoAddSheet(initialDate: date),
     );
@@ -106,7 +106,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
 
   void _openDetailSheet(BuildContext context, Todo todo, bool isSomeday) {
     showModalBottomSheet(
-      context: context, isScrollControlled: true, useSafeArea: true,
+      context: context, isScrollControlled: true,
       backgroundColor: Colors.transparent, useRootNavigator: true,
       builder: (_) => TodoDetailSheet(todoId: todo.id, isSomeday: isSomeday),
     );
@@ -320,6 +320,30 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+
+          // ── 핸들바: 탭/스와이프로 월간↔주간 전환 ──
+          GestureDetector(
+            onVerticalDragEnd: _onCalendarSwipe,
+            onTap: () {
+              final isMonth = state.calendarFormat == CalendarFormat.month;
+              vm.onFormatChanged(isMonth ? CalendarFormat.week : CalendarFormat.month);
+            },
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Center(
+                child: Container(
+                  width: 48,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
               ),
             ),
           ),

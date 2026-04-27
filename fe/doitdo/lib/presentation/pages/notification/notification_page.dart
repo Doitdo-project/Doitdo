@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/pages/notification/notification_view_model.dart';
+import 'package:doitdo/presentation/providers/app_data_providers.dart';
 
 /// 알림 목록 전체 화면.
 ///
@@ -19,18 +20,74 @@ class NotificationPage extends ConsumerStatefulWidget {
   ConsumerState<NotificationPage> createState() => _NotificationPageState();
 }
 
-class _NotificationPageState extends ConsumerState<NotificationPage> {
+class _NotificationPageState extends ConsumerState<NotificationPage>
+    with SingleTickerProviderStateMixin {
   final _scrollController = ScrollController();
+
+  // ── 스와이프 코치마크 ─────────────────────────
+  // 첫 진입 시 1번째 알림 아이템을 살짝 좌측으로 자동 슬라이드해
+  // "밀어서 삭제" 인터랙션을 시각적으로 가르친다.
+  // SharedPreferences 키 하나로 본 적 있는 사용자는 다시 안 보이게.
+  static const _swipeHintSeenKey = 'noti_swipe_hint_seen';
+  static const _hintSwipeDistance = 72.0; // 좌측으로 미는 거리(px)
+
+  late final AnimationController _hintController;
+  late final Animation<double> _hintOffset;
+  bool _hintRunning = false;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+
+    _hintController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    // TweenSequence: 0 → -dist (in) → -dist hold → 0 (out)
+    _hintOffset = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.0, end: -_hintSwipeDistance)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 30,
+      ),
+      TweenSequenceItem(
+        tween: ConstantTween<double>(-_hintSwipeDistance),
+        weight: 35,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: -_hintSwipeDistance, end: 0.0)
+            .chain(CurveTween(curve: Curves.easeInCubic)),
+        weight: 35,
+      ),
+    ]).animate(_hintController);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowHint());
+  }
+
+  Future<void> _maybeShowHint() async {
+    if (!mounted) return;
+    final prefs = ref.read(sharedPreferencesProvider);
+    final seen = prefs.getBool(_swipeHintSeenKey) ?? false;
+    if (seen) return;
+
+    // 첫 데이터가 그려진 뒤(약간 지연) 자연스럽게 시작.
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+    final state = ref.read(notificationViewModelProvider);
+    if (state.filtered.isEmpty) return; // 보여줄 아이템이 없으면 스킵
+
+    setState(() => _hintRunning = true);
+    await _hintController.forward(from: 0);
+    if (!mounted) return;
+    setState(() => _hintRunning = false);
+    await prefs.setBool(_swipeHintSeenKey, true);
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _hintController.dispose();
     super.dispose();
   }
 
@@ -147,7 +204,7 @@ class _NotificationPageState extends ConsumerState<NotificationPage> {
             );
           }
           final item = state.filtered[i];
-          return Dismissible(
+          final dismissible = Dismissible(
             key: ValueKey(item.id),
             direction: DismissDirection.endToStart,
             background: Container(
@@ -165,6 +222,37 @@ class _NotificationPageState extends ConsumerState<NotificationPage> {
               },
             ),
           );
+
+          // 첫 진입 코치마크: 1번째 아이템에만 자동 슬라이드 애니메이션 덧입힘.
+          // Stack 으로 빨간 배경을 뒤에 깔고 위에 Transform.translate 로 미끄러뜨린다.
+          if (i == 0 && _hintRunning) {
+            return AnimatedBuilder(
+              animation: _hintController,
+              builder: (context, _) {
+                return Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Container(
+                        alignment: Alignment.centerRight,
+                        padding: EdgeInsets.only(right: 20.w),
+                        color: Colors.red.shade400,
+                        child: Icon(Icons.delete_outline_rounded,
+                            color: Colors.white, size: 22.sp),
+                      ),
+                    ),
+                    IgnorePointer(
+                      ignoring: true,
+                      child: Transform.translate(
+                        offset: Offset(_hintOffset.value, 0),
+                        child: dismissible,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          }
+          return dismissible;
         },
       ),
     );
@@ -396,12 +484,22 @@ class _NotiItem extends StatelessWidget {
     );
   }
 
+  /// 상대 시간 포맷.
+  /// 서버 시계 skew / timezone 누락으로 미래 시각이 들어와 diff 가 음수로
+  /// 잡히는 케이스를 방어한다 (예전엔 음수도 `< 1` 에 걸려 전부 "방금" 으로 표시됨).
+  /// 또 1분 미만 구간을 초 단위로 더 잘게 쪼개 "방금만 줄줄이" 보이는 문제를 완화.
   String _fmtRel(DateTime dt) {
     final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return '방금';
+
+    // 미래 (서버 시계 앞섬 / timezone 파싱 어긋남) → "방금"
+    if (diff.isNegative) return '방금';
+
+    final secs = diff.inSeconds;
+    if (secs < 10)  return '방금';
+    if (secs < 60)  return '$secs초 전';
     if (diff.inMinutes < 60) return '${diff.inMinutes}분 전';
-    if (diff.inHours < 24) return '${diff.inHours}시간 전';
-    if (diff.inDays == 1) return '어제';
+    if (diff.inHours < 24)   return '${diff.inHours}시간 전';
+    if (diff.inDays == 1)    return '어제';
     return '${diff.inDays}일 전';
   }
 }
@@ -510,13 +608,29 @@ _NotiTypeInfo _typeInfo(NotificationType type) {
         chipTextColor: Color(0xFF8A5A00),
         iconData: Icons.wb_sunny_rounded,
       );
-    case NotificationType.todoUnlock:
+    case NotificationType.todoDone:
+      return const _NotiTypeInfo(
+        bgColor: Color(0xFFF0F7EE),
+        dotColor: Color(0xFF4CAF50),
+        chipColor: Color(0xFFD9EBD5),
+        chipTextColor: Color(0xFF2E7D32),
+        iconData: Icons.check_circle_rounded,
+      );
+    case NotificationType.todoReminder:
       return const _NotiTypeInfo(
         bgColor: Color(0xFFF1F6FF),
         dotColor: Color(0xFF4A7DDB),
         chipColor: Color(0xFFE0EBFF),
         chipTextColor: Color(0xFF2D5BB8),
-        iconData: Icons.lock_open_rounded,
+        iconData: Icons.notifications_active_rounded,
+      );
+    case NotificationType.todoSnoozed:
+      return const _NotiTypeInfo(
+        bgColor: Color(0xFFF7F1FF),
+        dotColor: Color(0xFF8B5CF6),
+        chipColor: Color(0xFFEAE0FF),
+        chipTextColor: Color(0xFF5B3DAE),
+        iconData: Icons.snooze_rounded,
       );
     case NotificationType.tamagochiFarewell:
       return const _NotiTypeInfo(
@@ -525,6 +639,22 @@ _NotiTypeInfo _typeInfo(NotificationType type) {
         chipColor: Color(0xFFF5E2EE),
         chipTextColor: Color(0xFFA53F7B),
         iconData: Icons.favorite_rounded,
+      );
+    case NotificationType.tamagochiGrowth:
+      return const _NotiTypeInfo(
+        bgColor: Color(0xFFFFF6EE),
+        dotColor: Color(0xFFE2782B),
+        chipColor: Color(0xFFFDE7D4),
+        chipTextColor: Color(0xFFB85A1C),
+        iconData: Icons.auto_awesome_rounded,
+      );
+    case NotificationType.unknown:
+      return const _NotiTypeInfo(
+        bgColor: Color(0xFFF5F5F5),
+        dotColor: Color(0xFF9E9E9E),
+        chipColor: Color(0xFFE0E0E0),
+        chipTextColor: Color(0xFF616161),
+        iconData: Icons.notifications_rounded,
       );
   }
 }
