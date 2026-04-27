@@ -7,7 +7,6 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/data/models/category_dto.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
-import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/pages/todo/todo_add_notifier.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_category_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_date_sheet.dart';
@@ -22,10 +21,17 @@ class TodoAddSheet extends ConsumerStatefulWidget {
   ConsumerState<TodoAddSheet> createState() => _TodoAddSheetState();
 }
 
+/// 시트 내부 단계.
+/// 시트 위에 시트가 겹치는 대신 한 시트 안에서 view 만 전환하고
+/// `AnimatedSize` 가 단계별 높이 차를 부드럽게 보간한다.
+enum _Step { main, datePicker, categoryPicker, alertPicker }
+
 class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
   final _titleController = TextEditingController();
   final _memoController  = TextEditingController();
   final _titleFocusNode  = FocusNode();
+
+  _Step _step = _Step.main;
 
   TodoDateResult? _dateResult;
   String    _selectedCategory = '공부';
@@ -41,6 +47,12 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
     } else {
       _dateResult = const TodoDateResult(type: TodoDateType.someday);
     }
+  }
+
+  /// 단계 전환 — 키보드 닫고 setState. 메인↔서브 모두 이걸로.
+  void _goToStep(_Step next) {
+    FocusScope.of(context).unfocus();
+    setState(() => _step = next);
   }
 
   @override
@@ -107,138 +119,275 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
       return;
     }
 
-    final vm = ref.read(todoViewModelProvider.notifier);
-    await vm.fetchTodos();
-    await vm.fetchCalendarData();
-
+    // 홈/투두 갱신은 TodoAddNotifier.createTodo 안에서 이미 끝났음.
+    // 시트는 닫기만.
     if (context.mounted) Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-
-    // ✅ 동적 카테고리 색상 찾기
-    final categories = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
-    Color getCategoryColor(String name) {
-      try {
-        return categories.firstWhere((cat) => cat.categoryName == name).color;
-      } catch (_) {
-        return AppColors.calendarPoint; // 기본색
-      }
-    }
+    // 시트 높이를 화면의 70% 로 고정 — 단계 전환 때 시트 자체가 출렁이는 걸 막는다.
+    // 각 단계는 자체적으로 [헤더(마스코트) / Expanded(본문) / 하단 버튼] 패턴을 갖는다.
+    final fixedHeight = MediaQuery.of(context).size.height * 0.70;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
         decoration: BoxDecoration(
           color: c.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+        height: fixedHeight,
+        padding: const EdgeInsets.only(top: 12),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(2)))),
-            const SizedBox(height: 32),
-            _MascotBubble(message: widget.initialDate == null ? '언제가 하고 싶은 일은?' : '이날 어떤 일을 계획해볼까?'),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: TextField(
-                controller: _titleController, focusNode: _titleFocusNode,
-                style: AppTextStyles.titleLarge.copyWith(fontFamily: 'GmarketSansMedium', fontWeight: FontWeight.w500, color: c.textPrimary),
-                decoration: InputDecoration(
-                  hintText: '할 일을 입력해주세요.',
-                  hintStyle: AppTextStyles.titleLarge.copyWith(fontFamily: 'GmarketSansMedium', fontWeight: FontWeight.w500, color: const Color(0xFFD6D3D1)),
-                  border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
+            // drag handle — 단계와 무관하게 항상 노출.
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: c.border,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-            const SizedBox(height: 32),
-
-            GestureDetector(
-              onTap: () async {
-                final result = await showModalBottomSheet<TodoDateResult>(
-                  context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-                  builder: (_) => TodoDateSheet(initialDate: _dateResult?.date ?? DateTime.now(), initialResult: _dateResult),
-                );
-                if (result != null) setState(() => _dateResult = result);
-              },
-              child: _OptionRow(icon: Icons.calendar_today_outlined, label: '기간', valueText: _dateResult?.displayText ?? '미지정', colors: c),
-            ),
-            Divider(color: c.divider, height: 1, thickness: 1),
-
-            GestureDetector(
-              onTap: () async {
-                final result = await showModalBottomSheet<dynamic>(
-                  context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-                  builder: (_) => TodoCategorySheet(selectedCategory: _selectedCategory, embedded: false),
-                );
-                if (result != null && result is CategoryResp) {
-                  setState(() {
-                    _selectedCategory = result.categoryName;
-                    _selectedCategoryId = result.categoryId;
-                  });
-                }
-              },
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 20, 0, 20),
-                child: Row(
+            const SizedBox(height: 16),
+            // 단계 전환 — 시트 크기는 fixedHeight 로 고정.
+            // 각 단계 자체가 [상단 anchor / Expanded body / 하단 anchor] 구조라
+            // AnimatedSize 는 쓰지 않는다 (Expanded 와 충돌).
+            // StackFit.expand 로 각 단계가 시트 잔여 높이를 그대로 받게 한다.
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                layoutBuilder: (current, previous) => Stack(
+                  fit: StackFit.expand,
+                  alignment: Alignment.center,
                   children: [
-                    const Icon(Icons.category_outlined, size: 18, color: Color(0xFFC8966E)),
-                    const SizedBox(width: 12),
-                    Text('카테고리', style: AppTextStyles.bodyMedium.copyWith(color: c.textSecondary)),
-                    const Spacer(),
-                    Container(
-                      width: 8, height: 8,
-                      // ✅ 동적 카테고리 색상 적용
-                      decoration: BoxDecoration(color: getCategoryColor(_selectedCategory), shape: BoxShape.circle),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(_selectedCategory, style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary)),
-                    const SizedBox(width: 2),
-                    Icon(Icons.chevron_right, size: 16, color: c.textHint),
+                    ...previous,
+                    if (current != null) current,
                   ],
                 ),
+                transitionBuilder: (child, anim) =>
+                    FadeTransition(opacity: anim, child: child),
+                child: _buildStep(c),
               ),
             ),
-
-            GestureDetector(
-              onTap: () async {
-                final result = await showModalBottomSheet<TodoAlarmResult>(
-                  context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-                  builder: (_) => TodoTimeSheet(initialTime: _selectedTime, initialEnabled: _alarmEnabled),
-                );
-                if (result != null) {
-                  setState(() {
-                    _selectedTime = result.time;
-                    _alarmEnabled = result.enabled;
-                  });
-                }
-              },
-              child: _OptionRow(icon: Icons.notifications_outlined, label: '알림', valueText: _alarmEnabled ? _formatTime(_selectedTime) : '없음', colors: c),
-            ),
-            Divider(color: c.divider, height: 1, thickness: 1),
-
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: TextField(
-                controller: _memoController, minLines: 5, maxLines: null, keyboardType: TextInputType.multiline,
-                style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary),
-                decoration: InputDecoration(
-                  hintText: '메모를 입력해 보세요.', hintStyle: AppTextStyles.bodyMedium.copyWith(color: c.textHint),
-                  border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            DoitdoPrimaryButton(label: '저장하기', onPressed: () => _onSave(context)),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStep(DoitdoColors c) {
+    switch (_step) {
+      case _Step.main:
+        return KeyedSubtree(
+          key: const ValueKey('main'),
+          child: _buildMainForm(c),
+        );
+      case _Step.datePicker:
+        return KeyedSubtree(
+          key: const ValueKey('date'),
+          child: TodoDateSheet(
+            initialDate: _dateResult?.date ?? DateTime.now(),
+            initialResult: _dateResult,
+            embedded: true,
+            onConfirm: (result) {
+              setState(() {
+                _dateResult = result;
+                _step = _Step.main;
+              });
+            },
+            onBack: () => _goToStep(_Step.main),
+          ),
+        );
+      case _Step.categoryPicker:
+        return KeyedSubtree(
+          key: const ValueKey('category'),
+          child: TodoCategorySheet(
+            selectedCategory: _selectedCategory,
+            embedded: true,
+            onConfirm: (result) {
+              setState(() {
+                _selectedCategory = result.categoryName;
+                _selectedCategoryId = result.categoryId;
+                _step = _Step.main;
+              });
+            },
+            onBack: () => _goToStep(_Step.main),
+          ),
+        );
+      case _Step.alertPicker:
+        return KeyedSubtree(
+          key: const ValueKey('alert'),
+          child: TodoTimeSheet(
+            initialTime: _selectedTime,
+            initialEnabled: _alarmEnabled,
+            embedded: true,
+            onConfirm: (result) {
+              setState(() {
+                _selectedTime = result.time;
+                _alarmEnabled = result.enabled;
+                _step = _Step.main;
+              });
+            },
+            onBack: () => _goToStep(_Step.main),
+          ),
+        );
+    }
+  }
+
+  Widget _buildMainForm(DoitdoColors c) {
+    // 동적 카테고리 색상 — 메인 폼에서만 필요.
+    final categories = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
+    Color getCategoryColor(String name) {
+      try {
+        return categories.firstWhere((cat) => cat.categoryName == name).color;
+      } catch (_) {
+        return AppColors.calendarPoint;
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── 상단 anchor: 마스코트 + 제목 입력 ─────────────
+          _MascotBubble(
+            message: widget.initialDate == null
+                ? '언제가 하고 싶은 일은?'
+                : '이날 어떤 일을 계획해볼까?',
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: TextField(
+              controller: _titleController,
+              focusNode: _titleFocusNode,
+              style: AppTextStyles.titleLarge.copyWith(
+                fontFamily: 'GmarketSansMedium',
+                fontWeight: FontWeight.w500,
+                color: c.textPrimary,
+              ),
+              decoration: InputDecoration(
+                hintText: '할 일을 입력해주세요.',
+                hintStyle: AppTextStyles.titleLarge.copyWith(
+                  fontFamily: 'GmarketSansMedium',
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFFD6D3D1),
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // ── 본문: 옵션들 + 메모. 키보드 올라와도 스크롤 가능. ──
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 기간 — 시트 띄우는 대신 step 전환.
+                  GestureDetector(
+                    onTap: () => _goToStep(_Step.datePicker),
+                    child: _OptionRow(
+                      icon: Icons.calendar_today_outlined,
+                      label: '기간',
+                      valueText: _dateResult?.displayText ?? '미지정',
+                      colors: c,
+                    ),
+                  ),
+                  Divider(color: c.divider, height: 1, thickness: 1),
+
+                  // 카테고리 — step 전환.
+                  GestureDetector(
+                    onTap: () => _goToStep(_Step.categoryPicker),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 20, 0, 20),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.category_outlined,
+                              size: 18, color: Color(0xFFC8966E)),
+                          const SizedBox(width: 12),
+                          Text('카테고리',
+                              style: AppTextStyles.bodyMedium
+                                  .copyWith(color: c.textSecondary)),
+                          const Spacer(),
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: getCategoryColor(_selectedCategory),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(_selectedCategory,
+                              style: AppTextStyles.bodyMedium
+                                  .copyWith(color: c.textPrimary)),
+                          const SizedBox(width: 2),
+                          Icon(Icons.chevron_right, size: 16, color: c.textHint),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // 알림 — step 전환.
+                  GestureDetector(
+                    onTap: () => _goToStep(_Step.alertPicker),
+                    child: _OptionRow(
+                      icon: Icons.notifications_outlined,
+                      label: '알림',
+                      valueText:
+                          _alarmEnabled ? _formatTime(_selectedTime) : '없음',
+                      colors: c,
+                    ),
+                  ),
+                  Divider(color: c.divider, height: 1, thickness: 1),
+
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: TextField(
+                      controller: _memoController,
+                      minLines: 4,
+                      maxLines: null,
+                      keyboardType: TextInputType.multiline,
+                      style: AppTextStyles.bodyMedium
+                          .copyWith(color: c.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: '메모를 입력해 보세요.',
+                        hintStyle: AppTextStyles.bodyMedium
+                            .copyWith(color: c.textHint),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── 하단 anchor: 저장 버튼 ────────────────────
+          const SizedBox(height: 12),
+          DoitdoPrimaryButton(
+            label: '저장하기',
+            onPressed: () => _onSave(context),
+          ),
+        ],
       ),
     );
   }
