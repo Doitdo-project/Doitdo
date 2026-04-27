@@ -171,6 +171,38 @@ class _CharacterApi implements CharacterApi {
   }
 
   @override
+  Future<ApiResponse<CharacterActionDto>> triggerCharacterAction(
+    String actionType,
+  ) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<ApiResponse<CharacterActionDto>>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/api/characters/me/actions/${actionType}',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
+    late ApiResponse<CharacterActionDto> _value;
+    try {
+      _value = ApiResponse<CharacterActionDto>.fromJson(
+        _result.data!,
+        (json) => CharacterActionDto.fromJson(json as Map<String, dynamic>),
+      );
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
   Future<ApiResponse<EncyclopediaDto>> getEncyclopedia() async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};

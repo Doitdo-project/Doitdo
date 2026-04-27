@@ -106,3 +106,22 @@ class Character {
 
   bool get isEgg => stage == CharacterStage.egg;
 }
+
+/// 다마고치 캐릭터 상호작용 액션. 서버 enum 과 1:1 매핑.
+///
+/// `GET /api/characters/me/actions/{actionType}` path 의 `{actionType}` 에 들어갈
+/// 값은 [serverValue] 로 직렬화한다 (대문자 그대로).
+///
+/// 현재 홈 캐릭터 탭에서는 [idle] 과 [eye] 만 번갈아 호출한다. 나머지(eat/sleep/
+/// happy/sad)는 향후 다마고치 인게임 인터랙션이 추가될 때 사용하기 위해 미리 선언.
+enum CharacterAction {
+  idle,
+  eye,
+  eat,
+  sleep,
+  happy,
+  sad;
+
+  /// 서버 path param 직렬화 값. enum 그대로 대문자.
+  String get serverValue => name.toUpperCase();
+}

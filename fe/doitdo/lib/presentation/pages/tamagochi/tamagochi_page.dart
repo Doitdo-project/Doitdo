@@ -334,6 +334,16 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                               onTapCollection: () =>
                                   context.push(AppRoutes.tamagochiCollection),
                               onEggTap: _handleEggTap,
+                              onCharacterTap: () {
+                                final remaining = todayTodos
+                                    .where((t) => !t.isDone)
+                                    .length;
+                                ref
+                                    .read(tamagochiViewModelProvider.notifier)
+                                    .onCharacterTap(
+                                      remainingTodayTodos: remaining,
+                                    );
+                              },
                             ),
                             if (character?.canFarewell ?? false) ...[
                               SizedBox(height: 12.h),
@@ -346,7 +356,6 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                 ),
                               ),
                             ],
-                            SizedBox(height: _streakTopGap),
                             StreakSection(
                               streakDays: streak.currentCount,
                               slots: streakWindow.slots,
