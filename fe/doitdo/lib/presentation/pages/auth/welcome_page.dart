@@ -380,6 +380,7 @@ import 'package:doitdo/core/theme/app_theme.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
+import 'package:doitdo/presentation/navigation/post_auth_destination.dart';
 import 'package:doitdo/presentation/pages/auth/welcome_view_model.dart';
 
 /// 앱 진입 후 최초로 보이는 로그인 선택 화면.
@@ -405,7 +406,8 @@ class WelcomePage extends ConsumerWidget {
               // 캐릭터 수령/프리로드는 홈(tamagochi_page) initState 의 ensureCharacter()
               // 한 곳에서만 돌린다. 여기서 unawaited 로 또 띄우면 home 의 load 와 레이스가
               // 나서 "GET 실패 → POST" 판정이 덮어써질 수 있음.
-              context.go(AppRoutes.tamagochi);
+              // 첫 소셜 로그인 사용자(birthDate/agreements 미등록) 는 메인 탭 대신 온보딩으로.
+              context.go(resolvePostAuthDestination(ref, success.user));
             },
             error: (error, _) {
               if (error is AuthCanceledException) return;

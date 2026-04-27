@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 
+import 'package:doitdo/core/config/app_config.dart';
 import 'package:doitdo/core/network/logging_interceptor.dart';
-import 'package:doitdo/core/utils/app_env.dart';
 
 class ApiClient {
   ApiClient._();
@@ -9,7 +9,7 @@ class ApiClient {
   static Dio create() {
     final dio = Dio(
       BaseOptions(
-        baseUrl: AppEnv.optional('API_BASE_URL'),
+        baseUrl: AppConfig.apiBaseUrl,
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 10),
         headers: {'Content-Type': 'application/json'},

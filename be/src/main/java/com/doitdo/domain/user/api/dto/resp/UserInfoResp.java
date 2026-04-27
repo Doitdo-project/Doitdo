@@ -9,13 +9,18 @@ import com.doitdo.domain.user.entity.User;
  * 소셜 전용 가입자({@code password == null})에게는 비밀번호 변경 진입 자체를 숨겨
  * 시도 → 401 거절로 인한 UX 깨짐을 방지한다. 백엔드 정책 자체는
  * {@code UserServiceImpl.changePassword} 에서 별도 검증.
+ *
+ * <p>{@code birthDateRegistered} / {@code agreementsAccepted} 는 온보딩 단계 분기용.
+ * 클라이언트가 진입 시 어느 온보딩 모달을 띄울지 판정한다.
  */
 public record UserInfoResp(
 
 		Long userId,
 		String username,
 		String email,
-		boolean hasPassword
+		boolean hasPassword,
+		boolean birthDateRegistered,
+		boolean agreementsAccepted
 ) {
 
 	public static UserInfoResp from(User user) {
@@ -23,7 +28,9 @@ public record UserInfoResp(
 				user.getUserId(),
 				user.getUsername(),
 				user.getEmail(),
-				user.getPassword() != null
+				user.getPassword() != null,
+				user.getBirthDate() != null,
+				user.getTermsAgreedAt() != null
 		);
 	}
 }

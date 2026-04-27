@@ -15,15 +15,24 @@ import 'package:doitdo/presentation/widgets/common/doitdo_dialog.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
 import 'package:doitdo/presentation/pages/todo/todo_detail_provider.dart';
 
-class TodoDetailSheet extends ConsumerWidget {
+class TodoDetailSheet extends ConsumerStatefulWidget {
   const TodoDetailSheet({super.key, required this.todoId, required this.isSomeday});
 
   final String todoId;
   final bool isSomeday;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TodoDetailSheet> createState() => _TodoDetailSheetState();
+}
+
+class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
+  bool _isToggling = false; // ✅ 완료/미완료 토글 중복 방지
+
+  @override
+  Widget build(BuildContext context) {
     final c = context.colors;
+    final todoId = widget.todoId;
+    final isSomeday = widget.isSomeday;
     final vm = ref.read(todoViewModelProvider.notifier);
     final detailAsync = ref.watch(todoDetailProvider(todoId));
 
@@ -42,205 +51,226 @@ class TodoDetailSheet extends ConsumerWidget {
     return SafeArea(
       top: false,
       child: Container(
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-      child: detailAsync.when(
-        loading: () => const SizedBox(height: 300, child: Center(child: CircularProgressIndicator(color: AppColors.calendarPoint))),
-        error: (err, stack) => SizedBox(height: 300, child: Center(child: Text('상세 정보를 불러오지 못했습니다.\n$err', style: AppTextStyles.bodyMedium))),
-        data: (detailDto) {
-          final catName = detailDto.category ?? '기타';
-          final catKey = TodoCategory.fromName(catName);
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+        child: detailAsync.when(
+          loading: () => const SizedBox(height: 300, child: Center(child: CircularProgressIndicator(color: AppColors.calendarPoint))),
+          error: (err, stack) => SizedBox(height: 300, child: Center(child: Text('상세 정보를 불러오지 못했습니다.\n$err', style: AppTextStyles.bodyMedium))),
+          data: (detailDto) {
+            final catName = detailDto.category ?? '기타';
+            final catKey = TodoCategory.fromName(catName);
 
-          // ✅ 동적 색상 적용 — 배경 밝기에 따라 글자색 자동 결정
-          final catBg = getCategoryColor(catName);
-          final catFg = catBg.computeLuminance() > 0.4
-              ? AppColors.calendarDateText  // 밝은 배경 → 어두운 글자
-              : Colors.white;              // 어두운 배경 → 흰 글자
+            // ✅ 동적 색상 적용 — 배경 밝기에 따라 글자색 자동 결정
+            final catBg = getCategoryColor(catName);
+            final catFg = catBg.computeLuminance() > 0.4
+                ? AppColors.calendarDateText  // 밝은 배경 → 어두운 글자
+                : Colors.white;              // 어두운 배경 → 흰 글자
 
-          final isDone = detailDto.status == 'DONE';
-          final memo = detailDto.content;
+            // ✅ 로컬 상태 우선 체크 — toggleTodo 후 즉시 반영 (서버 응답 대기 불필요)
+            // todoViewModelProvider의 allTodos/allSomedayTodos에서 먼저 찾고,
+            // 없으면(상세만 따로 열린 경우) 서버 detailDto.status 사용
+            final allLocal = [
+              ...ref.read(todoViewModelProvider).allTodos,
+              ...ref.read(todoViewModelProvider).allSomedayTodos,
+            ];
+            final localMatch = allLocal.where((t) => t.id == todoId);
+            final isDone = localMatch.isNotEmpty
+                ? localMatch.first.isDone       // 로컬 낙관적 업데이트 값 우선
+                : detailDto.status == 'DONE';   // 없으면 서버 응답 사용
+            final memo = detailDto.content;
 
-          String dateDisplay = '미지정';
-          if (detailDto.type == 'SOMEDAY') {
-            dateDisplay = '언제가 할 일';
-          } else if (detailDto.startDate != null) {
-            final sParts = detailDto.startDate!.split('-');
-            if (sParts.length == 3) {
-              dateDisplay = '${int.parse(sParts[1])}월 ${int.parse(sParts[2])}일';
-            } else {
-              dateDisplay = detailDto.startDate!;
+            String dateDisplay = '미지정';
+            if (detailDto.type == 'SOMEDAY') {
+              dateDisplay = '언제가 할 일';
+            } else if (detailDto.startDate != null) {
+              final sParts = detailDto.startDate!.split('-');
+              if (sParts.length == 3) {
+                dateDisplay = '${int.parse(sParts[1])}월 ${int.parse(sParts[2])}일';
+              } else {
+                dateDisplay = detailDto.startDate!;
+              }
+              if (detailDto.endDate != null) {
+                final eParts = detailDto.endDate!.split('-');
+                if (eParts.length == 3) dateDisplay += ' ~ ${int.parse(eParts[1])}월 ${int.parse(eParts[2])}일';
+              }
+              if (detailDto.type == 'RECURRING') dateDisplay += ' 시작 (반복)';
             }
-            if (detailDto.endDate != null) {
-              final eParts = detailDto.endDate!.split('-');
-              if (eParts.length == 3) dateDisplay += ' ~ ${int.parse(eParts[1])}월 ${int.parse(eParts[2])}일';
-            }
-            if (detailDto.type == 'RECURRING') dateDisplay += ' 시작 (반복)';
-          }
 
-          return SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(width: 40, height: 4, decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(2))),
-                ),
-                const SizedBox(height: 32),
-                Row(
-                  children: [
-                    Image.asset('assets/images/Dooit.png', width: 36, height: 36),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: const BoxDecoration(
-                        color: AppColors.bubbleBg,
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(4), topRight: Radius.circular(12),
-                          bottomLeft: Radius.circular(12), bottomRight: Radius.circular(12),
-                        ),
-                      ),
-                      child: Text('할 일 상세', style: AppTextStyles.bodySmall.copyWith(color: AppColors.calendarDateText)),
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: () {
-                        final sDate = detailDto.startDate != null ? DateTime.tryParse(detailDto.startDate!) : null;
-                        List<int>? restoredDays;
-                        if (detailDto.type == 'RECURRING') {
-                          if (detailDto.daysOfWeek != null && detailDto.daysOfWeek!.isNotEmpty) {
-                            const codeToIndex = {'SUN': 0, 'MON': 1, 'TUE': 2, 'WED': 3, 'THU': 4, 'FRI': 5, 'SAT': 6};
-                            restoredDays = detailDto.daysOfWeek!.map((cd) => codeToIndex[cd.toUpperCase()]).whereType<int>().toList();
-                          } else if (sDate != null) {
-                            final fw = sDate.weekday;
-                            restoredDays = [fw == 7 ? 0 : fw];
-                          }
-                        }
-
-                        final todoToEdit = Todo(
-                          id: detailDto.todoId.toString(),
-                          title: detailDto.title,
-                          isDone: isDone,
-                          category: catKey,
-                          categoryId: detailDto.categoryId,
-                          memo: detailDto.content,
-                          dateType: detailDto.type == 'PERIOD' ? TodoDateType.range
-                              : (detailDto.type == 'RECURRING' ? TodoDateType.repeat
-                              : (detailDto.type == 'SOMEDAY' ? TodoDateType.someday : TodoDateType.normal)),
-                          date: sDate,
-                          rangeEnd: detailDto.endDate != null ? DateTime.tryParse(detailDto.endDate!) : null,
-                          alarmTime: detailDto.alarmTime != null ? TimeOfDay(
-                              hour: int.parse(detailDto.alarmTime!.split(':')[0]), minute: int.parse(detailDto.alarmTime!.split(':')[1])
-                          ) : null,
-                          alarmEnabled: detailDto.alarmTime != null,
-                          repeatStartDate: sDate,
-                          repeatEndDate: detailDto.type == 'RECURRING' && detailDto.endDate != null ? DateTime.tryParse(detailDto.endDate!) : null,
-                          repeatDays: restoredDays,
-                        );
-
-                        Navigator.of(context, rootNavigator: true).pop();
-                        showModalBottomSheet(
-                          context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent, useRootNavigator: true,
-                          builder: (_) => TodoEditSheet(todo: todoToEdit, isSomeday: isSomeday),
-                        );
-                      },
-                      behavior: HitTestBehavior.opaque,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 8.0, top: 8.0, bottom: 8.0),
-                        child: Text('수정', style: AppTextStyles.labelMedium.copyWith(color: c.textSecondary)),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-                Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: Text(
-                    detailDto.title,
-                    style: AppTextStyles.titleLarge.copyWith(
-                      fontFamily: 'GmarketSansMedium', fontWeight: FontWeight.w500, color: isDone ? c.textHint : c.textPrimary,
-                      decoration: isDone ? TextDecoration.lineThrough : null, decorationColor: c.textHint,
-                    ),
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(width: 40, height: 4, decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(2))),
                   ),
-                ),
-                const SizedBox(height: 32),
-                _InfoRow(icon: Icons.calendar_today_outlined, label: '기간', value: dateDisplay),
-                Divider(color: c.divider, height: 1, thickness: 1),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 20, 0, 20),
-                  child: Row(
+                  const SizedBox(height: 32),
+                  Row(
                     children: [
-                      const Icon(Icons.category_outlined, size: 18, color: Color(0xFFC8966E)),
-                      const SizedBox(width: 12),
-                      Text('카테고리', style: AppTextStyles.bodyMedium.copyWith(color: c.textSecondary)),
-                      const Spacer(),
+                      Image.asset('assets/images/Dooit.png', width: 36, height: 36),
+                      const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(color: catBg, borderRadius: BorderRadius.circular(6)),
-                        child: Text(catName, style: AppTextStyles.labelSmall.copyWith(color: catFg)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: const BoxDecoration(
+                          color: AppColors.bubbleBg,
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(4), topRight: Radius.circular(12),
+                            bottomLeft: Radius.circular(12), bottomRight: Radius.circular(12),
+                          ),
+                        ),
+                        child: Text('할 일 상세', style: AppTextStyles.bodySmall.copyWith(color: AppColors.calendarDateText)),
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () {
+                          final sDate = detailDto.startDate != null ? DateTime.tryParse(detailDto.startDate!) : null;
+                          List<int>? restoredDays;
+                          if (detailDto.type == 'RECURRING') {
+                            if (detailDto.daysOfWeek != null && detailDto.daysOfWeek!.isNotEmpty) {
+                              const codeToIndex = {'SUN': 0, 'MON': 1, 'TUE': 2, 'WED': 3, 'THU': 4, 'FRI': 5, 'SAT': 6};
+                              restoredDays = detailDto.daysOfWeek!.map((cd) => codeToIndex[cd.toUpperCase()]).whereType<int>().toList();
+                            } else if (sDate != null) {
+                              final fw = sDate.weekday;
+                              restoredDays = [fw == 7 ? 0 : fw];
+                            }
+                          }
+
+                          final todoToEdit = Todo(
+                            id: detailDto.todoId.toString(),
+                            title: detailDto.title,
+                            isDone: isDone,
+                            category: catKey,
+                            categoryId: detailDto.categoryId,
+                            memo: detailDto.content,
+                            dateType: detailDto.type == 'PERIOD' ? TodoDateType.range
+                                : (detailDto.type == 'RECURRING' ? TodoDateType.repeat
+                                : (detailDto.type == 'SOMEDAY' ? TodoDateType.someday : TodoDateType.normal)),
+                            date: sDate,
+                            rangeEnd: detailDto.endDate != null ? DateTime.tryParse(detailDto.endDate!) : null,
+                            alarmTime: detailDto.alarmTime != null ? TimeOfDay(
+                                hour: int.parse(detailDto.alarmTime!.split(':')[0]), minute: int.parse(detailDto.alarmTime!.split(':')[1])
+                            ) : null,
+                            alarmEnabled: detailDto.alarmTime != null,
+                            repeatStartDate: sDate,
+                            repeatEndDate: detailDto.type == 'RECURRING' && detailDto.endDate != null ? DateTime.tryParse(detailDto.endDate!) : null,
+                            repeatDays: restoredDays,
+                          );
+
+                          Navigator.of(context, rootNavigator: true).pop();
+                          showModalBottomSheet(
+                            context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent, useRootNavigator: true,
+                            builder: (_) => TodoEditSheet(todo: todoToEdit, isSomeday: isSomeday),
+                          );
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 8.0, top: 8.0, bottom: 8.0),
+                          child: Text('수정', style: AppTextStyles.labelMedium.copyWith(color: c.textSecondary)),
+                        ),
                       ),
                     ],
                   ),
-                ),
-                Divider(color: c.divider, height: 1, thickness: 1),
-                _InfoRow(icon: Icons.notifications_outlined, label: '알림', value: detailDto.alarmTime ?? '없음'),
-                Divider(color: c.divider, height: 1, thickness: 1),
-                if (memo != null && memo.isNotEmpty) ...[
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                   Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      detailDto.title,
+                      style: AppTextStyles.titleLarge.copyWith(
+                        fontFamily: 'GmarketSansMedium', fontWeight: FontWeight.w500, color: isDone ? c.textHint : c.textPrimary,
+                        decoration: isDone ? TextDecoration.lineThrough : null, decorationColor: c.textHint,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  _InfoRow(icon: Icons.calendar_today_outlined, label: '기간', value: dateDisplay),
+                  Divider(color: c.divider, height: 1, thickness: 1),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 20, 8, 20),
+                    child: Row(
                       children: [
-                        Text('메모', style: AppTextStyles.bodySmall.copyWith(color: c.textSecondary)),
-                        const SizedBox(height: 8),
-                        Text(memo, style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary)),
+                        const Icon(Icons.category_outlined, size: 18, color: Color(0xFFC8966E)),
+                        const SizedBox(width: 12),
+                        Text('카테고리', style: AppTextStyles.bodyMedium.copyWith(color: c.textSecondary)),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(color: catBg, borderRadius: BorderRadius.circular(6)),
+                          child: Text(catName, style: AppTextStyles.labelSmall.copyWith(color: catFg)),
+                        ),
                       ],
                     ),
                   ),
-                ],
-                const SizedBox(height: 32),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          final confirmed = await showDoitdoDialog(
-                            context: context, title: '할 일 삭제', message: '정말 삭제하시겠어요?', confirmLabel: '삭제', cancelLabel: '취소',
-                          );
-                          if (confirmed == true && context.mounted) {
-                            Navigator.of(context, rootNavigator: true).pop();
-                            isSomeday ? vm.deleteSomedayTodo(todoId) : vm.deleteTodo(todoId);
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.loginBtnOff, foregroundColor: Colors.white,
-                          elevation: 0, shadowColor: Colors.transparent, textStyle: AppTextStyles.bodyLarge,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        child: const Text('삭제'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: DoitdoPrimaryButton(
-                        label: isDone ? '미완료로 변경' : '완료하기',
-                        onPressed: () {
-                          Navigator.of(context, rootNavigator: true).pop();
-                          isSomeday ? vm.toggleSomedayTodo(todoId) : vm.toggleTodo(todoId);
-                        },
+                  Divider(color: c.divider, height: 1, thickness: 1),
+                  _InfoRow(icon: Icons.notifications_outlined, label: '알림', value: detailDto.alarmTime ?? '없음'),
+                  Divider(color: c.divider, height: 1, thickness: 1),
+                  if (memo != null && memo.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text('메모', style: AppTextStyles.bodySmall.copyWith(color: c.textSecondary)),
+                          const SizedBox(height: 8),
+                          Text(memo, style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary)),
+                        ],
                       ),
                     ),
                   ],
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+                  const SizedBox(height: 32),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final confirmed = await showDoitdoDialog(
+                              context: context, title: '할 일 삭제', message: '정말 삭제하시겠어요?', confirmLabel: '삭제', cancelLabel: '취소',
+                            );
+                            if (confirmed == true && context.mounted) {
+                              Navigator.of(context, rootNavigator: true).pop();
+                              isSomeday ? vm.deleteSomedayTodo(todoId) : vm.deleteTodo(todoId);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.loginBtnOff, foregroundColor: Colors.white,
+                            elevation: 0, shadowColor: Colors.transparent, textStyle: AppTextStyles.bodyLarge,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: const Text('삭제'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: DoitdoPrimaryButton(
+                          label: isDone ? '미완료로 변경' : '완료하기',
+                          onPressed: _isToggling ? null : () async {
+                            // ✅ 시트를 닫지 않고 상태 즉시 반영
+                            setState(() => _isToggling = true);
+                            try {
+                              isSomeday
+                                  ? await vm.toggleSomedayTodo(todoId)
+                                  : await vm.toggleTodo(todoId);
+                              // ✅ provider invalidate → 서버에서 최신 상태 재조회
+                              if (mounted) {
+                                ref.invalidate(todoDetailProvider(todoId));
+                              }
+                            } finally {
+                              if (mounted) setState(() => _isToggling = false);
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -386,125 +416,125 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
         padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom),
         child: Container(
-        decoration: BoxDecoration(
-          color: c.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(2)))),
-              const SizedBox(height: 32),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Image.asset('assets/images/Dooit.png', width: 36, height: 36),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: const BoxDecoration(
-                      color: AppColors.bubbleBg,
-                      borderRadius: BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(12), bottomLeft: Radius.circular(12), bottomRight: Radius.circular(12)),
-                    ),
-                    child: Text('어떻게 수정할까?', style: AppTextStyles.bodySmall.copyWith(color: AppColors.calendarDateText)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: TextField(
-                  controller: _titleController, focusNode: _titleFocusNode,
-                  style: AppTextStyles.titleLarge.copyWith(fontFamily: 'GmarketSansMedium', fontWeight: FontWeight.w500, color: c.textPrimary),
-                  decoration: InputDecoration(
-                    hintText: '할 일을 입력해주세요.',
-                    hintStyle: AppTextStyles.titleLarge.copyWith(fontFamily: 'GmarketSansMedium', fontWeight: FontWeight.w500, color: const Color(0xFFD6D3D1)),
-                    border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-              GestureDetector(
-                onTap: () async {
-                  final result = await showModalBottomSheet<TodoDateResult>(
-                    context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
-                    builder: (_) => TodoDateSheet(initialDate: _dateResult.date ?? DateTime.now(), initialResult: _dateResult),
-                  );
-                  if (result != null) setState(() => _dateResult = result);
-                },
-                child: _OptionRow(icon: Icons.calendar_today_outlined, label: '기간', valueText: _dateResult.displayText, colors: c),
-              ),
-              Divider(color: c.divider, height: 1, thickness: 1),
-              GestureDetector(
-                onTap: () async {
-                  final result = await showModalBottomSheet<dynamic>(
-                    context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
-                    builder: (_) => TodoCategorySheet(selectedCategory: _selectedCategory),
-                  );
-                  if (result != null && result is CategoryResp) {
-                    setState(() {
-                      _selectedCategory = result.categoryName;
-                      _selectedCategoryId = result.categoryId;
-                    });
-                  }
-                },
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 20, 0, 20),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.category_outlined, size: 18, color: Color(0xFFC8966E)),
-                      const SizedBox(width: 12),
-                      Text('카테고리', style: AppTextStyles.bodyMedium.copyWith(color: c.textSecondary)),
-                      const Spacer(),
-                      // ✅ 동적 카테고리 색상 적용
-                      Container(width: 8, height: 8, decoration: BoxDecoration(color: getCategoryColor(_selectedCategory), shape: BoxShape.circle)),
-                      const SizedBox(width: 6),
-                      Text(_selectedCategory, style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary)),
-                      const SizedBox(width: 2),
-                      Icon(Icons.chevron_right, size: 16, color: c.textHint),
-                    ],
-                  ),
-                ),
-              ),
-              GestureDetector(
-                onTap: () async {
-                  final result = await showModalBottomSheet<TodoAlarmResult>(
-                    context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
-                    builder: (_) => TodoTimeSheet(initialTime: _selectedTime, initialEnabled: _alarmEnabled),
-                  );
-                  if (result != null) {
-                    setState(() {
-                      _selectedTime = result.time;
-                      _alarmEnabled = result.enabled;
-                    });
-                  }
-                },
-                child: _OptionRow(icon: Icons.notifications_outlined, label: '알림', valueText: _formatTime(_selectedTime), colors: c),
-              ),
-              Divider(color: c.divider, height: 1, thickness: 1),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: TextField(
-                  controller: _memoController, minLines: 5, maxLines: null, keyboardType: TextInputType.multiline,
-                  style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary),
-                  decoration: InputDecoration(
-                    hintText: '메모를 입력해 보세요.', hintStyle: AppTextStyles.bodyMedium.copyWith(color: c.textHint),
-                    border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              DoitdoPrimaryButton(
-                label: _isLoading ? '수정 중...' : '수정 완료',
-                onPressed: _isLoading ? null : () => _onSave(context),
-              ),
-            ],
+          decoration: BoxDecoration(
+            color: c.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
-        ),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(2)))),
+                const SizedBox(height: 32),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Image.asset('assets/images/Dooit.png', width: 36, height: 36),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: const BoxDecoration(
+                        color: AppColors.bubbleBg,
+                        borderRadius: BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(12), bottomLeft: Radius.circular(12), bottomRight: Radius.circular(12)),
+                      ),
+                      child: Text('어떻게 수정할까?', style: AppTextStyles.bodySmall.copyWith(color: AppColors.calendarDateText)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: TextField(
+                    controller: _titleController, focusNode: _titleFocusNode,
+                    style: AppTextStyles.titleLarge.copyWith(fontFamily: 'GmarketSansMedium', fontWeight: FontWeight.w500, color: c.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: '할 일을 입력해주세요.',
+                      hintStyle: AppTextStyles.titleLarge.copyWith(fontFamily: 'GmarketSansMedium', fontWeight: FontWeight.w500, color: const Color(0xFFD6D3D1)),
+                      border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                GestureDetector(
+                  onTap: () async {
+                    final result = await showModalBottomSheet<TodoDateResult>(
+                      context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
+                      builder: (_) => TodoDateSheet(initialDate: _dateResult.date ?? DateTime.now(), initialResult: _dateResult),
+                    );
+                    if (result != null) setState(() => _dateResult = result);
+                  },
+                  child: _OptionRow(icon: Icons.calendar_today_outlined, label: '기간', valueText: _dateResult.displayText, colors: c),
+                ),
+                Divider(color: c.divider, height: 1, thickness: 1),
+                GestureDetector(
+                  onTap: () async {
+                    final result = await showModalBottomSheet<dynamic>(
+                      context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
+                      builder: (_) => TodoCategorySheet(selectedCategory: _selectedCategory),
+                    );
+                    if (result != null && result is CategoryResp) {
+                      setState(() {
+                        _selectedCategory = result.categoryName;
+                        _selectedCategoryId = result.categoryId;
+                      });
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 20, 8, 20),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.category_outlined, size: 18, color: Color(0xFFC8966E)),
+                        const SizedBox(width: 12),
+                        Text('카테고리', style: AppTextStyles.bodyMedium.copyWith(color: c.textSecondary)),
+                        const Spacer(),
+                        // ✅ 동적 카테고리 색상 적용
+                        Container(width: 8, height: 8, decoration: BoxDecoration(color: getCategoryColor(_selectedCategory), shape: BoxShape.circle)),
+                        const SizedBox(width: 6),
+                        Text(_selectedCategory, style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary)),
+                        const SizedBox(width: 2),
+                        Icon(Icons.chevron_right, size: 16, color: c.textHint),
+                      ],
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () async {
+                    final result = await showModalBottomSheet<TodoAlarmResult>(
+                      context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
+                      builder: (_) => TodoTimeSheet(initialTime: _selectedTime, initialEnabled: _alarmEnabled),
+                    );
+                    if (result != null) {
+                      setState(() {
+                        _selectedTime = result.time;
+                        _alarmEnabled = result.enabled;
+                      });
+                    }
+                  },
+                  child: _OptionRow(icon: Icons.notifications_outlined, label: '알림', valueText: _formatTime(_selectedTime), colors: c),
+                ),
+                Divider(color: c.divider, height: 1, thickness: 1),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: TextField(
+                    controller: _memoController, minLines: 5, maxLines: null, keyboardType: TextInputType.multiline,
+                    style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: '메모를 입력해 보세요.', hintStyle: AppTextStyles.bodyMedium.copyWith(color: c.textHint),
+                      border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                DoitdoPrimaryButton(
+                  label: _isLoading ? '수정 중...' : '수정 완료',
+                  onPressed: _isLoading ? null : () => _onSave(context),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -520,7 +550,7 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 20, 0, 20),
+      padding: const EdgeInsets.fromLTRB(8, 20, 8, 20),
       child: Row(
         children: [
           Icon(icon, size: 18, color: const Color(0xFFC8966E)),
@@ -543,7 +573,7 @@ class _OptionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 20, 0, 20),
+      padding: const EdgeInsets.fromLTRB(8, 20, 8, 20),
       child: Row(
         children: [
           Icon(icon, size: 18, color: const Color(0xFFC8966E)),

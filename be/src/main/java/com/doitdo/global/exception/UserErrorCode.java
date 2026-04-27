@@ -15,6 +15,10 @@ public enum UserErrorCode implements ErrorCode {
 	U00_003("U00-003", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
 	U00_004("U00-004", HttpStatus.CONFLICT, "이미 사용 중인 닉네임"),
 	U00_005("U00-005", HttpStatus.INTERNAL_SERVER_ERROR, "회원가입 초기화 실패 — 관리자에게 문의해주세요"),
+	U00_006("U00-006", HttpStatus.FORBIDDEN, "만 14세 미만은 회원가입할 수 없습니다."),
+	U00_007("U00-007", HttpStatus.BAD_REQUEST, "이용약관에 동의해야 가입할 수 있습니다."),
+	U00_008("U00-008", HttpStatus.BAD_REQUEST, "개인정보처리방침에 동의해야 가입할 수 있습니다."),
+	U00_009("U00-009", HttpStatus.FORBIDDEN, "온보딩이 완료되지 않았습니다."),
 
 	// U01 - 내 정보 조회
 	U01_001("U01-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),

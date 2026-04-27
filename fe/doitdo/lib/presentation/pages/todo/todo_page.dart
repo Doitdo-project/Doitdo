@@ -66,31 +66,76 @@ class _TodoPageState extends ConsumerState<TodoPage> {
   void _showFilterMenu(BuildContext context, String currentFilter) {
     final colors = context.colors;
     final vm = ref.read(todoViewModelProvider.notifier);
+    final categories = ref.read(categoryViewModelProvider).valueOrNull ?? [];
 
-    PopupMenuItem<String> buildItem(String value, String text) {
-      final isSelected = value == currentFilter;
-      return PopupMenuItem<String>(
-        value: value,
-        child: Text(text, style: AppTextStyles.bodyMedium.copyWith(
-          color: isSelected ? AppColors.calendarPoint : colors.textPrimary,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        )),
-      );
-    }
+    // 카테고리 필터 드롭다운
+    final items = <PopupMenuEntry<String>>[
+      PopupMenuItem<String>(
+        value: 'all',
+        child: Row(
+          children: [
+            Icon(
+              Icons.list_outlined,
+              size: 16,
+              color: currentFilter == 'all'
+                  ? AppColors.calendarPoint
+                  : colors.textSecondary,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '전체',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: currentFilter == 'all'
+                    ? AppColors.calendarPoint
+                    : colors.textPrimary,
+                fontWeight: currentFilter == 'all'
+                    ? FontWeight.w600
+                    : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+      if (categories.isNotEmpty) const PopupMenuDivider(),
+      ...categories.map((cat) {
+        final value = 'cat:${cat.categoryName}';
+        final isSelected = currentFilter == value;
+        return PopupMenuItem<String>(
+          value: value,
+          child: Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: cat.color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                cat.categoryName,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: isSelected
+                      ? AppColors.calendarPoint
+                      : colors.textPrimary,
+                  fontWeight: isSelected
+                      ? FontWeight.w600
+                      : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+    ];
 
     showMenu<String>(
       context: context,
-      position: const RelativeRect.fromLTRB(1000, 100, 16, 0),
+      position: const RelativeRect.fromLTRB(1000, 100, 100, 0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       color: colors.surface,
-      items: [
-        buildItem('all', '모든 할 일'),
-        buildItem('todo', '미완료 (TODO)'),
-        buildItem('done', '완료 (DONE)'),
-        const PopupMenuDivider(),
-        buildItem('upcoming', '예정된 할 일'),
-        buildItem('past', '지난 할 일'),
-      ],
+      items: items,
     ).then((value) {
       if (value != null) vm.setFilter(value);
     });
@@ -112,14 +157,9 @@ class _TodoPageState extends ConsumerState<TodoPage> {
     );
   }
 
-  String _sectionTitle(String filter, DateTime? selectedDay) {
-    switch (filter) {
-      case 'upcoming': return '예정된 할 일';
-      case 'past':     return '지난 할 일';
-      case 'todo':     return '미완료된 할 일';
-      case 'done':     return '완료된 할 일';
-      default:         return '오늘의 할 일';
-    }
+  String _sectionTitle(String filter) {
+    if (filter.startsWith('cat:')) return '${filter.substring(4)} 카테고리';
+    return '오늘의 할 일';
   }
 
   @override
@@ -257,7 +297,10 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                     availableCalendarFormats: const {CalendarFormat.month: '월간', CalendarFormat.week: '주간'},
                     onDaySelected: vm.onDaySelected,
                     onFormatChanged: vm.onFormatChanged,
-                    onPageChanged: (focusedDay) => vm.onDaySelected(focusedDay, focusedDay),
+                    onPageChanged: (focusedDay) async {
+                      // ✅ 달 이동 시 onDaySelected 내부에서 fetchCalendarData 자동 호출
+                      await vm.onDaySelected(focusedDay, focusedDay);
+                    },
                     headerVisible: false,
                     locale: 'ko_KR',
                     eventLoader: (day) {
@@ -404,7 +447,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   TodoSection(
-                    title: _sectionTitle(state.currentFilter, state.selectedDay),
+                    title: _sectionTitle(state.currentFilter),
                     todos: state.todos,
                     onToggle: vm.toggleTodo,
                     onReorder: vm.reorderTodo,
@@ -413,18 +456,20 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                     onActionTap: () => _openAddSheet(context, state.selectedDay ?? DateTime.now()),
                     onTodoTap: (todo) => _openDetailSheet(context, todo, false),
                   ),
-                  const SizedBox(height: 24),
-
-                  TodoSection(
-                    title: '언제가 할 일',
-                    todos: state.somedayTodos,
-                    onToggle: vm.toggleSomedayTodo,
-                    onReorder: vm.reorderSomedayTodo,
-                    onSnooze: null,
-                    actionLabel: '추가하기',
-                    onActionTap: () => _openAddSheet(context, null),
-                    onTodoTap: (todo) => _openDetailSheet(context, todo, true),
-                  ),
+                  // 카테고리별/유형별 필터 시 언제가 할 일 섹션 숨기기
+                  if (state.currentFilter == 'all' || !state.currentFilter.startsWith('cat:')) ...[
+                    const SizedBox(height: 24),
+                    TodoSection(
+                      title: '언제가 할 일',
+                      todos: state.somedayTodos,
+                      onToggle: vm.toggleSomedayTodo,
+                      onReorder: vm.reorderSomedayTodo,
+                      onSnooze: null,
+                      actionLabel: '추가하기',
+                      onActionTap: () => _openAddSheet(context, null),
+                      onTodoTap: (todo) => _openDetailSheet(context, todo, true),
+                    ),
+                  ],
                 ],
               ),
             ),

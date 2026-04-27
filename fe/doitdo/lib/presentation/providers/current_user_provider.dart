@@ -36,6 +36,15 @@ class CurrentUserViewModel extends AsyncNotifier<User?> {
       return ref.read(userRepositoryProvider).getMe();
     });
   }
+
+  /// 온보딩 단계 등에서 서버 응답으로 받은 [User] 를 그대로 캐시에 반영.
+  ///
+  /// `invalidate` 와 달리 추가 GET 호출이 발생하지 않아 온보딩 화면 전환이 빠르고,
+  /// router redirect 가 두 번 트리거되는 것도 방지한다. 호출측은 가능한 최신 값을
+  /// 직접 넣어줘야 한다 — 일부 필드만 바뀌면 [User.copyWith] 로 합쳐서 전달.
+  void replace(User? user) {
+    state = AsyncValue.data(user);
+  }
 }
 
 final currentUserProvider =

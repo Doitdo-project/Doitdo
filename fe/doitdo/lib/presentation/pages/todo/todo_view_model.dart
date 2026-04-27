@@ -54,78 +54,45 @@ class TodoViewModel extends StateNotifier<TodoState> {
     final selectedDay = state.selectedDay;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    // done 인 todo 는 화면에서 숨긴다 — 단, 방금 체크해서 fading 중인 항목은
-    // 600ms 동안 "주황 체크" 모습으로 노출됐다가 사라지도록 예외.
-    bool isHiddenDone(Todo t) =>
-        t.isDone && !state.fadingTodoIds.contains(t.id);
 
     List<Todo> filteredTodos = state.allTodos;
     List<Todo> filteredSomeday = state.allSomedayTodos;
 
+    // 카테고리별 필터 (cat:{name})
+    if (filter.startsWith('cat:')) {
+      final catName = filter.substring(4);
+      filteredTodos = filteredTodos
+          .where((t) => t.category.name == catName)
+          .toList();
+      filteredSomeday = state.allSomedayTodos
+          .where((t) => t.category.name == catName)
+          .toList();
+      state = state.copyWith(todos: filteredTodos, somedayTodos: filteredSomeday);
+      return;
+    }
+
+    // 유형별 필터 (type:NORMAL / type:RECURRING / type:PERIOD)
+    if (filter.startsWith('type:')) {
+      final typeStr = filter.substring(5);
+      final dateType = switch (typeStr) {
+        'RECURRING' => TodoDateType.repeat,
+        'PERIOD'    => TodoDateType.range,
+        _           => TodoDateType.normal,
+      };
+      filteredTodos = filteredTodos
+          .where((t) => t.dateType == dateType)
+          .toList();
+      filteredSomeday = [];
+      state = state.copyWith(todos: filteredTodos, somedayTodos: filteredSomeday);
+      return;
+    }
+
     switch (filter) {
-      case 'upcoming':
-        filteredTodos = filteredTodos.where((t) {
-          if (t.date == null) return false;
-          if (isHiddenDone(t)) return false;
-          final start = DateTime(t.date!.year, t.date!.month, t.date!.day);
-
-          switch (t.dateType) {
-            case TodoDateType.normal:
-              return !start.isBefore(today);
-            case TodoDateType.someday:
-              return false;
-
-            case TodoDateType.range:
-              if (t.rangeEnd == null) return !start.isBefore(today);
-              final end = DateTime(t.rangeEnd!.year, t.rangeEnd!.month, t.rangeEnd!.day);
-              return !end.isBefore(today);
-
-            case TodoDateType.repeat:
-              if (t.repeatEndDate == null) return true;
-              final end = DateTime(t.repeatEndDate!.year, t.repeatEndDate!.month, t.repeatEndDate!.day);
-              return !end.isBefore(today);
-          }
-        }).toList();
-        filteredSomeday = [];
-        break;
-
-      case 'past':
-        filteredTodos = filteredTodos.where((t) {
-          if (t.date == null) return false;
-          final start = DateTime(t.date!.year, t.date!.month, t.date!.day);
-
-          // ✏️ 수정: dateType 별로 "완전히 끝난 일정" 판단
-          switch (t.dateType) {
-            case TodoDateType.normal:
-            // NORMAL: 오늘 이전 날짜
-              return start.isBefore(today);
-            case TodoDateType.someday:
-              return false;
-
-            case TodoDateType.range:
-            // PERIOD: endDate가 오늘 이전이어야 완전히 지난 것
-              if (t.rangeEnd == null) return start.isBefore(today);
-              final end = DateTime(t.rangeEnd!.year, t.rangeEnd!.month, t.rangeEnd!.day);
-              return end.isBefore(today);
-
-            case TodoDateType.repeat:
-            // RECURRING: endDate가 있고 오늘 이전이어야 지난 것
-            //            endDate 없으면(무한 반복) → 지난 일정 아님
-              if (t.repeatEndDate == null) return false;
-              final end = DateTime(t.repeatEndDate!.year, t.repeatEndDate!.month, t.repeatEndDate!.day);
-              return end.isBefore(today);
-          }
-        }).toList();
-        filteredSomeday = [];
-        break;
       default:
         if (selectedDay != null) {
           final sel = DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
 
           filteredTodos = filteredTodos.where((t) {
-            // 완료된 항목은 기본 view 에서도 숨김 — 단 fading 중이면 노출 유지.
-            if (isHiddenDone(t)) return false;
-
             // ✏️ 수정: PERIOD 타입은 date 대신 rangeStart 또는 date 우선 사용
             final effectiveDate = (t.dateType == TodoDateType.range)
                 ? (t.date ?? t.rangeStart)
@@ -177,9 +144,8 @@ class TodoViewModel extends StateNotifier<TodoState> {
 
     // ✏️ 수정: todo/done 은 날짜 선택과 무관하게 전체 기간 기준
     if (filter == 'todo') {
-      filteredTodos   = state.allTodos.where((t) => !isHiddenDone(t)).toList();
-      filteredSomeday =
-          state.allSomedayTodos.where((t) => !isHiddenDone(t)).toList();
+      filteredTodos   = state.allTodos.where((t) => !t.isDone).toList();
+      filteredSomeday = state.allSomedayTodos.where((t) => !t.isDone).toList();
     } else if (filter == 'done') {
       filteredTodos   = state.allTodos.where((t) => t.isDone).toList();
       filteredSomeday = state.allSomedayTodos.where((t) => t.isDone).toList();
@@ -267,10 +233,18 @@ class TodoViewModel extends StateNotifier<TodoState> {
           ? todo.repeatEndDate
           : null;
 
+      // ✅ 반복 종료일 없으면 현재 focusedDay 기준 앞뒤 2달 범위 끝까지 표시
+      // (90일 하드코딩 제거 — 달을 넘겨도 DOT 계속 표시)
+      final calendarEnd = DateTime(
+        state.focusedDay.year,
+        state.focusedDay.month + 3,
+        0,
+      );
+
       final end = effectiveEnd != null
           ? DateTime(effectiveEnd.year, effectiveEnd.month, effectiveEnd.day)
           : (todo.dateType == TodoDateType.repeat
-          ? start.add(const Duration(days: 90))
+          ? calendarEnd  // ✅ 종료일 없는 반복 → 캘린더 표시 범위까지
           : start);
 
       final totalDays = end.difference(start).inDays;
@@ -317,28 +291,42 @@ class TodoViewModel extends StateNotifier<TodoState> {
 
   Future<void> fetchCalendarData() async {
     final focusedDay = state.focusedDay;
-    final firstDay   = DateTime(focusedDay.year, focusedDay.month, 1);
-    final lastDay    = DateTime(focusedDay.year, focusedDay.month + 1, 0);
+
+    // ✅ focusedDay 기준 앞 2달 ~ 뒤 2달 범위로 조회
+    // 예: 4월 포커스 → 2월 1일 ~ 6월 30일 조회
+    final from = DateTime(focusedDay.year, focusedDay.month - 2, 1);
+    final to   = DateTime(focusedDay.year, focusedDay.month + 3, 0); // 뒤 2달의 말일
 
     await AsyncValue.guard(
           () => _repository.getCalendarTodos(
-        from: firstDay.toIso8601String().split('T')[0],
-        to:   lastDay.toIso8601String().split('T')[0],
+        from: from.toIso8601String().split('T')[0],
+        to:   to.toIso8601String().split('T')[0],
       ),
     );
+
+    // ✅ 서버 조회 후 로컬 캘린더 이벤트 재계산
+    _updateCalendarEvents(state.allTodos);
   }
 
-  void setFilter(String filter) {
+  Future<void> setFilter(String filter) async {
     state = state.copyWith(currentFilter: filter);
     _updateDisplayedTodos();
   }
 
-  void onDaySelected(DateTime selected, DateTime focused) {
+  Future<void> onDaySelected(DateTime selected, DateTime focused) async {
+    final prevMonth = state.focusedDay.month;
+    final prevYear  = state.focusedDay.year;
+
     state = state.copyWith(
       selectedDay: DateTime(selected.year, selected.month, selected.day),
       focusedDay:  focused,
     );
     _updateDisplayedTodos();
+
+    // ✅ 달이 바뀐 경우 캘린더 데이터 재조회
+    if (focused.month != prevMonth || focused.year != prevYear) {
+      await fetchCalendarData();
+    }
   }
 
   void onFormatChanged(CalendarFormat format) {
@@ -387,7 +375,7 @@ class TodoViewModel extends StateNotifier<TodoState> {
       if (!state.fadingTodoIds.contains(id)) return;
       state = state.copyWith(
         fadingTodoIds:
-            state.fadingTodoIds.where((it) => it != id).toSet(),
+        state.fadingTodoIds.where((it) => it != id).toSet(),
       );
       _updateDisplayedTodos();
     }
@@ -510,7 +498,7 @@ class TodoViewModel extends StateNotifier<TodoState> {
       if (!state.fadingTodoIds.contains(id)) return;
       state = state.copyWith(
         fadingTodoIds:
-            state.fadingTodoIds.where((it) => it != id).toSet(),
+        state.fadingTodoIds.where((it) => it != id).toSet(),
       );
       _updateDisplayedTodos();
     }
@@ -662,7 +650,7 @@ class TodoViewModel extends StateNotifier<TodoState> {
         .map(_toWidgetDto)
         .toList(growable: false);
     final somedayTodos =
-        s.allSomedayTodos.map(_toWidgetDto).toList(growable: false);
+    s.allSomedayTodos.map(_toWidgetDto).toList(growable: false);
     unawaited(_widgetSync.syncTodos(
       todayTodos: todayTodos,
       somedayTodos: somedayTodos,
@@ -670,11 +658,11 @@ class TodoViewModel extends StateNotifier<TodoState> {
   }
 
   static WidgetTodoDto _toWidgetDto(Todo t) => WidgetTodoDto(
-        id: int.tryParse(t.id) ?? 0,
-        title: t.title,
-        isDone: t.isDone,
-        isSomeday: t.dateType == TodoDateType.someday,
-      );
+    id: int.tryParse(t.id) ?? 0,
+    title: t.title,
+    isDone: t.isDone,
+    isSomeday: t.dateType == TodoDateType.someday,
+  );
 
   /// `tamagochi_page._isTodayTodo` 와 동일 로직 — 위젯 "오늘" 섹션 필터.
   /// 단일=오늘, 기간=오늘이 시작~종료 사이, 반복=시작 이후 + 종료 이내.
