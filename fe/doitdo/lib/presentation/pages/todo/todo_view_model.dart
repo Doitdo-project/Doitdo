@@ -54,10 +54,6 @@ class TodoViewModel extends StateNotifier<TodoState> {
     final selectedDay = state.selectedDay;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    // done 인 todo 는 화면에서 숨긴다 — 단, 방금 체크해서 fading 중인 항목은
-    // 600ms 동안 "주황 체크" 모습으로 노출됐다가 사라지도록 예외.
-    bool isHiddenDone(Todo t) =>
-        t.isDone && !state.fadingTodoIds.contains(t.id);
 
     List<Todo> filteredTodos = state.allTodos;
     List<Todo> filteredSomeday = state.allSomedayTodos;
@@ -97,9 +93,6 @@ class TodoViewModel extends StateNotifier<TodoState> {
           final sel = DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
 
           filteredTodos = filteredTodos.where((t) {
-            // 완료된 항목은 기본 view 에서도 숨김 — 단 fading 중이면 노출 유지.
-            if (isHiddenDone(t)) return false;
-
             // ✏️ 수정: PERIOD 타입은 date 대신 rangeStart 또는 date 우선 사용
             final effectiveDate = (t.dateType == TodoDateType.range)
                 ? (t.date ?? t.rangeStart)
@@ -151,9 +144,8 @@ class TodoViewModel extends StateNotifier<TodoState> {
 
     // ✏️ 수정: todo/done 은 날짜 선택과 무관하게 전체 기간 기준
     if (filter == 'todo') {
-      filteredTodos   = state.allTodos.where((t) => !isHiddenDone(t)).toList();
-      filteredSomeday =
-          state.allSomedayTodos.where((t) => !isHiddenDone(t)).toList();
+      filteredTodos   = state.allTodos.where((t) => !t.isDone).toList();
+      filteredSomeday = state.allSomedayTodos.where((t) => !t.isDone).toList();
     } else if (filter == 'done') {
       filteredTodos   = state.allTodos.where((t) => t.isDone).toList();
       filteredSomeday = state.allSomedayTodos.where((t) => t.isDone).toList();
