@@ -39,6 +39,12 @@ out/
 ### Local env files ###
 env/dev.env
 env/prod.env
+env/local.env
+
+### Local docker setup ###
+Dockerfile.local
+docker-compose.local.yml
+local-init/
 
 ### Local secrets ###
 secret.txt
