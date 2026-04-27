@@ -24,10 +24,14 @@ pipeline {
 
         stage('Inject prod env') {
             steps {
-                withCredentials([file(credentialsId: 'prod-env-file', variable: 'PROD_ENV_FILE')]) {
-                    sh 'mkdir -p be/env'
+                withCredentials([
+                    file(credentialsId: 'prod-env-file', variable: 'PROD_ENV_FILE'),
+                    file(credentialsId: 'apple-signin-key.p8', variable: 'APPLE_KEY_FILE')
+                ]) {
+                    sh 'mkdir -p be/env be/secrets'
                     sh 'cp "$PROD_ENV_FILE" be/env/prod.env'
-                    sh 'chmod 600 be/env/prod.env'
+                    sh 'cp "$APPLE_KEY_FILE" be/secrets/apple-signin-key.p8'
+                    sh 'chmod 600 be/env/prod.env be/secrets/apple-signin-key.p8'
                 }
             }
         }
