@@ -3,6 +3,7 @@ package com.doitdo.global.config;
 import com.doitdo.global.security.JwtAccessDeniedHandler;
 import com.doitdo.global.security.JwtAuthenticationEntryPoint;
 import com.doitdo.global.security.JwtAuthenticationFilter;
+import com.doitdo.global.security.OnboardingRequiredFilter;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -57,7 +58,8 @@ public class SecurityConfig {
 						.authenticationEntryPoint(jwtAuthenticationEntryPoint)
 						.accessDeniedHandler(jwtAccessDeniedHandler)
 				)
-				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+				.addFilterAfter(new OnboardingRequiredFilter(), JwtAuthenticationFilter.class);
 
 		return http.build();
 	}

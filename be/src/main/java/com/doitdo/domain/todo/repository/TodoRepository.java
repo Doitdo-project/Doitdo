@@ -46,6 +46,10 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 	@Query("UPDATE Todo t SET t.isDeleted = true WHERE t.userId = :userId AND t.isDeleted = false")
 	int softDeleteAllByUserId(@Param("userId") Long userId);
 
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("DELETE FROM Todo t WHERE t.userId = :userId")
+	int hardDeleteAllByUserId(@Param("userId") Long userId);
+
 	/**
 	 * 특정 분(HH:mm)에 알림을 발송해야 하는 TODO 목록 조회.
 	 * - alertTime 이 일치하고, 완료되지 않았으며, 삭제되지 않은 row

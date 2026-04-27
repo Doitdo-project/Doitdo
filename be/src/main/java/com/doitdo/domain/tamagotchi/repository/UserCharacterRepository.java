@@ -27,4 +27,8 @@ public interface UserCharacterRepository extends JpaRepository<UserCharacter, Lo
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("UPDATE UserCharacter uc SET uc.isDeleted = true WHERE uc.userId = :userId AND uc.isDeleted = false")
 	int softDeleteAllByUserId(@Param("userId") Long userId);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("DELETE FROM UserCharacter uc WHERE uc.userId = :userId")
+	int hardDeleteAllByUserId(@Param("userId") Long userId);
 }
