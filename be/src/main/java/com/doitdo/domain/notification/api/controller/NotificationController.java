@@ -108,4 +108,13 @@ public class NotificationController {
 		notificationService.delete(userDetails.getUserId(), notificationId);
 		return GlobalApiResponse.noContent("알림 삭제 성공");
 	}
+
+	@Operation(summary = "알림 전체 삭제", description = "본인의 모든 알림을 소프트 삭제한다.")
+	@DeleteMapping
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public GlobalApiResponse<Void> deleteAll(
+			@AuthenticationPrincipal CustomUserDetails userDetails) {
+		notificationService.deleteAll(userDetails.getUserId());
+		return GlobalApiResponse.noContent("알림 전체 삭제 성공");
+	}
 }

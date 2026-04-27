@@ -74,6 +74,12 @@ public class NotificationServiceImpl implements NotificationService {
 
 	@Override
 	@Transactional
+	public void deleteAll(Long userId) {
+		notificationRepository.softDeleteAllByUserId(userId);
+	}
+
+	@Override
+	@Transactional
 	public void delete(Long userId, Long notificationId) {
 		Notification notification = notificationRepository.findByNotificationIdAndIsDeletedFalse(notificationId)
 				.orElseThrow(() -> new CustomException(NotificationErrorCode.N07_003));
