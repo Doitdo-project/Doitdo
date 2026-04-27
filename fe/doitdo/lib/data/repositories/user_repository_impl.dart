@@ -1,6 +1,8 @@
 import 'package:doitdo/core/network/base_repository.dart';
 import 'package:doitdo/data/datasources/user_api.dart';
 import 'package:doitdo/data/models/change_password_request_dto.dart';
+import 'package:doitdo/data/models/register_agreements_request_dto.dart';
+import 'package:doitdo/data/models/register_birth_date_request_dto.dart';
 import 'package:doitdo/data/models/withdraw_request_dto.dart';
 import 'package:doitdo/domain/entities/user.dart';
 import 'package:doitdo/domain/repositories/user_repository.dart';
@@ -52,4 +54,36 @@ class UserRepositoryImpl extends BaseRepository implements UserRepository {
           WithdrawRequestDto(currentPassword: currentPassword),
         ),
       );
+
+  // ── 온보딩 ────────────────────────────────────────────────────
+
+  @override
+  Future<User> registerBirthDate(DateTime birthDate) {
+    // ISO date (YYYY-MM-DD). DateTime.toIso8601String() 은 시간/타임존까지 포함하므로
+    // 직접 date-only 로 포맷한다 — 서버는 LocalDate 로 파싱하기 때문에 시간 부분을
+    // 같이 보내면 422 (G00-006) 로 거절될 수 있다.
+    final iso =
+        '${birthDate.year.toString().padLeft(4, '0')}-${birthDate.month.toString().padLeft(2, '0')}-${birthDate.day.toString().padLeft(2, '0')}';
+    return safeApiCall(
+      () => _api.registerBirthDate(
+        RegisterBirthDateRequestDto(birthDate: iso),
+      ),
+    ).then((dto) => dto.toEntity());
+  }
+
+  @override
+  Future<User> registerAgreements({
+    required bool termsAgreed,
+    required bool privacyAgreed,
+    required bool marketingAgreed,
+  }) =>
+      safeApiCall(
+        () => _api.registerAgreements(
+          RegisterAgreementsRequestDto(
+            termsAgreed: termsAgreed,
+            privacyAgreed: privacyAgreed,
+            marketingAgreed: marketingAgreed,
+          ),
+        ),
+      ).then((dto) => dto.toEntity());
 }

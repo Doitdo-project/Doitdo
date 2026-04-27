@@ -36,4 +36,25 @@ abstract class UserRepository {
   /// [currentPassword] 는 일반(이메일+비번) 계정에서만 필수. OAuth 계정은 null.
   /// 일반 계정인데 비번을 안 보내거나 틀리면 `ServerException` (BE 메시지 포함).
   Future<void> withdraw({String? currentPassword});
+
+  // ── 온보딩 ────────────────────────────────────────────────────
+
+  /// 온보딩 1단계 — 생년월일 등록.
+  ///
+  /// [birthDate] 는 그 날 자정(local) 의 [DateTime] 으로 받아 ISO date(`YYYY-MM-DD`) 로 직렬화한다.
+  /// 만 14세 미만이면 서버가 계정을 hard delete 하고 `ServerException(statusCode: 403)` 을 throw.
+  /// 호출측은 그 경우 토큰을 정리하고 Welcome 으로 보내야 한다.
+  ///
+  /// 성공 시 갱신된 [User] (birthDateRegistered=true) 를 반환.
+  Future<User> registerBirthDate(DateTime birthDate);
+
+  /// 온보딩 2단계 — 약관 동의 등록.
+  ///
+  /// 이용약관/개인정보처리방침은 필수 → 호출측에서 false 면 호출 자체를 막아야 한다.
+  /// 마케팅은 선택. 성공 시 갱신된 [User] (agreementsAccepted=true) 를 반환.
+  Future<User> registerAgreements({
+    required bool termsAgreed,
+    required bool privacyAgreed,
+    required bool marketingAgreed,
+  });
 }
