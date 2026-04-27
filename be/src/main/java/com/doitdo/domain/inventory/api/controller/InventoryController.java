@@ -1,0 +1,63 @@
+package com.doitdo.domain.inventory.api.controller;
+
+import com.doitdo.domain.auth.application.CustomUserDetails;
+import com.doitdo.domain.inventory.api.dto.resp.EquipItemResp;
+import com.doitdo.domain.inventory.api.dto.resp.InventoryResp;
+import com.doitdo.domain.inventory.application.InventoryService;
+import com.doitdo.global.api.response.GlobalApiResponse;
+import com.doitdo.global.swagger.ApiErrorCodes;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@Tag(name = "inventory", description = "인벤토리 관련 API")
+@RestController
+@RequestMapping("/api/tamagotchis")
+@RequiredArgsConstructor
+public class InventoryController {
+
+	private final InventoryService inventoryService;
+
+	@Operation(summary = "인벤토리 조회", description = "특정 다마고치를 기준으로 보유 아이템과 장착 상태를 조회")
+	@ApiErrorCodes({"M08-001", "M08-002", "M08-003"})
+	@GetMapping("/{tamagotchiId}/inventory")
+	public GlobalApiResponse<InventoryResp> getInventory(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@PathVariable Long tamagotchiId
+	) {
+		return GlobalApiResponse.ok(inventoryService.getInventory(userDetails.getUserId(), tamagotchiId));
+	}
+
+	@Operation(summary = "아이템 장착", description = "보유한 아이템을 현재 다마고치에 장착")
+	@ApiErrorCodes({"M06-001", "M06-002", "M06-003", "M06-004"})
+	@PostMapping("/{tamagotchiId}/items/{userItemId}")
+	public GlobalApiResponse<EquipItemResp> equipItem(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@PathVariable Long tamagotchiId,
+		@PathVariable Long userItemId
+	) {
+		return GlobalApiResponse.ok("아이템 장착 완료",
+			inventoryService.equipItem(userDetails.getUserId(), tamagotchiId, userItemId));
+	}
+
+	@Operation(summary = "아이템 해제", description = "현재 장착된 아이템을 해제")
+	@ApiErrorCodes({"M07-001", "M07-002", "M07-003", "M07-004"})
+	@DeleteMapping("/{tamagotchiId}/items/{userItemId}")
+	public GlobalApiResponse<Void> unequipItem(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@PathVariable Long tamagotchiId,
+		@PathVariable Long userItemId
+	) {
+		inventoryService.unequipItem(userDetails.getUserId(), tamagotchiId, userItemId);
+		return GlobalApiResponse.noContent("아이템 해제 완료");
+	}
+}

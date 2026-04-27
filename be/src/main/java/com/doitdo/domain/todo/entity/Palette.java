@@ -27,4 +27,10 @@ public class Palette {
 
 	@Column(name = "palette_name", nullable = false, length = 20)
 	private String paletteName;
+
+	public static Palette create(String paletteName) {
+		return Palette.builder()
+				.paletteName(paletteName)
+				.build();
+	}
 }

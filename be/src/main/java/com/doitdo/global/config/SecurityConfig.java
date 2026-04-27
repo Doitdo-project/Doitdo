@@ -33,7 +33,7 @@ public class SecurityConfig {
 			"/api/auth/signup",
 			"/api/auth/login",
 			"/api/auth/refresh",
-			"/api/auth/oauth/**",
+			"/api/auth/social/**",
 			"/api/users/check-email",
 			"/api/users/check-username",
 			"/v3/api-docs/**",
@@ -70,7 +70,12 @@ public class SecurityConfig {
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowedOriginPatterns(List.of("http://localhost:*"));
+		config.setAllowedOriginPatterns(List.of(
+				"http://localhost:*",
+				"https://dev-api.doitdo.site",
+				"https://doitdo.site",
+				"https://*.doitdo.site"
+		));
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 		config.setAllowedHeaders(List.of("*"));
 		config.setAllowCredentials(false);

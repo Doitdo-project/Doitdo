@@ -39,4 +39,8 @@ public class UserWallet extends BaseTimeEntity {
 				.balance(0)
 				.build();
 	}
+
+	public void addBalance(Integer amount) {
+		this.balance += amount;
+	}
 }

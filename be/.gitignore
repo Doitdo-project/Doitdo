@@ -37,11 +37,17 @@ out/
 .vscode/
 
 ### Local env files ###
-env/dev.env
-env/prod.env
+env/.env.*
+!env/.env.*.example
+
+### Local docker setup ###
+Dockerfile.local
+docker-compose.local.yml
+local-init/
 
 ### Local secrets ###
 secret.txt
+secrets/
 
 ### Local docs assets (ERD 등 큰 이미지) ###
 docs/imgs/
@@ -49,5 +55,10 @@ docs/imgs/
 ### Runtime logs ###
 *.log
 
-### Claude Code (개인 설정) ###
+### Claude Code (개인 설정 / 런타임) ###
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+### Python 런타임 캐시 (scripts/) ###
+**/__pycache__/
+*.pyc

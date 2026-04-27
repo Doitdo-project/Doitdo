@@ -9,6 +9,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -65,5 +67,40 @@ public class UserSetting extends BaseTimeEntity {
 				.eveningReminderTime(LocalTime.of(21, 0))
 				.homeScreenMode(HomeScreenMode.HOME)
 				.build();
+	}
+
+	@PrePersist
+	@PreUpdate
+	private void normalizeTimes() {
+		this.morningReminderTime = truncate(this.morningReminderTime);
+		this.eveningReminderTime = truncate(this.eveningReminderTime);
+		this.dndStartTime        = truncate(this.dndStartTime);
+		this.dndEndTime          = truncate(this.dndEndTime);
+	}
+
+	private static LocalTime truncate(LocalTime t) {
+		return t == null ? null : t.withSecond(0).withNano(0);
+	}
+
+	/**
+	 * 부분 업데이트: null 인자는 기존값 유지. 방해금지/아침/저녁 3종 필드만 지원.
+	 * (home_screen_mode 는 이번 스코프에서 제외)
+	 */
+	public void update(
+			Boolean dndEnabled,
+			LocalTime dndStartTime,
+			LocalTime dndEndTime,
+			Boolean morningReminderEnabled,
+			LocalTime morningReminderTime,
+			Boolean eveningReminderEnabled,
+			LocalTime eveningReminderTime
+	) {
+		if (dndEnabled != null) this.dndEnabled = dndEnabled;
+		if (dndStartTime != null) this.dndStartTime = dndStartTime;
+		if (dndEndTime != null) this.dndEndTime = dndEndTime;
+		if (morningReminderEnabled != null) this.morningReminderEnabled = morningReminderEnabled;
+		if (morningReminderTime != null) this.morningReminderTime = morningReminderTime;
+		if (eveningReminderEnabled != null) this.eveningReminderEnabled = eveningReminderEnabled;
+		if (eveningReminderTime != null) this.eveningReminderTime = eveningReminderTime;
 	}
 }

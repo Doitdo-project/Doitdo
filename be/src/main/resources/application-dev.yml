@@ -1,0 +1,27 @@
+spring:
+  config:
+    import: "optional:file:./env/.env.dev[.properties]"
+  datasource:
+    url: jdbc:mariadb://${db.host}:${db.port}/${db.name}
+    username: ${db.username}
+    password: ${db.password}
+
+server:
+  forward-headers-strategy: framework
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+    display-request-duration: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus

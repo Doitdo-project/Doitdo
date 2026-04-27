@@ -14,6 +14,7 @@ public enum UserErrorCode implements ErrorCode {
 	U00_002("U00-002", HttpStatus.UNPROCESSABLE_ENTITY, "필수 파라미터 누락 또는 형식 오류"),
 	U00_003("U00-003", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
 	U00_004("U00-004", HttpStatus.CONFLICT, "이미 사용 중인 닉네임"),
+	U00_005("U00-005", HttpStatus.INTERNAL_SERVER_ERROR, "회원가입 초기화 실패 — 관리자에게 문의해주세요"),
 
 	// U01 - 내 정보 조회
 	U01_001("U01-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),
@@ -33,7 +34,15 @@ public enum UserErrorCode implements ErrorCode {
 	// U04 - 회원 탈퇴
 	U04_001("U04-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),
 	U04_002("U04-002", HttpStatus.NOT_FOUND, "사용자를 찾을 수 없음"),
-	U04_003("U04-003", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류");
+	U04_003("U04-003", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
+	U04_004("U04-004", HttpStatus.UNAUTHORIZED, "비밀번호가 일치하지 않습니다."),
+	U04_005("U04-005", HttpStatus.CONFLICT, "이미 탈퇴한 계정입니다."),
+
+	// U06 - 스트릭 조회
+	U06_001("U06-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),
+	U06_002("U06-002", HttpStatus.NOT_FOUND, "스트릭 데이터를 찾을 수 없습니다."),
+	U06_003("U06-003", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
+	U06_004("U06-004", HttpStatus.NOT_FOUND, "지갑 데이터를 찾을 수 없습니다.");
 
 	private final String code;
 	private final HttpStatus httpStatus;

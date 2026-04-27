@@ -11,6 +11,9 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
 
+  # 캘린더
+  table_calendar: ^3.1.2
+
   # 상태관리 / MVVM
   flutter_riverpod: ^2.6.1
   riverpod_annotation: ^2.6.1
@@ -24,12 +27,22 @@ dependencies:
 
   # 네트워킹
   dio: ^5.7.0
-  retrofit: ^4.9.0
+  retrofit: 4.9.0
 
   # 푸시 알림
   firebase_core: ^4.1.1
   firebase_messaging: ^16.0.1
   flutter_local_notifications: ^17.2.4
+
+  # OS 알림 설정 페이지 열기 (iOS/Android).
+  # 알림 설정 페이지에서 푸시알림 토글이 OS 알림 권한 상태를 반영하고,
+  # 토글 탭 시 OS 알림 설정 페이지로 보내기 위해 사용 (NotificationSettingsPage).
+  app_settings: ^5.1.1
+
+  # OS 알림 권한 상태 조회 / 요청.
+  # 알림 설정 페이지의 푸시알림 토글이 이걸로 권한 상태를 읽어 비주얼에 반영하고,
+  # 권한 미허용 상태에서 토글 탭 시 권한 요청 다이얼로그를 띄운다.
+  permission_handler: ^11.3.1
 
   # 로컬 저장
   hive: ^2.2.3
@@ -46,6 +59,34 @@ dependencies:
 
   # 반응형 UI
   flutter_screenutil: ^5.9.3
+
+  # 소셜 로그인 — Apple Sign In (iOS 전용).
+  # Android 에서는 import 해도 빌드 OK. 실제 호출은 Platform.isIOS 로 가드한다.
+  # App Store 심사 규정 4.8 준수를 위해 iOS 에서 Google/Kakao 와 함께 반드시 제공.
+  sign_in_with_apple: ^6.1.0
+  # Google Sign In — Android/iOS 공통.
+  google_sign_in: ^6.2.1
+
+  # Kakao Login — Android/iOS 공식 SDK.
+  # 카카오톡 앱 설치 시 앱-투-앱 로그인, 미설치 시 카카오계정 웹 로그인 폴백.
+  # 실제 호출은 AuthRepositoryImpl.signInWithKakao 가 담당.
+  kakao_flutter_sdk_user: ^1.9.5
+
+  # 토큰 안전 저장 (iOS: Keychain, Android: EncryptedSharedPreferences).
+  # OAuth 로 발급된 access/refresh 토큰은 반드시 이걸로 보관. SharedPreferences 금지.
+  flutter_secure_storage: ^9.2.2
+
+  # 카메라 촬영 / 갤러리 이미지 선택.
+  # Android 13+ 에선 Photo Picker 로 별도 권한 불필요, 카메라 사용 시 CAMERA 권한 필요 (manifest).
+  # iOS 는 Info.plist 에 NSCameraUsageDescription / NSPhotoLibraryUsageDescription 필요 (Mac 빌드 시).
+  image_picker: ^1.1.2
+
+  # 홈스크린 위젯 ↔ Flutter 데이터 공유.
+  # iOS 는 App Group UserDefaults, Android 는 SharedPreferences 를 통해 위젯 extension/provider 와
+  # 공유 영역에 JSON 직렬화한 TODO 목록과 인증 토큰을 저장한다.
+  # 위젯 자체 UI 는 SwiftUI(iOS)/RemoteViews(Android) 로 별도 작성. 본 패키지는 데이터 다리 + 갱신 트리거 역할만.
+  # iOS App Group ID: group.com.d107.doitdo (Apple Developer Console + Xcode 양쪽 capability 등록 필요)
+  home_widget: ^0.7.0
 
 dev_dependencies:
   flutter_test:

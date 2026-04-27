@@ -1,4 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- image_picker (카메라 촬영) 용 권한.
+         갤러리 선택은 Android 13+ Photo Picker 로 권한 불필요. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Android 13+ (API 33+) 알림 표시 권한.
+         FCM / flutter_local_notifications / permission_handler 모두 이 권한이 있어야
+         알림을 띄우거나 권한 다이얼로그를 정상적으로 요청할 수 있다.
+         설정 > 알림 설정 페이지의 푸시알림 토글이 OS 권한을 읽고/요청할 때 사용. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:label="doitdo"
         android:name="${applicationName}"
@@ -24,12 +34,59 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- 위젯 탭 → 앱 진입 (doitdo://widget/open).
+                 home_widget 패키지가 launchIntent 를 받아 Flutter 측에서 후속 처리할 수 있게 해 준다. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="doitdo" android:host="widget" />
+            </intent-filter>
         </activity>
+
+        <!-- ─────────────────────────────────────────────────────────
+             doitdo 홈스크린 위젯 (iOS DoitdoWidget 와 동등).
+             - DoitdoWidgetProvider: 위젯 그리기 + lifecycle (AppWidgetProvider)
+             - ToggleTodoReceiver: 행 체크 탭 → PATCH /todos/status (BroadcastReceiver)
+             ───────────────────────────────────────────────────────── -->
+        <receiver
+            android:name=".widget.DoitdoWidgetProvider"
+            android:exported="true"
+            android:label="doitdo">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/doitdo_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.ToggleTodoReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.d107.doitdo.widget.ACTION_TOGGLE_TODO" />
+            </intent-filter>
+        </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Kakao OAuth redirect scheme.
+             로그인 성공 후 "kakao{NATIVE_APP_KEY}://oauth" 로 돌아오는 콜백을 받는 액티비티.
+             android:scheme 의 실제 값은 build.gradle 의 manifestPlaceholders 에서 주입한다. -->
+        <activity
+            android:name="com.kakao.sdk.flutter.AuthCodeCustomTabsActivity"
+            android:exported="true">
+            <intent-filter android:label="flutter_web_auth">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="kakao${kakaoNativeAppKey}" android:host="oauth" />
+            </intent-filter>
+        </activity>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -41,5 +98,8 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Android 11+ (API 30+) 에서 다른 앱 존재 여부를 조회하려면 queries 선언 필수.
+             카카오톡 앱-투-앱 로그인 가능 여부 판별 (isKakaoTalkInstalled) 에 사용됨. -->
+        <package android:name="com.kakao.talk" />
     </queries>
 </manifest>

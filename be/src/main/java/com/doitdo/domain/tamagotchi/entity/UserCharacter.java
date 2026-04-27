@@ -39,12 +39,49 @@ public class UserCharacter extends BaseTimeEntity {
 	@Column(length = 50)
 	private String name;
 
-	@Column(name = "growth_percent", nullable = false)
-	private Integer growthPercent;
+	@Column(name = "current_exp", nullable = false)
+	private Integer currentExp;
 
 	@Column(name = "is_active", nullable = false)
 	private Boolean isActive;
 
 	@Column(name = "is_deleted", nullable = false)
 	private Boolean isDeleted;
+
+	public void equipItem(Long userItemId) {
+		this.equipedItemsId = userItemId;
+	}
+
+	public void unequipItem() {
+		this.equipedItemsId = null;
+	}
+
+	public void deactivate() {
+		this.isActive = false;
+	}
+
+	public void setCharacterId(Long characterId) {
+		this.characterId = characterId;
+	}
+
+	/** 진화/부화/farewell 시 exp 리셋. */
+	public void resetExp() {
+		this.currentExp = 0;
+	}
+
+	/**
+	 * 경험치 가산. 현재 단계 상한에서 cap.
+	 *
+	 * @param delta 가산할 양 (≥0)
+	 * @param cap   현재 단계의 requiredExp. null 이면 no-op.
+	 */
+	public void gainExp(int delta, Integer cap) {
+		if (cap == null || delta <= 0) return;
+		int next = this.currentExp + delta;
+		this.currentExp = Math.min(cap, next);
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
 }

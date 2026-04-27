@@ -11,100 +11,82 @@ class CollectionEntry {
   const CollectionEntry({
     required this.characterId,
     required this.species,
+    required this.name,
     required this.stage,
     required this.thumbnailUrl,
     required this.isUnlocked,
-    this.unlockedAt,
-    this.birthStory = '',
-    this.meetCount = 1,
   });
 
   final int characterId;
 
-  /// 종 이름. 예: "학자 둥이", "오둥이", "유아둥이".
+  /// BE 의 종 enum (URL path param 으로 사용). 예: "CAT", "FOX".
   final String species;
+
+  /// 표시용 캐릭터 이름 (BE `name`). 예: "어른 고양이".
+  /// 미해금일 땐 빈 문자열이며 UI 에서 "???" 로 가린다.
+  final String name;
 
   /// 성장 단계.
   final CharacterStage stage;
 
-  /// 썸네일 이미지 경로. mock 에서는 로컬 asset 경로, 실서비스에선 네트워크 URL.
+  /// 썸네일 이미지 URL. 미해금이어도 BE 가 내려주면 들어온다.
   final String thumbnailUrl;
 
   /// 해금 여부. false 면 "???" 로 표시되고 탭해도 상세를 열지 않는다.
   final bool isUnlocked;
 
-  /// 해금 일시. 미해금이거나 정보 없음이면 null.
-  final DateTime? unlockedAt;
-
-  /// 캐릭터의 탄생 배경 설명. 상세 바텀시트에서 "탄생 배경" 섹션에 노출.
-  /// 미해금이거나 서버에 스토리가 없으면 빈 문자열.
-  final String birthStory;
-
-  /// 이 캐릭터를 지금까지 몇 번 만났는지. 도감 그리드 우상단 `xN` 뱃지에 사용.
-  /// 1 이면 뱃지 미표시(기본), 2 이상일 때만 표시한다.
-  final int meetCount;
-
-  // ── 상세 화면용 파생 정보 ───────────────────────────────────────────
-  // 아래 3개는 UI 시안을 맞추기 위한 임시 파생값이다.
-  // 실제 API 가 붙으면 BE 의 `UserCharacter.growthPercent` 등으로 대체한다.
-
-  /// 상세 바텀시트의 성장 단계 라벨. 예: "성장기".
-  String get stageLabel => switch (stage) {
-        CharacterStage.baby => '탄생기',
-        CharacterStage.teen => '성장기',
-        CharacterStage.adult => '완성기',
-      };
-
-  /// 현재 성장 퍼센티지(0-100). 다음 단계까지의 진행률.
-  /// adult 는 최종 단계라 100.
-  int get growthPercent => switch (stage) {
-        CharacterStage.baby => 30,
-        CharacterStage.teen => 62,
-        CharacterStage.adult => 100,
-      };
-
-  /// 진화 트리. MVP 기준 BE `Character.Stage` 가 BABY/TEEN/ADULT 3단계라
-  /// UI 도 3칸으로 맞춘다. 아직 도달하지 않은 단계는 "???" 로 마스킹.
-  List<EvolutionStep> get evolutionTree {
-    const names = ['알', '성장', '완전체'];
-    const levels = [0, 3, 5];
-    final currentIndex = switch (stage) {
-      CharacterStage.baby => 0,
-      CharacterStage.teen => 1,
-      CharacterStage.adult => 2,
-    };
-    return [
-      for (var i = 0; i < 3; i++)
-        EvolutionStep(
-          name: i <= currentIndex ? names[i] : '???',
-          level: levels[i],
-          // 단계별 썸네일이 추가되기 전까지 현재 단계에만 본인 썸네일을 쓰고
-          // 나머지는 경로를 비워 두고 placeholder 로 대체한다.
-          thumbnailUrl: i == currentIndex ? thumbnailUrl : '',
-          isUnlocked: i <= currentIndex,
-          isCurrent: i == currentIndex,
-        ),
-    ];
-  }
+  /// 상세 바텀시트의 성장 단계 라벨. 다마고치 홈의 [Character.stage.badgeLabel]
+  /// 과 동일한 표기를 쓴다 (유년기 / 성장기 / 성숙기).
+  String get stageLabel => stageLabelOf(stage);
 }
 
-/// 캐릭터 성장 단계. BE `Character.Stage` 와 1:1.
+/// 캐릭터 성장 단계. BE `Character.Stage` 와 1:1 (EGG 는 도감에 잡히지 않음).
 enum CharacterStage { baby, teen, adult }
 
-/// 진화 트리의 한 단계. 상세 바텀시트에서 가로 카드로 나열된다.
+/// 홈과 통일된 단계 라벨 매핑. [Character.stage.badgeLabel] 과 동일.
+String stageLabelOf(CharacterStage stage) => switch (stage) {
+      CharacterStage.baby => '유년기',
+      CharacterStage.teen => '성장기',
+      CharacterStage.adult => '성숙기',
+    };
+
+/// `/api/characters/encyclopedia/{species}` 상세 응답의 도메인 모델.
 @immutable
-class EvolutionStep {
-  const EvolutionStep({
-    required this.name,
-    required this.level,
-    required this.thumbnailUrl,
-    required this.isUnlocked,
-    required this.isCurrent,
+class EncyclopediaDetail {
+  const EncyclopediaDetail({
+    required this.species,
+    required this.birthBackground,
+    required this.encounterCount,
+    required this.baby,
+    required this.teen,
+    required this.adult,
   });
 
+  final String species;
+  final String birthBackground;
+  final int encounterCount;
+  final EncyclopediaStage baby;
+  final EncyclopediaStage teen;
+  final EncyclopediaStage adult;
+
+  /// baby→teen→adult 순서의 리스트 편의 getter. UI 진화 트리 렌더에 사용.
+  List<({CharacterStage stage, EncyclopediaStage data})> get stagesInOrder => [
+        (stage: CharacterStage.baby, data: baby),
+        (stage: CharacterStage.teen, data: teen),
+        (stage: CharacterStage.adult, data: adult),
+      ];
+}
+
+/// 상세 응답의 단일 진화 단계 정보.
+@immutable
+class EncyclopediaStage {
+  const EncyclopediaStage({
+    required this.characterId,
+    required this.name,
+    required this.thumbnailUrl,
+  });
+
+  final int characterId;
   final String name;
-  final int level;
   final String thumbnailUrl;
-  final bool isUnlocked;
-  final bool isCurrent;
 }

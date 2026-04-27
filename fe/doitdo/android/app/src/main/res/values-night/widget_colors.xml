@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 다크 모드 — surface 톤 다운. -->
+<resources>
+    <color name="widget_background">#FF22201D</color>
+    <color name="widget_text_primary">#FFEFE8DC</color>
+    <color name="widget_text_secondary">#FF8C8174</color>
+    <color name="widget_text_done">#FF5B5247</color>
+    <color name="widget_accent">#FFE2782B</color>
+    <color name="widget_check_inactive">#FF5B5247</color>
+    <color name="widget_divider">#FF3A352D</color>
+</resources>

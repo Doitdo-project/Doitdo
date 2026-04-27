@@ -7,7 +7,6 @@ import io.swagger.v3.oas.annotations.info.Contact;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
-import io.swagger.v3.oas.annotations.servers.Server;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,9 +21,6 @@ import org.springframework.context.annotation.Profile;
         description = "doitdo 백엔드 API 명세 (Swagger 자동 생성)",
         contact = @Contact(name = "doitdo backend", email = "ssafydoitdo@gmail.com")
     ),
-    servers = {
-        @Server(url = "http://localhost:8080", description = "local")
-    },
     security = @SecurityRequirement(name = "BearerAuth")
 )
 @SecurityScheme(
@@ -65,6 +61,14 @@ public class OpenApiConfig {
         return GroupedOpenApi.builder()
             .group("tamagotchi")
             .packagesToScan("com.doitdo.domain.tamagotchi.api.controller")
+            .build();
+    }
+
+    @Bean
+    public GroupedOpenApi streak() {
+        return GroupedOpenApi.builder()
+            .group("streak")
+            .packagesToScan("com.doitdo.domain.streak.api.controller")
             .build();
     }
 

@@ -24,7 +24,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Character extends BaseTimeEntity {
 
-	public enum Stage { BABY, TEEN, ADULT }
+	public enum Stage { EGG, BABY, TEEN, ADULT }
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,10 +34,16 @@ public class Character extends BaseTimeEntity {
 	@Column(nullable = false, length = 20)
 	private String species;
 
+	@Column(nullable = false, length = 20)
+	private String name;
+
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 10)
 	private Stage stage;
 
-	@Column(name = "thumnail_url", nullable = false, length = 500)
-	private String thumnailUrl;
+	@Column(name = "required_exp", nullable = true)
+	private Integer requiredExp;
+
+	@Column(name = "thumbnail_url", nullable = false, length = 500)
+	private String thumbnailUrl;
 }

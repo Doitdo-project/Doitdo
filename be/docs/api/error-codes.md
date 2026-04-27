@@ -41,6 +41,11 @@ public interface ErrorCode {
 | `SettingErrorCode` | `C` | setting |
 
 각 enum 의 실제 값 (코드/status/메시지) 은 enum 파일 자체가 SSOT.
+
+> **T05-004 재정의 (2026-04-22):** `TodoErrorCode.T05_004` 메시지를
+> "반복 TODO 는 현재 미루기 미지원 (인스턴스 설계 후 추가 예정)" → "반복 TODO 미루기 시 occurrenceDate 필수" 로 변경.
+> RECURRING 타입 TODO 에 snooze 를 시도할 때 `occurrenceDate` 가 없거나 유효한 발생일이 아니면 422 + T05-004 가 반환된다.
+
 대표 예시:
 
 ### `CommonErrorCode`
@@ -66,6 +71,35 @@ public interface ErrorCode {
 
 전체는 `AuthErrorCode.java` 참고. 다른 도메인 enum 도 동일한 형식.
 
+### `NotificationErrorCode` (N00~N07 전체)
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `N00_001` | `N00-001` | 401 | 설정 변경 인증 실패 |
+| `N00_002` | `N00-002` | 422 | 설정 변경 시간 형식 오류 |
+| `N00_003` | `N00-003` | 500 | 설정 변경 서버 오류 |
+| `N01_001` | `N01-001` | 401 | 설정 조회 인증 실패 |
+| `N01_002` | `N01-002` | 404 | 알림 설정 없음 |
+| `N01_003` | `N01-003` | 500 | 설정 조회 서버 오류 |
+| `N02_001` | `N02-001` | 401 | 토큰 해제 인증 실패 |
+| `N02_002` | `N02-002` | 404 | 등록되지 않은 FCM 토큰 |
+| `N02_003` | `N02-003` | 500 | 토큰 해제 서버 오류 |
+| `N03_001` | `N03-001` | 401 | 토큰 등록 인증 실패 |
+| `N03_002` | `N03-002` | 422 | 필수 파라미터 누락 |
+| `N03_003` | `N03-003` | 500 | 토큰 등록 서버 오류 |
+| `N04_001` | `N04-001` | 401 | 목록 조회 인증 실패 |
+| `N04_002` | `N04-002` | 500 | 목록 조회 서버 오류 |
+| `N05_001` | `N05-001` | 401 | 읽음 인증 실패 |
+| `N05_002` | `N05-002` | 403 | 타 사용자 알림 |
+| `N05_003` | `N05-003` | 404 | 알림 없음 |
+| `N05_004` | `N05-004` | 500 | 읽음 서버 오류 |
+| `N06_001` | `N06-001` | 401 | 전체 읽음 인증 실패 |
+| `N06_002` | `N06-002` | 500 | 전체 읽음 서버 오류 |
+| `N07_001` | `N07-001` | 401 | 삭제 인증 실패 |
+| `N07_002` | `N07-002` | 403 | 타 사용자 알림 |
+| `N07_003` | `N07-003` | 404 | 알림 없음 |
+| `N07_004` | `N07-004` | 500 | 삭제 서버 오류 |
+
 ## 4. `ErrorCodeRegistry` — 정적 인덱스
 
 위치: `com.doitdo.global.exception.ErrorCodeRegistry`
@@ -84,6 +118,33 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 ```
 
 `@ApiErrorCodes` 어노테이션이 이 Registry 를 통해 코드를 해석하므로, 새 enum 을 추가하면 반드시 `ErrorCodeRegistry.SOURCES` 에도 등록한다.
+
+### `TamagotchiErrorCode` 추가 코드 (exp system, 2026-04)
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `M05_006` | `M05-006` | 409 | 아직 진화할 수 없음 — 경험치 부족 |
+
+### `UserErrorCode` 추가 코드 (exp system, 2026-04)
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `U00_005` | `U00-005` | 500 | 회원가입 초기화 실패 — EGG Character row 누락 등 운영 이슈 |
+
+### `TodoErrorCode` 추가 코드 (alert/recurrence redesign, 2026-04)
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `TODO_RECURRING_DAYS_OF_WEEK_REQUIRED` | `T14-001` | 400 | 반복 TODO는 daysOfWeek가 필요함 |
+| `TODO_RECURRING_START_DATE_DAY_MISMATCH` | `T14-002` | 400 | 반복 TODO의 startDate 요일이 daysOfWeek에 포함되어야 함 |
+
+### `TamagotchiErrorCode` 추가 코드 (character action url, 2026-04)
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `M09_001` | `M09-001` | 401 | 인증 토큰이 없거나 유효하지 않음 |
+| `M09_002` | `M09-002` | 404 | 해당 캐릭터의 요청 액션을 찾을 수 없음 |
+| `M09_003` | `M09-003` | 500 | 서버 내부 오류 |
 
 ## 5. 새 코드 추가 절차
 

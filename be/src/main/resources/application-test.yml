@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    url: "jdbc:h2:mem:doitdo;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        "[format_sql]": false
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+apple:
+  signin:
+    # 테스트 전용 더미 Apple Sign-in 설정. 실제 Apple Developer 키가 아니다.
+    team-id: TESTTEAMID
+    key-id: TESTKEYID
+    key-path: src/test/resources/apple-test-key.p8
+    client-id: com.d107.doitdo.test

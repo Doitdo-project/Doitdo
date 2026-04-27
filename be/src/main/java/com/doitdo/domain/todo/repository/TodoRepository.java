@@ -1,0 +1,71 @@
+package com.doitdo.domain.todo.repository;
+
+import com.doitdo.domain.todo.entity.Todo;
+import com.doitdo.domain.todo.entity.Todo.TodoType;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificationExecutor<Todo> {
+
+	Optional<Todo> findByTodoIdAndIsDeletedFalse(Long todoId);
+
+	Optional<Todo> findByUserIdAndTitleAndStartDateAndIsDeletedFalse(Long userId, String title, LocalDate startDate);
+
+	Optional<Todo> findByUserIdAndTitleAndStartDateAndTypeAndIsDeletedFalse(
+			Long userId,
+			String title,
+			LocalDate startDate,
+			TodoType type);
+
+	List<Todo> findAllByUserIdAndTitleAndTypeAndIsDeletedFalse(Long userId, String title, TodoType type);
+
+	Optional<Todo> findByUserIdAndMasterTodoIdAndStartDateAndIsDeletedFalse(
+			Long userId,
+			Long masterTodoId,
+			LocalDate startDate);
+
+	List<Todo> findAllByUserIdAndMasterTodoIdAndIsDeletedFalse(Long userId, Long masterTodoId);
+
+	List<Todo> findAllByTypeAndIsDeletedFalse(TodoType type);
+
+	@Query("""
+			select count(t) from Todo t
+			where t.userId = :userId
+			  and t.status <> com.doitdo.domain.todo.entity.Todo.TodoStatus.DONE
+			  and t.isDeleted = false
+			""")
+	long countPendingByUserId(@Param("userId") Long userId);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("UPDATE Todo t SET t.isDeleted = true WHERE t.userId = :userId AND t.isDeleted = false")
+	int softDeleteAllByUserId(@Param("userId") Long userId);
+
+	/**
+	 * 특정 분(HH:mm)에 알림을 발송해야 하는 TODO 목록 조회.
+	 * - alertTime 이 일치하고, 완료되지 않았으며, 삭제되지 않은 row
+	 * - RECURRING 마스터(type = RECURRING) 는 제외 — 인스턴스(type = NORMAL)만 포함
+	 * - NORMAL: startDate = today
+	 * - PERIOD: startDate <= today AND (endDate IS NULL OR endDate >= today)
+	 * - RECURRING 인스턴스(NORMAL): startDate = today (createRecurringInstance 에서 NORMAL로 생성됨)
+	 */
+	@Query("""
+			SELECT t FROM Todo t
+			WHERE t.alertTime = :hhmm
+			  AND t.status <> com.doitdo.domain.todo.entity.Todo.TodoStatus.DONE
+			  AND t.isDeleted = false
+			  AND t.type <> com.doitdo.domain.todo.entity.Todo.TodoType.RECURRING
+			  AND (
+			      (t.type = com.doitdo.domain.todo.entity.Todo.TodoType.NORMAL AND t.startDate = :today)
+			      OR (t.type = com.doitdo.domain.todo.entity.Todo.TodoType.PERIOD
+			          AND t.startDate <= :today
+			          AND (t.endDate IS NULL OR t.endDate >= :today))
+			  )
+			""")
+	List<Todo> findAlertTargets(@Param("hhmm") String hhmm, @Param("today") LocalDate today);
+}

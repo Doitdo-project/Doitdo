@@ -1,9 +1,26 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
+    // START: FlutterFire Configuration
+    id("com.google.gms.google-services")
+    // END: FlutterFire Configuration
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// Kakao 네이티브 앱 키는 AndroidManifest 의 redirect scheme(kakao{KEY}://oauth) 에
+// 빌드타임에 주입돼야 하므로 local.properties 에서 읽어 manifestPlaceholders 로 전달.
+// 키가 없으면 빈 문자열이 들어가고, Kakao 로그인 시도 시 SDK 레벨에서 에러가 난다.
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    FileInputStream(localPropertiesFile).use { localProperties.load(it) }
+}
+val kakaoNativeAppKey: String =
+    localProperties.getProperty("KAKAO_NATIVE_APP_KEY") ?: ""
 
 android {
     namespace = "com.d107.doitdo"
@@ -29,12 +46,33 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        manifestPlaceholders["kakaoNativeAppKey"] = kakaoNativeAppKey
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 공용 debug keystore.
+    // 개인 `~/.android/debug.keystore` 가 아니라 프로젝트 내부의 파일을 쓰도록
+    // 강제해 팀 누구 PC 에서 빌드해도 동일한 SHA-1 이 나오게 한다.
+    // SHA-1 은 Firebase / Google Cloud Console / Kakao Developers 에 한 번만 등록.
+    // storepass/keypass/alias 는 Android 디버그 keystore 의 관례적 고정값.
+    // ─────────────────────────────────────────────────────────────
+    signingConfigs {
+        getByName("debug") {
+            storeFile = rootProject.file("keystore/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // TODO: 배포용 release keystore 준비 후 별도 signingConfig 연결.
+            //       현재는 `flutter run --release` 가 되도록 debug 서명 재활용.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -46,4 +84,8 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // 위젯의 BroadcastReceiver 컨텍스트에서 BE 로 진짜 PATCH 요청을 보내야 한다.
+    // HttpURLConnection 의 PATCH reflection 우회는 Android 12+ 의 SDK 제한으로 silent
+    // 무시되는 경우가 있어 신뢰할 수 없음 — OkHttp 의 정식 PATCH 사용으로 교체.
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }

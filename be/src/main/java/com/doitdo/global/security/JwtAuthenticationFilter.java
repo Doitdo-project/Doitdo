@@ -32,10 +32,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 			Long userId = jwtUtil.getUserId(token);
 			UserDetails userDetails = userDetailsService.loadUserById(userId);
 
-			UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-					userDetails, null, userDetails.getAuthorities());
-			auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-			SecurityContextHolder.getContext().setAuthentication(auth);
+			// 탈퇴(isDeleted=true) 유저는 CustomUserDetails.isEnabled() 가 false 를 반환.
+			// 이 경우 인증을 부여하지 않아 잔여 access token 으로도 보호 API 접근이 차단된다.
+			if (userDetails.isEnabled()) {
+				UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+						userDetails, null, userDetails.getAuthorities());
+				auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+				SecurityContextHolder.getContext().setAuthentication(auth);
+			}
 		}
 
 		filterChain.doFilter(request, response);

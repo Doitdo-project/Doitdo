@@ -33,7 +33,7 @@
 |---|---|
 | `auth` | refresh_tokens, auto_providers |
 | `user` | users, user_wallets |
-| `todo` | todos, categories, palettes, palette_colors |
+| `todo` | todos, categories, palettes, palette_colors, snooze_history |
 | `tamagotchi` | characters, character_actions, character_unlocks, user_character |
 | `inventory` | items, user_items |
 | `shop` | purchase_logs |
