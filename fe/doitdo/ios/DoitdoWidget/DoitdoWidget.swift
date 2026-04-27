@@ -44,8 +44,15 @@ struct DoitdoEntry: TimelineEntry {
 
 struct DoitdoTimelineProvider: TimelineProvider {
 
-    /// 토글 직후 strikethrough 노출 시간 — 너무 짧으면 인지 못 하고, 너무 길면 답답.
-    private static let strikethroughLinger: TimeInterval = 0.45
+    /// 토글 직후 strikethrough 노출 시간.
+    /// OS 가 timeline 을 받아 화면에 그리기까지 ~수백 ms 의 스케줄링 지연이 있는데,
+    /// 이 값이 그 지연보다 짧으면 OS 가 entry1(strikethrough) 을 건너뛰고 entry2(사라짐) 만 그린다.
+    /// 0.6초 정도로 잡아야 일반적인 OS 지연 (200~400ms) 에서도 visible 하게 노출된다.
+    private static let strikethroughLinger: TimeInterval = 0.6
+
+    /// entry1 의 시각을 약간 미래로 밀어 OS 지연이 있어도 "현재 entry" 로 선택되도록 보장.
+    /// (entry1.date 가 이미 충분한 과거면 OS 가 entry2 로 건너뛸 수 있음)
+    private static let entryLeadIn: TimeInterval = 0.05
 
     func placeholder(in context: Context) -> DoitdoEntry {
         DoitdoEntry(
@@ -95,12 +102,12 @@ struct DoitdoTimelineProvider: TimelineProvider {
             // SharedStore 정리 — 다음 호출에서는 cleaned 가 source of truth.
             SharedStore.savePayload(cleanedNow)
 
-            let entry1 = DoitdoEntry(date: now, payload: payload, hasAuthToken: token)
-            let entry2 = DoitdoEntry(
-                date: now.addingTimeInterval(Self.strikethroughLinger),
-                payload: cleanedNow,
-                hasAuthToken: token
-            )
+            // entry1 을 살짝 미래로 (entryLeadIn) 밀어 OS 지연이 있어도 "현재" entry 로 선택되도록.
+            // entry2 는 entry1 + strikethroughLinger — strikethrough 가 충분히 노출되도록.
+            let entry1Date = now.addingTimeInterval(Self.entryLeadIn)
+            let entry2Date = entry1Date.addingTimeInterval(Self.strikethroughLinger)
+            let entry1 = DoitdoEntry(date: entry1Date, payload: payload, hasAuthToken: token)
+            let entry2 = DoitdoEntry(date: entry2Date, payload: cleanedNow, hasAuthToken: token)
             completion(Timeline(entries: [entry1, entry2], policy: .after(nextRefresh)))
         } else {
             let entry = DoitdoEntry(date: now, payload: payload, hasAuthToken: token)
