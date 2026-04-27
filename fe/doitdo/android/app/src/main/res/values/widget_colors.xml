@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  doitdo 홈 위젯 전용 색상.
+  iOS 의 .accentColor / Color.primary / .secondary 톤과 유사하게 매핑.
+-->
+<resources>
+    <color name="widget_background">#FFFFF8F2</color>
+    <color name="widget_text_primary">#FF1F1B16</color>
+    <color name="widget_text_secondary">#FF7C7269</color>
+    <color name="widget_text_done">#FFB3A89E</color>
+    <color name="widget_accent">#FFE2782B</color>
+    <color name="widget_check_inactive">#FFC8BFB4</color>
+    <color name="widget_divider">#FFEFE8DC</color>
+</resources>
