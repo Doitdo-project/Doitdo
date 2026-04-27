@@ -32,6 +32,11 @@ class CharacterRepositoryImpl extends BaseRepository
       safeApiCall(() => _api.evolveCharacter(userCharacterId));
 
   @override
+  Future<String> triggerAction(CharacterAction action) =>
+      safeApiCall(() => _api.triggerCharacterAction(action.serverValue))
+          .then((dto) => dto.actionUrl);
+
+  @override
   Future<List<CollectionEntry>> getEncyclopedia() => safeApiCall(
         () => _api.getEncyclopedia(),
       ).then((dto) => dto.items.map((item) => item.toEntry()).toList());

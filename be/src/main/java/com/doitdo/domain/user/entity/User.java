@@ -8,6 +8,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,6 +31,21 @@ public class User extends BaseTimeEntity {
 
 	@Column(length = 50, unique = true)
 	private String username;
+
+	@Column(name = "birth_date")
+	private LocalDate birthDate;
+
+	@Column(name = "terms_agreed_at")
+	private LocalDateTime termsAgreedAt;
+
+	@Column(name = "privacy_agreed_at")
+	private LocalDateTime privacyAgreedAt;
+
+	@Column(name = "marketing_agreed_at")
+	private LocalDateTime marketingAgreedAt;
+
+	@Column(name = "terms_version", length = 20)
+	private String termsVersion;
 
 	@Column(length = 255)
 	private String password;
@@ -55,6 +72,17 @@ public class User extends BaseTimeEntity {
 				.username(username)
 				.isDeleted(false)
 				.build();
+	}
+
+	public void registerBirthDate(LocalDate birthDate) {
+		this.birthDate = birthDate;
+	}
+
+	public void registerAgreements(LocalDateTime agreedAt, Boolean marketingAgreed, String termsVersion) {
+		this.termsAgreedAt = agreedAt;
+		this.privacyAgreedAt = agreedAt;
+		this.marketingAgreedAt = Boolean.TRUE.equals(marketingAgreed) ? agreedAt : null;
+		this.termsVersion = termsVersion;
 	}
 
 	public void updatePassword(String encodedPassword) {

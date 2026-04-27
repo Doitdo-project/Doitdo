@@ -20,8 +20,17 @@ Flutter 구현 레벨의 상세 가이드(폴더 규칙 / 공통 레이아웃 / 
 ```bash
 cd fe/doitdo
 flutter pub get
-flutter run
+
+# 개발 (dev 서버) — IDE 에서는 "doitdo (dev)" run config 사용
+flutter run --dart-define-from-file=dart_defines/dev.json
+
+# 운영 (Play Store / App Store) 빌드
+flutter build appbundle --release --dart-define-from-file=dart_defines/prod.json   # Android AAB
+flutter build apk       --release --dart-define-from-file=dart_defines/prod.json   # Android APK (사이드로딩 검증용)
+flutter build ipa       --release --dart-define-from-file=dart_defines/prod.json   # iOS IPA
 ```
+
+`--dart-define-from-file` 을 빠뜨리면 `AppConfig` 의 dev 기본값이 들어간다 → 실수로 운영 빌드를 dev 서버로 출시하는 사고 방지.
 
 코드 생성이 필요한 경우(freezed, json_serializable, retrofit 등):
 
@@ -29,11 +38,16 @@ flutter run
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-### 1.2 환경 파일
+### 1.2 환경 / 시크릿 분리
 
-- `fe/doitdo/.env` — 환경변수 (gitignore, 로컬에 직접 복사)
-- `fe/doitdo/.env.example` — 템플릿
-- 로딩 위치: `lib/core/utils/app_env.dart` + `pubspec.yaml` assets 에 `.env` 등록
+| 종류 | 어디에 | 누가 읽나 | 비고 |
+|---|---|---|---|
+| API base URL · Flavor (dev/prod) | `dart_defines/{dev,prod}.json` (커밋됨) | `lib/core/config/app_config.dart` (`AppConfig.apiBaseUrl`, `AppConfig.flavor`) | 빌드 타임 박힘. release 에서도 변경 불가 |
+| Kakao Native Key · Google Server Client ID 등 시크릿 | `fe/doitdo/.env` (gitignore) | `lib/core/utils/app_env.dart` (`AppEnv.optional(...)`) | 로컬에 직접 복사. 템플릿: `.env.example` |
+
+**왜 분리했나** — dart-define 값은 빌드 산출물에 평문으로 박힌다. URL 같은 공개 정보는 OK 지만, 시크릿은 `.env` 또는 백엔드 발급 흐름으로 둔다.
+
+자세한 사용법: `fe/doitdo/dart_defines/README.md`.
 
 ### 1.3 Firebase / FCM
 

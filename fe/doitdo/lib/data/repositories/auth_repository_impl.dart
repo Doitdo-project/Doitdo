@@ -45,7 +45,7 @@ class AuthRepositoryImpl extends BaseRepository implements AuthRepository {
   final WidgetSyncService widgetSync;
 
   /// 위젯이 PATCH 호출할 때 prefix 로 사용할 베이스 URL — 토큰과 함께 같이 저장.
-  /// 환경별 (dev/prod) 다르므로 런타임 주입 (.env 의 API_BASE_URL).
+  /// 환경별 (dev/prod) 다르므로 빌드 타임 주입 (`AppConfig.apiBaseUrl` ← --dart-define).
   final String apiBaseUrl;
 
   // ── 이메일 계정 ───────────────────────────────────────────────

@@ -1,0 +1,43 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "doitdo (dev)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define-from-file=dart_defines/dev.json"
+      ]
+    },
+    {
+      "name": "doitdo (dev · profile)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "flutterMode": "profile",
+      "toolArgs": [
+        "--dart-define-from-file=dart_defines/dev.json"
+      ]
+    },
+    {
+      "name": "doitdo (prod)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define-from-file=dart_defines/prod.json"
+      ]
+    },
+    {
+      "name": "doitdo (prod · release)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "flutterMode": "release",
+      "toolArgs": [
+        "--dart-define-from-file=dart_defines/prod.json"
+      ]
+    }
+  ]
+}

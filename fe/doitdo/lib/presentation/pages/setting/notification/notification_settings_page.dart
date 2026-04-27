@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'package:doitdo/core/notifications/fcm_service.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
@@ -50,6 +51,9 @@ class _NotificationSettingsPageState
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _refreshOsPermission();
+    // 알림 디버그용 — 페이지 진입 시 APNs/FCM 토큰과 권한 상태를 콘솔에 한 번 찍는다.
+    // 디버그 빌드에서만 의미 있고, release 에선 logger 가 무시한다.
+    FcmService.logDiagnostics();
   }
 
   @override

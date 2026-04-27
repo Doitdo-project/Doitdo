@@ -598,7 +598,7 @@ class _SocialButtons extends StatelessWidget {
             height: 48,
             borderRadius: BorderRadius.circular(12.r),
           ),
-          SizedBox(height: 10.h),
+          SizedBox(height: 12.h),
         ],
         // 카카오 — 공식 와이드 버튼 이미지(에셋) 사용.
         // Ink.image 로 이미지를 Material 의 ink surface 로 등록해야 InkWell 의 탭
@@ -625,7 +625,7 @@ class _SocialButtons extends StatelessWidget {
             ),
           ),
         ),
-        SizedBox(height: 10.h),
+        SizedBox(height: 12.h),
         // Google — 이미지 에셋 사용 (카카오와 동일한 방식).
         SizedBox(
           height: 48.h,
@@ -647,7 +647,7 @@ class _SocialButtons extends StatelessWidget {
             ),
           ),
         ),
-        SizedBox(height: 10.h),
+        SizedBox(height: 12.h),
         // 이메일 — 이미지 에셋 사용 (카카오와 동일한 방식).
         SizedBox(
           height: 48.h,

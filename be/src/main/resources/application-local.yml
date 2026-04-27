@@ -16,3 +16,8 @@ springdoc:
     tags-sorter: alpha
     operations-sorter: alpha
     display-request-duration: true
+
+# local 은 로컬 개발자만 호출.
+app:
+  cors:
+    allowed-origins: "http://localhost:*"
