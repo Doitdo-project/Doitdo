@@ -17,6 +17,8 @@ public interface NotificationService {
 
 	void delete(Long userId, Long notificationId);
 
+	void deleteAll(Long userId);
+
 	void sendEveningReminder(Long userId, int pendingCount, LocalTime now);
 
 	void sendMorningReminder(Long userId, int pendingCount, LocalTime now);
