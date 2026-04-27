@@ -14,6 +14,21 @@ import 'package:doitdo/firebase_options.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+/// 앱이 백그라운드/종료 상태일 때 도착하는 FCM 메시지 처리.
+///
+/// - 반드시 top-level (혹은 static) 함수여야 한다 — Flutter engine 이 별도 isolate
+///   에서 호출하기 때문에 클로저/인스턴스 메서드는 사용할 수 없다.
+/// - `@pragma('vm:entry-point')` 는 release 빌드에서 tree-shake 으로 제거되지 않도록.
+/// - 현재는 로깅만. 추후 배지 카운트 갱신, 위젯 sync 등 필요한 부수효과를 여기에 추가.
+@pragma('vm:entry-point')
+Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {
+  // 백그라운드 isolate 라 appLogger 가 초기화 안 돼 있을 수 있어 print 로 둔다.
+  // ignore: avoid_print
+  print('[FCM bg] received messageId=${message.messageId} '
+      'title=${message.notification?.title}');
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,6 +56,8 @@ Future<void> main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    // 백그라운드 핸들러는 Firebase init 직후, FCM 다른 호출보다 먼저 등록해야 한다.
+    FirebaseMessaging.onBackgroundMessage(_firebaseBackgroundHandler);
     await FcmService.init();
   } catch (e) {
     appLogger.w('Firebase 초기화 실패: $e');
