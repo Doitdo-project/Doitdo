@@ -47,13 +47,22 @@ struct ToggleTodoIntent: AppIntent {
         let willBeDone = !target.isDone
         let nextStatus = willBeDone ? "DONE" : "TODO"
 
-        // 1. payload 의 isDone 만 뒤집어 저장 — TimelineProvider 가 transition 을 만든다.
-        let updatedToday = payload.todayTodos.map {
+        // 1. stale done 들을 먼저 정리한 위에서 target 만 뒤집어 저장.
+        //    Invariant: perform 종료 직후 SharedStore 에는 isDone=true 항목이 정확히
+        //    0개 또는 1개(= 방금 토글한 것) 만 존재한다.
+        //    이 invariant 가 없으면, recentToggleWindow(2s) 안 연속 토글 시 이전에 완료된
+        //    항목들이 SharedStore 에 누적되어 다음 transition 의 entry1 에 strikethrough 로
+        //    다시 그려지는 race 발생. (TimelineProvider 의 cleanup 보류 정책은 OS 더블호출
+        //    race 차단 목적으로만 유지되고, stale 누적 차단은 본 perform 단계가 책임진다.)
+        //    target 본인은 필터에서 보존 — 이론상 가능한 0.5s 안 재탭(DONE→TODO 언토글) 대비.
+        let baseToday = payload.todayTodos.filter { !$0.isDone || $0.id == todoId }
+        let baseSomeday = payload.somedayTodos.filter { !$0.isDone || $0.id == todoId }
+        let updatedToday = baseToday.map {
             $0.id == todoId
                 ? WidgetTodo(id: $0.id, title: $0.title, isDone: willBeDone, isSomeday: $0.isSomeday)
                 : $0
         }
-        let updatedSomeday = payload.somedayTodos.map {
+        let updatedSomeday = baseSomeday.map {
             $0.id == todoId
                 ? WidgetTodo(id: $0.id, title: $0.title, isDone: willBeDone, isSomeday: $0.isSomeday)
                 : $0
