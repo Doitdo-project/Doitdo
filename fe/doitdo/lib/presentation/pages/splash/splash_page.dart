@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:doitdo/core/config/app_config.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
-import 'package:doitdo/core/utils/app_env.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
 import 'package:doitdo/presentation/providers/default_screen_provider.dart';
@@ -57,7 +57,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
       unawaited(ref.read(widgetSyncServiceProvider).syncAuthTokens(
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
-            apiBaseUrl: AppEnv.optional('API_BASE_URL'),
+            apiBaseUrl: AppConfig.apiBaseUrl,
           ));
 
       // 사용자가 설정에서 고른 기본 화면(`home` / `calendar`)으로 진입한다.
