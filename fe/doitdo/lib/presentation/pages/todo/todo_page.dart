@@ -196,11 +196,11 @@ class _TodoPageState extends ConsumerState<TodoPage> {
           GestureDetector(
             onVerticalDragEnd: _onCalendarSwipe,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 22),
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(left: 12, top: 12, bottom: 20),
+                    padding: const EdgeInsets.only(left: 12, top: 12, bottom: 18),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -326,7 +326,9 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                       defaultTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textPrimary),
                       weekendTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textPrimary),
                       outsideTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textHint),
-                      cellMargin: const EdgeInsets.all(10),
+                      // cellMargin 키울수록 선택/오늘 원이 작아진다 (셀 안쪽 여백).
+                      // top/bottom 비대칭: 원이 셀 안에서 1px 위로 올라가도록.
+                      cellMargin: const EdgeInsets.fromLTRB(12, 11, 12, 13),
                     ),
                     calendarBuilders: CalendarBuilders(
                       markerBuilder: (context, day, events) {
@@ -335,33 +337,52 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                         final row1 = todos.take(3).toList();
                         final row2 = todos.length > 3 ? todos.sublist(3) : <Todo>[];
 
-                        // ✅ 하드코딩 _dotColor 대신 서버 카테고리 실제 색상 사용
+                        // 좌우 여백을 같게 — 마지막 점에는 right margin 안 줌.
+                        // 그래야 점 묶음 전체가 셀 가운데에 정확히 정렬된다.
                         Widget dotRow(List<Todo> items) => Row(
                           mainAxisSize: MainAxisSize.min,
-                          children: items.map((t) => Container(
-                            width: 5, height: 5, margin: const EdgeInsets.only(right: 2),
-                            decoration: BoxDecoration(
-                              color: getDotColor(t.category.name), // ✅ 이름으로 실제 색상 조회
-                              shape: BoxShape.circle,
-                            ),
-                          )).toList(),
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(items.length, (i) {
+                            final t = items[i];
+                            return Container(
+                              width: 5,
+                              height: 5,
+                              margin: EdgeInsets.only(
+                                right: i == items.length - 1 ? 0 : 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: getDotColor(t.category.name),
+                                shape: BoxShape.circle,
+                              ),
+                            );
+                          }),
                         );
 
+                        // 마커 영역을 항상 2행 기준 높이(5+2+5=12)로 고정.
+                        // crossAxisAlignment.start → row2 가 row1 왼쪽 끝부터 채워짐
+                        // (4·5개일 때도 6개와 같은 왼쪽 기준 정렬).
+                        // 1~3개(단일 행)는 column 자체가 단일 행 너비라 outer Center 가 중앙 배치.
                         return Positioned(
-                          bottom: 3, left: 0, right: 0,
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                dotRow(row1),
-                                if (row2.isNotEmpty) ...[const SizedBox(height: 2), dotRow(row2)],
-                              ],
+                          bottom: 2.5, left: 0, right: 0,
+                          child: SizedBox(
+                            height: 12,
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  dotRow(row1),
+                                  if (row2.isNotEmpty) ...[const SizedBox(height: 2), dotRow(row2)],
+                                ],
+                              ),
                             ),
                           ),
                         );
                       },
                     ),
                   ),
+                  // 캘린더 마지막 줄 아래 호흡 — 다음 콘텐츠와의 시각 간격 확보.
+                  const SizedBox(height: 6),
                 ],
               ),
             ),

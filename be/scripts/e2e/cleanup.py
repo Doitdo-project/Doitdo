@@ -132,7 +132,7 @@ ENTITY_TABLE_MAPPING = [
 def default_env_file():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     be_dir = os.path.abspath(os.path.join(script_dir, "..", ".."))
-    return os.path.join(be_dir, "env", "dev.env")
+    return os.path.join(be_dir, "env", ".env.dev")
 
 
 def parse_env_file(path):

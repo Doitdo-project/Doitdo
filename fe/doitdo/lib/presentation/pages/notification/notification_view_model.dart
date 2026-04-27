@@ -283,6 +283,31 @@ class NotificationViewModel extends StateNotifier<NotificationState> {
       state = state.copyWith(items: prev);
     }
   }
+
+  /// 본인의 모든 알림 삭제. 낙관적 업데이트 — 목록을 즉시 비우고
+  /// 서버 호출 실패 시 복구.
+  Future<void> deleteAll() async {
+    final prev = state.items;
+    final prevPage = state.currentPage;
+    final prevHasMore = state.hasMore;
+
+    state = state.copyWith(
+      items: [],
+      currentPage: 0,
+      hasMore: false,
+    );
+    try {
+      await _repo.deleteAllNotifications();
+    } catch (_) {
+      // 실패 시 롤백
+      state = state.copyWith(
+        items: prev,
+        currentPage: prevPage,
+        hasMore: prevHasMore,
+      );
+      rethrow;
+    }
+  }
 }
 
 final notificationViewModelProvider =

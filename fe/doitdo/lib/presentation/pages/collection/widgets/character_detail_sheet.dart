@@ -130,8 +130,10 @@ class _BirthStorySection extends StatelessWidget {
           ),
           child: Text(
             story.isEmpty ? '아직 기록되지 않은 이야기예요.' : story,
+            // streakBg 가 라이트 전용 크림색이라 다크모드에서 colors.textPrimary
+            // (흰색) 와 대비가 사라져 안 보임. 본문 글자는 항상 어두운 톤으로 고정.
             style: AppTextStyles.labelMedium.copyWith(
-              color: colors.textPrimary,
+              color: Colors.black87,
               height: 1.6,
             ),
           ),

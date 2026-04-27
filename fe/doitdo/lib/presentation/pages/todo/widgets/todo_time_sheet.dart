@@ -142,6 +142,7 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
         const SizedBox(width: 8),
         Expanded(
           child: DoitdoPrimaryButton(
+            height: 48,
             label: '확인',
             onPressed: () {
               final hour = _isAm
@@ -165,10 +166,10 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
     if (embedded) {
       // 부모(todo_add_sheet) 가 시트 잔여 높이를 통째로 넘겨주므로
       // mainAxisSize.max + Expanded 로 마스코트(상단)/버튼(하단) 을 anchor.
-      // 좌우/상단 padding 24/16 — todo_add_sheet 메인폼과 동일하게 맞춰
+      // 좌우/상단 padding 24/14 — todo_add_sheet 메인폼과 동일하게 맞춰
       // 마스코트 위치를 일치시킨다.
       return Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
         child: Column(
           mainAxisSize: MainAxisSize.max,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -183,10 +184,11 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
       );
     }
 
-    // SafeArea(top: false): 시스템 네비바 영역만큼 padding 을 더해 시트 하단이
-    // 시스템바와 절대 겹치지 않게 한다. 호출부의 useSafeArea: true 와 짝.
+    // SafeArea(top: false, minimum: 8): 시스템 네비바와 시각 간격 보장 +
+    // useSafeArea 가 꺼져 있어도 최소 8px 버퍼.
     return SafeArea(
       top: false,
+      minimum: const EdgeInsets.only(bottom: 8),
       child: Container(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -324,11 +326,11 @@ class _PrevButton extends StatelessWidget {
         shadowColor: Colors.transparent,
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(vertical: 12),
       ),
       child: Text(
         '이전',
-        style: AppTextStyles.bodyLarge.copyWith(color: Colors.white),
+        style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
 import 'package:doitdo/core/network/api_response.dart';
+import 'package:doitdo/data/models/character_action_dto.dart';
 import 'package:doitdo/data/models/character_dto.dart';
 import 'package:doitdo/data/models/encyclopedia_detail_dto.dart';
 import 'package:doitdo/data/models/encyclopedia_dto.dart';
@@ -43,6 +44,15 @@ abstract class CharacterApi {
   @POST('/api/characters/{userCharacterId}/evolution')
   Future<ApiResponse<EvolutionDto>> evolveCharacter(
     @Path('userCharacterId') int userCharacterId,
+  );
+
+  /// 캐릭터 액션 트리거. path 의 `{actionType}` 은 IDLE/EYE/EAT/SLEEP/HAPPY/SAD
+  /// 중 하나(대문자). 홈 화면 캐릭터 탭으로 호출되는 상호작용 핑.
+  /// 응답 `data` 는 `{actionUrl: "...gif"}` 형태로, 호출자가 thumbnail 을 잠시
+  /// 이 gif 로 swap 해 동작을 재생한다.
+  @GET('/api/characters/me/actions/{actionType}')
+  Future<ApiResponse<CharacterActionDto>> triggerCharacterAction(
+    @Path('actionType') String actionType,
   );
 
   /// 도감 목록. `{ items: [...] }` 형태.

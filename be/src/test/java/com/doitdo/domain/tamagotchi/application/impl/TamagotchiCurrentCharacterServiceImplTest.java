@@ -14,6 +14,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.entity.Character;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
+import com.doitdo.domain.tamagotchi.repository.CharacterActionRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterSpeciesBackgroundRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
@@ -23,6 +24,9 @@ import com.doitdo.domain.user.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 class TamagotchiCurrentCharacterServiceImplTest {
+
+	@Mock
+	private CharacterActionRepository characterActionRepository;
 
 	@Mock
 	private UserCharacterRepository userCharacterRepository;
@@ -48,6 +52,7 @@ class TamagotchiCurrentCharacterServiceImplTest {
 	@Test
 	void getCurrentCharacterReturnsActiveCharacterState() {
 		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
+			characterActionRepository,
 			characterRepository,
 			characterUnlockRepository,
 			userCharacterRepository,

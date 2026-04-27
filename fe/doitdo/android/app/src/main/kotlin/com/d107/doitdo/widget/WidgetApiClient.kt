@@ -1,27 +1,48 @@
 package com.d107.doitdo.widget
 
 import android.content.Context
+import android.util.Log
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
-import java.net.HttpURLConnection
-import java.net.URL
+import java.util.concurrent.TimeUnit
 
 /**
  * 위젯 백그라운드 컨텍스트(BroadcastReceiver) 에서 doitdo 백엔드를 직접 호출.
  *
- * iOS `WidgetApiClient` 와 동등 — 단순한 401 → refresh → retry 1회 동작.
- * 위젯 extension 은 사용자에게 UI 피드백을 줄 수 없으므로 실패해도 throw 만 하고
- * 호출자가 silent 처리한다.
+ * iOS `WidgetApiClient` 와 동등 — 401 → refresh → retry 1회 동작.
  *
- * Dart Dio 와는 다음 두 가지가 다름:
- * - 백그라운드라 사용자 알림 없이 조용히 실패 가능 → 실패 시 예외만 던지고 끝
+ * Dart Dio 와 다음 두 가지가 다름:
+ * - 백그라운드라 사용자에게 토스트/스낵바 띄울 수 없으므로 실패 시 throw 만 하고
+ *   호출자(BroadcastReceiver) 가 silent 로 흡수
  * - 위젯이 갖는 토큰은 SharedPreferences 에 저장된 것 (마지막 앱 동기화 시점값)
  *
- * 모든 호출은 동기. 호출자(BroadcastReceiver)는 `goAsync()` + 별도 Thread 로 감싼다.
+ * 모든 호출은 동기. 호출자는 `goAsync()` + 별도 Thread 로 감싼다.
+ *
+ * ─── PATCH 우회 히스토리 ───────────────────────────────────────────────
+ * 초창기엔 `HttpURLConnection.method` 필드를 reflection 으로 강제 주입해 PATCH 를
+ * 흉내냈지만, Android 12+ 에선 SDK 제한으로 set 이 silent 무시되는 경우가 있다
+ * (예외도 안 나서 fallback 분기조차 못 탐). 결과적으로 BE 에 POST 가 도달해 500
+ * 응답을 받는 사례 발생 → OkHttp 의 정식 PATCH 로 교체. 의존성 한 줄 부담 대비
+ * 안정성 확보.
  */
 object WidgetApiClient {
+    private const val TAG = "WidgetApiClient"
+
+    private val JSON = "application/json".toMediaType()
+
+    // OkHttpClient 는 thread-safe + 내부에 connection pool 을 가지므로 싱글톤이 정석.
+    // 위젯 receiver 는 짧게 살았다 죽으므로 lazy 로 첫 사용 시점에만 초기화.
+    private val client: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .writeTimeout(10, TimeUnit.SECONDS)
+            .build()
+    }
+
     sealed class WidgetApiException(message: String) : Exception(message) {
         object NoTokens : WidgetApiException("토큰 없음")
         object NoBaseUrl : WidgetApiException("baseUrl 없음")
@@ -48,39 +69,38 @@ object WidgetApiClient {
         try {
             patchStatus(url, body, access)
         } catch (e: WidgetApiException.Unauthorized) {
-            // 401 → refresh 1회 → 재호출
+            // 401 → refresh 1회 → 재호출.
             val refreshed = refreshAccessToken(context)
             patchStatus(url, body, refreshed)
         }
     }
 
     private fun patchStatus(urlString: String, body: String, accessToken: String) {
-        val conn = (URL(urlString).openConnection() as HttpURLConnection).apply {
-            // HttpURLConnection 은 PATCH 를 정식 지원하지 않아 (Java 11 이전) X-HTTP-Method-Override
-            // 헤더 + POST 로 우회하는 방법이 표준. 단, OkHttp/Dio 와 동일한 진짜 PATCH 가 BE 라우트
-            // 매칭에 필요하므로 reflection 으로 method 강제 주입.
-            requestMethod = "POST"
-            setRequestMethodViaReflection(this, "PATCH")
-            doOutput = true
-            connectTimeout = 10_000
-            readTimeout = 10_000
-            setRequestProperty("Content-Type", "application/json")
-            setRequestProperty("Authorization", "Bearer $accessToken")
-        }
+        val request = Request.Builder()
+            .url(urlString)
+            .patch(body.toRequestBody(JSON))
+            .header("Authorization", "Bearer $accessToken")
+            .build()
         try {
-            OutputStreamWriter(conn.outputStream, Charsets.UTF_8).use { it.write(body) }
-            val code = conn.responseCode
-            when {
-                code in 200..299 -> return
-                code == 401 -> throw WidgetApiException.Unauthorized
-                else -> throw WidgetApiException.Server(code)
+            client.newCall(request).execute().use { response ->
+                val code = response.code
+                when {
+                    response.isSuccessful -> return
+                    code == 401 -> throw WidgetApiException.Unauthorized
+                    else -> {
+                        val errBody = response.body?.string()
+                        Log.w(
+                            TAG,
+                            "PATCH $urlString → $code body=$body resp=$errBody",
+                        )
+                        throw WidgetApiException.Server(code)
+                    }
+                }
             }
         } catch (e: WidgetApiException) {
             throw e
         } catch (e: Exception) {
             throw WidgetApiException.Network(e)
-        } finally {
-            conn.disconnect()
         }
     }
 
@@ -97,52 +117,31 @@ object WidgetApiClient {
         val url = "$baseUrl/api/auth/refresh"
         val body = JSONObject().put("refreshToken", refresh).toString()
 
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            doOutput = true
-            connectTimeout = 10_000
-            readTimeout = 10_000
-            setRequestProperty("Content-Type", "application/json")
-        }
+        val request = Request.Builder()
+            .url(url)
+            .post(body.toRequestBody(JSON))
+            .build()
         try {
-            OutputStreamWriter(conn.outputStream, Charsets.UTF_8).use { it.write(body) }
-            val code = conn.responseCode
-            if (code !in 200..299) throw WidgetApiException.Unauthorized
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) throw WidgetApiException.Unauthorized
 
-            val raw = BufferedReader(InputStreamReader(conn.inputStream, Charsets.UTF_8)).use {
-                it.readText()
+                val raw = response.body?.string() ?: throw WidgetApiException.Decode
+                // envelope.data = { accessToken, refreshToken }
+                val data = JSONObject(raw).optJSONObject("data")
+                    ?: throw WidgetApiException.Decode
+                val newAccess = data.optString("accessToken").takeIf { it.isNotEmpty() }
+                    ?: throw WidgetApiException.Decode
+                val newRefresh = data.optString("refreshToken").takeIf { it.isNotEmpty() }
+                    ?: throw WidgetApiException.Decode
+
+                WidgetSharedStore.updateAccessToken(context, newAccess)
+                WidgetSharedStore.updateRefreshToken(context, newRefresh)
+                return newAccess
             }
-            // envelope.data = { accessToken, refreshToken }
-            val data = JSONObject(raw).optJSONObject("data") ?: throw WidgetApiException.Decode
-            val newAccess = data.optString("accessToken").takeIf { it.isNotEmpty() }
-                ?: throw WidgetApiException.Decode
-            val newRefresh = data.optString("refreshToken").takeIf { it.isNotEmpty() }
-                ?: throw WidgetApiException.Decode
-
-            WidgetSharedStore.updateAccessToken(context, newAccess)
-            WidgetSharedStore.updateRefreshToken(context, newRefresh)
-            return newAccess
         } catch (e: WidgetApiException) {
             throw e
         } catch (e: Exception) {
             throw WidgetApiException.Network(e)
-        } finally {
-            conn.disconnect()
-        }
-    }
-
-    /**
-     * HttpURLConnection 은 method 화이트리스트가 하드코딩돼 있어 PATCH 를 거부한다.
-     * reflection 으로 내부 `method` 필드를 직접 set — 모든 안드로이드 버전에서 검증된 우회법.
-     */
-    private fun setRequestMethodViaReflection(conn: HttpURLConnection, method: String) {
-        try {
-            val field = HttpURLConnection::class.java.getDeclaredField("method")
-            field.isAccessible = true
-            field.set(conn, method)
-        } catch (_: Exception) {
-            // reflection 실패 시 POST 로 폴백 — BE 라우트가 PATCH 만 받으면 405 나는데
-            // 그건 그때 server() 예외로 떨어져 호출자가 무시한다.
         }
     }
 }

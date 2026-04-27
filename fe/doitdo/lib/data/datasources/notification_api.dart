@@ -46,4 +46,8 @@ abstract class NotificationApi {
   Future<void> deleteNotification(
     @Path('notificationId') int notificationId,
   );
+
+  // [N08] 알림 전체 삭제 (소프트 삭제, 204 No Content)
+  @DELETE('/api/notifications')
+  Future<void> deleteAllNotifications();
 }

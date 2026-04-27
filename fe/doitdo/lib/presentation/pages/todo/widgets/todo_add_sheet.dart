@@ -158,21 +158,25 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    // 시트 높이를 화면의 70% 로 고정 — 단계 전환 때 시트 자체가 출렁이는 걸 막는다.
-    final fixedHeight = MediaQuery.of(context).size.height * 0.70;
+    // 시트 높이를 화면의 75% 로 고정 — 단계 전환 때 시트 자체가 출렁이는 걸 막는다.
+    // 각 단계는 자체적으로 [헤더(마스코트) / Expanded(본문) / 하단 버튼] 패턴을 갖는다.
+    final fixedHeight = MediaQuery.of(context).size.height * 0.75;
 
-    // ✅ SafeArea(top: false): 시스템 네비바 영역이 시트를 가리지 않도록
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          height: fixedHeight,
-          padding: const EdgeInsets.only(top: 12),
+    return Padding(
+      padding:
+      EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        height: fixedHeight,
+        padding: const EdgeInsets.only(top: 12),
+        // SafeArea(minimum) 으로 시스템 네비게이션 / 홈 인디케이터와의 시각 간격 보장.
+        // 호출부의 useSafeArea 가 꺼져 있더라도 동일한 버퍼를 확보한다.
+        child: SafeArea(
+          top: false,
+          minimum: const EdgeInsets.only(bottom: 8),
           child: Column(
             mainAxisSize: MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -189,7 +193,10 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                 ),
               ),
               const SizedBox(height: 16),
-              // 단계 전환 — StackFit.expand 로 각 단계가 시트 잔여 높이를 그대로 받게 한다.
+              // 단계 전환 — 시트 크기는 fixedHeight 로 고정.
+              // 각 단계 자체가 [상단 anchor / Expanded body / 하단 anchor] 구조라
+              // AnimatedSize 는 쓰지 않는다 (Expanded 와 충돌).
+              // StackFit.expand 로 각 단계가 시트 잔여 높이를 그대로 받게 한다.
               Expanded(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 180),
@@ -283,8 +290,9 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
       }
     }
 
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
       child: Column(
         mainAxisSize: MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -409,10 +417,12 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
             ),
           ),
 
-          // ── 하단 anchor: 저장 버튼
+          // ── 하단 anchor: 저장 버튼 ────────────────────
+          // 저장 중에는 onPressed=null 로 disable + 라벨 변경.
           const SizedBox(height: 12),
           // ✅ _isLoading 상태에 따라 버튼 비활성화 + 라벨 변경
           DoitdoPrimaryButton(
+            height: 48,
             label: _isLoading ? '저장 중...' : '저장하기',
             onPressed: _isLoading ? null : () => _onSave(context),
           ),

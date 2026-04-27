@@ -44,8 +44,19 @@ struct DoitdoEntry: TimelineEntry {
 
 struct DoitdoTimelineProvider: TimelineProvider {
 
-    /// 토글 직후 strikethrough 노출 시간 — 너무 짧으면 인지 못 하고, 너무 길면 답답.
-    private static let strikethroughLinger: TimeInterval = 0.45
+    /// 토글 직후 strikethrough 노출 시간.
+    private static let strikethroughLinger: TimeInterval = 0.5
+
+    /// entry1 의 시각을 약간 미래로 밀어 OS 지연이 있어도 "현재 entry" 로 선택되도록 보장.
+    private static let entryLeadIn: TimeInterval = 0.05
+
+    /// payload.updatedAt 가 이 시간 안에 있으면 "최근 토글" 로 간주 → SharedStore 정리를 미루고
+    /// 항상 같은 transition timeline 을 만들어준다. 이 값보다 오래되면 "오래된 잔여 DONE 상태" 로
+    /// 보고 cleanup 진행.
+    /// (OS 가 reloadTimelines 직후 짧은 시간 안에 getTimeline 을 두 번 부르는 경우가 있어,
+    ///  첫 호출에서 SharedStore 를 cleaned 로 덮으면 두 번째 호출이 strikethrough 를 못 만드는
+    ///  race 가 발생. 이 윈도우 안에서는 cleanup 안 하면 두 호출이 같은 transition 을 반환.)
+    private static let recentToggleWindow: TimeInterval = 2.0
 
     func placeholder(in context: Context) -> DoitdoEntry {
         DoitdoEntry(
@@ -92,15 +103,21 @@ struct DoitdoTimelineProvider: TimelineProvider {
 
         if let payload = payload, hasDoneItems(in: payload) {
             let cleanedNow = cleaned(of: payload)
-            // SharedStore 정리 — 다음 호출에서는 cleaned 가 source of truth.
-            SharedStore.savePayload(cleanedNow)
 
-            let entry1 = DoitdoEntry(date: now, payload: payload, hasAuthToken: token)
-            let entry2 = DoitdoEntry(
-                date: now.addingTimeInterval(Self.strikethroughLinger),
-                payload: cleanedNow,
-                hasAuthToken: token
-            )
+            // SharedStore 정리 정책:
+            //   - "최근 토글 윈도우" 내(updatedAt 이 충분히 fresh)면 cleanup 을 미룸.
+            //     OS 가 짧은 간격으로 getTimeline 을 두 번 호출해도 둘 다 같은 transition 반환 → race 차단.
+            //   - 윈도우 밖이면 (예: 위젯 화면 떠났다 한참 뒤 돌아옴) 잔여 DONE 으로 간주 → cleanup.
+            let payloadAge = ageInSeconds(of: payload, relativeTo: now)
+            let isRecentToggle = payloadAge < Self.recentToggleWindow
+            if !isRecentToggle {
+                SharedStore.savePayload(cleanedNow)
+            }
+
+            let entry1Date = now.addingTimeInterval(Self.entryLeadIn)
+            let entry2Date = entry1Date.addingTimeInterval(Self.strikethroughLinger)
+            let entry1 = DoitdoEntry(date: entry1Date, payload: payload, hasAuthToken: token)
+            let entry2 = DoitdoEntry(date: entry2Date, payload: cleanedNow, hasAuthToken: token)
             completion(Timeline(entries: [entry1, entry2], policy: .after(nextRefresh)))
         } else {
             let entry = DoitdoEntry(date: now, payload: payload, hasAuthToken: token)
@@ -126,6 +143,21 @@ struct DoitdoTimelineProvider: TimelineProvider {
             somedayTodos: payload.somedayTodos.filter { !$0.isDone },
             updatedAt: payload.updatedAt
         )
+    }
+
+    private static let isoFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+    private static let isoFormatterFallback = ISO8601DateFormatter()
+
+    /// payload.updatedAt 을 파싱해 now 와의 차이(초)를 반환. 파싱 실패 시 큰 값 반환(=오래됨).
+    private func ageInSeconds(of payload: WidgetPayload, relativeTo now: Date) -> TimeInterval {
+        let parsed = Self.isoFormatter.date(from: payload.updatedAt)
+            ?? Self.isoFormatterFallback.date(from: payload.updatedAt)
+        guard let updatedAt = parsed else { return .greatestFiniteMagnitude }
+        return now.timeIntervalSince(updatedAt)
     }
 }
 
@@ -180,6 +212,10 @@ struct DoitdoWidgetEntryView: View {
                     emptyText: "다 했어요!"
                 )
             }
+            // 컨테이너 가장자리에 너무 붙지 않도록 inner margin 부여.
+            // iOS 17 의 .containerBackground 기본 inset 위에 추가로 더 주는 효과.
+            .padding(.top, 4)
+            .padding(.leading, 6)
         }
     }
 
@@ -202,6 +238,12 @@ struct DoitdoWidgetEntryView: View {
             } else {
                 ForEach(todos) { todo in
                     row(todo: todo)
+                        // 사라짐: 순수 opacity 만 — 위치(최상단/중간/하단) 무관하게 일관된 페이드.
+                        //   .move(edge:.top) 같은 방향성 transition 은 최상단 행이 위로 즉시 빠져
+                        //   strikethrough 가 안 보이는 이슈가 있어 빼버림.
+                        // 등장: 동일하게 opacity (insertion 시 슬라이드 어색함 방지).
+                        // 아래 행들이 위로 올라오는 reflow 는 .animation modifier 가 자동 처리.
+                        .transition(.opacity)
                 }
                 Spacer(minLength: 0)
                 // 컬럼별 overflow 는 좌측 하단. 너무 끝에 붙지 않게 살짝 띄움.
@@ -210,11 +252,17 @@ struct DoitdoWidgetEntryView: View {
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Color.doitdoTextSecondary)
                         .padding(.bottom, 4)
-                        .padding(.leading, 2)
+                        .padding(.leading, 6)
+                        .transition(.opacity)
                 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        // 행 추가/제거 + overflow 변경에는 fade animation, isDone 변경(체크 채움 + strikethrough)은
+        // 즉각 반영. isDone 도 animate 하면 OS 지연 시 0.5s linger 안에 strikethrough 가 다 안
+        // 그려진 채로 fade 가 시작되는 케이스가 있어, 토글 시점에 즉시 그어지도록 분리.
+        .animation(.easeOut(duration: 0.25), value: todos.map(\.id))
+        .animation(.easeOut(duration: 0.25), value: overflow)
     }
 
     private func columnHeader(_ title: String) -> some View {

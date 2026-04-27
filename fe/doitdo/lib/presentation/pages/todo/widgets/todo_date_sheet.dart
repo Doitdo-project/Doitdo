@@ -405,13 +405,13 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
     final embedded = widget.embedded;
 
     // ── 헤더(마스코트 + 탭). embedded 에선 상단 anchor 로 고정 노출 ──
-    // 말풍선 위치는 그대로 두고, 말풍선 ~ 탭 사이 간격만 넓혀 시각적 호흡 확보.
+    // 말풍선 ~ 탭 사이 간격 22 로 타이트하게 호흡 확보.
     final headerSection = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const _MascotBubble(message: '언제부터 언제까지 할까?'),
-        const SizedBox(height: 28),
+        const SizedBox(height: 22),
         Row(
           children: [
             Expanded(
@@ -457,12 +457,13 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
             child: Text('${_focusedDay.month}월',
                 style: AppTextStyles.titleMedium.copyWith(color: c.textPrimary)),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           TableCalendar(
             firstDay: DateTime.utc(2020, 1, 1),
             lastDay: DateTime.utc(2030, 12, 31),
             focusedDay: _focusedDay,
-            rowHeight: 54, // 기간 탭과 셀 높이 동일하게 맞춤
+            rowHeight: 50, // 기간 탭과 셀 높이 동일하게 맞춤
+            daysOfWeekHeight: 32, // 요일 행 위아래 호흡 균형
             selectedDayPredicate: (d) => isSameDay(_selectedDay, d),
             rangeSelectionMode: RangeSelectionMode.disabled,
             onDaySelected: (sel, foc) =>
@@ -490,14 +491,15 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
             child: Text('${_focusedDay.month}월',
                 style: AppTextStyles.titleMedium.copyWith(color: c.textPrimary)),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           TableCalendar(
             firstDay: DateTime.utc(2020, 1, 1),
             lastDay: DateTime.utc(2030, 12, 31),
             focusedDay: _focusedDay,
             rangeStartDay: _rangeStart,
             rangeEndDay: _rangeEnd,
-            rowHeight: 54,
+            rowHeight: 50,
+            daysOfWeekHeight: 32, // 일반 탭과 동일 — 요일 행 호흡 균형
             // ✅ toggledOn: rangeStartBuilder / rangeEndBuilder / withinRangeBuilder 정상 호출됨
             rangeSelectionMode: RangeSelectionMode.toggledOn,
             onRangeSelected: (start, end, focusedDay) {
@@ -548,7 +550,8 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
           GestureDetector(
             onTap: () => _showRepeatTypePicker(context),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              // top 만 4 줄여서 위쪽 호흡을 타이트하게.
+              padding: const EdgeInsets.fromLTRB(0, 10, 0, 14),
               child: Row(
                 children: [
                   Icon(Icons.repeat,
@@ -678,6 +681,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
         const SizedBox(width: 8),
         Expanded(
           child: DoitdoPrimaryButton(
+            height: 48,
             label: '확인',
             onPressed: () {
               final TodoDateResult result;
@@ -720,17 +724,17 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
 
     if (embedded) {
       // 부모(todo_add_sheet) 가 잔여 높이 통째로 넘김 → mainAxisSize.max + Expanded body.
-      // 좌우/상단 padding 24/16 — todo_add_sheet 메인폼과 동일하게 맞춰
+      // 좌우/상단 padding 24/14 — todo_add_sheet 메인폼과 동일하게 맞춰
       // 마스코트 위치를 일치시킨다.
-      // 헤더(탭) ~ 본문(달력) 사이 간격 28 로 호흡 확보.
+      // 헤더(탭) ~ 본문(달력) 사이 간격 24 로 호흡 확보.
       return Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
         child: Column(
           mainAxisSize: MainAxisSize.max,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             headerSection,
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
             Expanded(
               child: SingleChildScrollView(
                 child: tabContent,
@@ -743,7 +747,12 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
       );
     }
 
-    return Container(
+    // SafeArea(top: false, minimum: 8): 시스템 네비바와 시각 간격 보장 +
+    // useSafeArea 가 꺼져 있어도 최소 8px 버퍼.
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.only(bottom: 8),
+      child: Container(
       decoration: BoxDecoration(
         color: c.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -772,6 +781,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
           ],
         ),
       ),
+    ),
     );
   }
 }
@@ -1020,7 +1030,7 @@ class _TabChip extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 9),
+        padding: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
           color: selected ? AppColors.calendarPoint : c.surfaceAlt,
           borderRadius: BorderRadius.circular(20),
@@ -1051,10 +1061,10 @@ class _PrevButton extends StatelessWidget {
         shadowColor: Colors.transparent,
         shape:
         RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(vertical: 12),
       ),
       child: Text('이전',
-          style: AppTextStyles.bodyLarge.copyWith(color: Colors.white)),
+          style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)),
     );
   }
 }

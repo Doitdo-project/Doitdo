@@ -54,6 +54,10 @@ class TodoViewModel extends StateNotifier<TodoState> {
     final selectedDay = state.selectedDay;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    // done 인 todo 는 화면에서 숨긴다 — 단, 방금 체크해서 fading 중인 항목은
+    // 600ms 동안 "주황 체크" 모습으로 노출됐다가 사라지도록 예외.
+    bool isHiddenDone(Todo t) =>
+        t.isDone && !state.fadingTodoIds.contains(t.id);
 
     List<Todo> filteredTodos = state.allTodos;
     List<Todo> filteredSomeday = state.allSomedayTodos;
@@ -93,6 +97,9 @@ class TodoViewModel extends StateNotifier<TodoState> {
           final sel = DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
 
           filteredTodos = filteredTodos.where((t) {
+            // 완료된 항목은 기본 view 에서도 숨김 — 단 fading 중이면 노출 유지.
+            if (isHiddenDone(t)) return false;
+
             // ✏️ 수정: PERIOD 타입은 date 대신 rangeStart 또는 date 우선 사용
             final effectiveDate = (t.dateType == TodoDateType.range)
                 ? (t.date ?? t.rangeStart)
@@ -144,8 +151,9 @@ class TodoViewModel extends StateNotifier<TodoState> {
 
     // ✏️ 수정: todo/done 은 날짜 선택과 무관하게 전체 기간 기준
     if (filter == 'todo') {
-      filteredTodos   = state.allTodos.where((t) => !t.isDone).toList();
-      filteredSomeday = state.allSomedayTodos.where((t) => !t.isDone).toList();
+      filteredTodos   = state.allTodos.where((t) => !isHiddenDone(t)).toList();
+      filteredSomeday =
+          state.allSomedayTodos.where((t) => !isHiddenDone(t)).toList();
     } else if (filter == 'done') {
       filteredTodos   = state.allTodos.where((t) => t.isDone).toList();
       filteredSomeday = state.allSomedayTodos.where((t) => t.isDone).toList();
@@ -343,16 +351,42 @@ class TodoViewModel extends StateNotifier<TodoState> {
     final idx = state.allTodos.indexWhere((t) => t.id == id);
     if (idx == -1) return;
 
-    final newStatus = state.allTodos[idx].isDone ? 'TODO' : 'DONE';
+    final wasDone = state.allTodos[idx].isDone;
+    final newIsDone = !wasDone;
+    final newStatus = newIsDone ? 'DONE' : 'TODO';
+
+    // 1. allTodos isDone 토글 + DONE 으로 가는 경우만 fading 마크.
+    //    fading 동안에는 _updateDisplayedTodos 가 done 필터에도 불구하고 카드를 유지 →
+    //    사용자가 "주황 체크" 된 모습을 잠깐 본 후 사라짐. TODO 로 되돌리는 경우는
+    //    안전 차원에서 혹시 남아있던 fading 마크 정리.
+    final newFading = newIsDone
+        ? {...state.fadingTodoIds, id}
+        : (state.fadingTodoIds.where((it) => it != id).toSet());
     state = state.copyWith(
       allTodos: state.allTodos
-          .map((t) => t.id == id ? t.copyWith(isDone: !t.isDone) : t)
+          .map((t) => t.id == id ? t.copyWith(isDone: newIsDone) : t)
           .toList(),
+      fadingTodoIds: newFading,
     );
     _updateCalendarEvents(state.allTodos);
     _updateDisplayedTodos();
 
-    await AsyncValue.guard(() => _repository.updateTodoStatus(id, newStatus));
+    // 2. PATCH 병렬 발사 — 시각 효과 타이밍을 네트워크 지연과 분리.
+    unawaited(
+      AsyncValue.guard(() => _repository.updateTodoStatus(id, newStatus)),
+    );
+
+    // 3. DONE 으로 토글된 경우 600ms 뒤 fading 해제 → done 필터가 발동해 카드 unmount.
+    if (newIsDone) {
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (!mounted) return;
+      if (!state.fadingTodoIds.contains(id)) return;
+      state = state.copyWith(
+        fadingTodoIds:
+        state.fadingTodoIds.where((it) => it != id).toSet(),
+      );
+      _updateDisplayedTodos();
+    }
   }
 
   Future<void> updateTodo(Todo updated) async {
@@ -447,15 +481,35 @@ class TodoViewModel extends StateNotifier<TodoState> {
     final idx = state.allSomedayTodos.indexWhere((t) => t.id == id);
     if (idx == -1) return;
 
-    final newStatus = state.allSomedayTodos[idx].isDone ? 'TODO' : 'DONE';
+    final wasDone = state.allSomedayTodos[idx].isDone;
+    final newIsDone = !wasDone;
+    final newStatus = newIsDone ? 'DONE' : 'TODO';
+
+    final newFading = newIsDone
+        ? {...state.fadingTodoIds, id}
+        : (state.fadingTodoIds.where((it) => it != id).toSet());
     state = state.copyWith(
       allSomedayTodos: state.allSomedayTodos
-          .map((t) => t.id == id ? t.copyWith(isDone: !t.isDone) : t)
+          .map((t) => t.id == id ? t.copyWith(isDone: newIsDone) : t)
           .toList(),
+      fadingTodoIds: newFading,
     );
     _updateDisplayedTodos();
 
-    await AsyncValue.guard(() => _repository.updateTodoStatus(id, newStatus));
+    unawaited(
+      AsyncValue.guard(() => _repository.updateTodoStatus(id, newStatus)),
+    );
+
+    if (newIsDone) {
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (!mounted) return;
+      if (!state.fadingTodoIds.contains(id)) return;
+      state = state.copyWith(
+        fadingTodoIds:
+        state.fadingTodoIds.where((it) => it != id).toSet(),
+      );
+      _updateDisplayedTodos();
+    }
   }
 
   Future<void> updateSomedayTodo(Todo updated) async {

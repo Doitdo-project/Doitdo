@@ -11,6 +11,10 @@ class TodoState {
   final CalendarFormat calendarFormat;
   final String currentFilter;
   final Map<DateTime, List<Todo>> kEvents;
+  // 체크 직후 잠깐 "주황 체크" 모습으로 노출되었다가 사라지는 todo 의 id 집합.
+  // toggleTodo 가 DONE 으로 토글할 때 여기에 추가하고 ~600ms 뒤 제거 — 그 사이에는
+  // _updateDisplayedTodos 가 done 필터에도 불구하고 이 항목들을 list 에 유지한다.
+  final Set<String> fadingTodoIds;
 
   TodoState({
     this.allTodos = const [],
@@ -22,6 +26,7 @@ class TodoState {
     this.calendarFormat = CalendarFormat.month,
     this.currentFilter = 'all',
     this.kEvents = const {},
+    this.fadingTodoIds = const {},
   }) : focusedDay = focusedDay ?? DateTime.now();
 
   TodoState copyWith({
@@ -33,8 +38,8 @@ class TodoState {
     DateTime? focusedDay,
     CalendarFormat? calendarFormat,
     String? currentFilter,
-    // ✅ 3. copyWith 에도 kEvents 추가
     Map<DateTime, List<Todo>>? kEvents,
+    Set<String>? fadingTodoIds,
   }) {
     return TodoState(
       allTodos: allTodos ?? this.allTodos,
@@ -46,6 +51,7 @@ class TodoState {
       calendarFormat: calendarFormat ?? this.calendarFormat,
       currentFilter: currentFilter ?? this.currentFilter,
       kEvents: kEvents ?? this.kEvents,
+      fadingTodoIds: fadingTodoIds ?? this.fadingTodoIds,
     );
   }
 }

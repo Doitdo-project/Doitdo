@@ -30,6 +30,7 @@ import com.doitdo.domain.tamagotchi.entity.Character;
 import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
 import com.doitdo.domain.tamagotchi.entity.UserCharacterHistory;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
+import com.doitdo.domain.tamagotchi.repository.CharacterActionRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterSpeciesBackgroundRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
@@ -42,6 +43,9 @@ import com.doitdo.global.exception.TamagotchiErrorCode;
 
 @ExtendWith(MockitoExtension.class)
 class TamagotchiServiceImplTest {
+
+	@Mock
+	private CharacterActionRepository characterActionRepository;
 
 	@Mock
 	private CharacterRepository characterRepository;
@@ -66,6 +70,7 @@ class TamagotchiServiceImplTest {
 
 	private TamagotchiServiceImpl service() {
 		return new TamagotchiServiceImpl(
+			characterActionRepository,
 			characterRepository,
 			characterUnlockRepository,
 			userCharacterRepository,

@@ -61,16 +61,46 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    // ref.listen 은 ConsumerWidget/ConsumerStatefulWidget 의 build 메서드 직접
+    // 호출 컨텍스트에서만 등록할 수 있다. _buildBody 는 Builder 의 closure 안에서
+    // 호출되므로 별도 StatelessElement 의 build 컨텍스트가 되어, 거기서 listen 을
+    // 등록하면 element 매핑이 어긋나 assertion 실패. 따라서 listen 만 여기서
+    // 등록하고, 실제 화면 구성은 Theme(Builder) 안에서 _buildBody 가 담당.
+    ref.listen<AsyncValue<User?>>(loginViewModelProvider, (prev, next) {
+      next.whenOrNull(
+        data: (user) {
+          if (user == null) return;
+          if (!mounted) return;
+          context.go(AppRoutes.tamagochi);
+        },
+        error: (error, _) {
+          if (!mounted) return;
+          final isCred = error is UnauthorizedException ||
+              (error is ServerException &&
+                  (error.statusCode == 400 || error.statusCode == 401));
+          if (isCred) return; // 인라인으로 이미 노출됨.
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(mapErrorMessage(error))),
+          );
+        },
+      );
+    });
+
     // 인증 화면은 브랜드 크림 톤 + 캐릭터 일러스트 기반이라 다크 모드 토글과
     // 무관하게 항상 라이트 테마로 강제. 그래야 토큰 텍스트 색(textPrimary 등) 도
     // 라이트 값을 받아 크림 배경 위에서 가독성이 보장된다.
+    //
+    // Builder 대신 Consumer 를 써서 (1) 테마 변경 후의 새 context 도 받고
+    // (2) 그 안에서 ref.watch / ref.listen 이 정상 동작하도록 한다.
+    // (Builder 안의 ref.listen 은 ConsumerStatefulElement 의 debugDoingBuild
+    //  체크에 걸려 assertion fail.)
     return Theme(
       data: AppTheme.light,
-      child: Builder(builder: (context) => _buildBody(context)),
+      child: Consumer(builder: (context, ref, _) => _buildBody(context, ref)),
     );
   }
 
-  Widget _buildBody(BuildContext context) {
+  Widget _buildBody(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final loginState = ref.watch(loginViewModelProvider);
 
@@ -82,27 +112,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final isCredentialError = errorObj is UnauthorizedException ||
         (errorObj is ServerException &&
             (errorObj.statusCode == 400 || errorObj.statusCode == 401));
-
-    // 성공 시 메인 이동, 시스템 에러만 스낵바.
-    ref.listen<AsyncValue<User?>>(loginViewModelProvider, (prev, next) {
-      next.whenOrNull(
-        data: (user) {
-          if (user == null) return;
-          if (!context.mounted) return;
-          context.go(AppRoutes.tamagochi);
-        },
-        error: (error, _) {
-          if (!context.mounted) return;
-          final isCred = error is UnauthorizedException ||
-              (error is ServerException &&
-                  (error.statusCode == 400 || error.statusCode == 401));
-          if (isCred) return; // 인라인으로 이미 노출됨.
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(mapErrorMessage(error))),
-          );
-        },
-      );
-    });
 
     return Scaffold(
       backgroundColor: LoginPage._bgColor,

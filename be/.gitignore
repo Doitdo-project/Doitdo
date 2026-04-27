@@ -37,9 +37,8 @@ out/
 .vscode/
 
 ### Local env files ###
-env/dev.env
-env/prod.env
-env/local.env
+env/.env.*
+!env/.env.*.example
 
 ### Local docker setup ###
 Dockerfile.local

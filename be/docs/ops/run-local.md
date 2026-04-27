@@ -2,7 +2,7 @@
 
 ## 사전 조건
 
-- JDK 21 + `env/dev.env` 준비 완료 ([env-setup.md](env-setup.md))
+- JDK 21 + `env/.env.dev` 준비 완료 ([env-setup.md](env-setup.md))
 - dev DB 접근 가능 (원격 `168.107.48.80`)
 
 ## 부팅
@@ -46,6 +46,6 @@ curl http://localhost:8080/db-check    # DB SELECT 1 실행
 
 ## 자주 만나는 문제
 
-- 부팅 즉시 `Failed to determine a suitable driver class` → `env/dev.env` 누락 또는 경로 오타.
+- 부팅 즉시 `Failed to determine a suitable driver class` → `env/.env.dev` 누락 또는 경로 오타.
 - 부팅 즉시 `Communications link failure` → DB 호스트 도달 불가 (VPN/방화벽).
 - `/swagger-ui.html` 404 → 활성 프로파일이 `dev` / `local` 이 아님.

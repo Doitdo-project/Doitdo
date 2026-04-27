@@ -25,6 +25,11 @@ abstract class CharacterRepository {
   /// 다시 당기는 것을 권장한다.
   Future<void> evolveCharacter(int userCharacterId);
 
+  /// 캐릭터 상호작용 액션. 홈 화면 캐릭터 탭에서 IDLE/EYE 를 번갈아 호출.
+  /// 응답으로 그 액션의 동작 gif URL 을 반환한다 — 호출자는 이걸 캐릭터 썸네일
+  /// 자리에 swap 해 동작을 재생하면 된다. 빈 문자열이면 swap 없이 정적 썸네일 유지.
+  Future<String> triggerAction(CharacterAction action);
+
   /// 도감 목록. 미해금 항목은 species/thumbnailUrl 은 들어와도 UI 에서 가린다.
   Future<List<CollectionEntry>> getEncyclopedia();
 
