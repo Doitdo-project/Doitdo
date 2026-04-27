@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  doitdo 홈 위젯 (Medium, ~250x110dp). iOS DoitdoWidget.swift 와 동일한 정보 구조:
+  오늘 헤더 + 최대 4행, (공간 남으면) 나중에 헤더 + 1행, 또는 빈/로그인 안내.
+
+  RemoteViews 한계로 ListView 대신 고정 N행 + visibility 토글 패턴 사용.
+  AppWidgetProvider 가 매 갱신마다 모든 행의 가시성/텍스트/체크 아이콘을 setRemoteViews 로 재설정.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:background="@drawable/widget_background">
+
+    <!-- ─── 빈 상태 / 로그인 필요 안내 (오늘+나중에 모두 비어있을 때만 visible) ─── -->
+    <LinearLayout
+        android:id="@+id/empty_state"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center_vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/empty_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/widget_text_primary" />
+
+        <TextView
+            android:id="@+id/empty_subtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textSize="12sp"
+            android:textColor="@color/widget_text_secondary" />
+    </LinearLayout>
+
+    <!-- ─── 컨텐츠 (오늘/나중에 섹션) ─── -->
+    <LinearLayout
+        android:id="@+id/content_state"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- 오늘 헤더: "오늘 N" -->
+        <LinearLayout
+            android:id="@+id/today_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/today_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="오늘"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/widget_text_primary" />
+
+            <TextView
+                android:id="@+id/today_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:textSize="11sp"
+                android:textColor="@color/widget_text_secondary" />
+        </LinearLayout>
+
+        <!-- 오늘 행 0~3 (총 4개). 데이터 부족 시 visibility=gone. -->
+        <LinearLayout
+            android:id="@+id/row_today_0"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingVertical="3dp"
+            android:visibility="gone">
+            <ImageView
+                android:id="@+id/check_today_0"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="todo check" />
+            <TextView
+                android:id="@+id/title_today_0"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textSize="13sp"
+                android:singleLine="true"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/row_today_1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingVertical="3dp"
+            android:visibility="gone">
+            <ImageView
+                android:id="@+id/check_today_1"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="todo check" />
+            <TextView
+                android:id="@+id/title_today_1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textSize="13sp"
+                android:singleLine="true"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/row_today_2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingVertical="3dp"
+            android:visibility="gone">
+            <ImageView
+                android:id="@+id/check_today_2"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="todo check" />
+            <TextView
+                android:id="@+id/title_today_2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textSize="13sp"
+                android:singleLine="true"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/row_today_3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingVertical="3dp"
+            android:visibility="gone">
+            <ImageView
+                android:id="@+id/check_today_3"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="todo check" />
+            <TextView
+                android:id="@+id/title_today_3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textSize="13sp"
+                android:singleLine="true"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <!-- 나중에 헤더 + 1행 -->
+        <TextView
+            android:id="@+id/someday_header"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="나중에"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/widget_text_primary"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/row_someday_0"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingVertical="3dp"
+            android:visibility="gone">
+            <ImageView
+                android:id="@+id/check_someday_0"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="todo check" />
+            <TextView
+                android:id="@+id/title_someday_0"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textSize="13sp"
+                android:singleLine="true"
+                android:ellipsize="end" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

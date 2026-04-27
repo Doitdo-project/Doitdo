@@ -133,7 +133,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
 
     return Padding(
       padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
         decoration: BoxDecoration(
           color: c.surface,
@@ -350,7 +350,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                       icon: Icons.notifications_outlined,
                       label: '알림',
                       valueText:
-                          _alarmEnabled ? _formatTime(_selectedTime) : '없음',
+                      _alarmEnabled ? _formatTime(_selectedTime) : '없음',
                       colors: c,
                     ),
                   ),

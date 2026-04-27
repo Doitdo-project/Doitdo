@@ -39,7 +39,8 @@ class TodoCategory {
       '업무' => const TodoCategory(name: '업무', colorKey: CategoryColorKey.work),
       '건강' => const TodoCategory(name: '건강', colorKey: CategoryColorKey.health),
       '취미' => const TodoCategory(name: '취미', colorKey: CategoryColorKey.hobby),
-      _    => const TodoCategory(name: '공부', colorKey: CategoryColorKey.study),
+      '공부' => const TodoCategory(name: '공부', colorKey: CategoryColorKey.study),
+      _ => TodoCategory(name: name, colorKey: CategoryColorKey.etc),
     };
   }
 }

@@ -27,7 +27,7 @@ class TodoDetailSheet extends ConsumerWidget {
     final vm = ref.read(todoViewModelProvider.notifier);
     final detailAsync = ref.watch(todoDetailProvider(todoId));
 
-    // ✅ 동적 카테고리 색상 찾기
+    // 동적 카테고리 색상: 서버 카테고리 목록에서 이름으로 색을 찾는다.
     final categories = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
     Color getCategoryColor(String name) {
       try {
@@ -37,7 +37,11 @@ class TodoDetailSheet extends ConsumerWidget {
       }
     }
 
-    return Container(
+    // SafeArea(top: false) 가 시스템 네비바 영역만큼 padding 을 더해 시트 하단이
+    // 시스템바와 절대 겹치지 않게 한다. 호출부의 useSafeArea: true 와 짝.
+    return SafeArea(
+      top: false,
+      child: Container(
       decoration: BoxDecoration(
         color: c.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -138,7 +142,7 @@ class TodoDetailSheet extends ConsumerWidget {
 
                         Navigator.of(context, rootNavigator: true).pop();
                         showModalBottomSheet(
-                          context: context, isScrollControlled: true, backgroundColor: Colors.transparent, useRootNavigator: true,
+                          context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent, useRootNavigator: true,
                           builder: (_) => TodoEditSheet(todo: todoToEdit, isSomeday: isSomeday),
                         );
                       },
@@ -237,6 +241,7 @@ class TodoDetailSheet extends ConsumerWidget {
           );
         },
       ),
+      ),
     );
   }
 }
@@ -259,6 +264,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
   late TimeOfDay _selectedTime;
   late bool      _alarmEnabled;
   late TodoDateResult _dateResult;
+  bool           _isLoading = false; // ✅ 연타 방지 플래그
 
   @override
   void initState() {
@@ -292,7 +298,10 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
     return '$period $display:$m';
   }
 
-  void _onSave(BuildContext context) {
+  Future<void> _onSave(BuildContext context) async {
+    // ✅ 연타 방지
+    if (_isLoading) return;
+
     final title = _titleController.text.trim();
     if (title.isEmpty) {
       _titleFocusNode.requestFocus();
@@ -306,35 +315,59 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
       return;
     }
 
-    final r = _dateResult;
-    final updated = widget.todo.copyWith(
-      title:           title,
-      category:        TodoCategory.fromName(_selectedCategory),
-      categoryId:      _selectedCategoryId,
-      memo:            _memoController.text.trim().isEmpty ? null : _memoController.text.trim(),
-      alarmTime:       _alarmEnabled ? _selectedTime : null,
-      alarmEnabled:    _alarmEnabled,
-      dateType:        r.type,
-      date:            r.date,
-      rangeStart:      r.rangeStart,
-      rangeEnd:        r.rangeEnd,
-      repeatType:      r.repeatType,
-      repeatStartDate: r.repeatStartDate,
-      repeatEndDate:   r.repeatEndDate,
-      repeatDays:      r.repeatDays,
-    );
+    // ✅ 수정 시작 — 버튼 비활성화
+    setState(() => _isLoading = true);
 
-    final vm = ref.read(todoViewModelProvider.notifier);
-    widget.isSomeday ? vm.updateSomedayTodo(updated) : vm.updateTodo(updated);
+    try {
+      final r = _dateResult;
+      final updated = widget.todo.copyWith(
+        title:           title,
+        category:        TodoCategory.fromName(_selectedCategory),
+        categoryId:      _selectedCategoryId,
+        memo:            _memoController.text.trim().isEmpty ? null : _memoController.text.trim(),
+        alarmTime:       _alarmEnabled ? _selectedTime : null,
+        alarmEnabled:    _alarmEnabled,
+        dateType:        r.type,
+        date:            r.date,
+        rangeStart:      r.rangeStart,
+        rangeEnd:        r.rangeEnd,
+        repeatType:      r.repeatType,
+        repeatStartDate: r.repeatStartDate,
+        repeatEndDate:   r.repeatEndDate,
+        repeatDays:      r.repeatDays,
+      );
 
-    Navigator.of(context, rootNavigator: true).pop();
+      final vm = ref.read(todoViewModelProvider.notifier);
+
+      // ✅ await로 API 완료까지 대기
+      widget.isSomeday
+          ? await vm.updateSomedayTodo(updated)
+          : await vm.updateTodo(updated);
+
+      // ✅ 수정 후 목록 + 캘린더 재조회
+      await vm.fetchTodos();
+      await vm.fetchCalendarData();
+
+      // ✅ 완료 후 딱 한 번만 pop
+      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('수정 실패: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      // ✅ 성공/실패/예외 무관하게 항상 로딩 해제
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
 
-    // ✅ 동적 카테고리 색상
+    // 동적 카테고리 색상.
     final categories = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
     Color getCategoryColor(String name) {
       try {
@@ -344,9 +377,15 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
       }
     }
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
+    // SafeArea(top: false): 시스템 네비바 영역만큼 padding 을 더해 시트 하단이
+    // 시스템바와 절대 겹치지 않게 한다. 호출부의 useSafeArea: true 와 짝.
+    // Padding(viewInsets.bottom): 키보드가 올라왔을 때 그 높이만큼 컨텐츠를 위로.
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
         decoration: BoxDecoration(
           color: c.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -391,7 +430,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
               GestureDetector(
                 onTap: () async {
                   final result = await showModalBottomSheet<TodoDateResult>(
-                    context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+                    context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
                     builder: (_) => TodoDateSheet(initialDate: _dateResult.date ?? DateTime.now(), initialResult: _dateResult),
                   );
                   if (result != null) setState(() => _dateResult = result);
@@ -402,7 +441,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
               GestureDetector(
                 onTap: () async {
                   final result = await showModalBottomSheet<dynamic>(
-                    context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+                    context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
                     builder: (_) => TodoCategorySheet(selectedCategory: _selectedCategory),
                   );
                   if (result != null && result is CategoryResp) {
@@ -433,7 +472,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
               GestureDetector(
                 onTap: () async {
                   final result = await showModalBottomSheet<TodoAlarmResult>(
-                    context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+                    context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
                     builder: (_) => TodoTimeSheet(initialTime: _selectedTime, initialEnabled: _alarmEnabled),
                   );
                   if (result != null) {
@@ -459,9 +498,13 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
                 ),
               ),
               const SizedBox(height: 20),
-              DoitdoPrimaryButton(label: '수정 완료', onPressed: () => _onSave(context)),
+              DoitdoPrimaryButton(
+                label: _isLoading ? '수정 중...' : '수정 완료',
+                onPressed: _isLoading ? null : () => _onSave(context),
+              ),
             ],
           ),
+        ),
         ),
       ),
     );
