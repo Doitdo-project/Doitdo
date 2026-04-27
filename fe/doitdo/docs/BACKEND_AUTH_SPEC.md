@@ -12,7 +12,7 @@
 
 HTTPS + Cloudflare SSL Full (strict) 적용됨.
 
-`.env` 의 `API_BASE_URL` 에 위 중 하나 입력.
+환경 전환은 `--dart-define-from-file=dart_defines/{dev,prod}.json` 으로 수행 (코드 접근: `AppConfig.apiBaseUrl`). 자세한 빌드 명령은 루트 `CLAUDE.md` §1.4 참조.
 
 ## 엔드포인트
 
