@@ -7,6 +7,7 @@ import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/pages/notification/notification_view_model.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
+import 'package:doitdo/presentation/widgets/common/doitdo_dialog.dart';
 
 /// 알림 목록 전체 화면.
 ///
@@ -99,6 +100,33 @@ class _NotificationPageState extends ConsumerState<NotificationPage>
     }
   }
 
+  /// 전체 삭제 확인 다이얼로그 → 사용자가 동의하면 ViewModel.deleteAll 호출.
+  /// 실패 시 스낵바로 알림.
+  Future<void> _confirmDeleteAll(NotificationViewModel vm) async {
+    final ok = await showDoitdoDialog(
+      context: context,
+      title: '모든 알림을 삭제할까요?',
+      message: '삭제된 알림은 복구할 수 없어요.',
+      confirmLabel: '삭제',
+      cancelLabel: '취소',
+    );
+    if (ok != true) return;
+    if (!mounted) return;
+
+    try {
+      await vm.deleteAll();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('알림을 모두 삭제했어요.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('삭제 실패: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state  = ref.watch(notificationViewModelProvider);
@@ -112,9 +140,13 @@ class _NotificationPageState extends ConsumerState<NotificationPage>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // ── 상단 바 ─────────────────────────────
+            // 메뉴는 항상 노출 — 모두 읽음 / 전체 삭제 두 액션 모두 상시 가능.
+            // 안 읽은 게 없으면 API 가 no-op 으로 처리되므로 호출해도 무해.
             _NotiTopBar(
               unreadCount: state.unreadCount,
-              onMarkAll: state.unreadCount > 0 ? vm.markAllAsRead : null,
+              onMarkAll: vm.markAllAsRead,
+              onDeleteAll:
+                  state.items.isEmpty ? null : () => _confirmDeleteAll(vm),
               onBack: () => context.pop(),
             ),
 
@@ -262,23 +294,31 @@ class _NotificationPageState extends ConsumerState<NotificationPage>
 // ──────────────────────────────────────────────
 // 상단 바
 // ──────────────────────────────────────────────
+
+/// TopBar 의 점 3개 메뉴 액션.
+enum _TopAction { markAll, deleteAll }
+
 class _NotiTopBar extends StatelessWidget {
   const _NotiTopBar({
     required this.unreadCount,
     required this.onBack,
     this.onMarkAll,
+    this.onDeleteAll,
   });
 
   final int unreadCount;
   final VoidCallback onBack;
   final VoidCallback? onMarkAll;
+  final VoidCallback? onDeleteAll;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final hasMenu = onMarkAll != null || onDeleteAll != null;
+
     return Container(
       color: colors.topBarBg,
-      padding: EdgeInsets.fromLTRB(8.w, 4.h, 16.w, 4.h),
+      padding: EdgeInsets.fromLTRB(8.w, 4.h, 8.w, 4.h),
       child: Row(
         children: [
           IconButton(
@@ -312,14 +352,63 @@ class _NotiTopBar extends StatelessWidget {
 
           const Spacer(),
 
-          if (onMarkAll != null)
-            GestureDetector(
-              onTap: onMarkAll,
-              child: Text(
-                '모두 읽음',
-                style:
-                    AppTextStyles.bodySmall.copyWith(color: colors.textSecondary),
+          // 점 3개 메뉴 — 모두 읽음 / 전체 삭제 액션을 통합.
+          // 둘 다 사용 불가(목록 비어 있음 + unread 0) 면 메뉴 자체를 숨김.
+          if (hasMenu)
+            PopupMenuButton<_TopAction>(
+              icon: Icon(Icons.more_vert_rounded,
+                  size: 22.sp, color: colors.textPrimary),
+              tooltip: '메뉴',
+              color: colors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
               ),
+              itemBuilder: (context) => [
+                if (onMarkAll != null)
+                  PopupMenuItem<_TopAction>(
+                    value: _TopAction.markAll,
+                    height: 44,
+                    child: Row(
+                      children: [
+                        Icon(Icons.done_all_rounded,
+                            size: 18.sp, color: colors.textSecondary),
+                        SizedBox(width: 10.w),
+                        Text(
+                          '모두 읽음',
+                          style: AppTextStyles.bodyMedium
+                              .copyWith(color: colors.textPrimary),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (onDeleteAll != null)
+                  PopupMenuItem<_TopAction>(
+                    value: _TopAction.deleteAll,
+                    height: 44,
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline_rounded,
+                            size: 18.sp, color: Colors.red.shade400),
+                        SizedBox(width: 10.w),
+                        Text(
+                          '전체 삭제',
+                          style: AppTextStyles.bodyMedium
+                              .copyWith(color: Colors.red.shade400),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+              onSelected: (value) {
+                switch (value) {
+                  case _TopAction.markAll:
+                    onMarkAll?.call();
+                    break;
+                  case _TopAction.deleteAll:
+                    onDeleteAll?.call();
+                    break;
+                }
+              },
             ),
         ],
       ),

@@ -201,13 +201,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     });
 
     // 인증 화면은 브랜드 크림 톤 일러스트 기반이라 themeMode 와 무관하게 라이트 강제.
+    // Builder 대신 Consumer 를 써서 안쪽에서 ref.watch / ref.listen 이 정상 동작하도록.
     return Theme(
       data: AppTheme.light,
-      child: Builder(builder: (context) => _buildBody(context)),
+      child: Consumer(builder: (context, ref, _) => _buildBody(context, ref)),
     );
   }
 
-  Widget _buildBody(BuildContext context) {
+  Widget _buildBody(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     // 중복체크 결과도 구독해 "사용 가능" 체크 아이콘·에러 메시지가 실시간 갱신되게.
     ref.watch(emailAvailabilityProvider);

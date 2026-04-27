@@ -72,6 +72,10 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
   }
 
   Future<void> _onSave(BuildContext context) async {
+    // 이미 저장 진행 중이면 무시 — 같은 프레임 내 더블탭으로 두 번 호출되는 케이스 방어.
+    // (UI 의 isSaving 가드만으로는 동일 프레임 race 를 못 막음.)
+    if (ref.read(todoAddNotifierProvider).isLoading) return;
+
     final title = _titleController.text.trim();
 
     if (title.isEmpty) {
@@ -127,9 +131,9 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    // 시트 높이를 화면의 70% 로 고정 — 단계 전환 때 시트 자체가 출렁이는 걸 막는다.
+    // 시트 높이를 화면의 75% 로 고정 — 단계 전환 때 시트 자체가 출렁이는 걸 막는다.
     // 각 단계는 자체적으로 [헤더(마스코트) / Expanded(본문) / 하단 버튼] 패턴을 갖는다.
-    final fixedHeight = MediaQuery.of(context).size.height * 0.70;
+    final fixedHeight = MediaQuery.of(context).size.height * 0.75;
 
     return Padding(
       padding:
@@ -141,43 +145,49 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
         ),
         height: fixedHeight,
         padding: const EdgeInsets.only(top: 12),
-        child: Column(
-          mainAxisSize: MainAxisSize.max,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // drag handle — 단계와 무관하게 항상 노출.
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: c.border,
-                  borderRadius: BorderRadius.circular(2),
+        // SafeArea(minimum) 으로 시스템 네비게이션 / 홈 인디케이터와의 시각 간격 보장.
+        // 호출부의 useSafeArea 가 꺼져 있더라도 동일한 버퍼를 확보한다.
+        child: SafeArea(
+          top: false,
+          minimum: const EdgeInsets.only(bottom: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.max,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // drag handle — 단계와 무관하게 항상 노출.
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: c.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            // 단계 전환 — 시트 크기는 fixedHeight 로 고정.
-            // 각 단계 자체가 [상단 anchor / Expanded body / 하단 anchor] 구조라
-            // AnimatedSize 는 쓰지 않는다 (Expanded 와 충돌).
-            // StackFit.expand 로 각 단계가 시트 잔여 높이를 그대로 받게 한다.
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 180),
-                layoutBuilder: (current, previous) => Stack(
-                  fit: StackFit.expand,
-                  alignment: Alignment.center,
-                  children: [
-                    ...previous,
-                    if (current != null) current,
-                  ],
+              const SizedBox(height: 16),
+              // 단계 전환 — 시트 크기는 fixedHeight 로 고정.
+              // 각 단계 자체가 [상단 anchor / Expanded body / 하단 anchor] 구조라
+              // AnimatedSize 는 쓰지 않는다 (Expanded 와 충돌).
+              // StackFit.expand 로 각 단계가 시트 잔여 높이를 그대로 받게 한다.
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  layoutBuilder: (current, previous) => Stack(
+                    fit: StackFit.expand,
+                    alignment: Alignment.center,
+                    children: [
+                      ...previous,
+                      if (current != null) current,
+                    ],
+                  ),
+                  transitionBuilder: (child, anim) =>
+                      FadeTransition(opacity: anim, child: child),
+                  child: _buildStep(c),
                 ),
-                transitionBuilder: (child, anim) =>
-                    FadeTransition(opacity: anim, child: child),
-                child: _buildStep(c),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -253,8 +263,12 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
       }
     }
 
+    // 저장 진행 상태 watch — 저장 중에는 버튼 disable + 라벨 '저장 중...' 으로
+    // 바꿔서 더블탭 / 동일 todo 중복 생성 방지.
+    final isSaving = ref.watch(todoAddNotifierProvider).isLoading;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      padding: const EdgeInsets.fromLTRB(24, 14, 24, 24),
       child: Column(
         mainAxisSize: MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -382,10 +396,12 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           ),
 
           // ── 하단 anchor: 저장 버튼 ────────────────────
+          // 저장 중에는 onPressed=null 로 disable + 라벨 변경.
           const SizedBox(height: 12),
           DoitdoPrimaryButton(
-            label: '저장하기',
-            onPressed: () => _onSave(context),
+            height: 48,
+            label: isSaving ? '저장 중...' : '저장하기',
+            onPressed: isSaving ? null : () => _onSave(context),
           ),
         ],
       ),

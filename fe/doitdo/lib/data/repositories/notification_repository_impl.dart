@@ -49,4 +49,8 @@ class NotificationRepositoryImpl extends BaseRepository
   @override
   Future<void> deleteNotification(int notificationId) =>
       safeApiCallVoid(() => _api.deleteNotification(notificationId));
+
+  @override
+  Future<void> deleteAllNotifications() =>
+      safeApiCallVoid(() => _api.deleteAllNotifications());
 }

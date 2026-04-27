@@ -89,13 +89,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     // 인증 화면은 브랜드 크림 톤 + 캐릭터 일러스트 기반이라 다크 모드 토글과
     // 무관하게 항상 라이트 테마로 강제. 그래야 토큰 텍스트 색(textPrimary 등) 도
     // 라이트 값을 받아 크림 배경 위에서 가독성이 보장된다.
+    //
+    // Builder 대신 Consumer 를 써서 (1) 테마 변경 후의 새 context 도 받고
+    // (2) 그 안에서 ref.watch / ref.listen 이 정상 동작하도록 한다.
+    // (Builder 안의 ref.listen 은 ConsumerStatefulElement 의 debugDoingBuild
+    //  체크에 걸려 assertion fail.)
     return Theme(
       data: AppTheme.light,
-      child: Builder(builder: (context) => _buildBody(context)),
+      child: Consumer(builder: (context, ref, _) => _buildBody(context, ref)),
     );
   }
 
-  Widget _buildBody(BuildContext context) {
+  Widget _buildBody(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final loginState = ref.watch(loginViewModelProvider);
 
