@@ -92,11 +92,31 @@ class NotificationSettingsViewModel extends AsyncNotifier<UserSettingResp> {
     );
   }
 
+  /// 아침 리마인드 on/off.
+  ///
+  /// DND 와 마찬가지로 서버 스케줄러가 enabled=true 이면 시간을 함께
+  /// 알아야 트리거가 잡힌다. 사용자가 시간을 한 번도 설정하지 않은 채
+  /// 토글만 켜면 서버는 어떤 시각에 푸시할지 모르므로, 켤 때는 기본값(08:00)을
+  /// 함께 PATCH 한다.
   Future<void> setMorningEnabled(bool v) {
     final current = state.requireValue;
+    if (!v) {
+      return _patch(
+        current.copyWith(morningReminderEnabled: v),
+        {'morningReminderEnabled': v},
+      );
+    }
+    final timeDto =
+        current.morningReminderTime ?? const LocalTimeDto(hour: 8, minute: 0);
     return _patch(
-      current.copyWith(morningReminderEnabled: v),
-      {'morningReminderEnabled': v},
+      current.copyWith(
+        morningReminderEnabled: v,
+        morningReminderTime: timeDto,
+      ),
+      {
+        'morningReminderEnabled': v,
+        'morningReminderTime': timeDto.toJson(),
+      },
     );
   }
 
@@ -109,11 +129,26 @@ class NotificationSettingsViewModel extends AsyncNotifier<UserSettingResp> {
     );
   }
 
+  /// 저녁 리마인드 on/off — 아침과 동일한 이유로 기본값(21:00) 동봉.
   Future<void> setEveningEnabled(bool v) {
     final current = state.requireValue;
+    if (!v) {
+      return _patch(
+        current.copyWith(eveningReminderEnabled: v),
+        {'eveningReminderEnabled': v},
+      );
+    }
+    final timeDto =
+        current.eveningReminderTime ?? const LocalTimeDto(hour: 21, minute: 0);
     return _patch(
-      current.copyWith(eveningReminderEnabled: v),
-      {'eveningReminderEnabled': v},
+      current.copyWith(
+        eveningReminderEnabled: v,
+        eveningReminderTime: timeDto,
+      ),
+      {
+        'eveningReminderEnabled': v,
+        'eveningReminderTime': timeDto.toJson(),
+      },
     );
   }
 
