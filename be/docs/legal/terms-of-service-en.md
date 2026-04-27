@@ -36,7 +36,7 @@ These Terms establish the conditions, procedures, and rights and responsibilitie
 | **Member** | A user who has agreed to these Terms and completed account registration |
 | **Account** | The login identity created by a Member using an email address or social login |
 | **Virtual Currency (Doredits)** | In-app virtual currency obtainable exclusively by completing TODOs; has no monetary value and cannot be exchanged for cash |
-| **Tamagotchi (Character)** | A virtual slime character that grows, evolves, or departs based on a Member's TODO completion activity |
+| **Pet (Character)** | A virtual slime character that grows, evolves, or departs based on a Member's TODO completion activity |
 | **Content** | Text, images, or other materials created or uploaded by a Member within the Service (TODOs, nicknames, character names, profile images, etc.) |
 | **Social Login** | Authentication via third-party OAuth providers — Google, Kakao, or Apple |
 
@@ -111,7 +111,7 @@ Members are responsible for maintaining the security of their account credential
 | Feature | Description |
 |---|---|
 | TODO Management | Create, edit, delete, and set reminders for tasks |
-| Tamagotchi Character | Raise, evolve, and care for a virtual slime character tied to TODO completion |
+| Pet Character | Raise, evolve, and care for a virtual slime character tied to TODO completion |
 | Doredits & Inventory | Earn virtual currency by completing TODOs; spend it on in-app items |
 | Account & Settings | Profile management, notification preferences, account withdrawal |
 
@@ -175,7 +175,7 @@ The Service is provided 24 hours a day, 365 days a year in principle. Temporary 
 2. The Company is not liable for service disruptions caused by a Member's own actions or negligence.
 3. The Company is not liable for:
    - Failure to achieve expected results from using the Service
-   - Loss of virtual currency (Doredits) or virtual characters (Tamagotchi)
+   - Loss of virtual currency (Doredits) or virtual characters (Pet)
 4. The Company does not intervene in disputes between Members or between Members and third parties, and is not liable for damages resulting from such disputes.
 5. Because the Service is currently provided free of charge and Doredits cannot be purchased with money, no monetary damages arise from service changes or interruptions.
 
