@@ -40,7 +40,7 @@ This Privacy Policy explains what personal information we collect, why we collec
 | Data Element | When Generated | Purpose |
 |---|---|---|
 | TODO content, categories, reminder times | While using the service | Core TODO functionality |
-| Character name, status, evolution history, collection | While using the service | Tamagotchi character feature |
+| Character name, status, evolution history, collection | While using the service | Pet character feature |
 | Inventory, virtual currency (Doredits), activity logs | While using the service | In-app game mechanics |
 | Camera / photo-library images | When user sets a character profile photo | Character profile image |
 
@@ -67,7 +67,7 @@ We do not collect the following, and we want to be transparent about this:
 We use collected personal information for the following purposes:
 
 1. **Account Management** — registration, identity verification, age-restriction enforcement (14+), prevention of fraudulent use, and account deletion.
-2. **Service Delivery** — TODO management, Tamagotchi character features, inventory and virtual-currency (Doredits) management.
+2. **Service Delivery** — TODO management, Pet character features, inventory and virtual-currency (Doredits) management.
 3. **Notifications** — service-related push notifications such as TODO reminders, character growth and farewell alerts. Marketing push notifications (optional consent; see Section 6).
 4. **Authentication & Security** — maintaining login sessions via JWT, linking and managing social accounts, token refresh and revocation.
 5. **Character Profile** — storing and displaying user-uploaded character profile images.

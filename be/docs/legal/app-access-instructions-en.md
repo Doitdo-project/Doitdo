@@ -81,7 +81,7 @@ All three social login providers are fully integrated and available for review:
 
 ## Camera and Photo Library Permission
 
-- The app requests camera and photo-library access only when the user navigates to set a Tamagotchi character's profile image (**optional**).
+- The app requests camera and photo-library access only when the user navigates to set a Pet character's profile image (**optional**).
 - This permission is never requested on launch.
 - If declined, all other features remain fully functional; the character profile image defaults to a pre-set image.
 
@@ -126,7 +126,7 @@ In compliance with **App Store Review Guideline 5.1.1(v)**:
 ## Summary for Reviewer
 
 - **Login:** Use the pre-configured test account above, or sign up with a new email.
-- **All features accessible:** TODO management, Tamagotchi character, inventory, settings.
+- **All features accessible:** TODO management, Pet character, inventory, settings.
 - **No age gate triggered** by the test account.
 - **Apple Sign-In token revocation** is implemented server-side on account withdrawal.
 - **No mandatory permissions** — camera and notifications are optional and can be declined without impacting core review.
