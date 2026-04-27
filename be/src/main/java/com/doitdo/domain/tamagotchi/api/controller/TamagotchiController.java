@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.tamagotchi.api.dto.req.ApproveIndependenceReq;
 import com.doitdo.domain.tamagotchi.api.dto.req.UpdateCharacterNameReq;
+import com.doitdo.domain.tamagotchi.api.dto.resp.CharacterActionUrlResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaDetailResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
@@ -109,5 +110,15 @@ public class TamagotchiController {
 		@RequestBody ApproveIndependenceReq request
 	) {
 		return GlobalApiResponse.ok(tamagotchiService.approveIndependence(userDetails.getUserId(), request.approved()));
+	}
+
+	@Operation(summary = "캐릭터 액션 URL 조회", description = "현재 사용자의 활성 캐릭터에서 액션 타입에 해당하는 URL을 조회한다.")
+	@ApiErrorCodes({"M04-002", "M09-001", "M09-002", "M09-003"})
+	@GetMapping("/me/actions/{actionType}")
+	public GlobalApiResponse<CharacterActionUrlResp> getMyCharacterActionUrl(
+		@PathVariable String actionType,
+		@AuthenticationPrincipal CustomUserDetails userDetails
+	) {
+		return GlobalApiResponse.ok(tamagotchiService.getMyCharacterActionUrl(userDetails.getUserId(), actionType));
 	}
 }

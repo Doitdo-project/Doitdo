@@ -60,7 +60,12 @@ public enum TamagotchiErrorCode implements ErrorCode {
 	// M08 - inventory
 	M08_001("M08-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),
 	M08_002("M08-002", HttpStatus.NOT_FOUND, "다마고치를 찾을 수 없음"),
-	M08_003("M08-003", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류");
+	M08_003("M08-003", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
+
+	// M09 - character action url
+	M09_001("M09-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),
+	M09_002("M09-002", HttpStatus.NOT_FOUND, "해당 캐릭터의 요청 액션을 찾을 수 없음"),
+	M09_003("M09-003", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류");
 
 	private final String code;
 	private final HttpStatus httpStatus;
