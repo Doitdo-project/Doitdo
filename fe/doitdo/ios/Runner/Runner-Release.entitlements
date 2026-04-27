@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Release (App Store / TestFlight) 전용 entitlements.
+	  - aps-environment: TestFlight 와 App Store 빌드는 production APNs 토큰을 받아야 하므로 production.
+	  - Debug 빌드는 Runner.entitlements 의 development 가 적용된다 (project.pbxproj 의 Debug 빌드 config 참조).
+	-->
+	<key>aps-environment</key>
+	<string>production</string>
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.d107.doitdo</string>
+	</array>
+</dict>
+</plist>

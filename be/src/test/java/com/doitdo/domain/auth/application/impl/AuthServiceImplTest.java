@@ -17,6 +17,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.doitdo.domain.auth.api.dto.req.SignupReq;
+import com.doitdo.domain.auth.api.dto.resp.SignupResp;
 import com.doitdo.domain.auth.repository.RefreshTokenRepository;
 import com.doitdo.domain.setting.repository.UserSettingRepository;
 import com.doitdo.domain.streak.repository.UserStreakRepository;
@@ -66,9 +67,8 @@ class AuthServiceImplTest {
 	@Mock
 	private UserCharacterRepository userCharacterRepository;
 
-	@Test
-	void signupAssignsRandomEggCharacter() {
-		AuthServiceImpl service = new AuthServiceImpl(
+	private AuthServiceImpl buildService() {
+		return new AuthServiceImpl(
 			userRepository,
 			userWalletRepository,
 			userSettingRepository,
@@ -81,6 +81,21 @@ class AuthServiceImplTest {
 			characterRepository,
 			userCharacterRepository
 		);
+	}
+
+	private Character defaultEggCharacter() {
+		return Character.builder()
+			.characterId(26L)
+			.species("DUCK")
+			.name("오리알")
+			.stage(Character.Stage.EGG)
+			.requiredExp(0)
+			.build();
+	}
+
+	@Test
+	void signupAssignsRandomEggCharacter() {
+		AuthServiceImpl service = buildService();
 		User savedUser = User.builder()
 			.userId(1L)
 			.email("user@example.com")
@@ -88,21 +103,17 @@ class AuthServiceImplTest {
 			.password("encoded")
 			.isDeleted(false)
 			.build();
-		Character eggCharacter = Character.builder()
-			.characterId(26L)
-			.species("DUCK")
-			.name("오리알")
-			.stage(Character.Stage.EGG)
-			.requiredExp(0)
-			.build();
 
 		given(userRepository.existsByEmail("user@example.com")).willReturn(false);
 		given(userRepository.existsByUsername("user")).willReturn(false);
 		given(passwordEncoder.encode("password123")).willReturn("encoded");
 		given(userRepository.save(any(User.class))).willReturn(savedUser);
-		given(characterRepository.findAllByStage(Character.Stage.EGG)).willReturn(List.of(eggCharacter));
+		given(characterRepository.findAllByStage(Character.Stage.EGG)).willReturn(List.of(defaultEggCharacter()));
 
-		service.signup(new SignupReq("user@example.com", "password123", "user"));
+		SignupResp resp = service.signup(new SignupReq("user@example.com", "password123", "user"));
+
+		assertThat(resp.birthDateRegistered()).isFalse();
+		assertThat(resp.agreementsAccepted()).isFalse();
 
 		ArgumentCaptor<UserCharacter> captor = forClass(UserCharacter.class);
 		then(userCharacterRepository).should().save(captor.capture());

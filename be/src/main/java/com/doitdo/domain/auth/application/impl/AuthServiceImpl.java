@@ -71,7 +71,10 @@ public class AuthServiceImpl implements AuthService {
 		}
 
 		String encodedPassword = passwordEncoder.encode(req.password());
-		User user = userRepository.save(User.create(req.email(), encodedPassword, req.username()));
+		User user = userRepository.save(User.create(
+				req.email(),
+				encodedPassword,
+				req.username()));
 
 		userWalletRepository.save(UserWallet.create(user.getUserId()));
 		userSettingRepository.save(UserSetting.create(user.getUserId()));
@@ -90,7 +93,13 @@ public class AuthServiceImpl implements AuthService {
 				.isDeleted(false)
 				.build());
 
-		return new SignupResp(user.getUserId(), user.getEmail(), user.getUsername());
+		return new SignupResp(
+				user.getUserId(),
+				user.getEmail(),
+				user.getUsername(),
+				user.getBirthDate() != null,
+				user.getTermsAgreedAt() != null
+		);
 	}
 
 	private Character randomEggCharacter() {

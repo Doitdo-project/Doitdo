@@ -1,13 +1,26 @@
 spring:
   config:
-    import: "optional:file:./env/prod.env[.properties]"
+    # prod 부팅 시 ./env/prod.env 가 없으면 부팅 실패해야 한다.
+    # optional: 을 붙이면 base application.yml 의 dev fallback 값들로 silent boot 되어
+    # 운영 토큰이 dev JWT secret 으로 서명되는 사고가 가능하므로 절대 추가하지 말 것.
+    import: "file:./env/prod.env[.properties]"
   datasource:
     url: jdbc:mariadb://${db.host}:${db.port}/${db.name}
     username: ${db.username}
     password: ${db.password}
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        "[format_sql]": false
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,prometheus
+
+# prod 는 운영 도메인만 허용. dev-api / localhost 차단.
+app:
+  cors:
+    allowed-origins: "https://doitdo.site,https://*.doitdo.site"

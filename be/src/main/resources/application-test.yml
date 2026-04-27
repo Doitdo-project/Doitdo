@@ -12,6 +12,10 @@ spring:
       hibernate:
         "[format_sql]": false
 
+# 테스트 전용 JWT 시크릿. h2 메모리 DB 와 짝을 이뤄 dev/prod 와 격리된 값.
+jwt:
+  secret: test-only-jwt-secret-for-h2-in-memory-db-must-be-long-enough-for-hmac-sha-256
+
 springdoc:
   api-docs:
     enabled: false
@@ -25,3 +29,7 @@ apple:
     key-id: TESTKEYID
     key-path: src/test/resources/apple-test-key.p8
     client-id: com.d107.doitdo.test
+
+app:
+  terms:
+    version: "1.0"

@@ -15,6 +15,8 @@ import com.doitdo.domain.todo.repository.CategoryRepository;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository;
 import com.doitdo.domain.todo.repository.TodoRepository;
 import com.doitdo.domain.user.api.dto.req.PasswordChangeReq;
+import com.doitdo.domain.user.api.dto.req.RegisterAgreementsReq;
+import com.doitdo.domain.user.api.dto.req.RegisterBirthDateReq;
 import com.doitdo.domain.user.api.dto.req.WithdrawReq;
 import com.doitdo.domain.user.api.dto.resp.CheckDuplicateResp;
 import com.doitdo.domain.user.api.dto.resp.UserInfoResp;
@@ -25,9 +27,13 @@ import com.doitdo.domain.user.repository.UserWalletRepository;
 import com.doitdo.global.client.AppleOAuthClient;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.UserErrorCode;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Period;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,6 +59,12 @@ public class UserServiceImpl implements UserService {
 	private final CharacterUnlockRepository characterUnlockRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final AppleOAuthClient appleOAuthClient;
+	private final UserHardDeleteService userHardDeleteService;
+
+	@Value("${app.terms.version}")
+	private String appTermsVersion;
+
+	private static final int MINIMUM_AGE = 14;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -148,6 +160,53 @@ public class UserServiceImpl implements UserService {
 		//       dirty-checking 만으로는 변경이 flush 되지 않으므로 saveAndFlush 로 merge + 즉시 flush.
 		user.withdraw();
 		userRepository.saveAndFlush(user);
+	}
+
+	/**
+	 * 온보딩 1단계: 생년월일 등록.
+	 *
+	 * <p>만 14세 미만이면 User 및 연관 데이터를 hard delete 한 뒤 U00_006 예외를 던진다.
+	 * hard delete 는 UserHardDeleteService(REQUIRES_NEW) 에서 먼저 커밋되므로
+	 * 이 메서드의 트랜잭션이 롤백돼도 delete 는 유지된다.
+	 */
+	@Override
+	@Transactional
+	public UserInfoResp registerBirthDate(Long userId, RegisterBirthDateReq req) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new CustomException(UserErrorCode.U01_002));
+
+		LocalDate birthDate = req.birthDate();
+		int age = Period.between(birthDate, LocalDate.now()).getYears();
+		if (age < MINIMUM_AGE) {
+			userHardDeleteService.hardDeleteUser(userId);
+			throw new CustomException(UserErrorCode.U00_006);
+		}
+
+		user.registerBirthDate(birthDate);
+		userRepository.saveAndFlush(user);
+		return UserInfoResp.from(user);
+	}
+
+	/**
+	 * 온보딩 2단계: 약관 동의 등록.
+	 */
+	@Override
+	@Transactional
+	public UserInfoResp registerAgreements(Long userId, RegisterAgreementsReq req) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new CustomException(UserErrorCode.U01_002));
+
+		if (!Boolean.TRUE.equals(req.termsAgreed())) {
+			throw new CustomException(UserErrorCode.U00_007);
+		}
+		if (!Boolean.TRUE.equals(req.privacyAgreed())) {
+			throw new CustomException(UserErrorCode.U00_008);
+		}
+
+		LocalDateTime now = LocalDateTime.now();
+		user.registerAgreements(now, req.marketingAgreed(), appTermsVersion);
+		userRepository.saveAndFlush(user);
+		return UserInfoResp.from(user);
 	}
 
 	/**

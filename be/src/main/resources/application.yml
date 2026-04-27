@@ -18,7 +18,12 @@ springdoc:
     enabled: false
 
 jwt:
-  secret: local-dev-jwt-secret-do-not-use-in-production-must-be-long-enough-for-hmac-sha-256
+  # JWT_SECRET 은 환경변수로만 주입한다 (fallback 없음).
+  # - dev: be/env/.env.dev 의 JWT_SECRET
+  # - prod: Jenkins 의 prod-env-file Credential 의 JWT_SECRET (dev 와 반드시 다른 값)
+  # - local: application-local.yml 에서 하드코딩 fallback 제공 (h2 메모리 DB 전용)
+  # 미설정 시 부팅 실패 — prod 가 dev secret 으로 silent boot 되는 사고 방지.
+  secret: ${JWT_SECRET}
   access-token-expiration: 1800000
   refresh-token-expiration: 1209600000
 
@@ -52,3 +57,11 @@ notification:
     enabled: ${NOTIFICATION_EVENING_REMINDER_ENABLED:true}
   morning-reminder:
     enabled: ${NOTIFICATION_MORNING_REMINDER_ENABLED:true}
+
+# CORS 허용 origin. profile 별 yml 에서 override — base 는 빈 값으로 두어 명시적으로 설정하지 않으면 외부 호출 차단.
+# 모바일 앱은 CORS 영향 없음 — 웹/swagger/외부 도구용.
+app:
+  cors:
+    allowed-origins: ""
+  terms:
+    version: "1.0"
