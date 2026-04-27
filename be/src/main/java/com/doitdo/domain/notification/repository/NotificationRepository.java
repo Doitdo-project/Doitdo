@@ -32,4 +32,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("update Notification n set n.isDeleted = true where n.userId = :userId and n.isDeleted = false")
 	int softDeleteAllByUserId(@Param("userId") Long userId);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("delete from Notification n where n.userId = :userId")
+	int hardDeleteAllByUserId(@Param("userId") Long userId);
 }

@@ -4,6 +4,8 @@ public record SignupResp(
 
 		Long userId,
 		String email,
-		String username
+		String username,
+		boolean birthDateRegistered,
+		boolean agreementsAccepted
 ) {
 }

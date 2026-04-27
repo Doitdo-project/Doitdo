@@ -52,3 +52,7 @@ notification:
     enabled: ${NOTIFICATION_EVENING_REMINDER_ENABLED:true}
   morning-reminder:
     enabled: ${NOTIFICATION_MORNING_REMINDER_ENABLED:true}
+
+app:
+  terms:
+    version: "1.0"

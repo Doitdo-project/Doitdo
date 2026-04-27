@@ -25,3 +25,7 @@ apple:
     key-id: TESTKEYID
     key-path: src/test/resources/apple-test-key.p8
     client-id: com.d107.doitdo.test
+
+app:
+  terms:
+    version: "1.0"
