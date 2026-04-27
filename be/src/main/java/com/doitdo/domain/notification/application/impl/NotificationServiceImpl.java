@@ -164,7 +164,7 @@ public class NotificationServiceImpl implements NotificationService {
 
 	@Override
 	public void sendTamagotchiGrowth(Long userId, Long userCharacterId, String characterName, String afterStage) {
-		String title = "다마고치가 성장했어요!";
+		String title = "BABY".equals(afterStage) ? "알이 부화했어요!" : "다마고치가 성장했어요!";
 		String body  = "\"%s\"이(가) %s 단계로 성장했어요.".formatted(characterName, afterStage);
 
 		notificationRepository.save(Notification.of(
