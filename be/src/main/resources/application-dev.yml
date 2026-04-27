@@ -9,6 +9,11 @@ spring:
 server:
   forward-headers-strategy: framework
 
+# dev 는 로컬 개발자 + dev 스웨거가 호출 가능하도록 localhost / dev-api 도메인 허용.
+app:
+  cors:
+    allowed-origins: "http://localhost:*,https://dev-api.doitdo.site"
+
 springdoc:
   api-docs:
     enabled: true

@@ -5,6 +5,7 @@ import com.doitdo.global.security.JwtAuthenticationEntryPoint;
 import com.doitdo.global.security.JwtAuthenticationFilter;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,6 +26,11 @@ public class SecurityConfig {
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
 	private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 	private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
+
+	// CORS 허용 origin 목록. profile 별 yml 에서 주입 — prod 는 doitdo.site 도메인만, dev 는 dev-api 까지 허용.
+	// 모바일 앱은 CORS 가 적용되지 않으므로 이 설정은 웹/swagger/외부 도구가 호출할 때만 의미가 있다.
+	@Value("${app.cors.allowed-origins}")
+	private List<String> allowedOrigins;
 
 	private static final String[] PUBLIC_ENDPOINTS = {
 			"/hello",
@@ -70,12 +76,7 @@ public class SecurityConfig {
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowedOriginPatterns(List.of(
-				"http://localhost:*",
-				"https://dev-api.doitdo.site",
-				"https://doitdo.site",
-				"https://*.doitdo.site"
-		));
+		config.setAllowedOriginPatterns(allowedOrigins);
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 		config.setAllowedHeaders(List.of("*"));
 		config.setAllowCredentials(false);
