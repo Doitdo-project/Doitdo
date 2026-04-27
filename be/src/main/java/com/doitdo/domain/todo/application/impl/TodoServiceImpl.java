@@ -31,6 +31,7 @@ import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TodoErrorCode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -304,7 +305,18 @@ public class TodoServiceImpl implements TodoService {
 			throw new CustomException(TodoErrorCode.T07_003);
 		}
 
-		todo.changePriority(req.priority());
+		List<Todo> reorderTargets = new ArrayList<>(todo.getType() == TodoType.SOMEDAY
+				? todoRepository.findReorderTargetsForSomeday(userId)
+				: todoRepository.findReorderTargetsForNonSomeday(userId));
+		reorderTargets.removeIf(item -> item.getTodoId().equals(todoId));
+
+		int requestedPriority = req.priority() == null ? reorderTargets.size() + 1 : req.priority();
+		int targetIndex = Math.max(0, Math.min(requestedPriority - 1, reorderTargets.size()));
+		reorderTargets.add(targetIndex, todo);
+
+		for (int i = 0; i < reorderTargets.size(); i++) {
+			reorderTargets.get(i).changePriority(i + 1);
+		}
 
 		String categoryName = null;
 		if (todo.getCategoryId() != null) {

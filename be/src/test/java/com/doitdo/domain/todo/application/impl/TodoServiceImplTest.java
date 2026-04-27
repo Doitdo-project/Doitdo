@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.given;
 
 import com.doitdo.domain.streak.application.UserStreakService;
 import com.doitdo.domain.todo.api.dto.req.TodoCreateReq;
+import com.doitdo.domain.todo.api.dto.req.TodoPriorityChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.application.RecurrenceService;
@@ -18,6 +19,7 @@ import com.doitdo.domain.todo.repository.TodoRepository;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TodoErrorCode;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -145,6 +147,40 @@ class TodoServiceImplTest {
 		assertThat(todo.getAlertTime()).isNull();
 	}
 
+	@Test
+	void changePriorityReordersOnlyNonSomedayTodos() {
+		Todo a = todo(1L, TodoType.NORMAL, 1);
+		Todo b = todo(2L, TodoType.PERIOD, 2);
+		Todo c = todo(3L, TodoType.SOMEDAY, 1);
+		Todo d = todo(4L, TodoType.NORMAL, 3);
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(4L)).willReturn(Optional.of(d));
+		given(todoRepository.findReorderTargetsForNonSomeday(1L)).willReturn(List.of(a, b, d));
+		given(snoozeHistoryRepository.countByTodoId(4L)).willReturn(0L);
+
+		service.changePriority(1L, 4L, new TodoPriorityChangeReq(1));
+
+		assertThat(d.getPriority()).isEqualTo(1);
+		assertThat(a.getPriority()).isEqualTo(2);
+		assertThat(b.getPriority()).isEqualTo(3);
+		assertThat(c.getPriority()).isEqualTo(1);
+	}
+
+	@Test
+	void changePriorityReordersOnlySomedayTodos() {
+		Todo a = todo(1L, TodoType.NORMAL, 1);
+		Todo x = todo(2L, TodoType.SOMEDAY, 1);
+		Todo y = todo(3L, TodoType.SOMEDAY, 2);
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(3L)).willReturn(Optional.of(y));
+		given(todoRepository.findReorderTargetsForSomeday(1L)).willReturn(List.of(x, y));
+		given(snoozeHistoryRepository.countByTodoId(3L)).willReturn(0L);
+
+		service.changePriority(1L, 3L, new TodoPriorityChangeReq(1));
+
+		assertThat(y.getPriority()).isEqualTo(1);
+		assertThat(x.getPriority()).isEqualTo(2);
+		assertThat(a.getPriority()).isEqualTo(1);
+	}
+
 	private Todo normalTodo(String alertTime) {
 		return Todo.builder()
 				.todoId(1L)
@@ -154,6 +190,20 @@ class TodoServiceImplTest {
 				.status(TodoStatus.TODO)
 				.priority(1)
 				.alertTime(alertTime)
+				.startDate(LocalDate.parse("2026-04-20"))
+				.isDeleted(false)
+				.expGranted(false)
+				.build();
+	}
+
+	private Todo todo(Long todoId, TodoType type, Integer priority) {
+		return Todo.builder()
+				.todoId(todoId)
+				.userId(1L)
+				.title("todo" + todoId)
+				.type(type)
+				.status(TodoStatus.TODO)
+				.priority(priority)
 				.startDate(LocalDate.parse("2026-04-20"))
 				.isDeleted(false)
 				.expGranted(false)
