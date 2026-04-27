@@ -42,6 +42,9 @@ lib/
 ├─ app.dart                        # MaterialApp 세팅 (theme/router 연결)
 │
 ├─ core/                           # 앱 전역에서 공유되는 "순수 유틸/설정"
+│  ├─ config/
+│  │  ├─ flavor.dart               # 빌드 환경 enum (dev/prod)
+│  │  └─ app_config.dart           # ★ API base URL 등 빌드 타임 설정 (--dart-define)
 │  ├─ theme/
 │  │  ├─ app_colors.dart           # 원본 컬러 팔레트 (raw hex) — 직접 쓰지 말 것
 │  │  ├─ app_text_styles.dart      # 폰트/사이즈 정의 (색상 없음)
@@ -51,7 +54,7 @@ lib/
 │  ├─ errors/                      # 공통 예외/실패 타입
 │  ├─ network/                     # Dio/ApiClient (API 작업 시 사용)
 │  ├─ notifications/               # FCM 초기화
-│  └─ utils/                       # 환경변수, 로거 등 유틸
+│  └─ utils/                       # 시크릿(.env) 로더, 로거 등 유틸
 │
 ├─ data/                           # (API 작업 시) 모델, DataSource, Repository 구현
 ├─ domain/                         # (API 작업 시) Entity, Repository 인터페이스

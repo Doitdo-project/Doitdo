@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:doitdo/core/config/app_config.dart';
 import 'package:doitdo/core/network/api_client.dart';
 import 'package:doitdo/core/network/auth_interceptor.dart';
 import 'package:doitdo/core/notifications/fcm_token_registrar.dart';
@@ -99,7 +100,7 @@ final authRepositoryProvider = Provider<AuthRepository>(
     local: ref.watch(authLocalDataSourceProvider),
     googleSignIn: ref.watch(googleSignInProvider),
     widgetSync: ref.watch(widgetSyncServiceProvider),
-    apiBaseUrl: AppEnv.optional('API_BASE_URL'),
+    apiBaseUrl: AppConfig.apiBaseUrl,
   ),
 );
 
