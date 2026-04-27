@@ -1,0 +1,41 @@
+# Release keystore 설정 — 이 파일을 `key.properties` 로 복사한 뒤 실제 값으로 채울 것.
+# `android/key.properties` 는 `.gitignore` 에 등록되어 커밋되지 않는다.
+# 마켓 업로드용 AAB 빌드 전 반드시 4개 값이 채워져 있어야 한다.
+
+# keystore 파일 경로 — android/ 기준 상대경로. 보통 keystore/ 하위.
+RELEASE_STORE_FILE=keystore/doitdo-release.jks
+
+# keystore 자체 비밀번호 (`-storepass`). 발급 시 입력한 값.
+RELEASE_STORE_PASSWORD=
+
+# 키 alias (`keytool -genkeypair ... -alias` 로 지정한 이름).
+RELEASE_KEY_ALIAS=doitdo
+
+# 키 비밀번호 (`-keypass`). 보통 storepass 와 동일하게 둔다.
+RELEASE_KEY_PASSWORD=
+
+# ─────────────────────────────────────────────────────────────
+# 키스토어 신규 발급:
+#
+#   keytool -genkeypair -v \
+#     -keystore android/keystore/doitdo-release.jks \
+#     -alias doitdo \
+#     -keyalg RSA -keysize 2048 -validity 10000
+#
+# 발급 후:
+#   1. 위 4개 항목 채우기
+#   2. 다음 명령으로 SHA-1 / SHA-256 추출:
+#        keytool -list -v -keystore android/keystore/doitdo-release.jks -alias doitdo
+#   3. SHA-1 을 다음 콘솔에 모두 등록:
+#        - Firebase Console → 프로젝트 설정 → Android 앱 → SHA 인증 지문 추가
+#        - Google Cloud Console → 사용자 인증 정보 → Android OAuth 클라이언트
+#        - Kakao Developers → 내 애플리케이션 → 플랫폼 → Android → 키 해시
+#          (SHA-1 을 base64 로 변환:
+#             keytool -exportcert -alias doitdo \
+#               -keystore android/keystore/doitdo-release.jks \
+#             | openssl sha1 -binary | openssl base64)
+#   4. Play App Signing 사용 시 Play Console 이 발급한 "앱 서명 키 SHA-1" 도
+#      위 3개 콘솔에 추가 등록.
+#
+# ⚠️ keystore 파일 (.jks) 과 비밀번호는 반드시 백업할 것.
+# 잃어버리면 같은 패키지명으로 업데이트 못 올린다 (Play Store 정책).

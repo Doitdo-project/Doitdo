@@ -22,6 +22,17 @@ if (localPropertiesFile.exists()) {
 val kakaoNativeAppKey: String =
     localProperties.getProperty("KAKAO_NATIVE_APP_KEY") ?: ""
 
+// Release keystore 정보. android/key.properties (gitignored) 에서 읽는다.
+// 파일이 없으면 release signingConfig 를 만들지 않고, release 빌드가 debug keystore
+// 로 폴백 + 빌드 로그에 경고가 찍힌다. 마켓 업로드용 AAB 는 반드시 key.properties 가
+// 채워진 상태에서 빌드해야 한다 (Play Store / OneStore 모두 debug 서명 거부).
+// 템플릿은 android/key.properties.example 참고.
+val keyProperties = Properties()
+val keyPropertiesFile = rootProject.file("key.properties")
+val hasReleaseKeystore = keyPropertiesFile.exists().also {
+    if (it) FileInputStream(keyPropertiesFile).use { stream -> keyProperties.load(stream) }
+}
+
 android {
     namespace = "com.d107.doitdo"
     compileSdk = flutter.compileSdkVersion
@@ -64,6 +75,16 @@ android {
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
+        if (hasReleaseKeystore) {
+            create("release") {
+                // android/key.properties 에서 RELEASE_* 4개 항목을 읽는다.
+                // RELEASE_STORE_FILE 은 android/ 기준 상대경로 (보통 keystore/doitdo-release.jks).
+                storeFile = rootProject.file(keyProperties.getProperty("RELEASE_STORE_FILE"))
+                storePassword = keyProperties.getProperty("RELEASE_STORE_PASSWORD")
+                keyAlias = keyProperties.getProperty("RELEASE_KEY_ALIAS")
+                keyPassword = keyProperties.getProperty("RELEASE_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -71,9 +92,14 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
         release {
-            // TODO: 배포용 release keystore 준비 후 별도 signingConfig 연결.
-            //       현재는 `flutter run --release` 가 되도록 debug 서명 재활용.
-            signingConfig = signingConfigs.getByName("debug")
+            // android/key.properties 가 있으면 release 키, 없으면 debug 키로 폴백.
+            // 폴백 빌드는 로컬 release-mode 동작 확인용 — 마켓 업로드 시엔 반드시 release 키가 필요.
+            signingConfig = if (hasReleaseKeystore) {
+                signingConfigs.getByName("release")
+            } else {
+                logger.warn("[doitdo] android/key.properties 없음 — release 빌드가 debug 키로 서명됩니다. 마켓 업로드용이라면 키 발급 후 재빌드하세요.")
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }
