@@ -181,6 +181,25 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    // ref.listen 은 ConsumerStatefulWidget 의 build 직속 컨텍스트에서만 등록 가능.
+    // _buildBody 는 Builder 의 closure 안에서 호출되므로(별도 StatelessElement) 거기서
+    // listen 을 호출하면 element 매핑이 어긋나 assertion 실패. listen 만 build 로 끌어올림.
+    ref.listen<AsyncValue<User?>>(registerViewModelProvider, (prev, next) {
+      next.whenOrNull(
+        data: (user) {
+          if (user == null) return;
+          if (!mounted) return;
+          context.go(AppRoutes.tamagochi);
+        },
+        error: (error, _) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(mapErrorMessage(error))),
+          );
+        },
+      );
+    });
+
     // 인증 화면은 브랜드 크림 톤 일러스트 기반이라 themeMode 와 무관하게 라이트 강제.
     return Theme(
       data: AppTheme.light,
@@ -194,24 +213,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     ref.watch(emailAvailabilityProvider);
     ref.watch(usernameAvailabilityProvider);
     final registerState = ref.watch(registerViewModelProvider);
-
-    // 회원가입 성공/실패 부수효과.
-    // signUp 직후 자동 로그인까지 완료된 상태로 data 가 도착하므로 바로 메인 탭으로 이동.
-    ref.listen<AsyncValue<User?>>(registerViewModelProvider, (prev, next) {
-      next.whenOrNull(
-        data: (user) {
-          if (user == null) return;
-          if (!context.mounted) return;
-          context.go(AppRoutes.tamagochi);
-        },
-        error: (error, _) {
-          if (!context.mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(mapErrorMessage(error))),
-          );
-        },
-      );
-    });
 
     return Scaffold(
       backgroundColor: RegisterPage._bgColor,
