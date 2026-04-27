@@ -409,7 +409,9 @@ class TodoViewModel extends StateNotifier<TodoState> {
     _updateCalendarEvents(state.allTodos);
     _updateDisplayedTodos();
 
-    await AsyncValue.guard(() => _repository.updateTodo(
+    // AsyncValue.guard 제거 — 오류를 caller(_onSave)까지 전파해야 fetchTodos 호출을 막을 수 있다.
+    // guard로 삼키면 PATCH 실패 후 fetchTodos가 서버 구버전 데이터로 덮어써 "반영 안됨" 현상 발생.
+    await _repository.updateTodo(
       finalTodo.id,
       TodoUpdateRequestDto(
         title:     finalTodo.title,
@@ -433,7 +435,7 @@ class TodoViewModel extends StateNotifier<TodoState> {
         alarmTime: finalTodo.alarmEnabled ? _formatTime(finalTodo.alarmTime) : null,
         clearAlertTime: finalTodo.alarmEnabled ? null : true,
       ),
-    ));
+    );
   }
 
   Future<void> deleteTodo(String id, {String? scope}) async {
@@ -528,7 +530,8 @@ class TodoViewModel extends StateNotifier<TodoState> {
     );
     _updateDisplayedTodos();
 
-    await AsyncValue.guard(() => _repository.updateTodo(
+    // AsyncValue.guard 제거 — updateTodo와 동일한 이유
+    await _repository.updateTodo(
       normalized.id,
       TodoUpdateRequestDto(
         title:     normalized.title,
@@ -537,9 +540,9 @@ class TodoViewModel extends StateNotifier<TodoState> {
         startDate: null,
         endDate:   null,
         alarmTime: normalized.alarmEnabled ? _formatTime(normalized.alarmTime) : null,
-        clearAlertTime: normalized.alarmEnabled ? null : true, // ✏️ 추가
+        clearAlertTime: normalized.alarmEnabled ? null : true,
       ),
-    ));
+    );
   }
 
   Future<void> deleteSomedayTodo(String id) async {
