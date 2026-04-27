@@ -258,10 +258,10 @@ struct DoitdoWidgetEntryView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        // 행 추가/제거 + overflow 변경 + 행 내부 isDone 토글까지 모두 한 번에 watch.
-        // value 가 바뀔 때마다 위의 .transition 과 함께 layout 변경에도 같은 animation 이 적용됨.
+        // 행 추가/제거 + overflow 변경에는 fade animation, isDone 변경(체크 채움 + strikethrough)은
+        // 즉각 반영. isDone 도 animate 하면 OS 지연 시 0.5s linger 안에 strikethrough 가 다 안
+        // 그려진 채로 fade 가 시작되는 케이스가 있어, 토글 시점에 즉시 그어지도록 분리.
         .animation(.easeOut(duration: 0.25), value: todos.map(\.id))
-        .animation(.easeOut(duration: 0.25), value: todos.map(\.isDone))
         .animation(.easeOut(duration: 0.25), value: overflow)
     }
 
