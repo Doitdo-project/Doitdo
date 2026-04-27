@@ -80,6 +80,67 @@ c.d.d.n.a.impl.FirebaseFcmService  : [fcm] FirebaseFcmService is active.
 
 비활성(Noop) 상태라면 `NoopFcmService` 초기화 로그가 대신 나온다.
 
+## 2-3. Apple Sign-In 설정
+
+Apple 로그인은 `authorizationCode` 교환과 회원탈퇴 revoke 호출을 위해 Apple `.p8` 개인키가 필요하다.
+`AppleClientSecretGenerator`는 부팅 시 설정과 키 파일 존재 여부를 검사하므로, 서버와 Jenkins 테스트 환경에 모두 맞춰 둔다.
+
+### 서버 secret 배치
+
+dev 서버:
+
+```bash
+/workspace/extra/app/secrets/apple-signin-key.p8
+chmod 600 /workspace/extra/app/secrets/apple-signin-key.p8
+```
+
+prod 서버:
+
+```bash
+/home/ubuntu/app/secrets/apple-signin-key.p8
+chmod 600 /home/ubuntu/app/secrets/apple-signin-key.p8
+```
+
+두 서버 모두 컨테이너 내부에서는 `/app/secrets/apple-signin-key.p8`로 보인다.
+
+### Docker env_file 설정
+
+Docker `env_file`에서는 대문자 env var 포맷을 사용한다.
+
+```properties
+APPLE_OAUTH_CLIENT_ID=com.d107.doitdo
+APPLE_SIGNIN_TEAM_ID=...
+APPLE_SIGNIN_KEY_ID=...
+APPLE_SIGNIN_KEY_PATH=/app/secrets/apple-signin-key.p8
+APPLE_SIGNIN_CLIENT_ID=com.d107.doitdo
+```
+
+Spring Boot relaxed binding으로 `APPLE_SIGNIN_KEY_PATH`는 `apple.signin.key-path`에 매핑된다.
+
+### Jenkins 테스트 설정
+
+Jenkins에서 Spring context 테스트를 돌리는 job은 `.p8` secret file도 주입해야 한다.
+
+```text
+Credentials ID: apple-signin-key-p8
+Kind: Secret file
+```
+
+Pipeline에서는 `be/secrets/apple-signin-key.p8`로 복사하고,
+Jenkins용 `prod-env-file`에는 아래처럼 둔다.
+
+```properties
+APPLE_SIGNIN_KEY_PATH=./secrets/apple-signin-key.p8
+```
+
+### 검증
+
+```bash
+docker exec doitdo-app printenv | grep APPLE
+docker exec doitdo-app test -r /app/secrets/apple-signin-key.p8
+curl http://localhost:8080/actuator/health
+```
+
 ## 3. DB 접근 확인
 
 dev 프로파일은 원격 테스트 DB(`168.107.48.80`)에 붙는다. VPN/방화벽 정책으로 접근이 막혀 있으면 부팅 실패하니 사전에 확인할 것.
