@@ -35,6 +35,24 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 	List<Todo> findAllByTypeAndIsDeletedFalse(TodoType type);
 
 	@Query("""
+			SELECT t FROM Todo t
+			WHERE t.userId = :userId
+			  AND t.isDeleted = false
+			  AND t.type <> com.doitdo.domain.todo.entity.Todo.TodoType.SOMEDAY
+			ORDER BY t.priority ASC, t.todoId ASC
+			""")
+	List<Todo> findReorderTargetsForNonSomeday(@Param("userId") Long userId);
+
+	@Query("""
+			SELECT t FROM Todo t
+			WHERE t.userId = :userId
+			  AND t.isDeleted = false
+			  AND t.type = com.doitdo.domain.todo.entity.Todo.TodoType.SOMEDAY
+			ORDER BY t.priority ASC, t.todoId ASC
+			""")
+	List<Todo> findReorderTargetsForSomeday(@Param("userId") Long userId);
+
+	@Query("""
 			select count(t) from Todo t
 			where t.userId = :userId
 			  and t.status <> com.doitdo.domain.todo.entity.Todo.TodoStatus.DONE
