@@ -5,8 +5,14 @@
 //  iOS 17+ 인터랙티브 위젯의 핵심. 위젯 내 Button(intent:) 이 trigger 되면 OS 가
 //  본 Intent 를 별도 extension 프로세스에서 실행 — 앱을 안 열고도 PATCH 호출 가능.
 //
-//  성공 시 App Group 의 payload JSON 을 즉시 갱신하고 WidgetCenter 로 timeline reload.
-//  실패 시 위젯 UI 는 변경 없이 다음 갱신 때까지 그대로 (사용자가 다시 탭).
+//  완료 토글 시 UX:
+//    1) payload 의 isDone 을 뒤집어 저장 + reloadTimelines (단 1회)
+//    2) TimelineProvider.getTimeline 이 두 entry 를 만들어 시간 transition 처리:
+//         entry 1 (now): isDone=true → "주황 채움 + 취소선" 노출
+//         entry 2 (now+0.45초): 해당 항목 제거된 payload → 부드럽게 사라짐
+//       (이 방식은 AppIntent 안에서 reload 를 여러 번 호출하다 OS throttling 으로
+//        첫 reload 가 무시되는 케이스를 근본 차단한다.)
+//    3) 백엔드 PATCH 호출 — 다음 timeline / 앱 sync 에서 정합성 회복.
 //
 
 import AppIntents
@@ -27,7 +33,6 @@ struct ToggleTodoIntent: AppIntent {
     init(todoId: Int) { self.todoId = todoId }
 
     func perform() async throws -> some IntentResult {
-        // 1. 현재 payload 에서 해당 TODO 의 status 반대값 결정
         guard let payload = SharedStore.payload() else {
             return .result()
         }
@@ -35,26 +40,19 @@ struct ToggleTodoIntent: AppIntent {
         guard let target = allTodos.first(where: { $0.id == todoId }) else {
             return .result()
         }
-        let nextStatus = target.isDone ? "TODO" : "DONE"
+        let willBeDone = !target.isDone
+        let nextStatus = willBeDone ? "DONE" : "TODO"
 
-        // 2. 백엔드 PATCH (실패해도 throw 하지 않고 조용히 무시 — 다음 갱신에서 sync)
-        do {
-            try await WidgetApiClient.changeTodoStatus(todoId: todoId, newStatus: nextStatus)
-        } catch {
-            // 디버그용 로그만 남김 — 위젯 extension 은 사용자에게 토스트를 띄울 수단이 없다.
-            // 다음 timeline 새로고침 또는 앱 진입 시 정합성 회복.
-            return .result()
-        }
-
-        // 3. App Group 의 payload 도 즉시 반영 → 위젯이 reload 되면 새 상태 표시
+        // payload 에서 해당 항목의 isDone 만 뒤집어 저장.
+        // TimelineProvider.getTimeline 이 이 변화를 감지해 두 entry 로 transition 시킨다.
         let updatedToday = payload.todayTodos.map {
             $0.id == todoId
-                ? WidgetTodo(id: $0.id, title: $0.title, isDone: !target.isDone, isSomeday: $0.isSomeday)
+                ? WidgetTodo(id: $0.id, title: $0.title, isDone: willBeDone, isSomeday: $0.isSomeday)
                 : $0
         }
         let updatedSomeday = payload.somedayTodos.map {
             $0.id == todoId
-                ? WidgetTodo(id: $0.id, title: $0.title, isDone: !target.isDone, isSomeday: $0.isSomeday)
+                ? WidgetTodo(id: $0.id, title: $0.title, isDone: willBeDone, isSomeday: $0.isSomeday)
                 : $0
         }
         SharedStore.savePayload(
@@ -65,8 +63,16 @@ struct ToggleTodoIntent: AppIntent {
             )
         )
 
-        // 4. 위젯 timeline 재생성
+        // 단 1회 reload — getTimeline 이 미래 entry 까지 만들어 자연 transition 발생
         WidgetCenter.shared.reloadTimelines(ofKind: "DoitdoWidget")
+
+        // 백엔드 PATCH (실패해도 다음 sync 에서 회복)
+        do {
+            try await WidgetApiClient.changeTodoStatus(todoId: todoId, newStatus: nextStatus)
+        } catch {
+            // no-op
+        }
+
         return .result()
     }
 }

@@ -1,6 +1,10 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:doitdo/core/widget_sync/widget_sync_service.dart';
+import 'package:doitdo/core/widget_sync/widget_todo_dto.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/pages/todo/todo_state.dart';
 import 'package:doitdo/domain/repositories/todo_repository.dart';
@@ -8,7 +12,7 @@ import 'package:doitdo/presentation/providers/app_data_providers.dart';
 import 'package:doitdo/data/models/todo_update_request_dto.dart';
 
 class TodoViewModel extends StateNotifier<TodoState> {
-  TodoViewModel(this._repository)
+  TodoViewModel(this._repository, this._widgetSync)
       : super(TodoState(
     selectedDay: DateTime(
         DateTime.now().year, DateTime.now().month, DateTime.now().day),
@@ -20,6 +24,7 @@ class TodoViewModel extends StateNotifier<TodoState> {
   }
 
   final TodoRepository _repository;
+  final WidgetSyncService _widgetSync;
 
   static CategoryColorKey _colorKey(String? category) {
     switch (category) {
@@ -171,6 +176,45 @@ class TodoViewModel extends StateNotifier<TodoState> {
     state = state.copyWith(
       todos: filteredTodos,
       somedayTodos: filteredSomeday,
+    );
+
+    // 화면 갱신과 함께 홈스크린 위젯에도 최신 TODO push.
+    // _updateDisplayedTodos 는 fetch / 변경 / 필터 변경 등 모든 갱신 경로의 단일 출구라
+    // 여기 한 곳만 hook 하면 위젯 동기화가 누락 없이 발생한다.
+    unawaited(_pushToWidget());
+  }
+
+  /// 위젯의 "오늘" 섹션은 calendar events map(`kEvents`) 의 오늘 키 — 모든 type
+  /// (normal/range/repeat) 의 오늘 활성 TODO 를 이미 OR 처리해 모아놨다.
+  /// "나중에" 섹션은 별도로 분리된 SOMEDAY 목록 그대로.
+  Future<void> _pushToWidget() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final todayList = state.kEvents[today] ?? const <Todo>[];
+
+    final todayDtos = todayList
+        .map((t) => WidgetTodoDto(
+              id: int.tryParse(t.id) ?? 0,
+              title: t.title,
+              isDone: t.isDone,
+              isSomeday: false,
+            ))
+        .where((t) => t.id != 0)
+        .toList();
+
+    final somedayDtos = state.allSomedayTodos
+        .map((t) => WidgetTodoDto(
+              id: int.tryParse(t.id) ?? 0,
+              title: t.title,
+              isDone: t.isDone,
+              isSomeday: true,
+            ))
+        .where((t) => t.id != 0)
+        .toList();
+
+    await _widgetSync.syncTodos(
+      todayTodos: todayDtos,
+      somedayTodos: somedayDtos,
     );
   }
 
@@ -590,5 +634,8 @@ class TodoViewModel extends StateNotifier<TodoState> {
 
 final todoViewModelProvider =
 StateNotifierProvider.autoDispose<TodoViewModel, TodoState>((ref) {
-  return TodoViewModel(ref.read(todoRepositoryProvider));
+  return TodoViewModel(
+    ref.read(todoRepositoryProvider),
+    ref.read(widgetSyncServiceProvider),
+  );
 });
