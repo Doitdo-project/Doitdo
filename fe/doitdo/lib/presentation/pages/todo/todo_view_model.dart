@@ -451,16 +451,20 @@ class TodoViewModel extends StateNotifier<TodoState> {
     final Todo item = list.removeAt(oldIndex);
     list.insert(newIndex, item);
 
-    state = state.copyWith(todos: list);
+    // ✅ allTodos도 같이 순서 변경 — _updateDisplayedTodos 호출 시 덮어씌워지는 문제 방지
+    final allList = List<Todo>.from(state.allTodos);
+    final allIdx = allList.indexWhere((t) => t.id == item.id);
+    if (allIdx != -1) {
+      allList.removeAt(allIdx);
+      allList.insert(newIndex, item);
+    }
+
+    state = state.copyWith(todos: list, allTodos: allList);
 
     final newPriority = newIndex + 1;
-    final response = await AsyncValue.guard(
-            () => _repository.updateTodoPriority(item.id, newPriority)
+    await AsyncValue.guard(
+          () => _repository.updateTodoPriority(item.id, newPriority),
     );
-
-    if (!response.hasError) {
-      fetchTodos();
-    }
   }
 
   void addSomedayTodo(Todo todo) {
@@ -553,16 +557,20 @@ class TodoViewModel extends StateNotifier<TodoState> {
     final Todo item = list.removeAt(oldIndex);
     list.insert(newIndex, item);
 
-    state = state.copyWith(somedayTodos: list);
+    // ✅ allSomedayTodos도 같이 순서 변경
+    final allList = List<Todo>.from(state.allSomedayTodos);
+    final allIdx = allList.indexWhere((t) => t.id == item.id);
+    if (allIdx != -1) {
+      allList.removeAt(allIdx);
+      allList.insert(newIndex, item);
+    }
+
+    state = state.copyWith(somedayTodos: list, allSomedayTodos: allList);
 
     final newPriority = newIndex + 1;
-    final response = await AsyncValue.guard(
-            () => _repository.updateTodoPriority(item.id, newPriority)
+    await AsyncValue.guard(
+          () => _repository.updateTodoPriority(item.id, newPriority),
     );
-
-    if (!response.hasError) {
-      fetchTodos();
-    }
   }
 
   Future<void> snoozeTodo(String id) async {
