@@ -132,7 +132,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
 
     showMenu<String>(
       context: context,
-      position: const RelativeRect.fromLTRB(1000, 100, 100, 0),
+      position: const RelativeRect.fromLTRB(1000, 55, 90, 0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       color: colors.surface,
       items: items,
@@ -355,10 +355,14 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                         final row1 = uniqueTodos.take(3).toList();
                         final row2 = uniqueTodos.length > 3 ? uniqueTodos.sublist(3) : <Todo>[];
 
+                        // 1. 가장 추천하는 정교한 방법 (좌우 균등 마진)
                         Widget dotRow(List<Todo> items) => Row(
                           mainAxisSize: MainAxisSize.min,
                           children: items.map((t) => Container(
-                            width: 5, height: 5, margin: const EdgeInsets.only(right: 2),
+                            width: 5,
+                            height: 5,
+                            // 좌우로 1픽셀씩 마진을 줍니다. (점 사이 간격은 여전히 2픽셀이 됩니다)
+                            margin: const EdgeInsets.symmetric(horizontal: 1),
                             decoration: BoxDecoration(
                               color: getDotColor(t.category.name),
                               shape: BoxShape.circle,
