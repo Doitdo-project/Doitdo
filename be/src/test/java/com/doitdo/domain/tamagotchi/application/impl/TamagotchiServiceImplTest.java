@@ -24,8 +24,10 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
+import com.doitdo.domain.tamagotchi.api.dto.resp.CharacterActionUrlResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.UpdateCharacterNameResp;
+import com.doitdo.domain.tamagotchi.entity.CharacterAction;
 import com.doitdo.domain.tamagotchi.entity.Character;
 import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
 import com.doitdo.domain.tamagotchi.entity.UserCharacterHistory;
@@ -222,6 +224,42 @@ class TamagotchiServiceImplTest {
 				assertThat(exception.getErrorCode()).isEqualTo(TamagotchiErrorCode.M01_003);
 				assertThat(exception.getErrorCode().getHttpStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
 			});
+	}
+
+	@Test
+	void getMyCharacterActionUrlReturnsOneUrlWhenMultipleActionsExist() {
+		TamagotchiServiceImpl service = service();
+		Long userId = 1L;
+		UserCharacter userCharacter = UserCharacter.builder()
+			.userCharacterId(10L)
+			.userId(userId)
+			.characterId(9L)
+			.name("rabi")
+			.currentExp(0)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+		CharacterAction first = CharacterAction.builder()
+			.actionId(11L)
+			.characterId(9L)
+			.actionType("EYE")
+			.actionUrl("https://cdn.example.com/eye_2.gif")
+			.build();
+		CharacterAction second = CharacterAction.builder()
+			.actionId(12L)
+			.characterId(9L)
+			.actionType("EYE")
+			.actionUrl("https://cdn.example.com/eye.gif")
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(userCharacter));
+		given(characterActionRepository.findAllByCharacterIdAndActionType(9L, "EYE"))
+			.willReturn(List.of(first, second));
+
+		CharacterActionUrlResp resp = service.getMyCharacterActionUrl(userId, "EYE");
+
+		assertThat(resp.actionUrl()).isIn("https://cdn.example.com/eye_2.gif", "https://cdn.example.com/eye.gif");
 	}
 
 	@Test

@@ -416,9 +416,13 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
 
-		com.doitdo.domain.tamagotchi.entity.CharacterAction action = characterActionRepository
-			.findByCharacterIdAndActionType(userCharacter.getCharacterId(), actionType)
-			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M09_002));
+		List<com.doitdo.domain.tamagotchi.entity.CharacterAction> actions = characterActionRepository
+			.findAllByCharacterIdAndActionType(userCharacter.getCharacterId(), actionType);
+		if (actions.isEmpty()) {
+			throw new CustomException(TamagotchiErrorCode.M09_002);
+		}
+		com.doitdo.domain.tamagotchi.entity.CharacterAction action =
+			actions.get(ThreadLocalRandom.current().nextInt(actions.size()));
 
 		return new CharacterActionUrlResp(action.getActionUrl());
 	}
