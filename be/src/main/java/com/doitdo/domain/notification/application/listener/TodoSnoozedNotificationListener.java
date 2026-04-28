@@ -12,13 +12,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * TODO 미루기 이벤트를 구독해 FCM 알림을 발송하는 리스너.
- *
- * <p>설계 포인트:
- * <ul>
- *   <li>{@code AFTER_COMMIT}: snooze 저장이 커밋된 뒤에만 발동</li>
- *   <li>{@code REQUIRES_NEW}: 알림 처리를 별도 TX 로 격리 → 알림 실패가 snooze 에 영향 없음</li>
- * </ul>
+ * TODO 미루기 알림은 현재 비활성화 상태다.
  */
 @Slf4j
 @Component
@@ -31,15 +25,6 @@ public class TodoSnoozedNotificationListener {
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void onTodoSnoozed(TodoSnoozedEvent event) {
-		String title = todoRepository.findByTodoIdAndIsDeletedFalse(event.todoId())
-				.map(todo -> todo.getTitle())
-				.orElse(null);
-
-		if (title == null) {
-			log.warn("[todo-snoozed] todo not found; notification skipped todoId={}", event.todoId());
-			return;
-		}
-
-		notificationService.sendTodoSnoozed(event.userId(), event.todoId(), title, event.toDate());
+		// 비활성화: TODO 미루기 알림은 현재 발송하지 않는다.
 	}
 }

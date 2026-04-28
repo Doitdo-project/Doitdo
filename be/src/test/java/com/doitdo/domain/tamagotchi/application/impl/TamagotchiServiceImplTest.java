@@ -4,10 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.ArgumentMatchers.any;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -184,6 +186,68 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.canEvolve()).isFalse(); // 20 < 100
 		assertThat(resp.canFarewell()).isFalse();
 		then(userCharacterRepository).should(never()).save(any(UserCharacter.class));
+	}
+
+	@Test
+	void getCurrentCharacterReturnsCanFarewellFalseWhenFarewellAvailableAtIsFuture() {
+		TamagotchiServiceImpl service = service();
+		Long userId = 1L;
+		UserCharacter userCharacter = UserCharacter.builder()
+			.userCharacterId(10L)
+			.userId(userId)
+			.characterId(4L)
+			.name("rabi")
+			.currentExp(300)
+			.isActive(true)
+			.isDeleted(false)
+			.farewellAvailableAt(LocalDateTime.now().plusMinutes(10))
+			.build();
+		Character adultCharacter = Character.builder()
+			.characterId(4L)
+			.species("SLIME")
+			.stage(Character.Stage.ADULT)
+			.requiredExp(300)
+			.thumbnailUrl("https://cdn.example.com/slime-adult.png")
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(userCharacter));
+		given(characterRepository.findById(4L)).willReturn(Optional.of(adultCharacter));
+
+		CurrentCharacterResp resp = service.getCurrentCharacter(userId);
+
+		assertThat(resp.canFarewell()).isFalse();
+	}
+
+	@Test
+	void getCurrentCharacterReturnsCanFarewellTrueWhenFarewellAvailableAtIsPast() {
+		TamagotchiServiceImpl service = service();
+		Long userId = 1L;
+		UserCharacter userCharacter = UserCharacter.builder()
+			.userCharacterId(10L)
+			.userId(userId)
+			.characterId(4L)
+			.name("rabi")
+			.currentExp(300)
+			.isActive(true)
+			.isDeleted(false)
+			.farewellAvailableAt(LocalDateTime.now().minusMinutes(1))
+			.build();
+		Character adultCharacter = Character.builder()
+			.characterId(4L)
+			.species("SLIME")
+			.stage(Character.Stage.ADULT)
+			.requiredExp(300)
+			.thumbnailUrl("https://cdn.example.com/slime-adult.png")
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(userCharacter));
+		given(characterRepository.findById(4L)).willReturn(Optional.of(adultCharacter));
+
+		CurrentCharacterResp resp = service.getCurrentCharacter(userId);
+
+		assertThat(resp.canFarewell()).isTrue();
 	}
 
 	@Test
@@ -619,9 +683,10 @@ class TamagotchiServiceImplTest {
 			.userId(userId)
 			.characterId(4L)
 			.name("rabi")
-			.currentExp(0)
+			.currentExp(300)
 			.isActive(true)
 			.isDeleted(false)
+			.farewellAvailableAt(LocalDateTime.now().minusMinutes(1))
 			.build();
 		Character adultCharacter = Character.builder()
 			.characterId(4L)
@@ -653,7 +718,80 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.nextCharacterAssigned()).isTrue();
 		assertThat(resp.nextCharacterStage()).isEqualTo("EGG");
 		assertThat(resp.animationUrl()).isNotBlank();
+		ArgumentCaptor<UserCharacter> captor = forClass(UserCharacter.class);
+		then(userCharacterRepository).should(times(2)).save(captor.capture());
+		UserCharacter savedNextEgg = captor.getAllValues().get(1);
+		assertThat(savedNextEgg.getFarewellNotified()).isFalse();
 		then(userCharacterHistoryRepository).should().save(any(UserCharacterHistory.class));
+	}
+
+	@Test
+	void approveIndependenceRejectsWhenFarewellAvailableAtIsNull() {
+		TamagotchiServiceImpl service = service();
+		Long userId = 1L;
+		UserCharacter adultUserCharacter = UserCharacter.builder()
+			.userCharacterId(30L)
+			.userId(userId)
+			.characterId(4L)
+			.name("rabi")
+			.currentExp(300)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+		Character adultCharacter = Character.builder()
+			.characterId(4L)
+			.species("SLIME")
+			.stage(Character.Stage.ADULT)
+			.requiredExp(300)
+			.thumbnailUrl("https://cdn.example.com/slime-adult.png")
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(adultUserCharacter));
+		given(characterRepository.findById(4L)).willReturn(Optional.of(adultCharacter));
+
+		assertThatThrownBy(() -> service.approveIndependence(userId, true))
+			.isInstanceOf(CustomException.class)
+			.satisfies(throwable -> {
+				CustomException exception = (CustomException)throwable;
+				assertThat(exception.getErrorCode()).isEqualTo(TamagotchiErrorCode.M00_003);
+				assertThat(exception.getErrorCode().getHttpStatus()).isEqualTo(HttpStatus.CONFLICT);
+			});
+	}
+
+	@Test
+	void approveIndependenceRejectsWhenFarewellAvailableAtIsFuture() {
+		TamagotchiServiceImpl service = service();
+		Long userId = 1L;
+		UserCharacter adultUserCharacter = UserCharacter.builder()
+			.userCharacterId(30L)
+			.userId(userId)
+			.characterId(4L)
+			.name("rabi")
+			.currentExp(300)
+			.isActive(true)
+			.isDeleted(false)
+			.farewellAvailableAt(LocalDateTime.now().plusMinutes(10))
+			.build();
+		Character adultCharacter = Character.builder()
+			.characterId(4L)
+			.species("SLIME")
+			.stage(Character.Stage.ADULT)
+			.requiredExp(300)
+			.thumbnailUrl("https://cdn.example.com/slime-adult.png")
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(adultUserCharacter));
+		given(characterRepository.findById(4L)).willReturn(Optional.of(adultCharacter));
+
+		assertThatThrownBy(() -> service.approveIndependence(userId, true))
+			.isInstanceOf(CustomException.class)
+			.satisfies(throwable -> {
+				CustomException exception = (CustomException)throwable;
+				assertThat(exception.getErrorCode()).isEqualTo(TamagotchiErrorCode.M00_003);
+				assertThat(exception.getErrorCode().getHttpStatus()).isEqualTo(HttpStatus.CONFLICT);
+			});
 	}
 
 	@Test
