@@ -594,9 +594,13 @@ class TodoViewModel extends StateNotifier<TodoState> {
       return;
     }
 
+    final hadAlarm = target.alarmEnabled;
+
     final snoozed = target.copyWith(
       date: target.date != null ? target.date!.add(const Duration(days: 1)) : null,
       rangeEnd: target.rangeEnd != null ? target.rangeEnd!.add(const Duration(days: 1)) : null,
+      alarmTime: null,
+      alarmEnabled: false,
     );
 
     state = state.copyWith(
@@ -604,13 +608,33 @@ class TodoViewModel extends StateNotifier<TodoState> {
     );
     _updateDisplayedTodos();
 
-    final response = await AsyncValue.guard(() => _repository.snoozeTodo(id));
+    await AsyncValue.guard(() => _repository.snoozeTodo(id));
 
-    if (!response.hasError) {
-      fetchTodos();
-    } else {
-      fetchTodos();
+    if (hadAlarm) {
+      await AsyncValue.guard(() => _repository.updateTodo(
+        id,
+        TodoUpdateRequestDto(
+          title:     snoozed.title,
+          content:   snoozed.memo,
+          category:  snoozed.category.name,
+          type: switch (snoozed.dateType) {
+            TodoDateType.normal  => 'NORMAL',
+            TodoDateType.someday => 'SOMEDAY',
+            TodoDateType.range   => 'PERIOD',
+            TodoDateType.repeat  => 'RECURRING',
+          },
+          startDate: switch (snoozed.dateType) {
+            TodoDateType.range => snoozed.rangeStart ?? snoozed.date,
+            _                  => snoozed.date,
+          }?.toIso8601String().split('T')[0],
+          endDate: snoozed.rangeEnd?.toIso8601String().split('T')[0],
+          alarmTime: null,
+          clearAlertTime: true,
+        ),
+      ));
     }
+
+    fetchTodos();
   }
 
   TimeOfDay? _parseTime(String? timeStr) {
