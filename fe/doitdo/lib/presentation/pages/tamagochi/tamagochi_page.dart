@@ -73,7 +73,15 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
 
   @override
   void dispose() {
-    ref.read(homeScrollControllerProvider.notifier).state = null;
+    // dispose 안에서 homeScrollControllerProvider 를 null 로 클리어하던 코드는
+    // 의도적으로 제거했다. 이 widget 이 unmount 되는 시점은 항상 위젯 트리
+    // finalize 중이고 — ConsumerStatefulElement 는 이미 disposed 라 ref.read 가
+    // 어설션이며, notifier 참조를 잡아두고 state= 를 호출해도 listener notify 가
+    // finalize 중인 트리에 흘러들어가 GlobalKey duplicate / Element activate 등의
+    // cascade 어설션을 일으킨다.
+    // homeScrollControllerProvider 는 non-autoDispose 이므로 stale reference 가
+    // 한 개 남는 것뿐이고, doitdo_shell._onTap 이 controller.hasClients 로 안전하게
+    // 검사한 후 폴백한다 (다음 TamagochiPage 가 mount 될 때 새 controller 로 덮어쓴다).
     _scrollController.dispose();
     _headerVisible.dispose();
     super.dispose();
