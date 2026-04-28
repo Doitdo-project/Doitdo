@@ -19,9 +19,11 @@ import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TamagotchiErrorCode;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class InventoryServiceImpl implements InventoryService {
 
 	private final UserItemRepository userItemRepository;
@@ -76,6 +78,8 @@ public class InventoryServiceImpl implements InventoryService {
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M06_002));
 
 		userCharacter.equipItem(userItemId);
+		log.info("event=ITEM_EQUIPPED userId={} tamagotchiId={} userItemId={} itemId={}",
+			userId, tamagotchiId, userItemId, item.getItemId());
 
 		return new EquipItemResp(
 			tamagotchiId,
@@ -105,5 +109,7 @@ public class InventoryServiceImpl implements InventoryService {
 		}
 
 		userCharacter.unequipItem();
+		log.info("event=ITEM_UNEQUIPPED userId={} tamagotchiId={} userItemId={}",
+			userId, tamagotchiId, userItemId);
 	}
 }

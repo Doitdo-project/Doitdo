@@ -32,6 +32,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -43,6 +44,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthServiceImpl implements AuthService {
 
 	private final UserRepository userRepository;
@@ -93,6 +95,8 @@ public class AuthServiceImpl implements AuthService {
 				.isDeleted(false)
 				.build());
 
+		log.info("event=USER_SIGNUP userId={}", user.getUserId());
+
 		return new SignupResp(
 				user.getUserId(),
 				user.getEmail(),
@@ -124,6 +128,8 @@ public class AuthServiceImpl implements AuthService {
 			String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
 			saveOrUpdateRefreshToken(user.getUserId(), refreshToken);
 
+			log.info("event=LOGIN_SUCCESS userId={}", user.getUserId());
+
 			return new LoginResp(accessToken, refreshToken, UserInfoResp.from(user));
 		} catch (AuthenticationException e) {
 			throw new CustomException(AuthErrorCode.A00_001);
@@ -153,6 +159,8 @@ public class AuthServiceImpl implements AuthService {
 		String newRefreshToken = jwtUtil.generateRefreshToken(userId);
 		saveOrUpdateRefreshToken(userId, newRefreshToken);
 
+		log.info("event=TOKEN_REFRESH userId={}", userId);
+
 		return new TokenResp(newAccessToken, newRefreshToken);
 	}
 
@@ -160,6 +168,7 @@ public class AuthServiceImpl implements AuthService {
 	@Transactional
 	public void logout(Long userId) {
 		refreshTokenRepository.deleteByUserId(userId);
+		log.info("event=LOGOUT userId={}", userId);
 	}
 
 	private void saveOrUpdateRefreshToken(Long userId, String refreshToken) {
