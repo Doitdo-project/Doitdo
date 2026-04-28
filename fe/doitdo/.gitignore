@@ -50,8 +50,13 @@ app.*.map.json
 !.env.example
 
 # 빌드 키
-android/key.properties
+android/key.properties*
 *.jks
+
+# 출시 도구 산출물 — PEPK 등으로 생성된 비공개 키 암호화 파일은 절대 커밋 금지.
+# tools/ 는 pepk.jar 같은 외부 다운로드 도구 임시 보관 위치.
+*-pepk.zip
+/tools/
 
 # iOS 로컬 시크릿 (Kakao Native App Key 등) — Android 의 local.properties 와 동일 역할.
 # Info.plist 의 $(KAKAO_NATIVE_APP_KEY) 변수에 주입되며 레포에는 올라가지 않는다.
