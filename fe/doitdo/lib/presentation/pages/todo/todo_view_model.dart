@@ -423,8 +423,13 @@ class TodoViewModel extends StateNotifier<TodoState> {
           TodoDateType.range  => 'PERIOD',
           TodoDateType.repeat => 'RECURRING',
         },
-        startDate: (finalTodo.dateType == TodoDateType.repeat ? finalTodo.repeatStartDate : finalTodo.date)
-            ?.toIso8601String().split('T')[0],
+        // PERIOD 타입은 date picker 확인 시 rangeStart 만 채워지고 date 는 null 이 됨.
+        // rangeStart ?? date 로 폴백해야 startDate 가 null 로 날아가는 버그 방지.
+        startDate: switch (finalTodo.dateType) {
+          TodoDateType.repeat  => finalTodo.repeatStartDate,
+          TodoDateType.range   => finalTodo.rangeStart ?? finalTodo.date,
+          _                    => finalTodo.date,
+        }?.toIso8601String().split('T')[0],
         endDate:   (finalTodo.dateType == TodoDateType.range ? finalTodo.rangeEnd : finalTodo.repeatEndDate)
             ?.toIso8601String().split('T')[0],
         // ✏️ 수정: period → daysOfWeek
@@ -535,6 +540,7 @@ class TodoViewModel extends StateNotifier<TodoState> {
       normalized.id,
       TodoUpdateRequestDto(
         title:     normalized.title,
+        content:   normalized.memo, // ✅ [버그 수정] 메모 누락으로 항상 null 전송되던 문제 수정
         category:  normalized.category.name,
         type:      'SOMEDAY',
         startDate: null,

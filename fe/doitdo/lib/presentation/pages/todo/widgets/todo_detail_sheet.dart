@@ -532,7 +532,6 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
                       });
                     }
                   },
-                  // ✅ 알림 비활성화 시 '없음' 표시 (오늘의 할 일과 동일한 로직)
                   child: _OptionRow(icon: Icons.notifications_outlined, label: '알림', valueText: _alarmEnabled ? _formatTime(_selectedTime) : '없음', colors: c),
                 ),
                 Divider(color: c.divider, height: 1, thickness: 1),

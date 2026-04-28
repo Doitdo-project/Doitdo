@@ -14,7 +14,8 @@ class TodoUpdateRequestDto with _$TodoUpdateRequestDto {
     String? endDate, // YYYY-MM-DD 형식
     Set<String>? daysOfWeek, // ✏️ period → daysOfWeek (서버 변경 반영)
     @JsonKey(name: 'alertTime') String? alarmTime,
-    bool? clearAlertTime, // ✏️ 추가: true면 서버에서 alertTime null로 초기화
+    @JsonKey(name: 'clearAlertTime', includeIfNull: false)
+    bool? clearAlertTime, // ✏️ true면 서버에서 alertTime null로 초기화. null이면 JSON에 포함 안 함
   }) = _TodoUpdateRequestDto;
 
   factory TodoUpdateRequestDto.fromJson(Map<String, dynamic> json) =>
