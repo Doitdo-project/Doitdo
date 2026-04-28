@@ -148,6 +148,52 @@ class TodoServiceImplTest {
 	}
 
 	@Test
+	void updateClearsContentWhenNullIsExplicitlySent() {
+		Todo todo = todoWithContent("기존 메모");
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+		given(snoozeHistoryRepository.countByTodoId(1L)).willReturn(0L);
+
+		TodoUpdateReq req = new TodoUpdateReq(
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null);
+
+		TodoDetailResp resp = service.update(1L, 1L, req);
+
+		assertThat(resp.content()).isNull();
+		assertThat(todo.getContent()).isNull();
+	}
+
+	@Test
+	void updateOverwritesContentWhenNewValueProvided() {
+		Todo todo = todoWithContent("기존 메모");
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+		given(snoozeHistoryRepository.countByTodoId(1L)).willReturn(0L);
+
+		TodoUpdateReq req = new TodoUpdateReq(
+				null,
+				"새 메모",
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null);
+
+		TodoDetailResp resp = service.update(1L, 1L, req);
+
+		assertThat(resp.content()).isEqualTo("새 메모");
+		assertThat(todo.getContent()).isEqualTo("새 메모");
+	}
+
+	@Test
 	void changePriorityReordersOnlyNonSomedayTodos() {
 		Todo a = todo(1L, TodoType.NORMAL, 1);
 		Todo b = todo(2L, TodoType.PERIOD, 2);
@@ -190,6 +236,21 @@ class TodoServiceImplTest {
 				.status(TodoStatus.TODO)
 				.priority(1)
 				.alertTime(alertTime)
+				.startDate(LocalDate.parse("2026-04-20"))
+				.isDeleted(false)
+				.expGranted(false)
+				.build();
+	}
+
+	private Todo todoWithContent(String content) {
+		return Todo.builder()
+				.todoId(1L)
+				.userId(1L)
+				.title("todo")
+				.content(content)
+				.type(TodoType.NORMAL)
+				.status(TodoStatus.TODO)
+				.priority(1)
 				.startDate(LocalDate.parse("2026-04-20"))
 				.isDeleted(false)
 				.expGranted(false)
