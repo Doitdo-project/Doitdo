@@ -32,6 +32,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OAuthServiceImpl implements OAuthService {
 
 	private static final int USERNAME_RETRY_LIMIT = 5;
@@ -62,11 +64,16 @@ public class OAuthServiceImpl implements OAuthService {
 	@Override
 	@Transactional
 	public OAuthLoginResp login(OAuthProvider provider, OAuthLoginReq req) {
-		return switch (provider) {
+		OAuthLoginResp resp = switch (provider) {
 			case KAKAO -> loginWithKakao(req.accessToken());
 			case GOOGLE -> loginWithGoogle(req.accessToken());
 			case APPLE -> loginWithApple(req);
 		};
+		log.info("event={} userId={} provider={}",
+				resp.isNewUser() ? "OAUTH_USER_SIGNUP" : "OAUTH_LOGIN_SUCCESS",
+				resp.user().userId(),
+				provider.name());
+		return resp;
 	}
 
 	private OAuthLoginResp loginWithKakao(String accessToken) {
