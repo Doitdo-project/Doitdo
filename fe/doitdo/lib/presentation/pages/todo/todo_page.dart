@@ -24,6 +24,8 @@ class TodoPage extends ConsumerStatefulWidget {
 }
 
 class _TodoPageState extends ConsumerState<TodoPage> {
+  final _formatBtnKey = GlobalKey();
+  final _filterBtnKey = GlobalKey();
 
   // ✅ _dotColor 하드코딩 메서드 삭제 — 서버 카테고리 색상으로 대체
 
@@ -41,9 +43,25 @@ class _TodoPageState extends ConsumerState<TodoPage> {
 
   void _showFormatDropdown(BuildContext context, CalendarFormat current) {
     final colors = context.colors;
+    final renderBox = _formatBtnKey.currentContext?.findRenderObject() as RenderBox?;
+    final RelativeRect position;
+    if (renderBox != null) {
+      final offset = renderBox.localToGlobal(Offset.zero);
+      final size = renderBox.size;
+      final screenWidth = MediaQuery.of(context).size.width;
+      final screenHeight = MediaQuery.of(context).size.height;
+      position = RelativeRect.fromLTRB(
+        offset.dx,
+        offset.dy + size.height + 4,
+        screenWidth - offset.dx - size.width,
+        screenHeight - offset.dy - size.height,
+      );
+    } else {
+      position = const RelativeRect.fromLTRB(24, 100, 200, 0);
+    }
     showMenu(
       context: context,
-      position: const RelativeRect.fromLTRB(0, 100, 200, 0),
+      position: position,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       color: colors.surface,
       items: [
@@ -130,9 +148,26 @@ class _TodoPageState extends ConsumerState<TodoPage> {
       }),
     ];
 
+    final filterRenderBox = _filterBtnKey.currentContext?.findRenderObject() as RenderBox?;
+    final RelativeRect filterPosition;
+    if (filterRenderBox != null) {
+      final offset = filterRenderBox.localToGlobal(Offset.zero);
+      final size = filterRenderBox.size;
+      final screenWidth = MediaQuery.of(context).size.width;
+      final screenHeight = MediaQuery.of(context).size.height;
+      filterPosition = RelativeRect.fromLTRB(
+        offset.dx,
+        offset.dy + size.height + 4,
+        screenWidth - offset.dx - size.width,
+        screenHeight - offset.dy - size.height,
+      );
+    } else {
+      filterPosition = const RelativeRect.fromLTRB(1000, 55, 90, 0);
+    }
+
     showMenu<String>(
       context: context,
-      position: const RelativeRect.fromLTRB(1000, 55, 90, 0),
+      position: filterPosition,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       color: colors.surface,
       items: items,
@@ -211,6 +246,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                                 style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary)),
                             const SizedBox(width: 12),
                             GestureDetector(
+                              key: _formatBtnKey,
                               onTap: () => _showFormatDropdown(context, state.calendarFormat),
                               behavior: HitTestBehavior.opaque,
                               child: Row(
@@ -229,6 +265,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                         Row(
                           children: [
                             GestureDetector(
+                              key: _filterBtnKey,
                               onTap: () => _showFilterMenu(context, state.currentFilter),
                               behavior: HitTestBehavior.opaque,
                               child: Icon(Icons.filter_alt_outlined, size: 24, color: colors.textPrimary),
