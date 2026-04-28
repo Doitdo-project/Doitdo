@@ -41,30 +41,18 @@
 			<string>kakao</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<!--
-				  $(KAKAO_NATIVE_APP_KEY) 는 빌드 시 xcconfig 에서 주입됨.
-				  값은 `ios/Flutter/LocalEnv.xcconfig` (gitignored) 에 정의.
-				  Android 의 `local.properties` 와 동일한 패턴 — 레포에는 절대 키가 올라가지 않는다.
-				-->
 				<string>kakao$(KAKAO_NATIVE_APP_KEY)</string>
 			</array>
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<!--
-	  Google Sign-In iOS SDK 는 런타임에 GIDClientID 를 Info.plist 에서 읽는다.
-	  기존에는 GoogleService-Info.plist 의 CLIENT_ID 를 자동 사용했지만,
-	  Firebase Console 에 Google Auth 가 활성화되지 않은 프로젝트에서는
-	  flutterfire configure 가 생성하는 plist 에 CLIENT_ID 가 포함되지 않기 때문에
-	  반드시 이 키를 명시해야 한다. 누락 시 `No active configuration` 예외로 앱이 즉시 크래시.
-	  - GIDClientID: Google Cloud Console 의 "iOS" 유형 OAuth Client ID
-	  - GIDServerClientID: 백엔드 토큰 검증용 "웹 애플리케이션" Client ID (.env 의 GOOGLE_SERVER_CLIENT_ID 와 일치)
-	-->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>GIDClientID</key>
 	<string>733189444569-ja6ti0dpmutgrmjmnbjtbsfjbqmshn9o.apps.googleusercontent.com</string>
 	<key>GIDServerClientID</key>
-	<string>733189444569-t8s9rpv9h26q3372hcls3cbmg48i664d.apps.googleusercontent.com</string>
+	<string>487273055258-6c59oog60514b1fdj5ek5apnbcub7btn.apps.googleusercontent.com</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>kakaokompassauth</string>
@@ -107,15 +95,6 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 </dict>
 </plist>
