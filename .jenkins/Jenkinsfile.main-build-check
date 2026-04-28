@@ -13,8 +13,14 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
-                updateGitlabCommitStatus name: 'jenkins-main-build-check', state: 'running'
+                script {
+                    def branchToBuild = env.gitlabSourceBranch ?: env.gitlabBranch ?: 'main'
+                    echo "Checkout branch: ${branchToBuild} (action=${env.gitlabActionType}, target=${env.gitlabTargetBranch})"
+                    git branch: branchToBuild,
+                            credentialsId: 'gitlab-http-token',
+                            url: 'https://lab.ssafy.com/s14-final/S14P31D107.git'
+                    updateGitlabCommitStatus name: 'jenkins-main-build-check', state: 'running'
+                }
             }
         }
 

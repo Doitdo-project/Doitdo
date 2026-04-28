@@ -33,5 +33,7 @@ Map<String, dynamic> _$$TodoUpdateRequestDtoImplToJson(
   'endDate': instance.endDate,
   'daysOfWeek': instance.daysOfWeek?.toList(),
   'alertTime': instance.alarmTime,
-  'clearAlertTime': instance.clearAlertTime,
+  // clearAlertTime은 true일 때만 포함 (null이면 알람 유지 → JSON에 포함 안 함)
+  if (instance.clearAlertTime != null)
+    'clearAlertTime': instance.clearAlertTime,
 };

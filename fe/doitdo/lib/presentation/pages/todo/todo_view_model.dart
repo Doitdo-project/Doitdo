@@ -409,7 +409,9 @@ class TodoViewModel extends StateNotifier<TodoState> {
     _updateCalendarEvents(state.allTodos);
     _updateDisplayedTodos();
 
-    await AsyncValue.guard(() => _repository.updateTodo(
+    // AsyncValue.guard 제거 — 오류를 caller(_onSave)까지 전파해야 fetchTodos 호출을 막을 수 있다.
+    // guard로 삼키면 PATCH 실패 후 fetchTodos가 서버 구버전 데이터로 덮어써 "반영 안됨" 현상 발생.
+    await _repository.updateTodo(
       finalTodo.id,
       TodoUpdateRequestDto(
         title:     finalTodo.title,
@@ -421,8 +423,13 @@ class TodoViewModel extends StateNotifier<TodoState> {
           TodoDateType.range  => 'PERIOD',
           TodoDateType.repeat => 'RECURRING',
         },
-        startDate: (finalTodo.dateType == TodoDateType.repeat ? finalTodo.repeatStartDate : finalTodo.date)
-            ?.toIso8601String().split('T')[0],
+        // PERIOD 타입은 date picker 확인 시 rangeStart 만 채워지고 date 는 null 이 됨.
+        // rangeStart ?? date 로 폴백해야 startDate 가 null 로 날아가는 버그 방지.
+        startDate: switch (finalTodo.dateType) {
+          TodoDateType.repeat  => finalTodo.repeatStartDate,
+          TodoDateType.range   => finalTodo.rangeStart ?? finalTodo.date,
+          _                    => finalTodo.date,
+        }?.toIso8601String().split('T')[0],
         endDate:   (finalTodo.dateType == TodoDateType.range ? finalTodo.rangeEnd : finalTodo.repeatEndDate)
             ?.toIso8601String().split('T')[0],
         // ✏️ 수정: period → daysOfWeek
@@ -433,7 +440,7 @@ class TodoViewModel extends StateNotifier<TodoState> {
         alarmTime: finalTodo.alarmEnabled ? _formatTime(finalTodo.alarmTime) : null,
         clearAlertTime: finalTodo.alarmEnabled ? null : true,
       ),
-    ));
+    );
   }
 
   Future<void> deleteTodo(String id, {String? scope}) async {
@@ -451,16 +458,20 @@ class TodoViewModel extends StateNotifier<TodoState> {
     final Todo item = list.removeAt(oldIndex);
     list.insert(newIndex, item);
 
-    state = state.copyWith(todos: list);
+    // ✅ allTodos도 같이 순서 변경 — _updateDisplayedTodos 호출 시 덮어씌워지는 문제 방지
+    final allList = List<Todo>.from(state.allTodos);
+    final allIdx = allList.indexWhere((t) => t.id == item.id);
+    if (allIdx != -1) {
+      allList.removeAt(allIdx);
+      allList.insert(newIndex, item);
+    }
+
+    state = state.copyWith(todos: list, allTodos: allList);
 
     final newPriority = newIndex + 1;
-    final response = await AsyncValue.guard(
-            () => _repository.updateTodoPriority(item.id, newPriority)
+    await AsyncValue.guard(
+          () => _repository.updateTodoPriority(item.id, newPriority),
     );
-
-    if (!response.hasError) {
-      fetchTodos();
-    }
   }
 
   void addSomedayTodo(Todo todo) {
@@ -524,18 +535,20 @@ class TodoViewModel extends StateNotifier<TodoState> {
     );
     _updateDisplayedTodos();
 
-    await AsyncValue.guard(() => _repository.updateTodo(
+    // AsyncValue.guard 제거 — updateTodo와 동일한 이유
+    await _repository.updateTodo(
       normalized.id,
       TodoUpdateRequestDto(
         title:     normalized.title,
+        content:   normalized.memo, // ✅ [버그 수정] 메모 누락으로 항상 null 전송되던 문제 수정
         category:  normalized.category.name,
         type:      'SOMEDAY',
         startDate: null,
         endDate:   null,
         alarmTime: normalized.alarmEnabled ? _formatTime(normalized.alarmTime) : null,
-        clearAlertTime: normalized.alarmEnabled ? null : true, // ✏️ 추가
+        clearAlertTime: normalized.alarmEnabled ? null : true,
       ),
-    ));
+    );
   }
 
   Future<void> deleteSomedayTodo(String id) async {
@@ -553,16 +566,20 @@ class TodoViewModel extends StateNotifier<TodoState> {
     final Todo item = list.removeAt(oldIndex);
     list.insert(newIndex, item);
 
-    state = state.copyWith(somedayTodos: list);
+    // ✅ allSomedayTodos도 같이 순서 변경
+    final allList = List<Todo>.from(state.allSomedayTodos);
+    final allIdx = allList.indexWhere((t) => t.id == item.id);
+    if (allIdx != -1) {
+      allList.removeAt(allIdx);
+      allList.insert(newIndex, item);
+    }
+
+    state = state.copyWith(somedayTodos: list, allSomedayTodos: allList);
 
     final newPriority = newIndex + 1;
-    final response = await AsyncValue.guard(
-            () => _repository.updateTodoPriority(item.id, newPriority)
+    await AsyncValue.guard(
+          () => _repository.updateTodoPriority(item.id, newPriority),
     );
-
-    if (!response.hasError) {
-      fetchTodos();
-    }
   }
 
   Future<void> snoozeTodo(String id) async {

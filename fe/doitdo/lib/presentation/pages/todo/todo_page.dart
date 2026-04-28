@@ -132,7 +132,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
 
     showMenu<String>(
       context: context,
-      position: const RelativeRect.fromLTRB(1000, 100, 100, 0),
+      position: const RelativeRect.fromLTRB(1000, 55, 90, 0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       color: colors.surface,
       items: items,
@@ -176,7 +176,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
       try {
         return categoryList.firstWhere((c) => c.categoryName == categoryName).color;
       } catch (_) {
-        return AppColors.calendarPoint; // 매칭 없으면 기본 오렌지
+        return AppColors.category1; // detail sheet와 동일한 fallback
       }
     }
 
@@ -196,11 +196,11 @@ class _TodoPageState extends ConsumerState<TodoPage> {
           GestureDetector(
             onVerticalDragEnd: _onCalendarSwipe,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(left: 12, top: 12, bottom: 18),
+                    padding: const EdgeInsets.only(left: 12, top: 12, bottom: 20),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -289,6 +289,8 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                   ),
 
                   TableCalendar(
+                    // ✅ 카테고리 목록이 로드되면 마커를 강제로 다시 렌더링
+                    key: ValueKey(categoryList.map((c) => '${c.categoryName}:${c.color.value}').join()),
                     firstDay: DateTime.utc(2020, 1, 1),
                     lastDay: DateTime.utc(2030, 12, 31),
                     focusedDay: state.focusedDay,
@@ -319,70 +321,70 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                     ),
                     calendarStyle: CalendarStyle(
                       markersMaxCount: 0,
-                      todayDecoration: const BoxDecoration(color: AppColors.homeCalendarSelectedBg, shape: BoxShape.circle),
+                      todayDecoration: BoxDecoration(color: colors.calendarRangeHighlight, shape: BoxShape.circle),
                       todayTextStyle: AppTextStyles.labelMedium.copyWith(color: AppColors.calendarPoint),
                       selectedDecoration: const BoxDecoration(color: AppColors.calendarPoint, shape: BoxShape.circle),
                       selectedTextStyle: AppTextStyles.labelMedium.copyWith(color: Colors.white),
                       defaultTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textPrimary),
                       weekendTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textPrimary),
                       outsideTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textHint),
-                      // cellMargin 키울수록 선택/오늘 원이 작아진다 (셀 안쪽 여백).
-                      // top/bottom 비대칭: 원이 셀 안에서 1px 위로 올라가도록.
-                      cellMargin: const EdgeInsets.fromLTRB(12, 11, 12, 13),
+                      cellMargin: const EdgeInsets.all(10),
                     ),
                     calendarBuilders: CalendarBuilders(
                       markerBuilder: (context, day, events) {
                         if (events.isEmpty) return const SizedBox.shrink();
-                        final todos = events.cast<Todo>().take(6).toList();
-                        final row1 = todos.take(3).toList();
-                        final row2 = todos.length > 3 ? todos.sublist(3) : <Todo>[];
+                        var todos = events.cast<Todo>().toList();
 
-                        // 좌우 여백을 같게 — 마지막 점에는 right margin 안 줌.
-                        // 그래야 점 묶음 전체가 셀 가운데에 정확히 정렬된다.
+                        // ✅ 3. 카테고리 필터 적용 시 DOT도 동일하게 필터링
+                        final currentFilter = state.currentFilter;
+                        if (currentFilter.startsWith('cat:')) {
+                          final catName = currentFilter.substring(4);
+                          todos = todos.where((t) => t.category.name == catName).toList();
+                        }
+                        if (todos.isEmpty) return const SizedBox.shrink();
+
+                        // ✅ 2. 카테고리별로 DOT 중복 제거 (같은 카테고리는 1개만)
+                        final seen = <String>{};
+                        final uniqueTodos = todos.where((t) {
+                          final name = t.category.name;
+                          if (seen.contains(name)) return false;
+                          seen.add(name);
+                          return true;
+                        }).take(6).toList();
+
+                        final row1 = uniqueTodos.take(3).toList();
+                        final row2 = uniqueTodos.length > 3 ? uniqueTodos.sublist(3) : <Todo>[];
+
+                        // 1. 가장 추천하는 정교한 방법 (좌우 균등 마진)
                         Widget dotRow(List<Todo> items) => Row(
                           mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(items.length, (i) {
-                            final t = items[i];
-                            return Container(
-                              width: 5,
-                              height: 5,
-                              margin: EdgeInsets.only(
-                                right: i == items.length - 1 ? 0 : 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: getDotColor(t.category.name),
-                                shape: BoxShape.circle,
-                              ),
-                            );
-                          }),
+                          children: items.map((t) => Container(
+                            width: 5,
+                            height: 5,
+                            // 좌우로 1픽셀씩 마진을 줍니다. (점 사이 간격은 여전히 2픽셀이 됩니다)
+                            margin: const EdgeInsets.symmetric(horizontal: 1),
+                            decoration: BoxDecoration(
+                              color: getDotColor(t.category.name),
+                              shape: BoxShape.circle,
+                            ),
+                          )).toList(),
                         );
 
-                        // 마커 영역을 항상 2행 기준 높이(5+2+5=12)로 고정.
-                        // crossAxisAlignment.start → row2 가 row1 왼쪽 끝부터 채워짐
-                        // (4·5개일 때도 6개와 같은 왼쪽 기준 정렬).
-                        // 1~3개(단일 행)는 column 자체가 단일 행 너비라 outer Center 가 중앙 배치.
                         return Positioned(
-                          bottom: 2.5, left: 0, right: 0,
-                          child: SizedBox(
-                            height: 12,
-                            child: Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  dotRow(row1),
-                                  if (row2.isNotEmpty) ...[const SizedBox(height: 2), dotRow(row2)],
-                                ],
-                              ),
+                          bottom: 3, left: 0, right: 0,
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                dotRow(row1),
+                                if (row2.isNotEmpty) ...[const SizedBox(height: 2), dotRow(row2)],
+                              ],
                             ),
                           ),
                         );
                       },
                     ),
                   ),
-                  // 캘린더 마지막 줄 아래 호흡 — 다음 콘텐츠와의 시각 간격 확보.
-                  const SizedBox(height: 6),
                 ],
               ),
             ),
@@ -456,11 +458,11 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                     onActionTap: () => _openAddSheet(context, state.selectedDay ?? DateTime.now()),
                     onTodoTap: (todo) => _openDetailSheet(context, todo, false),
                   ),
-                  // 카테고리별/유형별 필터 시 언제가 할 일 섹션 숨기기
+                  // 카테고리별/유형별 필터 시 언젠가 할 일 섹션 숨기기
                   if (state.currentFilter == 'all' || !state.currentFilter.startsWith('cat:')) ...[
                     const SizedBox(height: 24),
                     TodoSection(
-                      title: '언제가 할 일',
+                      title: '언젠가 할 일',
                       todos: state.somedayTodos,
                       onToggle: vm.toggleSomedayTodo,
                       onReorder: vm.reorderSomedayTodo,

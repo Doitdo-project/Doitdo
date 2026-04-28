@@ -39,6 +39,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -51,6 +52,7 @@ import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TodoServiceImpl implements TodoService {
 
 	private final TodoRepository todoRepository;
@@ -183,6 +185,8 @@ public class TodoServiceImpl implements TodoService {
 						type, priority, req.alertTime(), startDate, req.endDate(), daysOfWeek)
 		);
 
+		log.info("event=TODO_CREATED userId={} todoId={}", userId, todo.getTodoId());
+
 		// 새 TODO 이므로 snooze 이력 없음 — count=0 하드코딩 (DB 조회 불필요)
 		return TodoDetailResp.from(todo, categoryName, 0);
 	}
@@ -202,6 +206,7 @@ public class TodoServiceImpl implements TodoService {
 			todoRepository.findAllByUserIdAndMasterTodoIdAndIsDeletedFalse(userId, todo.getTodoId())
 					.forEach(Todo::softDelete);
 		}
+		log.info("event=TODO_DELETED userId={} todoId={} scope={}", userId, todo.getTodoId(), scope);
 	}
 
 	@Override
@@ -254,6 +259,8 @@ public class TodoServiceImpl implements TodoService {
 			todo.clearAlertTime();
 		}
 
+		log.info("event=TODO_UPDATED userId={} todoId={}", userId, todo.getTodoId());
+
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
 		return TodoDetailResp.from(todo, categoryName, count);
 	}
@@ -282,7 +289,10 @@ public class TodoServiceImpl implements TodoService {
 		if (beforeStatus != TodoStatus.DONE && req.status() == TodoStatus.DONE) {
 			userStreakService.recordActivity(userId);
 			eventPublisher.publishEvent(new TodoCompletedEvent(userId, todo.getTodoId()));
+			log.info("event=TODO_COMPLETED userId={} todoId={}", userId, todo.getTodoId());
 		}
+		log.info("event=TODO_STATUS_CHANGED userId={} todoId={} status={}",
+				userId, todo.getTodoId(), req.status());
 
 		String categoryName = null;
 		if (todo.getCategoryId() != null) {
@@ -400,6 +410,8 @@ public class TodoServiceImpl implements TodoService {
 				todo.getTodoId(), userId, fromDate, todo.getStartDate()));
 
 		eventPublisher.publishEvent(new TodoSnoozedEvent(userId, todo.getTodoId(), fromDate, todo.getStartDate()));
+		log.info("event=TODO_SNOOZED userId={} todoId={} fromDate={} toDate={}",
+				userId, todo.getTodoId(), fromDate, todo.getStartDate());
 
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
 		String categoryName = null;

@@ -84,7 +84,7 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
 
             String dateDisplay = '미지정';
             if (detailDto.type == 'SOMEDAY') {
-              dateDisplay = '언제가 할 일';
+              dateDisplay = '언젠가 할 일';
             } else if (detailDto.startDate != null) {
               final sParts = detailDto.startDate!.split('-');
               if (sParts.length == 3) {
@@ -110,7 +110,7 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                   const SizedBox(height: 32),
                   Row(
                     children: [
-                      Image.asset('assets/images/Dooit.png', width: 36, height: 36),
+                      Image.asset('assets/images/Dooit.png', width: 30, height: 30),
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -126,6 +126,17 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                       const Spacer(),
                       GestureDetector(
                         onTap: () {
+                          // 완료된 할 일은 서버 정책상 수정 불가 (T04-004)
+                          if (isDone) {
+                            showDoitdoDialog(
+                              context: context,
+                              title: '수정 불가',
+                              message: '완료된 할 일은 수정할 수 없어요.\n먼저 미완료로 변경해 주세요.',
+                              confirmLabel: '확인',
+                            );
+                            return;
+                          }
+
                           final sDate = detailDto.startDate != null ? DateTime.tryParse(detailDto.startDate!) : null;
                           List<int>? restoredDays;
                           if (detailDto.type == 'RECURRING') {
@@ -168,7 +179,8 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                         behavior: HitTestBehavior.opaque,
                         child: Padding(
                           padding: const EdgeInsets.only(right: 8.0, top: 8.0, bottom: 8.0),
-                          child: Text('수정', style: AppTextStyles.labelMedium.copyWith(color: c.textSecondary)),
+                          // 완료된 할 일은 수정 불가 — 텍스트 색을 흐리게 표시
+                          child: Text('수정', style: AppTextStyles.labelMedium.copyWith(color: isDone ? c.textHint : c.textSecondary)),
                         ),
                       ),
                     ],
@@ -238,7 +250,7 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                             backgroundColor: AppColors.loginBtnOff, foregroundColor: Colors.white,
                             elevation: 0, shadowColor: Colors.transparent, textStyle: AppTextStyles.bodyLarge,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            fixedSize: const Size.fromHeight(48),
                           ),
                           child: const Text('삭제'),
                         ),
@@ -246,6 +258,7 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: DoitdoPrimaryButton(
+                          height: 48,
                           label: isDone ? '미완료로 변경' : '완료하기',
                           onPressed: _isToggling ? null : () async {
                             // ✅ 시트를 닫지 않고 상태 즉시 반영
@@ -348,6 +361,8 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
     // ✅ 수정 시작 — 버튼 비활성화
     setState(() => _isLoading = true);
 
+    final vm = ref.read(todoViewModelProvider.notifier);
+
     try {
       final r = _dateResult;
       final updated = widget.todo.copyWith(
@@ -367,28 +382,33 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
         repeatDays:      r.repeatDays,
       );
 
-      final vm = ref.read(todoViewModelProvider.notifier);
-
-      // ✅ await로 API 완료까지 대기
+      // API 호출 — 성공 시에만 아래로 진행 (실패 시 catch로 이동)
       widget.isSomeday
           ? await vm.updateSomedayTodo(updated)
           : await vm.updateTodo(updated);
 
-      // ✅ 수정 후 목록 + 캘린더 재조회
+      // 수정 성공 → 목록 + 캘린더 재조회 후 시트 닫기
       await vm.fetchTodos();
       await vm.fetchCalendarData();
 
-      // ✅ 완료 후 딱 한 번만 pop
       if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
 
     } catch (e) {
+      // 수정 실패 → 낙관적 업데이트를 서버 원본 데이터로 롤백
+      await vm.fetchTodos();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('수정 실패: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('수정에 실패했어요. 다시 시도해 주세요.', style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
         );
       }
     } finally {
-      // ✅ 성공/실패/예외 무관하게 항상 로딩 해제
+      // 성공/실패 무관하게 항상 로딩 해제
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -431,7 +451,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Image.asset('assets/images/Dooit.png', width: 36, height: 36),
+                    Image.asset('assets/images/Dooit.png', width: 30, height: 30),
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -512,7 +532,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
                       });
                     }
                   },
-                  child: _OptionRow(icon: Icons.notifications_outlined, label: '알림', valueText: _formatTime(_selectedTime), colors: c),
+                  child: _OptionRow(icon: Icons.notifications_outlined, label: '알림', valueText: _alarmEnabled ? _formatTime(_selectedTime) : '없음', colors: c),
                 ),
                 Divider(color: c.divider, height: 1, thickness: 1),
                 const SizedBox(height: 16),
@@ -529,6 +549,7 @@ class _TodoEditSheetState extends ConsumerState<TodoEditSheet> {
                 ),
                 const SizedBox(height: 20),
                 DoitdoPrimaryButton(
+                  height: 48,
                   label: _isLoading ? '수정 중...' : '수정 완료',
                   onPressed: _isLoading ? null : () => _onSave(context),
                 ),

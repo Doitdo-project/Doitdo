@@ -47,7 +47,7 @@ class TodoDateResult {
         if (date == null) return '';
         return '${date!.month}월 ${date!.day}일';
       case TodoDateType.someday:
-        return '언제가 할 일';
+        return '언젠가 할 일';
       case TodoDateType.range:
         if (rangeStart == null) return '기간 일정';
         final s = '${rangeStart!.month}월 ${rangeStart!.day}일';
@@ -138,8 +138,8 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
   CalendarStyle _calStyle(BuildContext context) {
     final c = context.colors;
     return CalendarStyle(
-      todayDecoration: const BoxDecoration(
-        color: AppColors.homeCalendarSelectedBg,
+      todayDecoration: BoxDecoration(
+        color: c.calendarRangeHighlight,
         shape: BoxShape.circle,
       ),
       todayTextStyle:
@@ -164,8 +164,8 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
     final c = context.colors;
     return CalendarStyle(
       // 오늘 날짜를 일반 날짜와 동일하게 표시 (강조 없음)
-      todayDecoration: const BoxDecoration(
-        color: AppColors.homeCalendarSelectedBg,
+      todayDecoration: BoxDecoration(
+        color: c.calendarRangeHighlight,
         shape: BoxShape.circle,
       ),
       todayTextStyle:
@@ -535,7 +535,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
                     day.isAfter(_rangeStart!.subtract(const Duration(days: 1))) &&
                     day.isBefore(_rangeEnd!.add(const Duration(days: 1)));
                 if (inRange) return _RangeMiddleCell(day: day);
-                // range 밖: 연한 원 (homeCalendarSelectedBg)
+                // range 밖: 연한 원 (calendarRangeHighlight — 다크모드 대응)
                 return _TodayCell(day: day);
               },
 
@@ -814,7 +814,7 @@ class _RangeMiddleCell extends StatelessWidget {
           left: 0,
           right: 0,
           height: _kCircleSize,
-          child: Container(color: AppColors.homeCalendarSelectedBg),
+          child: Container(color: c.calendarRangeHighlight),
         ),
         // 날짜 텍스트: 원 영역 중앙에 배치
         Positioned(
@@ -868,7 +868,7 @@ class _RangeLabelCell extends StatelessWidget {
                 height: _kCircleSize,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: AppColors.homeCalendarSelectedBg,
+                    color: context.colors.calendarRangeHighlight,
                     borderRadius: BorderRadius.only(
                       topLeft: isStart
                           ? Radius.circular(_kCircleSize / 2)
@@ -963,8 +963,8 @@ class _TodayCell extends StatelessWidget {
       child: Container(
         width: 38,
         height: 38,
-        decoration: const BoxDecoration(
-          color: AppColors.homeCalendarSelectedBg,
+        decoration: BoxDecoration(
+          color: c.calendarRangeHighlight,
           shape: BoxShape.circle,
         ),
         alignment: Alignment.center,
@@ -989,8 +989,8 @@ class _MascotBubble extends StatelessWidget {
       children: [
         Image.asset(
           'assets/images/Dooit.png',
-          width: 36,
-          height: 36,
+          width: 30,
+          height: 30,
         ),
         const SizedBox(width: 8),
         Container(

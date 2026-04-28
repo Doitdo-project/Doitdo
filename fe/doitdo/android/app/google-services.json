@@ -12,7 +12,36 @@
           "package_name": "com.d107.doitdo"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "487273055258-7kpjeqek1jfib0mm64nsvniq5d4hmee2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.d107.doitdo",
+            "certificate_hash": "6e2feb947b057f919126c77a9051e430f939881d"
+          }
+        },
+        {
+          "client_id": "487273055258-moca0qppdhrkncgnha146jf9g7k3lird.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.d107.doitdo",
+            "certificate_hash": "4498d448760b80063fdecb12889d61f4adc918cb"
+          }
+        },
+        {
+          "client_id": "487273055258-sles69g8tc0658hp26pb1de8fvpc6k4o.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.d107.doitdo",
+            "certificate_hash": "b022e66ff3b6034dd6bb2ac5d79301dc3b3ddf9e"
+          }
+        },
+        {
+          "client_id": "487273055258-6c59oog60514b1fdj5ek5apnbcub7btn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBTvdSYkOKiIDQFTQRptRI6r8rEDSCf6T8"
@@ -20,7 +49,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "487273055258-6c59oog60514b1fdj5ek5apnbcub7btn.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "487273055258-9eh6mpan96hoh2ig532lio101u49mlhr.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.d107.doitdo"
+              }
+            }
+          ]
         }
       }
     }

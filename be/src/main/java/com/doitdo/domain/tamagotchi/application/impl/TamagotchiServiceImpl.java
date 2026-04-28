@@ -39,9 +39,11 @@ import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TamagotchiErrorCode;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TamagotchiServiceImpl implements TamagotchiService {
 
 	private final CharacterActionRepository characterActionRepository;
@@ -80,6 +82,8 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		saveHistory(savedUserCharacter.getUserCharacterId(), userId, UserCharacterHistory.EventType.CREATED,
 			null, eggCharacter.getCharacterId(), null, savedUserCharacter.getName(), null, 0,
 			UserCharacterHistory.ActorType.USER, userId, "egg received");
+		log.info("event=EGG_RECEIVED userId={} userCharacterId={} characterId={}",
+			userId, savedUserCharacter.getUserCharacterId(), eggCharacter.getCharacterId());
 
 		return new CurrentCharacterResp(
 			eggCharacter.getCharacterId(),
@@ -173,6 +177,8 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		saveHistory(userCharacter.getUserCharacterId(), userId, UserCharacterHistory.EventType.NAME_UPDATED,
 			beforeCharacterId, beforeCharacterId, beforeName, userCharacter.getName(), beforeExp, beforeExp,
 			UserCharacterHistory.ActorType.USER, userId, "name updated");
+		log.info("event=CHARACTER_NAME_UPDATED userId={} userCharacterId={}",
+			userId, userCharacter.getUserCharacterId());
 
 		return new UpdateCharacterNameResp(
 			userCharacter.getCharacterId(),
@@ -255,6 +261,8 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 
 		eventPublisher.publishEvent(new TamagotchiGrowthEvent(
 			userId, userCharacter.getUserCharacterId(), "EGG", "BABY", userCharacter.getName()));
+		log.info("event=CHARACTER_HATCHED userId={} userCharacterId={} beforeStage=EGG afterStage=BABY",
+			userId, userCharacter.getUserCharacterId());
 
 		return new HatchCharacterResp(
 			babyCharacter.getCharacterId(),
@@ -312,6 +320,8 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 
 		eventPublisher.publishEvent(new TamagotchiGrowthEvent(
 			userId, userCharacter.getUserCharacterId(), beforeStage.name(), afterStage.name(), userCharacter.getName()));
+		log.info("event=CHARACTER_EVOLVED userId={} userCharacterId={} beforeStage={} afterStage={}",
+			userId, userCharacter.getUserCharacterId(), beforeStage.name(), afterStage.name());
 
 		return new EvolutionResp(
 			userCharacter.getUserCharacterId(),
@@ -397,6 +407,8 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		eventPublisher.publishEvent(new TamagotchiFarewellEvent(
 			userId, adultUserCharacter.getUserCharacterId(),
 			savedNextEggCharacter.getUserCharacterId(), adultUserCharacter.getName()));
+		log.info("event=CHARACTER_FAREWELL userId={} userCharacterId={} nextUserCharacterId={}",
+			userId, adultUserCharacter.getUserCharacterId(), savedNextEggCharacter.getUserCharacterId());
 
 		return new FarewellResp(
 			adultUserCharacter.getUserCharacterId(),
@@ -416,9 +428,13 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
 
-		com.doitdo.domain.tamagotchi.entity.CharacterAction action = characterActionRepository
-			.findByCharacterIdAndActionType(userCharacter.getCharacterId(), actionType)
-			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M09_002));
+		List<com.doitdo.domain.tamagotchi.entity.CharacterAction> actions = characterActionRepository
+			.findAllByCharacterIdAndActionType(userCharacter.getCharacterId(), actionType);
+		if (actions.isEmpty()) {
+			throw new CustomException(TamagotchiErrorCode.M09_002);
+		}
+		com.doitdo.domain.tamagotchi.entity.CharacterAction action =
+			actions.get(ThreadLocalRandom.current().nextInt(actions.size()));
 
 		return new CharacterActionUrlResp(action.getActionUrl());
 	}

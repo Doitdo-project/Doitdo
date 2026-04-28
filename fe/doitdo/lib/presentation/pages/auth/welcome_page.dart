@@ -595,7 +595,7 @@ class _SocialButtons extends StatelessWidget {
                 ref.read(welcomeViewModelProvider.notifier).signInWithApple(),
             style: SignInWithAppleButtonStyle.black,
             text: 'Apple로 로그인',
-            height: 48,
+            height: 48.h,
             borderRadius: BorderRadius.circular(12.r),
           ),
           SizedBox(height: 12.h),

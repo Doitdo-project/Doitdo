@@ -94,7 +94,7 @@ public class TodoController {
 				todoService.detail(userDetails.getUserId(), todoId));
 	}
 
-	@Operation(summary = "TODO 수정", description = "TODO 의 내용·일정 정보를 부분 수정한다. 본인 소유 + 'TODO' 상태의 항목만 수정 가능.")
+	@Operation(summary = "TODO 수정", description = "TODO 의 내용·일정 정보를 부분 수정한다. 본인 소유 + 'TODO' 상태의 항목만 수정 가능. content 는 null 로 보내면 메모를 비운다(다른 필드는 null 시 변경되지 않음).")
 	@ApiErrorCodes({"T04-001", "T04-003", "T04-004", "T04-005", "T14-001", "T14-002"})
 	@PatchMapping("/{todoId}")
 	public GlobalApiResponse<TodoDetailResp> update(

@@ -157,7 +157,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
 
     setState(() => _farewelling = true);
     final ok =
-        await ref.read(characterViewModelProvider.notifier).farewell();
+    await ref.read(characterViewModelProvider.notifier).farewell();
     if (!mounted) return;
     setState(() => _farewelling = false);
 
@@ -237,27 +237,27 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     // true 가 되고 ADULT 는 canFarewell 로 전환되므로 stage 검사는 생략. 재렌더
     // 시 중복 호출되지 않도록 "false→true" 순간에만 호출한다.
     ref.listen<AsyncValue<Character?>>(characterViewModelProvider,
-        (prev, next) {
-      // 첫 로드(loading→error) 는 dio 의 토큰 refresh / 자동 재시도가 끼어들면서
-      // 잠깐 error 로 빠졌다 곧 회복되는 경우가 많다. 깜빡 떴다 사라지는 스낵바를
-      // 막기 위해, "한 번이라도 데이터를 보여준 적이 있는데 다시 실패" 한 경우
-      // (= data → error regression) 에만 알림. 진짜 영구 실패는 캐릭터 카드의
-      // 빈 상태 UI 가 처리하므로 사용자가 모르고 지나치진 않는다.
-      final wasShowingData =
-          prev != null && prev.hasValue && prev.value != null;
-      if (next.hasError && wasShowingData && mounted) {
-        _showComingSoon(context, '캐릭터 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
-      }
+            (prev, next) {
+          // 첫 로드(loading→error) 는 dio 의 토큰 refresh / 자동 재시도가 끼어들면서
+          // 잠깐 error 로 빠졌다 곧 회복되는 경우가 많다. 깜빡 떴다 사라지는 스낵바를
+          // 막기 위해, "한 번이라도 데이터를 보여준 적이 있는데 다시 실패" 한 경우
+          // (= data → error regression) 에만 알림. 진짜 영구 실패는 캐릭터 카드의
+          // 빈 상태 UI 가 처리하므로 사용자가 모르고 지나치진 않는다.
+          final wasShowingData =
+              prev != null && prev.hasValue && prev.value != null;
+          if (next.hasError && wasShowingData && mounted) {
+            _showComingSoon(context, '캐릭터 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
+          }
 
-      final prevChar = prev?.valueOrNull;
-      final nextChar = next.valueOrNull;
-      if (nextChar == null || !nextChar.canEvolve) return;
-      final wasAlreadyEvolvable = prevChar != null && prevChar.canEvolve;
-      if (wasAlreadyEvolvable) return;
-      ref
-          .read(characterViewModelProvider.notifier)
-          .evolve(nextChar.userCharacterId);
-    });
+          final prevChar = prev?.valueOrNull;
+          final nextChar = next.valueOrNull;
+          if (nextChar == null || !nextChar.canEvolve) return;
+          final wasAlreadyEvolvable = prevChar != null && prevChar.canEvolve;
+          if (wasAlreadyEvolvable) return;
+          ref
+              .read(characterViewModelProvider.notifier)
+              .evolve(nextChar.userCharacterId);
+        });
 
     // Todo 완료 count 가 증가하면 exp 가 올라갔을 가능성이 있으므로 캐릭터 재조회.
     // BE 는 AFTER_COMMIT 리스너로 exp 를 비동기 부여하므로 곧장 GET /me 를 부르면
@@ -285,15 +285,15 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: visible
               ? const SystemUiOverlayStyle(
-                  statusBarColor: Colors.transparent,
-                  statusBarIconBrightness: Brightness.light,
-                  statusBarBrightness: Brightness.dark,
-                )
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.light,
+            statusBarBrightness: Brightness.dark,
+          )
               : const SystemUiOverlayStyle(
-                  statusBarColor: Colors.transparent,
-                  statusBarIconBrightness: Brightness.dark,
-                  statusBarBrightness: Brightness.light,
-                ),
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.dark,
+            statusBarBrightness: Brightness.light,
+          ),
           child: child!,
         );
       },
@@ -306,109 +306,113 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
               //    여기서는 top padding 을 주지 않고 Card 내부에서 topSafePadding
               //    으로 content 만 밀어낸다. 상태바는 AnnotatedRegion 으로 투명 처리.
               NotificationListener<ScrollNotification>(
-                  onNotification: (notification) {
-                    if (notification.metrics.axis != Axis.vertical) return false;
-                    final nowVisible =
-                        notification.metrics.pixels < headerHeight / 2;
-                    if (_headerVisible.value != nowVisible) {
-                      _headerVisible.value = nowVisible;
-                    }
-                    return false;
-                  },
-                  child: CustomScrollView(
-                    physics: SnapScrollPhysics(snapOffset: headerHeight),
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            CharacterCard(
-                              state: state,
-                              character: character,
-                              isCharacterLoading: isCharacterLoading,
-                              topSafePadding: topInset,
-                              onTapShop: () => _showComingSoon(
-                                context,
-                                '상점 기능은 아직 준비 중이에요.',
-                              ),
-                              onTapCollection: () =>
-                                  context.push(AppRoutes.tamagochiCollection),
-                              onEggTap: _handleEggTap,
-                              onCharacterTap: () {
-                                final remaining = todayTodos
-                                    .where((t) => !t.isDone)
-                                    .length;
-                                ref
-                                    .read(tamagochiViewModelProvider.notifier)
-                                    .onCharacterTap(
-                                      remainingTodayTodos: remaining,
-                                    );
-                              },
+                onNotification: (notification) {
+                  if (notification.metrics.axis != Axis.vertical) return false;
+                  final nowVisible =
+                      notification.metrics.pixels < headerHeight / 2;
+                  if (_headerVisible.value != nowVisible) {
+                    _headerVisible.value = nowVisible;
+                  }
+                  return false;
+                },
+                child: CustomScrollView(
+                  physics: SnapScrollPhysics(snapOffset: headerHeight),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          CharacterCard(
+                            state: state,
+                            character: character,
+                            isCharacterLoading: isCharacterLoading,
+                            topSafePadding: topInset,
+                            onTapShop: () => _showComingSoon(
+                              context,
+                              '상점 기능은 아직 준비 중이에요.',
                             ),
-                            if (character?.canFarewell ?? false) ...[
-                              SizedBox(height: 12.h),
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                                child: FarewellBanner(
-                                  characterName: character!.name,
-                                  busy: _farewelling,
-                                  onTap: _handleFarewellTap,
-                                ),
+                            onTapCollection: () =>
+                                context.push(AppRoutes.tamagochiCollection),
+                            onEggTap: _handleEggTap,
+                            onCharacterTap: () {
+                              final remaining = todayTodos
+                                  .where((t) => !t.isDone)
+                                  .length;
+                              ref
+                                  .read(tamagochiViewModelProvider.notifier)
+                                  .onCharacterTap(
+                                remainingTodayTodos: remaining,
+                              );
+                            },
+                          ),
+                          if (character?.canFarewell ?? false) ...[
+                            SizedBox(height: 12.h),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16.w),
+                              child: FarewellBanner(
+                                characterName: character!.name,
+                                busy: _farewelling,
+                                onTap: _handleFarewellTap,
                               ),
-                            ],
-                            StreakSection(
-                              streakDays: streak.currentCount,
-                              slots: streakWindow.slots,
-                              isRewardClaimable: streak.hasCompletedBlock,
-                              isClaimingReward: _claimingReward,
-                              onClaimReward: _handleClaimReward,
                             ),
                           ],
-                        ),
+                          StreakSection(
+                            streakDays: streak.currentCount,
+                            slots: streakWindow.slots,
+                            isRewardClaimable: streak.hasCompletedBlock,
+                            isClaimingReward: _claimingReward,
+                            onClaimReward: _handleClaimReward,
+                          ),
+                        ],
                       ),
-                      SliverLayoutBuilder(
-                        builder: (context, constraints) {
-                          return SliverToBoxAdapter(
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                minHeight: constraints.viewportMainAxisExtent,
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    TodoSection(
-                                      title: '오늘의 할 일',
-                                      actionLabel: '추가하기',
-                                      onActionTap: () => _openAddSheet(
-                                        context,
-                                        DateTime.now(),
-                                      ),
-                                      todos: todayTodos,
-                                      onToggle: todoVm.toggleTodo,
-                                      onTodoTap: (todo) => _openDetailSheet(context, todo, false),
+                    ),
+                    SliverLayoutBuilder(
+                      builder: (context, constraints) {
+                        return SliverToBoxAdapter(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.viewportMainAxisExtent,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  TodoSection(
+                                    title: '오늘의 할 일',
+                                    actionLabel: '추가하기',
+                                    onActionTap: () => _openAddSheet(
+                                      context,
+                                      DateTime.now(),
                                     ),
-                                    const SizedBox(height: 24),
-                                    TodoSection(
-                                      title: '언젠가 할 일',
-                                      actionLabel: '추가하기',
-                                      onActionTap: () =>
-                                          _openAddSheet(context, null),
-                                      todos: somedayTodos,
-                                      onToggle: todoVm.toggleSomedayTodo,
-                                      onTodoTap: (todo) => _openDetailSheet(context, todo, true),
-                                    ),
-                                  ],
-                                ),
+                                    todos: todayTodos,
+                                    onToggle: todoVm.toggleTodo,
+                                    onReorder: todoVm.reorderTodo,
+                                    onSnooze: todoVm.snoozeTodo,
+                                    onTodoTap: (todo) => _openDetailSheet(context, todo, false),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  TodoSection(
+                                    title: '언젠가 할 일',
+                                    actionLabel: '추가하기',
+                                    onActionTap: () =>
+                                        _openAddSheet(context, null),
+                                    todos: somedayTodos,
+                                    onToggle: todoVm.toggleSomedayTodo,
+                                    onReorder: todoVm.reorderSomedayTodo,
+                                    onSnooze: null,
+                                    onTodoTap: (todo) => _openDetailSheet(context, todo, true),
+                                  ),
+                                ],
                               ),
                             ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
+              ),
 
               // 2. 헤더가 스크롤로 사라졌을 때만 뜨는 상태바 scrim.
               //    헤더가 보이는 동안은 완전 투명 — 캐릭터 카드의 grass 배경이
@@ -432,7 +436,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
 /// TodoState 의 완료된 할 일 총 개수 (오늘의 할 일 + 언젠가 할 일).
 int _doneCount(TodoState s) =>
     s.allTodos.where((t) => t.isDone).length +
-    s.allSomedayTodos.where((t) => t.isDone).length;
+        s.allSomedayTodos.where((t) => t.isDone).length;
 
 /// 해당 Todo 가 "오늘의 할 일" 에 포함되는지. 단일 날짜는 동일 일자, 기간은 오늘이
 /// 시작~종료 사이, 반복은 시작일이 오늘 이전이고 종료일이 없거나 오늘 이후면 포함.
@@ -447,20 +451,33 @@ bool _isTodayTodo(Todo todo, DateTime today) {
       return todo.date != null && sameDay(todo.date!, today);
     case TodoDateType.someday:
       return false;
+
     case TodoDateType.range:
-      final start = todo.rangeStart;
+    // ✅ fetchTodos에서 시작일은 todo.date에 저장됨 (rangeStart는 null)
+      final start = todo.date ?? todo.rangeStart;
       final end = todo.rangeEnd;
       if (start == null) return false;
       if (!onOrBefore(start, today)) return false;
       if (end == null) return true;
       return onOrBefore(today, end);
+
     case TodoDateType.repeat:
-      final start = todo.repeatStartDate;
+    // ✅ fetchTodos에서 시작일은 todo.date에 저장됨 (repeatStartDate는 null)
+      final start = todo.date ?? todo.repeatStartDate;
       final end = todo.repeatEndDate;
       if (start == null) return false;
       if (!onOrBefore(start, today)) return false;
-      if (end == null) return true;
-      return onOrBefore(today, end);
+      if (end != null && today.isAfter(end)) return false;
+
+      // ✅ 오늘이 반복 요일에 해당하는지 체크 (캘린더와 동일한 로직)
+      if (todo.repeatDays != null && todo.repeatDays!.isNotEmpty) {
+        final flutterWd = today.weekday; // 1=월~6=토, 7=일
+        final appIndex  = flutterWd == 7 ? 0 : flutterWd; // 일요일(7)→0
+        return todo.repeatDays!.contains(appIndex);
+      } else {
+        // repeatDays 없으면 시작 요일과 일치하는지 폴백
+        return today.weekday == start.weekday;
+      }
   }
 }
 

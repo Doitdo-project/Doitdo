@@ -144,7 +144,7 @@ public class Todo extends BaseTimeEntity {
 			Set<DayOfWeek> daysOfWeek,
 			String alertTime) {
 		if (title != null) this.title = title;
-		if (content != null) this.content = content;
+		this.content = content;
 		if (categoryId != null) this.categoryId = categoryId;
 		if (type != null) this.type = type;
 		if (type == TodoType.SOMEDAY) {
