@@ -47,8 +47,7 @@ class UserServiceImplOnboardingTest {
         );
         Long userId = saved.getUserId();
 
-        // 오늘(2026-04-27) 기준 만 14세: 2012-04-27 생일
-        LocalDate birthDate = LocalDate.of(2012, 4, 27);
+        LocalDate birthDate = LocalDate.now().minusYears(14);
         UserInfoResp resp = userService.registerBirthDate(userId, new RegisterBirthDateReq(birthDate));
 
         assertThat(resp.birthDateRegistered()).isTrue();
@@ -75,8 +74,7 @@ class UserServiceImplOnboardingTest {
         );
         Long userId = saved.getUserId();
 
-        // 오늘(2026-04-27) 기준 만 13세: 2012-04-28 생일 (생일 아직 안 지남)
-        LocalDate underageBirthDate = LocalDate.of(2012, 4, 28);
+        LocalDate underageBirthDate = LocalDate.now().minusYears(14).plusDays(1);
 
         assertThatThrownBy(() ->
                 userService.registerBirthDate(userId, new RegisterBirthDateReq(underageBirthDate))
