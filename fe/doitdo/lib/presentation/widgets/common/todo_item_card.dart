@@ -60,7 +60,7 @@ class _SlidableTodoItemCardState extends ConsumerState<SlidableTodoItemCard> {
           child: Container(
             alignment: Alignment.centerRight,
             decoration: BoxDecoration(
-              color: AppColors.homeCalendarSelectedBg,
+              color: colors.calendarRangeHighlight,
               borderRadius: BorderRadius.circular(12),
             ),
             child: GestureDetector(

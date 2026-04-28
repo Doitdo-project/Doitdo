@@ -30,6 +30,7 @@ class DoitdoColors extends ThemeExtension<DoitdoColors> {
     required this.streakDotInactive,
     required this.streakDotActive,
     required this.streakSilhouette,
+    required this.calendarRangeHighlight,
   });
 
   final Color background;
@@ -64,6 +65,11 @@ class DoitdoColors extends ThemeExtension<DoitdoColors> {
   /// 살짝 밝은 회색(#5A5A5A) 으로 톤을 뒤집어 카드 위에서 보이도록 한다.
   final Color streakSilhouette;
 
+  /// 달력 기간 선택 범위 하이라이트 색.
+  /// 라이트는 연한 복숭아(#FFEBD5), 다크는 어두운 오렌지 톤(#4A2800)으로
+  /// 다크모드에서 텍스트가 보이지 않는 문제를 방지한다.
+  final Color calendarRangeHighlight;
+
   static const DoitdoColors light = DoitdoColors(
     background: Color(0xFFFFFFFF),
     surface: Color(0xFFFFFFFF),
@@ -82,6 +88,7 @@ class DoitdoColors extends ThemeExtension<DoitdoColors> {
     streakDotInactive: AppColors.streakCheckX,
     streakDotActive: AppColors.streakCheck,
     streakSilhouette: Color(0xFF2B2B2B),
+    calendarRangeHighlight: Color(0xFFFFEBD5),
   );
 
   static const DoitdoColors dark = DoitdoColors(
@@ -102,6 +109,7 @@ class DoitdoColors extends ThemeExtension<DoitdoColors> {
     streakDotInactive: Color(0xFF3A3A3A),
     streakDotActive: Color(0xFFFFA066),
     streakSilhouette: Color(0xFF5A5A5A),
+    calendarRangeHighlight: Color(0xFF4A2800),
   );
 
   @override
@@ -123,6 +131,7 @@ class DoitdoColors extends ThemeExtension<DoitdoColors> {
     Color? streakDotInactive,
     Color? streakDotActive,
     Color? streakSilhouette,
+    Color? calendarRangeHighlight,
   }) {
     return DoitdoColors(
       background: background ?? this.background,
@@ -142,6 +151,7 @@ class DoitdoColors extends ThemeExtension<DoitdoColors> {
       streakDotInactive: streakDotInactive ?? this.streakDotInactive,
       streakDotActive: streakDotActive ?? this.streakDotActive,
       streakSilhouette: streakSilhouette ?? this.streakSilhouette,
+      calendarRangeHighlight: calendarRangeHighlight ?? this.calendarRangeHighlight,
     );
   }
 
@@ -168,6 +178,8 @@ class DoitdoColors extends ThemeExtension<DoitdoColors> {
       streakDotActive: Color.lerp(streakDotActive, other.streakDotActive, t)!,
       streakSilhouette:
           Color.lerp(streakSilhouette, other.streakSilhouette, t)!,
+      calendarRangeHighlight:
+          Color.lerp(calendarRangeHighlight, other.calendarRangeHighlight, t)!,
     );
   }
 }
