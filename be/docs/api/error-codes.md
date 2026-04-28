@@ -179,6 +179,7 @@ throw new CustomException(AuthErrorCode.A00_001, "외부 사용자 친화 메시
 ```
 
 `GlobalExceptionHandler` 가 위 예외를 잡아 `GlobalApiResponse.fail(errorCode)` 로 변환한다.
+`CustomException` 로그는 `uri="{method} {requestURI}" code={errorCode} status={httpStatus} message="{message}"` 포맷을 사용하며, 5xx 는 stack trace 를 포함한다.
 
 ## 7. 관련 문서
 
