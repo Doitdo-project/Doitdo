@@ -1,5 +1,7 @@
 package com.doitdo.domain.tamagotchi.repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,6 +14,16 @@ import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 public interface UserCharacterRepository extends JpaRepository<UserCharacter, Long> {
 
 	Optional<UserCharacter> findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(Long userId);
+
+	@Query("""
+		select uc from UserCharacter uc
+		where uc.farewellAvailableAt is not null
+			and uc.farewellAvailableAt <= :now
+			and uc.farewellNotified = false
+			and uc.isActive = true
+			and uc.isDeleted = false
+	""")
+	List<UserCharacter> findFarewellAvailableTargets(@Param("now") LocalDateTime now);
 
 	@Query("""
 		SELECT COUNT(uc)

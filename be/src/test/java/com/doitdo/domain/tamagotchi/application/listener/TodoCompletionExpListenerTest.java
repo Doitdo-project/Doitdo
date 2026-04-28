@@ -14,10 +14,13 @@ import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.event.TodoCompletedEvent;
 import com.doitdo.domain.todo.repository.TodoRepository;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -73,10 +76,14 @@ class TodoCompletionExpListenerTest {
 	}
 
 	private Character buildCharacter(Integer requiredExp) {
+		return buildCharacter(requiredExp, Character.Stage.BABY);
+	}
+
+	private Character buildCharacter(Integer requiredExp, Character.Stage stage) {
 		return Character.builder()
 				.characterId(2L)
 				.species("SLIME")
-				.stage(Character.Stage.BABY)
+				.stage(stage)
 				.requiredExp(requiredExp)
 				.thumbnailUrl("https://cdn.example.com/slime.png")
 				.build();
@@ -163,6 +170,77 @@ class TodoCompletionExpListenerTest {
 		listener.onTodoCompleted(new TodoCompletedEvent(1L, 1L));
 
 		assertThat(uc.getCurrentExp()).isEqualTo(100);
+		assertThat(todo.getExpGranted()).isTrue();
+	}
+
+	@Test
+	void schedulesFarewellWhenAdultReachesCapTransition() {
+		Todo todo = buildTodo(1L, false);
+		UserCharacter uc = buildUc(95);
+		Character character = buildCharacter(100, Character.Stage.ADULT);
+
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L))
+				.willReturn(Optional.of(uc));
+		given(characterRepository.findById(2L)).willReturn(Optional.of(character));
+		given(expCalculator.rollTodoDoneExp()).willReturn(7);
+
+		LocalDateTime before = LocalDateTime.now();
+		listener.onTodoCompleted(new TodoCompletedEvent(1L, 1L));
+		LocalDateTime after = LocalDateTime.now();
+
+		assertThat(uc.getCurrentExp()).isEqualTo(100);
+		assertThat(uc.getFarewellAvailableAt())
+				.isBetween(before.plusHours(48), after.plusHours(96));
+		assertThat(todo.getExpGranted()).isTrue();
+	}
+
+	@Test
+	void doesNotRescheduleWhenAdultWasAlreadyAtCap() {
+		Todo todo = buildTodo(1L, false);
+		LocalDateTime scheduledAt = LocalDateTime.now().plusHours(72);
+		UserCharacter uc = UserCharacter.builder()
+				.userCharacterId(10L)
+				.userId(1L)
+				.characterId(2L)
+				.name("뚜잇이")
+				.currentExp(100)
+				.isActive(true)
+				.isDeleted(false)
+				.farewellAvailableAt(scheduledAt)
+				.build();
+		Character character = buildCharacter(100, Character.Stage.ADULT);
+
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L))
+				.willReturn(Optional.of(uc));
+		given(characterRepository.findById(2L)).willReturn(Optional.of(character));
+		given(expCalculator.rollTodoDoneExp()).willReturn(7);
+
+		listener.onTodoCompleted(new TodoCompletedEvent(1L, 1L));
+
+		assertThat(uc.getCurrentExp()).isEqualTo(100);
+		assertThat(uc.getFarewellAvailableAt()).isEqualTo(scheduledAt);
+		assertThat(todo.getExpGranted()).isTrue();
+	}
+
+	@ParameterizedTest
+	@EnumSource(value = Character.Stage.class, names = {"BABY", "TEEN"})
+	void doesNotScheduleFarewellWhenNonAdultReachesCap(Character.Stage stage) {
+		Todo todo = buildTodo(1L, false);
+		UserCharacter uc = buildUc(95);
+		Character character = buildCharacter(100, stage);
+
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L))
+				.willReturn(Optional.of(uc));
+		given(characterRepository.findById(2L)).willReturn(Optional.of(character));
+		given(expCalculator.rollTodoDoneExp()).willReturn(7);
+
+		listener.onTodoCompleted(new TodoCompletedEvent(1L, 1L));
+
+		assertThat(uc.getCurrentExp()).isEqualTo(100);
+		assertThat(uc.getFarewellAvailableAt()).isNull();
 		assertThat(todo.getExpGranted()).isTrue();
 	}
 }

@@ -172,6 +172,7 @@ domain/{domain}/
 | Application impl | `domain/notification/application/impl/NoopFcmService.java` | 기본 활성 FCM 스텁 |
 | Application impl | `domain/notification/application/impl/FirebaseFcmService.java` | `firebase.enabled=true` 시 실제 송신 |
 | Scheduler | `domain/notification/application/scheduler/EveningReminderScheduler.java` | `NotificationSettingRepository` 존재 시에만 활성 |
+| Scheduler | `domain/notification/application/scheduler/FarewellAvailabilityScheduler.java` | ADULT cap 도달 후 random 48~96h 가 지난 독립 준비 완료 캐릭터에 `TAMAGOTCHI_FAREWELL` 발송 |
 | Entity | `domain/notification/entity/Notification.java` | `notifications` 테이블 매핑 |
 | Entity | `domain/notification/entity/DeviceToken.java` | 필드 유지, 등록/비활성화 메서드만 추가 |
 | Repository | `domain/notification/repository/NotificationRepository.java` | 목록 조회 + 전체 읽음 벌크 업데이트 |

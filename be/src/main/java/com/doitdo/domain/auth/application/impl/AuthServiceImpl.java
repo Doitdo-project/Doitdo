@@ -93,6 +93,7 @@ public class AuthServiceImpl implements AuthService {
 				.currentExp(0)
 				.isActive(true)
 				.isDeleted(false)
+				.farewellNotified(false)
 				.build());
 
 		log.info("event=USER_SIGNUP userId={}", user.getUserId());

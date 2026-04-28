@@ -151,15 +151,15 @@ public class NotificationServiceImpl implements NotificationService {
 	}
 
 	@Override
-	public void sendTamagotchiFarewell(Long userId, Long userCharacterId, String beforeCharacterName) {
-		String title = "다마고치와 작별했어요";
-		String body  = "\"%s\"의 독립을 응원해요. 새 친구가 알을 깨고 나올 준비를 하고 있어요.".formatted(beforeCharacterName);
+	public void sendTamagotchiFarewell(Long userId, Long userCharacterId, String characterName) {
+		String title = "독립 준비 완료";
+		String body  = "\"%s\"이(가) 독립할 준비가 되었어요!".formatted(characterName);
 
 		notificationRepository.save(Notification.of(
 				userId, NotificationType.TAMAGOTCHI_FAREWELL, title, body, userCharacterId));
 
 		LocalTime now = LocalTime.now(ZoneId.of("Asia/Seoul"));
-		dispatchFcm(userId, now, title, body, "[tamagotchi-farewell]");
+		dispatchFcm(userId, now, title, body, "[farewell-available]");
 	}
 
 	@Override

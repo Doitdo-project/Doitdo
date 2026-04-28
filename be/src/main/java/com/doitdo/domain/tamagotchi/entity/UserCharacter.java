@@ -1,5 +1,7 @@
 package com.doitdo.domain.tamagotchi.entity;
 
+import java.time.LocalDateTime;
+
 import com.doitdo.global.entity.BaseTimeEntity;
 
 import jakarta.persistence.Column;
@@ -48,6 +50,13 @@ public class UserCharacter extends BaseTimeEntity {
 	@Column(name = "is_deleted", nullable = false)
 	private Boolean isDeleted;
 
+	@Column(name = "farewell_available_at")
+	private LocalDateTime farewellAvailableAt;
+
+	@Builder.Default
+	@Column(name = "farewell_notified", nullable = false)
+	private Boolean farewellNotified = false;
+
 	public void equipItem(Long userItemId) {
 		this.equipedItemsId = userItemId;
 	}
@@ -83,5 +92,19 @@ public class UserCharacter extends BaseTimeEntity {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	public void scheduleFarewell(LocalDateTime availableAt) {
+		if (this.farewellAvailableAt != null) {
+			return;
+		}
+		this.farewellAvailableAt = availableAt;
+	}
+
+	public void markFarewellNotified() {
+		if (Boolean.TRUE.equals(this.farewellNotified)) {
+			return;
+		}
+		this.farewellNotified = true;
 	}
 }
