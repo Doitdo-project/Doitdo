@@ -76,9 +76,11 @@ com.doitdo
 | 아침 TODO 리마인더 | `REMINDER_MORNING` | `MorningReminderScheduler` → `NotificationService.sendMorningReminder` | null | 매분 cron, `UserSetting.morningReminderTime` 일치 유저 대상, 미완료 TODO > 0 조건. 플래그: `notification.morning-reminder.enabled` |
 | TODO 완료 | `TODO_DONE` | `TodoServiceImpl.changeStatus()` → `TodoCompletedEvent` → `TodoCompletedNotificationListener` | todoId | DONE 전이 시 1회 발행. 기존 `TodoCompletionExpListener` 와 분리 |
 | TODO 알림 시각 | `TODO_REMINDER` | `TodoAlertScheduler` → `NotificationService.sendTodoAlert` | todoId | 매분 cron, `Todo.alertTime` 일치 + 당일 대상. 기존 FCM 직접 호출을 NotificationService 경유로 교체 (DB 저장 추가) |
-| TODO 미루기 | `TODO_SNOOZED` | `TodoServiceImpl.snooze()` → `TodoSnoozedEvent` → `TodoSnoozedNotificationListener` | todoId | snoozeHistory 저장 직후 발행 |
-| 다마고치 이별 | `TAMAGOTCHI_FAREWELL` | `TamagotchiServiceImpl.approveIndependence()` → `TamagotchiFarewellEvent` → `TamagotchiFarewellNotificationListener` | afterUserCharacterId (새 EGG) | approved==true 경로에서만 발행. 알림 본문엔 작별한 캐릭터 이름 표시 |
-| 다마고치 성장 | `TAMAGOTCHI_GROWTH` | `TamagotchiServiceImpl.hatch()` / `evolve()` → `TamagotchiGrowthEvent` → `TamagotchiGrowthNotificationListener` | userCharacterId | HATCHED/EVOLVED 를 단일 리스너로 통합 처리 |
+| TODO 미루기 | `TODO_SNOOZED` | `TodoSnoozedNotificationListener` | todoId | 비활성화. Bean 과 이벤트 리스너 메서드는 유지하되 본문은 no-op |
+| 다마고치 독립 준비 완료 | `TAMAGOTCHI_FAREWELL` | `TodoCompletionExpListener` 에서 ADULT cap 도달 시 `farewellAvailableAt = now + random 48~96h` 예약 → `FarewellAvailabilityScheduler` → `NotificationService.sendTamagotchiFarewell` | userCharacterId (준비 완료된 ADULT) | 매분 cron, `farewell_available_at <= now`, `farewell_notified = false`, 활성/미삭제 대상. 플래그: `notification.farewell-available.enabled` |
+| 다마고치 성장 | `TAMAGOTCHI_GROWTH` | `TamagotchiGrowthNotificationListener` | userCharacterId | 비활성화. HATCHED/EVOLVED 이벤트 리스너 Bean 은 유지하되 본문은 no-op |
+
+다마고치 독립 승인(`TamagotchiServiceImpl.approveIndependence`)은 ADULT 검증 후 `farewellAvailableAt` 이 존재하고 현재 시각이 그 이후일 때만 통과한다. 기존 이별 시점 알림(`TamagotchiFarewellNotificationListener`)은 비활성화되어 새 EGG 생성 시 알림을 발송하지 않는다.
 
 ## 데이터 모델
 

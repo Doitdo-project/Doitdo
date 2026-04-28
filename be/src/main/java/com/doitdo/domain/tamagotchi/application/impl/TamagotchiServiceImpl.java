@@ -1,6 +1,7 @@
 package com.doitdo.domain.tamagotchi.application.impl;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Optional;
@@ -75,6 +76,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.currentExp(0)
 			.isActive(true)
 			.isDeleted(false)
+			.farewellNotified(false)
 			.build();
 		UserCharacter savedUserCharacter = userCharacterRepository.save(userCharacter);
 		saveHistory(savedUserCharacter.getUserCharacterId(), userId, UserCharacterHistory.EventType.CREATED,
@@ -205,7 +207,9 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			&& userCharacter.getCurrentExp() >= requiredExp;
 		boolean canFarewell = character.getStage() == com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT
 			&& requiredExp != null
-			&& userCharacter.getCurrentExp() >= requiredExp;
+			&& userCharacter.getCurrentExp() >= requiredExp
+			&& userCharacter.getFarewellAvailableAt() != null
+			&& !LocalDateTime.now().isBefore(userCharacter.getFarewellAvailableAt());
 
 		return new CurrentCharacterResp(
 			character.getCharacterId(),
@@ -371,6 +375,10 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		if (adultCharacter.getStage() != com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT) {
 			throw new CustomException(TamagotchiErrorCode.M00_002);
 		}
+		if (adultUserCharacter.getFarewellAvailableAt() == null
+			|| LocalDateTime.now().isBefore(adultUserCharacter.getFarewellAvailableAt())) {
+			throw new CustomException(TamagotchiErrorCode.M00_003);
+		}
 		if (!Boolean.TRUE.equals(approved)) {
 			throw new CustomException(TamagotchiErrorCode.M00_003);
 		}
@@ -387,6 +395,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.currentExp(0)
 			.isActive(true)
 			.isDeleted(false)
+			.farewellNotified(false)
 			.build();
 		UserCharacter savedNextEggCharacter = userCharacterRepository.save(nextEggCharacter);
 		saveHistory(savedNextEggCharacter.getUserCharacterId(), userId, UserCharacterHistory.EventType.FAREWELL,

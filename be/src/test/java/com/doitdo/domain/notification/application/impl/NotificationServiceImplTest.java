@@ -88,4 +88,22 @@ class NotificationServiceImplTest {
 		assertThat(saved.getTitle()).isEqualTo("알이 부화했어요!");
 		assertThat(saved.getMessage()).isEqualTo("\"두잇\"이(가) BABY 단계로 성장했어요.");
 	}
+
+	@Test
+	void sendTamagotchiFarewellSavesReadyMessage() {
+		NotificationServiceImpl service = new NotificationServiceImpl(
+				notificationRepository, userSettingRepository, deviceTokenRepository, fcmService);
+		given(deviceTokenRepository.findAllByUserIdAndIsActiveTrue(1L)).willReturn(List.of());
+
+		service.sendTamagotchiFarewell(1L, 10L, "두잇");
+
+		ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+		then(notificationRepository).should().save(captor.capture());
+		Notification saved = captor.getValue();
+		assertThat(saved.getUserId()).isEqualTo(1L);
+		assertThat(saved.getType()).isEqualTo(NotificationType.TAMAGOTCHI_FAREWELL);
+		assertThat(saved.getTitle()).isEqualTo("독립 준비 완료");
+		assertThat(saved.getMessage()).isEqualTo("\"두잇\"이(가) 독립할 준비가 되었어요!");
+		assertThat(saved.getReferenceId()).isEqualTo(10L);
+	}
 }

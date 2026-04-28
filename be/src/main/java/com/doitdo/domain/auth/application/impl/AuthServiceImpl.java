@@ -91,6 +91,7 @@ public class AuthServiceImpl implements AuthService {
 				.currentExp(0)
 				.isActive(true)
 				.isDeleted(false)
+				.farewellNotified(false)
 				.build());
 
 		return new SignupResp(

@@ -8,6 +8,8 @@ import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.event.TodoCompletedEvent;
 import com.doitdo.domain.todo.repository.TodoRepository;
+import java.time.LocalDateTime;
+import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -74,7 +76,16 @@ public class TodoCompletionExpListener {
 		}
 
 		int delta = expCalculator.rollTodoDoneExp();
+		int before = uc.getCurrentExp();
 		uc.gainExp(delta, requiredExp);
+		int after = uc.getCurrentExp();
+		if (character.getStage() == Character.Stage.ADULT
+				&& before < requiredExp
+				&& after >= requiredExp
+				&& uc.getFarewellAvailableAt() == null) {
+			long hours = ThreadLocalRandom.current().nextLong(48, 97);
+			uc.scheduleFarewell(LocalDateTime.now().plusHours(hours));
+		}
 		todo.markExpGranted();
 		log.debug("[exp] granted delta={} user={} todo={} currentExp={}",
 				delta, event.userId(), event.todoId(), uc.getCurrentExp());
