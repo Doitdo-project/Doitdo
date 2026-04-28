@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:doitdo/core/widget_sync/widget_sync_service.dart';
@@ -162,6 +163,18 @@ class TodoViewModel extends StateNotifier<TodoState> {
           () => _repository.getTodos(view: 'all'),
     );
 
+    // 비로그인 상태 부트스트랩 → 401 → /welcome 으로 리다이렉트되는 race:
+    // consumer 가 unmount 되면 autoDispose 는 다음 microtask 에 스케줄되는데,
+    // 우리 await 가 그보다 먼저 깨면 mounted 가 아직 true 라 defunct consumer 의
+    // markNeedsBuild 를 호출 → framework.dart 5340 어설션 → cascade 로 GlobalKey
+    // duplicate 등이 터지고 release 빌드에서 회색 화면이 됨.
+    // 빈 microtask 한 번 yield 해서 autoDispose 가 먼저 돌게 하고, 그 다음 mounted
+    // 체크가 정확한 상태를 반영하도록.
+    // Riverpod autoDispose 는 vsync 기반 (frame 단위) — microtask yield 만으론
+    // 늦게 돈다. endOfFrame 까지 기다려서 dispose 가 먼저 처리되게.
+    await SchedulerBinding.instance.endOfFrame;
+    if (!mounted) return;
+
     if (result.hasValue) {
       final items = result.value!.items;
 
@@ -303,6 +316,12 @@ class TodoViewModel extends StateNotifier<TodoState> {
         to:   to.toIso8601String().split('T')[0],
       ),
     );
+
+    // fetchTodos 와 동일한 사유 — autoDispose microtask 가 먼저 돌게 한 frame yield.
+    // Riverpod autoDispose 는 vsync 기반 (frame 단위) — microtask yield 만으론
+    // 늦게 돈다. endOfFrame 까지 기다려서 dispose 가 먼저 처리되게.
+    await SchedulerBinding.instance.endOfFrame;
+    if (!mounted) return;
 
     // ✅ 서버 조회 후 로컬 캘린더 이벤트 재계산
     _updateCalendarEvents(state.allTodos);

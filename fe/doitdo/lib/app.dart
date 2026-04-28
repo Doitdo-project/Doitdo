@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:doitdo/core/theme/app_theme.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
+import 'package:doitdo/presentation/providers/current_user_provider.dart';
 import 'package:doitdo/presentation/providers/theme_mode_provider.dart';
 import 'package:doitdo/presentation/widgets/shell/doitdo_web_preview_shell.dart';
 
@@ -39,6 +40,16 @@ class _DoitdoAppState extends ConsumerState<DoitdoApp>
       // 홈 위젯에서 todo 가 토글/추가/삭제되면 서버에는 반영되지만 앱 메모리의
       // TodoViewModel state 는 갱신되지 않는다. foreground 복귀 시 invalidate 로
       // autoDispose 재생성을 유도해 fetchTodos() 가 다시 돌게 한다.
+      //
+      // 단, 비로그인 상태에서는 invalidate 하지 않는다 — iOS 의 Google/Kakao/Apple
+      // OAuth 는 시스템 UI 가 뜨면서 Flutter 앱이 background → foreground 로 전환되어
+      // 이 콜백이 발화하는데, 그 시점엔 currentUser 가 아직 null 이고 새로 생성될
+      // ViewModel 의 fetchTodos / fetchCalendarData 는 401 만 받고 끝난다. 그러는
+      // 사이 frame 안의 provider refresh 가 unmount 중인 widget(defunct element) 의
+      // listener 를 호출해 framework.dart 5340 어설션 → cascade 어설션으로 release
+      // 빌드에서 회색 화면이 뜬다.
+      final user = ref.read(currentUserProvider).valueOrNull;
+      if (user == null) return;
       ref.invalidate(todoViewModelProvider);
     }
   }
