@@ -18,6 +18,7 @@ import 'package:doitdo/presentation/pages/todo/widgets/todo_add_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_detail_sheet.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_dialog.dart';
 import 'package:doitdo/presentation/widgets/common/todo_section.dart';
+import 'package:doitdo/presentation/providers/home_scroll_provider.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_full_layout.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
 import 'package:flutter/foundation.dart';
@@ -45,6 +46,8 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   /// 매 스크롤마다 build 가 다시 돌지 않도록 ValueNotifier 로 분리.
   final ValueNotifier<bool> _headerVisible = ValueNotifier<bool>(true);
 
+  late final ScrollController _scrollController;
+
   /// farewell API 호출 in-flight 여부. 버튼 중복 탭 방지용.
   bool _farewelling = false;
 
@@ -60,14 +63,18 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     //
     // TodoViewModel 은 생성자에서 fetchTodos() 를 자동 호출하므로 홈에서
     // 별도 부트스트랩은 불필요 — build 안 ref.watch 만으로 초기 로드됨.
+    _scrollController = ScrollController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      ref.read(homeScrollControllerProvider.notifier).state = _scrollController;
       ref.read(characterViewModelProvider.notifier).ensureCharacter();
     });
   }
 
   @override
   void dispose() {
+    ref.read(homeScrollControllerProvider.notifier).state = null;
+    _scrollController.dispose();
     _headerVisible.dispose();
     super.dispose();
   }
@@ -316,6 +323,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                   return false;
                 },
                 child: CustomScrollView(
+                  controller: _scrollController,
                   physics: SnapScrollPhysics(snapOffset: headerHeight),
                   slivers: [
                     SliverToBoxAdapter(
@@ -355,6 +363,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                 onTap: _handleFarewellTap,
                               ),
                             ),
+                            SizedBox(height: 12.h),
                           ],
                           StreakSection(
                             streakDays: streak.currentCount,
