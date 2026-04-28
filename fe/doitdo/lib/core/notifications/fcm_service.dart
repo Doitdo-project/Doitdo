@@ -87,9 +87,18 @@ class FcmService {
     }
   }
 
+  static const _blockedTypes = {
+    'TODO_DONE',
+    'TODO_SNOOZED',
+    'TAMAGOTCHI_GROWTH',
+  };
+
   static void _handleForeground(RemoteMessage message) {
     final notification = message.notification;
     if (notification == null) return;
+
+    final type = message.data['type'] as String?;
+    if (type != null && _blockedTypes.contains(type)) return;
 
     _local.show(
       notification.hashCode,

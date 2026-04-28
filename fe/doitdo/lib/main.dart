@@ -25,6 +25,10 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 /// - 현재는 로깅만. 추후 배지 카운트 갱신, 위젯 sync 등 필요한 부수효과를 여기에 추가.
 @pragma('vm:entry-point')
 Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {
+  const blocked = {'TODO_DONE', 'TODO_SNOOZED', 'TAMAGOTCHI_GROWTH'};
+  final type = message.data['type'] as String?;
+  if (type != null && blocked.contains(type)) return;
+
   // 백그라운드 isolate 라 appLogger 가 초기화 안 돼 있을 수 있어 print 로 둔다.
   // ignore: avoid_print
   print('[FCM bg] received messageId=${message.messageId} '
