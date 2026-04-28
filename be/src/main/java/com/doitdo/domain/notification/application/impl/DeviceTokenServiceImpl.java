@@ -9,12 +9,14 @@ import com.doitdo.domain.notification.repository.DeviceTokenRepository;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.NotificationErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DeviceTokenServiceImpl implements DeviceTokenService {
 
 	private final DeviceTokenRepository deviceTokenRepository;
@@ -33,7 +35,9 @@ public class DeviceTokenServiceImpl implements DeviceTokenService {
 				})
 				.orElseGet(() -> DeviceToken.create(userId, req.fcmToken(), req.platform()));
 
-		return DeviceTokenResp.from(deviceTokenRepository.save(deviceToken));
+		DeviceToken savedDeviceToken = deviceTokenRepository.save(deviceToken);
+		log.info("event=DEVICE_TOKEN_REGISTERED userId={} platform={}", userId, req.platform());
+		return DeviceTokenResp.from(savedDeviceToken);
 	}
 
 	@Override
@@ -43,5 +47,6 @@ public class DeviceTokenServiceImpl implements DeviceTokenService {
 				.orElseThrow(() -> new CustomException(NotificationErrorCode.N02_002));
 
 		deviceToken.deactivate();
+		log.info("event=DEVICE_TOKEN_UNREGISTERED userId={}", userId);
 	}
 }

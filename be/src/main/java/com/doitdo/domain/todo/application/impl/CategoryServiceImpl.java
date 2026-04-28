@@ -14,11 +14,13 @@ import com.doitdo.global.exception.TodoErrorCode;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CategoryServiceImpl implements CategoryService {
 
 	private static final int MAX_CATEGORY_COUNT = 6;
@@ -43,6 +45,7 @@ public class CategoryServiceImpl implements CategoryService {
 
 		Category category = categoryRepository.save(Category.create(userId, req.name(), req.colorId()));
 		String colorHex = resolveColorHex(category.getColorId());
+		log.info("event=CATEGORY_CREATED userId={} categoryId={}", userId, category.getCategoryId());
 		return CategoryResp.from(category, colorHex);
 	}
 
@@ -61,6 +64,7 @@ public class CategoryServiceImpl implements CategoryService {
 		}
 
 		categoryRepository.delete(category);
+		log.info("event=CATEGORY_DELETED userId={} categoryId={}", userId, categoryId);
 	}
 
 	/**
@@ -93,6 +97,7 @@ public class CategoryServiceImpl implements CategoryService {
 
 		category.update(req.name(), req.colorId());
 		String colorHex = resolveColorHex(category.getColorId());
+		log.info("event=CATEGORY_UPDATED userId={} categoryId={}", userId, categoryId);
 		return CategoryResp.from(category, colorHex);
 	}
 
