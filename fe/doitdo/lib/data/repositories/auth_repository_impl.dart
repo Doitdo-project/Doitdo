@@ -89,22 +89,47 @@ class AuthRepositoryImpl extends BaseRepository implements AuthRepository {
 
   @override
   Future<(User, AuthTokens, bool isNewUser)> signInWithGoogle() async {
-    // 1. Google 네이티브 로그인 시트
-    final account = await googleSignIn.signIn();
-    if (account == null) {
-      // 사용자가 취소한 케이스.
-      throw const AuthCanceledException();
-    }
-    final auth = await account.authentication;
-    // ⚠️ 백엔드는 Google **ID Token**(JWT) 을 넘겨받아 aud 검증을 한다.
-    //   access_token 이 아니라 id_token 을 보내야 함. 스펙상 body 필드명은
-    //   카카오와 통일을 위해 `accessToken` 이지만 담는 값은 ID Token.
-    //   (id_token 을 받기 위해 GoogleSignIn 생성자에 serverClientId 지정 필수)
-    final idToken = auth.idToken;
-    if (idToken == null) {
-      throw const AuthException(
-        'Google ID Token 을 받지 못했습니다. serverClientId 설정을 확인하세요.',
+    // 1. Google 네이티브 로그인 시트.
+    //
+    // SDK 의 PlatformException 을 그대로 흘려보내면 UI 의 mapErrorMessage 에서
+    // '알 수 없는 오류' 로 떨어져 SHA-1 미등록(DEVELOPER_ERROR/10) / network_error /
+    // serverClientId 오설정 같은 진단 단서가 묻힌다. Kakao 분기처럼 code+message 를
+    // AuthException 으로 변환해 스낵바에 그대로 보이게 한다.
+    final String idToken;
+    try {
+      final account = await googleSignIn.signIn();
+      if (account == null) {
+        // 사용자가 계정 선택 시트에서 뒤로가기로 취소한 케이스.
+        throw const AuthCanceledException();
+      }
+      final auth = await account.authentication;
+      // ⚠️ 백엔드는 Google **ID Token**(JWT) 을 넘겨받아 aud 검증을 한다.
+      //   access_token 이 아니라 id_token 을 보내야 함. 스펙상 body 필드명은
+      //   카카오와 통일을 위해 `accessToken` 이지만 담는 값은 ID Token.
+      //   (id_token 을 받기 위해 GoogleSignIn 생성자에 serverClientId 지정 필수)
+      final token = auth.idToken;
+      if (token == null) {
+        throw const AuthException(
+          'Google ID Token 을 받지 못했습니다. serverClientId 설정을 확인하세요.',
+        );
+      }
+      idToken = token;
+    } on AuthCanceledException {
+      rethrow;
+    } on AuthException {
+      rethrow;
+    } on PlatformException catch (e) {
+      // google_sign_in 의 취소 코드는 'sign_in_canceled' 가 표준이지만 플랫폼/버전에
+      // 따라 'canceled' 단독으로 오는 케이스도 있어 둘 다 매칭.
+      final code = e.code.toLowerCase();
+      if (code.contains('cancel')) {
+        throw const AuthCanceledException();
+      }
+      throw AuthException(
+        'Google 로그인 실패: ${e.code}${e.message != null ? ' / ${e.message}' : ''}',
       );
+    } catch (e) {
+      throw AuthException('Google 로그인 실패: $e');
     }
 
     // 2. 서버에 ID Token 전달 → 우리 서비스 세션 발급
