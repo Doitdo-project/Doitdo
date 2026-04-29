@@ -1,3 +1,4 @@
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:doitdo/core/utils/app_logger.dart';
@@ -23,9 +24,15 @@ class StreakViewModel extends StateNotifier<AsyncValue<Streak>> {
     state = const AsyncValue<Streak>.loading().copyWithPrevious(state);
     try {
       final streak = await _repository.getStreak();
+      // autoDispose microtask 가 먼저 돌게 한 frame yield 후 mounted 체크
+      // (TodoViewModel 과 동일 사유 — race window 회피).
+      await SchedulerBinding.instance.endOfFrame;
+      if (!mounted) return;
       state = AsyncValue.data(streak);
     } catch (e, st) {
       appLogger.e('streak load failed', error: e, stackTrace: st);
+      await SchedulerBinding.instance.endOfFrame;
+      if (!mounted) return;
       state = AsyncValue.error(e, st);
     }
   }
@@ -35,6 +42,8 @@ class StreakViewModel extends StateNotifier<AsyncValue<Streak>> {
   Future<void> refresh() async {
     try {
       final streak = await _repository.getStreak();
+      await SchedulerBinding.instance.endOfFrame;
+      if (!mounted) return;
       state = AsyncValue.data(streak);
     } catch (e, st) {
       appLogger.e('streak refresh failed (silent)', error: e, stackTrace: st);

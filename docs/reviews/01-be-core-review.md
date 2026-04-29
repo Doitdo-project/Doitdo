@@ -23,6 +23,14 @@
 +        "[format_sql]": true
 ```
 
+> **🔄 재검증 (2026-04-28) — (변경됨) 미성립 (단, yml hard fix 권장)**
+>
+> - **yml 자체 변경 없음**: `application.yml:8` `ddl-auto: ${JPA_DDL_AUTO:update}` 그대로, `application-prod.yml` 에 ddl-auto override 없음
+> - **부분 방어**: `be/env/.env.prod.example:10` 에 `JPA_DDL_AUTO=validate` 명시 + 주석. dev 예제는 주석 처리
+> - **잔존 위험**: 방어선이 `.env.prod` 준수에만 의존. yml hard 차단 부재. `JPA_DDL_AUTO` 누락/오타 시 update 적용. fail-fast 없음
+> - **권장**: `application-prod.yml` 에 `spring.jpa.hibernate.ddl-auto: ${JPA_DDL_AUTO:validate}` 직접 명시 (1줄). 추가로 부팅 시 `JPA_DDL_AUTO` 값 검증 빈
+> - **우선순위**: **P1**
+
 ### [HIGH-2] refresh token이 사용자당 1개라는 코드 전제와 DB 제약이 불일치함
 - 파일: be/src/main/java/com/doitdo/domain/auth/entity/RefreshToken.java:23
 - 문제: `RefreshTokenRepository.findByUserId()`는 단건을 전제로 하지만 `refresh_tokens.user_id`에 유니크 제약이 없다.
@@ -41,6 +49,16 @@
 +	private Long userId;
 ```
 
+> **🔄 재검증 (2026-04-28) — 성립 유지 (변화 없음)**
+>
+> - `local-init/00-schema-and-seed.sql:376~392` `refresh_tokens` 테이블에 UNIQUE 키 0
+> - `RefreshToken.java:35~36` `@UniqueConstraint` / `unique=true` 없음
+> - `RefreshTokenRepository.java:9` `Optional<RefreshToken> findByUserId(...)` — 결과 2건 시 `IncorrectResultSizeDataAccessException` 폭발
+> - `AuthServiceImpl.java:175~183` & `OAuthServiceImpl.java:352~360` 의 `saveOrUpdateRefreshToken` check-then-act 패턴 race 방어 0. 두 서비스 코드 중복
+> - hotfix `5dd9c43` / `47af472` / `db/hotfix/2026-04-23_auto_providers_unique.sql` 모두 `auto_providers` 전용 — refresh_tokens 미수정
+> - **권장**: `ALTER TABLE refresh_tokens ADD UNIQUE KEY uk_rt_user_id (user_id)` + 엔티티 `@UniqueConstraint` + `saveOrUpdateRefreshToken` 을 upsert / `ON DUPLICATE KEY UPDATE` 전환 + 토큰 SHA-256 해시 저장
+> - **우선순위**: **P1**
+
 ### [HIGH-3] 회원가입이 `characters` EGG 마스터 데이터에 의존하지만 main 리소스에 시드/마이그레이션이 없음
 - 파일: be/src/main/java/com/doitdo/domain/auth/application/impl/AuthServiceImpl.java:84
 - 문제: 일반 회원가입은 즉시 EGG `UserCharacter`를 만들며 `characters` 테이블의 EGG row를 필수로 요구한다. 그러나 `be/src/main`에서 확인되는 initializer는 palette만 넣고, character/action/background seed나 migration은 확인되지 않는다.
@@ -56,6 +74,19 @@
 +				.name("뚜잇이")
 +				.currentExp(0)
 ```
+
+> **🔄 재검증 (2026-04-28) — 부분 성립 (자동 적용 미해결)**
+>
+> - **추가됨**: 커밋 `9cd7a92 chore: add MVP character seed SQL` 로 `be/docs/ops/migrations/2026-04-mvp-character-seed.sql` 추가 (DUCK/ELEPHANT/HALLABONG/RACCOON EGG 포함)
+> - **그러나 자동 적용 X**: `docs/ops/migrations/` 위치 → Spring Boot 자동 로드 경로 아님. 수동 실행 전용
+> - `DataInitializer.java:77~96` palette 만 처리, characters 초기화 0
+> - `AuthServiceImpl.java:110~116` `randomEggCharacter()` — EGG 비면 `U00_005` 즉시 throw, graceful fallback 0
+> - `application*.yml` 에 `spring.sql.init.*` 0, Flyway/Liquibase 미도입
+> - `local-init/00-schema-and-seed.sql` 에 EGG row 있으나 git 추적 없음
+> - 두 seed 파일(local-init id 26~32 vs MVP seed id 4~30) ID 범위 불일치 → SSOT 불명확
+> - `be/docs/ops/deployment.md` 는 placeholder
+> - **권장**: `DataInitializer.run()` 에 `countByStage(EGG) == 0` 시 INSERT-IGNORE 추가 + 부팅 시 EGG 검증 fail-fast. 중기 Flyway 도입 + `deployment.md` placeholder 갱신
+> - **우선순위**: **P1**
 
 ## MEDIUM
 ### [MEDIUM-1] 반복 TODO 실체화 중복 방지가 DB 유니크 없이 동작함

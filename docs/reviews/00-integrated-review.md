@@ -117,6 +117,58 @@
 
 ---
 
+## 🔄 재검증 (2026-04-28) — HIGH 14건 전체
+
+`dev` 최신 (HEAD `56c3019`) 기준으로 HIGH 14건 전체를 Explore 서브 에이전트 read-only 로 재검증. **구현 코드 미수정.**
+
+### 결과 요약 (14건)
+
+| 우선순위 | ID | 영역 | 결론 | 한 줄 |
+|---|---|---|---|---|
+| **P0** | FE-LIB-H4 | 다마고치 | 성립 유지 | catch 분기 미수정. 500/403/envelope 실패 모두 미수령 오인 → POST `/me/egg` 자동 발화 |
+| **P0** | FE-AND-H1 | 빌드 보안 | 부분 성립 유지 | `.env.example` 경고 주석만 추가. `pubspec.yaml:127` `- .env` 그대로 |
+| **P1** | BE-H1 | DDL | (변경됨) 미성립 | `.env.prod.example` 만 가드. yml hard fix 권장 |
+| **P1** | BE-H2 | refresh_tokens | 성립 유지 | UNIQUE 제약·race 방어 미수정. `auto_providers` 만 hotfix |
+| **P1** | BE-H3 | EGG seed | 부분 성립 | seed SQL 추가됐으나 수동 실행 전용. 자동 적용 없음 |
+| **P1** | BE-T-H2 | apple key PEM | 성립 유지 | 더미 추정. `git rm` + Apple 포털 확인 + `.gitignore` 권장 |
+| **P1** | FE-LIB-H2 | 위젯 token 복제 | 성립 유지 (부분 완화) | signOut clearAll 추가, AuthInterceptor 401 경로 미정리 |
+| **P1** | FE-iOS-H1 | iOS 위젯 토글 | 성립 (의도적 설계) | 시각 race 3건 fix. fire-and-forget 은 주석으로 명시 |
+| **P1** | FE-iOS-H2 | iOS UserDefaults | 성립 유지 | 변화 없음. 앱·위젯 동시 401 race |
+| **P1** | FE-AND-H2 | OAuth SP | 성립 유지 | 정책-구현 모순 지속. EncryptedSharedPreferences 미적용 |
+| **P1** | FE-AND-H3 | Kakao scheme | 부분 성립 유지 | release keystore 분리만, 빈 폴백·`autoVerify` 부재 그대로 |
+| **P2** | FE-LIB-H1 | WidgetSync 인스턴스 | 부분 성립 유지 | `home_widget` static API 덕에 무해. 1줄 override 로 해결 |
+| **DONE** | FE-LIB-H3 | 가입/온보딩 | **(변경됨) 미성립** ✅ | 온보딩 2단계 신설 + `resolvePostAuthDestination` 4 진입점 적용 |
+| **DONE** | BE-T-H1 | 14세 테스트 날짜 | **(변경됨) 미성립** ✅ | `c55493e` fix. `LocalDate.now().minusYears(14)` 로 전환 |
+
+→ **머지 전 차단 (P0)**: 2건 / **다음 스프린트 (P1)**: 9건 / **기술 부채 (P2)**: 1건 / **해소 (DONE)**: 2건
+
+상세는 각 영역 리뷰 문서(`01-be-core-review.md`, `02-be-tests-review.md`, `03-fe-lib-review.md`, `04-fe-ios-review.md`, `05-fe-android-misc-review.md`)의 해당 카드 끝의 "🔄 재검증" 섹션 참조.
+
+### 작업 분배 제안
+
+| 묶음 | 이슈 | 사유 |
+|---|---|---|
+| **PR-1 (P0)** | FE-LIB-H4 | 운영 데이터 무결성. 단독 PR. catch 분기 1줄로 빠르게 머지 |
+| **PR-2 (P0)** | FE-AND-H1 + FE-AND-H3 빌드 가드 | `app_env.dart` 의 `optional → get` / `dart_defines/secrets.json` 도입을 묶으면 충돌 ↓ |
+| **PR-3 (P1, BE 보안)** | BE-H1 + BE-H2 + BE-T-H2 | DDL 가드 (yml 1줄) + refresh_tokens UNIQUE + apple-key 삭제 — 인프라 단일 PR |
+| **PR-4 (P1, BE 운영)** | BE-H3 | DataInitializer 에 EGG seed 자동 적용 또는 fail-fast |
+| **PR-5 (P1, FE 인증)** | FE-LIB-H2 + FE-iOS-H2 + FE-AND-H2 | refresh token 위젯 복제 제거를 3 플랫폼 일괄 — AuthInterceptor 정리 + iOS Keychain Access Group + Android refresh 제거 |
+| **PR-6 (P1)** | FE-iOS-H1 | iOS 단독, Swift. `inFlightTodoIds` + 롤백 ~30 LoC |
+| **PR-7 (P1, 선택)** | FE-AND-H3 App Links 강화 | Kakao SDK 지원 확인 후 별도 |
+| **PR-8 (P2)** | FE-LIB-H1 | 1줄 수정. 다른 작업 사이드로 끼워넣어도 됨 |
+
+### 공통 체크리스트
+
+- [ ] 각 PR 본문에 본 핸드오프 ID(BE-H2, FE-LIB-H4 등) 명시
+- [ ] 회귀 테스트 추가 (특히 H4 statusCode 분기, BE-H2 동시 로그인 race, FE-LIB-H2 401 경로)
+- [ ] PR-2 머지 전 모든 개발자에게 빌드 명령 변경 (`--dart-define-from-file=dart_defines/secrets.json` 추가) 공지
+- [ ] PR-3 의 BE-T-H2: `git rm` 전에 Apple 개발자 포털 Key ID 무관함을 팀 내 확인. 확인 불가 시 즉시 revoke
+- [ ] PR-3 머지 후 운영 DB 에 `2026-04-mvp-character-seed.sql` 적용 여부 확인 (BE-H3 와 연관)
+- [ ] PR-5 머지 후 다음 시나리오 회귀: 강제 로그아웃 후 위젯 토큰 잔존 X, 앱·위젯 동시 401, 루팅/탈옥 환경 토큰 추출 시도
+- [ ] PR-6 머지 후 다마고치 자동 알 발급 동작 회귀 (FE-LIB-H4 와 영역이 다르지만 위젯 sync 와 얽힘)
+
+---
+
 ## 부록: 사용한 위임 모델/방식
 
 - **BE 코어 / BE 테스트 / FE lib / FE iOS**: Codex (`gpt-5.5` + `model_reasoning_effort=xhigh`, `--write` 권한 / docs/reviews/ 한정)

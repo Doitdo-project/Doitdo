@@ -18,6 +18,7 @@ import 'package:doitdo/presentation/pages/todo/widgets/todo_add_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_detail_sheet.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_dialog.dart';
 import 'package:doitdo/presentation/widgets/common/todo_section.dart';
+import 'package:doitdo/presentation/providers/home_scroll_provider.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_full_layout.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
 import 'package:flutter/foundation.dart';
@@ -45,6 +46,8 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   /// 매 스크롤마다 build 가 다시 돌지 않도록 ValueNotifier 로 분리.
   final ValueNotifier<bool> _headerVisible = ValueNotifier<bool>(true);
 
+  late final ScrollController _scrollController;
+
   /// farewell API 호출 in-flight 여부. 버튼 중복 탭 방지용.
   bool _farewelling = false;
 
@@ -60,14 +63,26 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     //
     // TodoViewModel 은 생성자에서 fetchTodos() 를 자동 호출하므로 홈에서
     // 별도 부트스트랩은 불필요 — build 안 ref.watch 만으로 초기 로드됨.
+    _scrollController = ScrollController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      ref.read(homeScrollControllerProvider.notifier).state = _scrollController;
       ref.read(characterViewModelProvider.notifier).ensureCharacter();
     });
   }
 
   @override
   void dispose() {
+    // dispose 안에서 homeScrollControllerProvider 를 null 로 클리어하던 코드는
+    // 의도적으로 제거했다. 이 widget 이 unmount 되는 시점은 항상 위젯 트리
+    // finalize 중이고 — ConsumerStatefulElement 는 이미 disposed 라 ref.read 가
+    // 어설션이며, notifier 참조를 잡아두고 state= 를 호출해도 listener notify 가
+    // finalize 중인 트리에 흘러들어가 GlobalKey duplicate / Element activate 등의
+    // cascade 어설션을 일으킨다.
+    // homeScrollControllerProvider 는 non-autoDispose 이므로 stale reference 가
+    // 한 개 남는 것뿐이고, doitdo_shell._onTap 이 controller.hasClients 로 안전하게
+    // 검사한 후 폴백한다 (다음 TamagochiPage 가 mount 될 때 새 controller 로 덮어쓴다).
+    _scrollController.dispose();
     _headerVisible.dispose();
     super.dispose();
   }
@@ -316,6 +331,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                   return false;
                 },
                 child: CustomScrollView(
+                  controller: _scrollController,
                   physics: SnapScrollPhysics(snapOffset: headerHeight),
                   slivers: [
                     SliverToBoxAdapter(
@@ -355,6 +371,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                 onTap: _handleFarewellTap,
                               ),
                             ),
+                            SizedBox(height: 12.h),
                           ],
                           StreakSection(
                             streakDays: streak.currentCount,

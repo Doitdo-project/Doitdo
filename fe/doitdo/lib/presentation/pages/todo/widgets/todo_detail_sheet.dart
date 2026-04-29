@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' show max;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -15,39 +18,67 @@ import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
 import 'package:doitdo/data/models/todo_detail_response_dto.dart';
 import 'package:doitdo/presentation/pages/todo/todo_detail_provider.dart';
 
-// ── 단계 enum ───────────────────────────────────────────────────────────
-enum _Step { view, edit, datePicker, categoryPicker, alertPicker }
+enum _Step { main, datePicker, categoryPicker, alertPicker }
 
 class TodoDetailSheet extends ConsumerStatefulWidget {
   const TodoDetailSheet({super.key, required this.todoId, required this.isSomeday});
 
   final String todoId;
-  final bool isSomeday;
+  final bool   isSomeday;
 
   @override
   ConsumerState<TodoDetailSheet> createState() => _TodoDetailSheetState();
 }
 
 class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
-  _Step _step = _Step.view;
+  _Step _step        = _Step.main;
+  bool  _initialized = false;
+  bool  _isDone      = false;
+  bool  _textDirty   = false;
 
-  // 수정 모드 상태
   final _titleController = TextEditingController();
   final _memoController  = TextEditingController();
   final _titleFocusNode  = FocusNode();
-  String    _selectedCategory   = '기타';
-  int?      _selectedCategoryId;
-  TimeOfDay _selectedTime       = const TimeOfDay(hour: 12, minute: 0);
-  bool      _alarmEnabled       = false;
-  TodoDateResult _dateResult    = const TodoDateResult(type: TodoDateType.someday);
-  bool      _isLoading          = false;
+  final _memoFocusNode   = FocusNode();
+  String         _selectedCategory   = '기타';
+  int?           _selectedCategoryId;
+  TimeOfDay      _selectedTime       = const TimeOfDay(hour: 12, minute: 0);
+  bool           _alarmEnabled       = false;
+  TodoDateResult _dateResult         = const TodoDateResult(type: TodoDateType.someday);
+  bool           _isLoading          = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController.addListener(_markDirty);
+    _memoController.addListener(_markDirty);
+    _titleFocusNode.addListener(_onFocusChange);
+    _memoFocusNode.addListener(_onFocusChange);
+  }
 
   @override
   void dispose() {
     _titleController.dispose();
     _memoController.dispose();
     _titleFocusNode.dispose();
+    _memoFocusNode.dispose();
     super.dispose();
+  }
+
+  void _markDirty() {
+    if (_initialized) _textDirty = true;
+  }
+
+  // 제목/메모 포커스가 둘 다 빠졌을 때 자동 저장
+  void _onFocusChange() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_titleFocusNode.hasFocus && !_memoFocusNode.hasFocus &&
+          _textDirty && _initialized && !_isDone) {
+        _textDirty = false;
+        unawaited(_onSave(context, _isDone));
+      }
+    });
   }
 
   void _goToStep(_Step next) {
@@ -55,8 +86,7 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
     setState(() => _step = next);
   }
 
-  // detailDto 로부터 수정 모드 초기 상태 세팅
-  void _initEditState(TodoDetailResponseDto detailDto) {
+  void _initEditFields(TodoDetailResponseDto detailDto) {
     _titleController.text = detailDto.title;
     _memoController.text  = detailDto.content ?? '';
     _selectedCategory     = detailDto.category ?? '기타';
@@ -107,8 +137,8 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
   }
 
   String _formatTime(TimeOfDay t) {
-    final h = t.hour;
-    final m = t.minute.toString().padLeft(2, '0');
+    final h      = t.hour;
+    final m      = t.minute.toString().padLeft(2, '0');
     final period  = h < 12 ? '오전' : '오후';
     final display = h == 0 ? 12 : (h > 12 ? h - 12 : h);
     return '$period $display:$m';
@@ -122,12 +152,12 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
       _titleFocusNode.requestFocus();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('할 일을 입력해주세요.',
+          content:         Text('할 일을 입력해주세요.',
               style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)),
           backgroundColor: AppColors.calendarPoint,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(16),
+          behavior:        SnackBarBehavior.floating,
+          shape:           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin:          const EdgeInsets.all(16),
         ),
       );
       return;
@@ -137,7 +167,7 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
     final vm = ref.read(todoViewModelProvider.notifier);
 
     try {
-      final r = _dateResult;
+      final r       = _dateResult;
       final updated = Todo(
         id:              widget.todoId,
         title:           title,
@@ -164,21 +194,18 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
       await vm.fetchTodos();
       await vm.fetchCalendarData();
 
-      if (mounted) {
-        ref.invalidate(todoDetailProvider(widget.todoId));
-        _goToStep(_Step.view);
-      }
+      if (mounted) ref.invalidate(todoDetailProvider(widget.todoId));
     } catch (e) {
       await vm.fetchTodos();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('수정에 실패했어요. 다시 시도해 주세요.',
+            content:         Text('수정에 실패했어요. 다시 시도해 주세요.',
                 style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)),
             backgroundColor: Colors.red.shade700,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
+            behavior:        SnackBarBehavior.floating,
+            shape:           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin:          const EdgeInsets.all(16),
           ),
         );
       }
@@ -187,13 +214,31 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
     }
   }
 
+  Future<void> _onConfirm(BuildContext context) async {
+    if (_isDone) {
+      Navigator.of(context, rootNavigator: true).pop();
+      return;
+    }
+
+    // _textDirty 를 먼저 false 로 — unfocus 로 인한 focus listener 가 중복 저장하지 않도록
+    final wasDirty = _textDirty;
+    _textDirty = false;
+    FocusScope.of(context).unfocus();
+    final nav = Navigator.of(context, rootNavigator: true);
+
+    if (wasDirty) {
+      await _onSave(context, _isDone);
+    }
+    if (mounted) nav.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final c           = context.colors;
     final fixedHeight = MediaQuery.of(context).size.height * 0.75;
 
     return MediaQuery(
-      data: MediaQuery.of(context).copyWith(viewInsets: EdgeInsets.zero),
+      data:  MediaQuery.of(context).copyWith(viewInsets: EdgeInsets.zero),
       child: Container(
         decoration: BoxDecoration(
           color:        c.surface,
@@ -201,51 +246,51 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
         ),
         height:  fixedHeight,
         padding: const EdgeInsets.only(top: 12),
-        child: SafeArea(
-          top:     false,
-          minimum: const EdgeInsets.only(bottom: 8),
-        child: Column(
-          mainAxisSize:       MainAxisSize.max,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // drag handle
-            Center(
-              child: Container(
-                width:  40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color:        c.border,
-                  borderRadius: BorderRadius.circular(2),
+        child: Padding(
+          // viewPadding 은 키보드 유무와 무관하게 물리적 safe area 를 반환하므로
+          // 키보드 등장/퇴장 시 padding.bottom 이 0↔34 로 바뀌는 레이아웃 흔들림이 없다.
+          padding: EdgeInsets.only(
+            bottom: max(8.0, MediaQuery.viewPaddingOf(context).bottom),
+          ),
+          child: Column(
+            mainAxisSize:       MainAxisSize.max,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width:  40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color:        c.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 180),
-                layoutBuilder: (current, previous) => Stack(
-                  fit:       StackFit.expand,
-                  alignment: Alignment.center,
-                  children:  [...previous, ?current],
+              const SizedBox(height: 16),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration:       const Duration(milliseconds: 180),
+                  layoutBuilder:  (current, previous) => Stack(
+                    fit:       StackFit.expand,
+                    alignment: Alignment.center,
+                    children:  [...previous, ?current],
+                  ),
+                  transitionBuilder: (child, anim) =>
+                      FadeTransition(opacity: anim, child: child),
+                  child: _buildStep(c),
                 ),
-                transitionBuilder: (child, anim) =>
-                    FadeTransition(opacity: anim, child: child),
-                child: _buildStep(c),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 
   Widget _buildStep(DoitdoColors c) {
     switch (_step) {
-      case _Step.view:
-        return KeyedSubtree(key: const ValueKey('view'), child: _buildViewStep(c));
-      case _Step.edit:
-        return KeyedSubtree(key: const ValueKey('edit'), child: _buildEditStep(c));
+      case _Step.main:
+        return KeyedSubtree(key: const ValueKey('main'), child: _buildMainStep(c));
       case _Step.datePicker:
         return KeyedSubtree(
           key:   const ValueKey('date'),
@@ -253,11 +298,14 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
             initialDate:   _dateResult.date ?? DateTime.now(),
             initialResult: _dateResult,
             embedded:      true,
-            onConfirm: (result) => setState(() {
-              _dateResult = result;
-              _step       = _Step.edit;
-            }),
-            onBack: () => _goToStep(_Step.edit),
+            onConfirm: (result) {
+              setState(() {
+                _dateResult = result;
+                _step       = _Step.main;
+              });
+              unawaited(_onSave(context, _isDone));
+            },
+            onBack: () => _goToStep(_Step.main),
           ),
         );
       case _Step.categoryPicker:
@@ -266,12 +314,15 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
           child: TodoCategorySheet(
             selectedCategory: _selectedCategory,
             embedded:         true,
-            onConfirm: (result) => setState(() {
-              _selectedCategory   = result.categoryName;
-              _selectedCategoryId = result.categoryId;
-              _step               = _Step.edit;
-            }),
-            onBack: () => _goToStep(_Step.edit),
+            onConfirm: (result) {
+              setState(() {
+                _selectedCategory   = result.categoryName;
+                _selectedCategoryId = result.categoryId;
+                _step               = _Step.main;
+              });
+              unawaited(_onSave(context, _isDone));
+            },
+            onBack: () => _goToStep(_Step.main),
           ),
         );
       case _Step.alertPicker:
@@ -279,248 +330,24 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
           key:   const ValueKey('alert'),
           child: TodoTimeSheet(
             initialTime:    _selectedTime,
-            initialEnabled: _alarmEnabled,
+            initialEnabled: true,
             embedded:       true,
-            onConfirm: (result) => setState(() {
-              _selectedTime = result.time;
-              _alarmEnabled = result.enabled;
-              _step         = _Step.edit;
-            }),
-            onBack: () => _goToStep(_Step.edit),
+            onConfirm: (result) {
+              setState(() {
+                _selectedTime = result.time;
+                _alarmEnabled = result.enabled;
+                _step         = _Step.main;
+              });
+              unawaited(_onSave(context, _isDone));
+            },
+            onBack: () => _goToStep(_Step.main),
           ),
         );
     }
   }
 
-  // ── 상세 보기 단계 ──────────────────────────────────────────────────
-  Widget _buildViewStep(DoitdoColors c) {
-    final vm          = ref.read(todoViewModelProvider.notifier);
-    final detailAsync = ref.watch(todoDetailProvider(widget.todoId));
-    final categories  = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
-
-    Color getCategoryColor(String name) {
-      try {
-        return categories.firstWhere((cat) => cat.categoryName == name).color;
-      } catch (_) {
-        return AppColors.category1;
-      }
-    }
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-      child: detailAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.calendarPoint),
-        ),
-        error: (err, _) => Center(
-          child: Text('상세 정보를 불러오지 못했습니다.\n$err',
-              style: AppTextStyles.bodyMedium),
-        ),
-        data: (detailDto) {
-          final catName = detailDto.category ?? '기타';
-          final catBg   = getCategoryColor(catName);
-          final catFg   = catBg.computeLuminance() > 0.4
-              ? AppColors.calendarDateText
-              : Colors.white;
-
-          final allLocal = [
-            ...ref.read(todoViewModelProvider).allTodos,
-            ...ref.read(todoViewModelProvider).allSomedayTodos,
-          ];
-          final localMatch = allLocal.where((t) => t.id == widget.todoId);
-          final isDone = localMatch.isNotEmpty
-              ? localMatch.first.isDone
-              : detailDto.status == 'DONE';
-
-          String dateDisplay = '미지정';
-          if (detailDto.type == 'SOMEDAY') {
-            dateDisplay = '언젠가 할 일';
-          } else if (detailDto.startDate != null) {
-            final sParts = detailDto.startDate!.split('-');
-            if (sParts.length == 3) {
-              dateDisplay =
-                  '${int.parse(sParts[1])}월 ${int.parse(sParts[2])}일';
-            } else {
-              dateDisplay = detailDto.startDate!;
-            }
-            if (detailDto.endDate != null) {
-              final eParts = detailDto.endDate!.split('-');
-              if (eParts.length == 3) {
-                dateDisplay +=
-                    ' ~ ${int.parse(eParts[1])}월 ${int.parse(eParts[2])}일';
-              }
-            }
-            if (detailDto.type == 'RECURRING') dateDisplay += ' 시작 (반복)';
-          }
-
-          return Column(
-            mainAxisSize:       MainAxisSize.max,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 상단: 마스코트 + 삭제 버튼
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const _MascotBubble(message: '할 일 상세'),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () async {
-                      final confirmed = await showDoitdoDialog(
-                        context:      context,
-                        title:        '할 일 삭제',
-                        message:      '정말 삭제하시겠어요?',
-                        confirmLabel: '삭제',
-                        cancelLabel:  '취소',
-                      );
-                      if (confirmed == true && mounted) {
-                        if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
-                        widget.isSomeday
-                            ? vm.deleteSomedayTodo(widget.todoId)
-                            : vm.deleteTodo(widget.todoId);
-                      }
-                    },
-                    behavior: HitTestBehavior.opaque,
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 8, top: 8, bottom: 8),
-                      child: Text('삭제',
-                          style: AppTextStyles.labelMedium
-                              .copyWith(color: c.textSecondary)),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // 제목
-              Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: Text(
-                  detailDto.title,
-                  style: AppTextStyles.titleLarge.copyWith(
-                    fontFamily:      'GmarketSansMedium',
-                    fontWeight:      FontWeight.w500,
-                    color:           isDone ? c.textHint : c.textPrimary,
-                    decoration:      isDone ? TextDecoration.lineThrough : null,
-                    decorationColor: c.textHint,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              // 상세 정보 (스크롤)
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _InfoRow(
-                          icon:  Icons.calendar_today_outlined,
-                          label: '기간',
-                          value: dateDisplay),
-                      Divider(color: c.divider, height: 1, thickness: 1),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 20, 8, 20),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.category_outlined,
-                                size: 18, color: Color(0xFFC8966E)),
-                            const SizedBox(width: 12),
-                            Text('카테고리',
-                                style: AppTextStyles.bodyMedium
-                                    .copyWith(color: c.textSecondary)),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                  color:        catBg,
-                                  borderRadius: BorderRadius.circular(6)),
-                              child: Text(catName,
-                                  style: AppTextStyles.labelSmall
-                                      .copyWith(color: catFg)),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Divider(color: c.divider, height: 1, thickness: 1),
-                      _InfoRow(
-                          icon:  Icons.notifications_outlined,
-                          label: '알림',
-                          value: detailDto.alarmTime ?? '없음'),
-                      Divider(color: c.divider, height: 1, thickness: 1),
-                      ...[
-                        const SizedBox(height: 24),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text(
-                                (detailDto.content != null && detailDto.content!.isNotEmpty)
-                                    ? detailDto.content!
-                                    : '메모를 입력해 보세요.',
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  color: (detailDto.content != null && detailDto.content!.isNotEmpty)
-                                      ? c.textPrimary
-                                      : c.textHint,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // 하단 버튼: 닫기 / 수정하기
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () =>
-                          Navigator.of(context, rootNavigator: true).pop(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.loginBtnOff,
-                        foregroundColor: Colors.white,
-                        elevation:       0,
-                        shadowColor:     Colors.transparent,
-                        textStyle:       AppTextStyles.bodyMedium,
-                        shape:           RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        fixedSize: const Size.fromHeight(48),
-                      ),
-                      child: const Text('닫기'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: DoitdoPrimaryButton(
-                      height: 48,
-                      label:  '수정하기',
-                      onPressed: isDone
-                          ? () => showDoitdoDialog(
-                                context:      context,
-                                title:        '수정 불가',
-                                message:      '완료된 할 일은 수정할 수 없어요.\n먼저 미완료로 변경해 주세요.',
-                                confirmLabel: '확인',
-                              )
-                          : () {
-                              _initEditState(detailDto);
-                              _goToStep(_Step.edit);
-                            },
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  // ── 수정 단계 ──────────────────────────────────────────────────────
-  Widget _buildEditStep(DoitdoColors c) {
+  // ── 메인(통합) 단계 ────────────────────────────────────────────────────
+  Widget _buildMainStep(DoitdoColors c) {
     final categories = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
     Color getCategoryColor(String name) {
       try {
@@ -530,9 +357,48 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
       }
     }
 
-    final allLocal   = [...ref.read(todoViewModelProvider).allTodos, ...ref.read(todoViewModelProvider).allSomedayTodos];
-    final localMatch = allLocal.where((t) => t.id == widget.todoId);
-    final isDone     = localMatch.isNotEmpty ? localMatch.first.isDone : false;
+    // 초기화 완료 후 — detailAsync 를 더 이상 구독하지 않고 로컬 상태만 사용
+    if (_initialized) return _buildForm(c, getCategoryColor);
+
+    // 초기 데이터 로드 대기
+    final detailAsync = ref.watch(todoDetailProvider(widget.todoId));
+    return detailAsync.when(
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: AppColors.calendarPoint),
+      ),
+      error: (err, _) => Center(
+        child: Text('상세 정보를 불러오지 못했습니다.\n$err',
+            style: AppTextStyles.bodyMedium),
+      ),
+      data: (detailDto) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          final allLocal = [
+            ...ref.read(todoViewModelProvider).allTodos,
+            ...ref.read(todoViewModelProvider).allSomedayTodos,
+          ];
+          final match = allLocal.where((t) => t.id == widget.todoId);
+          setState(() {
+            _initEditFields(detailDto);
+            _isDone      = match.isNotEmpty
+                ? match.first.isDone
+                : detailDto.status == 'DONE';
+            _initialized = true;
+          });
+        });
+        return const Center(
+          child: CircularProgressIndicator(color: AppColors.calendarPoint),
+        );
+      },
+    );
+  }
+
+  Widget _buildForm(DoitdoColors c, Color Function(String) getCategoryColor) {
+    final vm     = ref.read(todoViewModelProvider.notifier);
+    final catBg  = getCategoryColor(_selectedCategory);
+    final catFg  = catBg.computeLuminance() > 0.4
+        ? AppColors.calendarDateText
+        : Colors.white;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
@@ -540,19 +406,54 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
         mainAxisSize:       MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 마스코트
-          const _MascotBubble(message: '어떻게 수정할까?'),
+          // 상단: 마스코트 + 삭제 버튼
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const _MascotBubble(message: '할 일 상세'),
+              const Spacer(),
+              GestureDetector(
+                onTap: () async {
+                  final confirmed = await showDoitdoDialog(
+                    context:      context,
+                    title:        '할 일 삭제',
+                    message:      '정말 삭제하시겠어요?',
+                    confirmLabel: '삭제',
+                    cancelLabel:  '취소',
+                  );
+                  if (confirmed == true && mounted) {
+                    if (context.mounted) {
+                      Navigator.of(context, rootNavigator: true).pop();
+                    }
+                    widget.isSomeday
+                        ? vm.deleteSomedayTodo(widget.todoId)
+                        : vm.deleteTodo(widget.todoId);
+                  }
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 8, top: 8, bottom: 8),
+                  child: Text('삭제',
+                      style: AppTextStyles.labelMedium
+                          .copyWith(color: c.textSecondary)),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
-          // 제목 입력
+          // 제목 (직접 수정 가능)
           Padding(
             padding: const EdgeInsets.only(left: 8),
             child: TextField(
               controller: _titleController,
               focusNode:  _titleFocusNode,
+              readOnly:   _isDone,
               style: AppTextStyles.titleLarge.copyWith(
-                fontFamily: 'GmarketSansMedium',
-                fontWeight: FontWeight.w500,
-                color:      c.textPrimary,
+                fontFamily:      'GmarketSansMedium',
+                fontWeight:      FontWeight.w500,
+                color:           _isDone ? c.textHint : c.textPrimary,
+                decoration:      _isDone ? TextDecoration.lineThrough : null,
+                decorationColor: c.textHint,
               ),
               decoration: InputDecoration(
                 hintText:  '할 일을 입력해주세요.',
@@ -575,23 +476,27 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                 mainAxisSize:       MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 기간 — 언젠가 할 일은 날짜 변경 불가
+                  // 기간
                   GestureDetector(
-                    onTap: widget.isSomeday ? null : () => _goToStep(_Step.datePicker),
+                    onTap: (_isDone || widget.isSomeday)
+                        ? null
+                        : () => _goToStep(_Step.datePicker),
                     child: _OptionRow(
                       icon:      Icons.calendar_today_outlined,
                       label:     '기간',
-                      valueText: widget.isSomeday ? '언젠가 할 일' : _dateResult.displayText,
-                      colors:    c,
-                      disabled:  widget.isSomeday,
+                      valueText: widget.isSomeday
+                          ? '언젠가 할 일'
+                          : _dateResult.displayText,
+                      colors:   c,
+                      disabled: _isDone || widget.isSomeday,
                     ),
                   ),
                   Divider(color: c.divider, height: 1, thickness: 1),
                   // 카테고리
                   GestureDetector(
-                    onTap: () => _goToStep(_Step.categoryPicker),
+                    onTap: _isDone ? null : () => _goToStep(_Step.categoryPicker),
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 20, 0, 20),
+                      padding: const EdgeInsets.fromLTRB(8, 20, 8, 20),
                       child: Row(
                         children: [
                           const Icon(Icons.category_outlined,
@@ -602,48 +507,53 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                                   .copyWith(color: c.textSecondary)),
                           const Spacer(),
                           Container(
-                            width:  8,
-                            height: 8,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color:  getCategoryColor(_selectedCategory),
-                              shape:  BoxShape.circle,
+                              color:        catBg,
+                              borderRadius: BorderRadius.circular(6),
                             ),
+                            child: Text(_selectedCategory,
+                                style: AppTextStyles.labelSmall
+                                    .copyWith(color: catFg)),
                           ),
-                          const SizedBox(width: 6),
-                          Text(_selectedCategory,
-                              style: AppTextStyles.bodyMedium
-                                  .copyWith(color: c.textPrimary)),
-                          const SizedBox(width: 2),
-                          Icon(Icons.chevron_right,
-                              size: 16, color: c.textHint),
+                          if (!_isDone) ...[
+                            const SizedBox(width: 6),
+                            Icon(Icons.chevron_right,
+                                size: 16, color: c.textHint),
+                          ],
                         ],
                       ),
                     ),
                   ),
+                  Divider(color: c.divider, height: 1, thickness: 1),
                   // 알림
                   GestureDetector(
-                    onTap: () => _goToStep(_Step.alertPicker),
+                    onTap: _isDone ? null : () => _goToStep(_Step.alertPicker),
                     child: _OptionRow(
                       icon:      Icons.notifications_outlined,
                       label:     '알림',
                       valueText: _alarmEnabled
                           ? _formatTime(_selectedTime)
                           : '없음',
-                      colors: c,
+                      colors:   c,
+                      disabled: _isDone,
                     ),
                   ),
                   Divider(color: c.divider, height: 1, thickness: 1),
-                  const SizedBox(height: 16),
-                  // 메모
+                  const SizedBox(height: 24),
+                  // 메모 (직접 수정 가능)
                   Padding(
                     padding: const EdgeInsets.only(left: 8),
                     child: TextField(
                       controller:   _memoController,
+                      focusNode:    _memoFocusNode,
+                      readOnly:     _isDone,
                       minLines:     4,
                       maxLines:     null,
                       keyboardType: TextInputType.multiline,
                       style:        AppTextStyles.bodyMedium
-                          .copyWith(color: c.textPrimary),
+                          .copyWith(color: _isDone ? c.textHint : c.textPrimary),
                       decoration: InputDecoration(
                         hintText:       '메모를 입력해 보세요.',
                         hintStyle:      AppTextStyles.bodyMedium
@@ -659,11 +569,35 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
             ),
           ),
           const SizedBox(height: 12),
-          // 수정 완료 버튼
-          DoitdoPrimaryButton(
-            height:    48,
-            label:     _isLoading ? '수정 중...' : '수정 완료',
-            onPressed: _isLoading ? null : () => _onSave(context, isDone),
+          // 하단 버튼
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () =>
+                      Navigator.of(context, rootNavigator: true).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.loginBtnOff,
+                    foregroundColor: Colors.white,
+                    elevation:       0,
+                    shadowColor:     Colors.transparent,
+                    textStyle:       AppTextStyles.bodyMedium,
+                    shape:           RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    fixedSize: const Size.fromHeight(48),
+                  ),
+                  child: const Text('닫기'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DoitdoPrimaryButton(
+                  height:    48,
+                  label:     '확인',
+                  onPressed: () => _onConfirm(context),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -671,33 +605,7 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
   }
 }
 
-// ── 공통 위젯 ─────────────────────────────────────────────────────────
-
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.icon, required this.label, required this.value});
-  final IconData icon;
-  final String   label;
-  final String   value;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 20, 8, 20),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: const Color(0xFFC8966E)),
-          const SizedBox(width: 12),
-          Text(label,
-              style: AppTextStyles.bodyMedium.copyWith(color: c.textSecondary)),
-          const Spacer(),
-          Text(value,
-              style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary)),
-        ],
-      ),
-    );
-  }
-}
+// ── 공통 위젯 ─────────────────────────────────────────────────────────────
 
 class _OptionRow extends StatelessWidget {
   const _OptionRow({
@@ -707,11 +615,11 @@ class _OptionRow extends StatelessWidget {
     required this.colors,
     this.disabled = false,
   });
-  final IconData      icon;
-  final String        label;
-  final String        valueText;
-  final DoitdoColors  colors;
-  final bool          disabled;
+  final IconData     icon;
+  final String       label;
+  final String       valueText;
+  final DoitdoColors colors;
+  final bool         disabled;
 
   @override
   Widget build(BuildContext context) {
@@ -726,8 +634,8 @@ class _OptionRow extends StatelessWidget {
                   .copyWith(color: colors.textSecondary)),
           const Spacer(),
           Text(valueText,
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: disabled ? colors.textHint : colors.textPrimary)),
+              style: AppTextStyles.bodyMedium.copyWith(
+                  color: disabled ? colors.textHint : colors.textPrimary)),
           if (!disabled) ...[
             const SizedBox(width: 2),
             Icon(Icons.chevron_right, size: 16, color: colors.textHint),
@@ -747,7 +655,8 @@ class _MascotBubble extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Image.asset('assets/images/Dooit.png', width: 30, height: 30),
+        Image.asset('assets/images/Dooit.png',
+            width: 30, height: 30, filterQuality: FilterQuality.high),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

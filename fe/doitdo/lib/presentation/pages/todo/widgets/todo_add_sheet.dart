@@ -264,7 +264,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           key: const ValueKey('alert'),
           child: TodoTimeSheet(
             initialTime:    _selectedTime,
-            initialEnabled: _alarmEnabled,
+            initialEnabled: true,
             embedded: true,
             onConfirm: (result) {
               setState(() {
@@ -484,7 +484,7 @@ class _MascotBubble extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Image.asset('assets/images/Dooit.png', width: 30, height: 30),
+        Image.asset('assets/images/Dooit.png', width: 30, height: 30, filterQuality: FilterQuality.high),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

@@ -57,6 +57,20 @@
   // "OAuth 로 발급된 access/refresh 토큰은 반드시 이걸로 보관. SharedPreferences 금지."
   ```
 
+> **🔄 재검증 (2026-04-28) — 성립 유지 (변화 없음)**
+>
+> - `WidgetSharedStore.kt:24` `KEY_REFRESH_TOKEN` 상수 그대로, `:32~33` 일반 `SharedPreferences MODE_PRIVATE`, `:56~62` access/refresh 평문 저장 그대로
+> - `WidgetApiClient.kt:114~138` `refreshAccessToken()` 가 위젯에서 자급자족 refresh 순환 (refresh 응답을 다시 SP 에 덮어씀)
+> - `androidx.security:security-crypto` 의존성 0
+> - `pubspec.yaml:75~77` "SharedPreferences 금지" 정책 주석 그대로 — **정책-구현 모순 지속**
+> - 최근 widget 디렉토리 커밋 (`6d57800` / `25ea67d` / `491795e` / `53dea96`) 모두 기능 / 레이아웃, 보안 미수정
+>
+> **권장 (현실적)**: `KEY_REFRESH_TOKEN` 위젯 SP 에서 제거 → 만료 시 위젯이 PendingIntent 로 앱 깨우고 앱이 secure_storage 에서 refresh → 위젯엔 access only 위임
+>
+> **권장 (장기)**: `EncryptedSharedPreferences` 전환 (`androidx.security:security-crypto:1.1.0+`)
+>
+> **우선순위**: **P1**
+
 ---
 
 ### [HIGH-3] Kakao Native App Key 미설정 시 빈 scheme 등록 — OAuth 코드 인터셉트 가능

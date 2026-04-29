@@ -31,7 +31,7 @@
 			<string>google</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.733189444569-ja6ti0dpmutgrmjmnbjtbsfjbqmshn9o</string>
+				<string>com.googleusercontent.apps.487273055258-9eh6mpan96hoh2ig532lio101u49mlhr</string>
 			</array>
 		</dict>
 		<dict>
@@ -50,7 +50,7 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>GIDClientID</key>
-	<string>733189444569-ja6ti0dpmutgrmjmnbjtbsfjbqmshn9o.apps.googleusercontent.com</string>
+	<string>487273055258-9eh6mpan96hoh2ig532lio101u49mlhr.apps.googleusercontent.com</string>
 	<key>GIDServerClientID</key>
 	<string>487273055258-6c59oog60514b1fdj5ek5apnbcub7btn.apps.googleusercontent.com</string>
 	<key>LSApplicationQueriesSchemes</key>

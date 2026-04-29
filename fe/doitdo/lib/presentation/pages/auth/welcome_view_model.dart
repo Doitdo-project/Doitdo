@@ -31,8 +31,7 @@ class WelcomeSuccess {
 /// - 로딩: `AsyncLoading()`
 /// - 성공: `AsyncData(WelcomeSuccess)` — View 가 `user` 의 온보딩 플래그를 보고 라우팅
 /// - 실패: `AsyncError` — 화면에서 스낵바
-class WelcomeViewModel
-    extends AutoDisposeAsyncNotifier<WelcomeSuccess?> {
+class WelcomeViewModel extends AsyncNotifier<WelcomeSuccess?> {
   @override
   Future<WelcomeSuccess?> build() async => null;
 
@@ -75,6 +74,6 @@ class WelcomeViewModel
 }
 
 final welcomeViewModelProvider =
-    AsyncNotifierProvider.autoDispose<WelcomeViewModel, WelcomeSuccess?>(
+    AsyncNotifierProvider<WelcomeViewModel, WelcomeSuccess?>(
   WelcomeViewModel.new,
 );

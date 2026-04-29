@@ -991,6 +991,7 @@ class _MascotBubble extends StatelessWidget {
           'assets/images/Dooit.png',
           width: 30,
           height: 30,
+          filterQuality: FilterQuality.high,
         ),
         const SizedBox(width: 8),
         Container(
