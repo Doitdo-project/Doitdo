@@ -419,6 +419,23 @@ class WelcomePage extends ConsumerWidget {
           );
         });
 
+    // ── ref.listen 만으로 부족한 케이스 보강 ──
+    // iOS 카카오 SDK 호출 시 외부 인텐트(카카오톡)로 점프했다 돌아오는 사이
+    // WelcomePage 가 dispose & 재빌드 되면, 그 짧은 순간 활성 listener 가 없어
+    // `state = AsyncData(WelcomeSuccess)` 변화 신호가 누락된다 (재빌드 후 새
+    // listener 는 변화가 아니라 "현재 값이 success" 인 상태로 시작해서 콜백 발화 X).
+    // → build 시점에 현재 state 가 이미 success 면 PostFrameCallback 으로 라우팅.
+    //   라우팅 후 위젯이 dispose 되어 매 rebuild 마다 큐잉되는 일은 자연 종료.
+    //   go_router 의 context.go 는 idempotent 라 listener 와 중복 호출되어도 무해.
+    final asyncState = ref.watch(welcomeViewModelProvider);
+    asyncState.whenOrNull(data: (success) {
+      if (success == null) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        context.go(resolvePostAuthDestination(ref, success.user));
+      });
+    });
+
     // 인증 화면은 브랜드 크림 톤 + 캐릭터 일러스트 기반이라 themeMode 토글과
     // 무관하게 라이트 테마로 강제. 토큰 텍스트/위젯이 라이트 값을 받아야
     // 크림 배경 위 가독성이 보장된다.
