@@ -53,6 +53,24 @@
 + }
 ```
 
+> **🔄 재검증 (2026-04-28) — 성립 유지 (부분 완화)**
+>
+> **개선됨 (정상 로그아웃 경로)**:
+> - `auth_repository_impl.dart:255~258` `signOut()` 가 `widgetSync.clearAll()` 호출 추가
+> - `widget_sync_service.dart:103` `clearAll()` 이 `_save(_keyRefreshToken, '')` 포함
+>
+> **핵심 잔존 (4건)**:
+> 1. **AuthInterceptor refresh 실패 경로 미정리** (`auth_interceptor.dart:84~86, 158~161`) — `_clearTokens()` 가 secure storage 만 지움. `widgetSync.clearAll()` 호출 X. `AuthInterceptor` 가 `WidgetSyncService` 의존성 자체가 없음
+> 2. `widget_sync_service.dart:40, 84~92` 의 `_keyRefreshToken` 저장 로직 그대로 — 설계 자체 미변경
+> 3. `splash_page.dart:137~141` 부팅 시마다 `unawaited(syncAuthTokens(refreshToken: ...))` 갱신 (fire-and-forget)
+> 4. iOS App Group UserDefaults 암호화 없음 — 탈옥 시 평문 추출 가능 (코드 주석 자체에 명시)
+>
+> **권장 (단기)**: `AuthInterceptor` 에 `WidgetSyncService` 주입 + `_clearTokens()` 직후 `widgetSync.clearAll()` 호출 (최소 1줄)
+>
+> **권장 (근본)**: 위젯 공유 저장소에 refresh token 두는 설계 폐기 — access only + 만료 시 앱 foreground 유도 또는 위젯 전용 단기 1회성 토큰
+>
+> **우선순위**: **P1**
+
 ### [HIGH-3] 만 14세/생년월일 검증 경로가 FE 가입/소셜 신규 유저 플로우에 없음
 
 - 파일: `fe/doitdo/lib/presentation/pages/auth/register_page.dart:153`, `fe/doitdo/lib/data/models/signup_request_dto.dart:1`, `fe/doitdo/lib/presentation/pages/auth/welcome_page.dart:399`
