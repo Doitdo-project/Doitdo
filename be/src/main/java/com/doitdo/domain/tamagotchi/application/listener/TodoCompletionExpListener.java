@@ -9,7 +9,6 @@ import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.event.TodoCompletedEvent;
 import com.doitdo.domain.todo.repository.TodoRepository;
 import java.time.LocalDateTime;
-import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -83,8 +82,7 @@ public class TodoCompletionExpListener {
 				&& before < requiredExp
 				&& after >= requiredExp
 				&& uc.getFarewellAvailableAt() == null) {
-			long hours = ThreadLocalRandom.current().nextLong(48, 97);
-			uc.scheduleFarewell(LocalDateTime.now().plusHours(hours));
+			uc.scheduleFarewell(LocalDateTime.now());
 		}
 		todo.markExpGranted();
 		log.debug("[exp] granted delta={} user={} todo={} currentExp={}",
