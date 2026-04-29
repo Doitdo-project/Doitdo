@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:doitdo/presentation/pages/auth/welcome_view_model.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
 import 'package:doitdo/presentation/providers/current_user_provider.dart';
 
@@ -29,6 +30,7 @@ class AccountViewModel extends AutoDisposeAsyncNotifier<bool?> {
       await ref.read(fcmTokenRegistrarProvider).unregister();
       await ref.read(authRepositoryProvider).signOut();
       ref.invalidate(currentUserProvider);
+      ref.invalidate(welcomeViewModelProvider);
       return true;
     });
   }
