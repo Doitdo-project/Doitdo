@@ -69,6 +69,21 @@
 +    }
 ```
 
+> **🔄 재검증 (2026-04-28) — 성립 유지 (변화 없음)**
+>
+> - `SharedStore.swift:17~22` `Key.refreshToken = "doitdo.widget.refreshToken"` + `:48~57` `updateRefreshToken` 가 App Group `UserDefaults` 평문 저장 그대로
+> - `WidgetApiClient.swift:41~44, 71~106` 위젯이 직접 `refreshAccessToken()` 호출 + 응답을 `SharedStore.updateRefreshToken()` 으로 다시 평문 덮어쓰기
+> - `Runner.entitlements` / `DoitdoWidgetExtension.entitlements` 모두 `keychain-access-groups` 키 부재 (App Group 만 존재)
+> - 앱 측은 `flutter_secure_storage` (Keychain) 사용 — 정책-구현 격차 그대로
+>
+> **핵심 race**: 앱·위젯 동시 401 시 둘 다 동일 refresh 토큰으로 rotation → 늦은 쪽 토큰 무효화 → UserDefaults vs Keychain 토큰 pair 불일치 → 강제 로그아웃 루프
+>
+> **권장 (단기)**: 위젯이 401 시 직접 refresh 대신 `throw .unauthorized` 후 다음 timeline reload 에서 앱이 갱신한 토큰 자연 복구
+>
+> **권장 (중장기)**: `keychain-access-groups` entitlement 추가 + Keychain Access Group 으로 refresh 이전
+>
+> **우선순위**: **P1**
+
 ### MEDIUM-01. APNs 등록이 `super.application`보다 먼저 실행되어 FCM swizzling/plugin 초기화와 race 가능
 
 - 위치: `fe/doitdo/ios/Runner/AppDelegate.swift:15`, `fe/doitdo/ios/Runner/AppDelegate.swift:22`

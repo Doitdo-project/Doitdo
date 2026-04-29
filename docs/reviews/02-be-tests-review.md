@@ -28,6 +28,19 @@
 +        )
 ```
 
+> **🔄 재검증 (2026-04-28) — (변경됨) 미성립** ✅
+>
+> 커밋 `c55493e fix : 생년월일 온보딩 테스트 날짜 의존성 제거` (2026-04-28 09:25 KST) 가 정확히 fix:
+> - `UserServiceImplOnboardingTest.java:50` `LocalDate.now().minusYears(14)` 로 교체
+> - `:77` `LocalDate.now().minusYears(14).plusDays(1)` 로 교체
+> - `grep '2026-04-2[78]\|LocalDate.of(2026\|LocalDate.of(2012' be/src/test/` → 0건
+>
+> **잔존 위험 (낮음, P2)**: `UserServiceImpl.java:179` 가 `Clock` 주입 없이 `LocalDate.now()` 직접 호출. 결정론적 시간 고정 테스트 불가. CI 타임존 / DST 경계 재발 가능. `Clock` 빈 주입 + `Clock.fixed()` 패턴 미도입 (`grep Clock be/src/test/` → 0)
+>
+> **권장**: 즉시 수정 불필요. 장기적으로 `Clock` 주입 구조 전환은 별도 P2 개선 이슈로 트래킹
+>
+> **우선순위**: **DONE** (Clock 개선은 P2 별도)
+
 ### [HIGH-2] 테스트 리소스에 private key PEM 블록이 커밋됐다
 - 파일: `be/src/test/resources/apple-test-key.p8:1`
 - 문제: `-----BEGIN PRIVATE KEY-----` 형식의 개인키가 테스트 리소스에 추가됐다. `AppleClientSecretGeneratorTest`는 이미 `@TempDir`에서 EC 키를 즉석 생성하므로 이 파일은 테스트에 필요하지 않은 것으로 보인다.
@@ -42,6 +55,24 @@
 +[REDACTED TEST PRIVATE KEY MATERIAL]
 +-----END PRIVATE KEY-----
 ```
+
+> **🔄 재검증 (2026-04-28) — 성립 유지 (변화 없음, 회전 권장)**
+>
+> - `be/src/test/resources/apple-test-key.p8` 그대로 잔존 (커밋 `72c4152` 추가, 이후 변경 없음)
+> - 헤더/푸터 정상 PKCS#8 EC P-256 (138 바이트 DER) — **구조적으로 유효한 키**
+> - `placeholder` / `dummy` / `fake` 등 명시 키워드 본문에 0
+> - `AppleClientSecretGeneratorTest` 는 `@TempDir` 즉석 생성 키만 사용 → **이 파일 자체가 기능적으로 불필요**
+> - `.gitignore` 에 `*.p8` 패턴 미등록
+> - 이미 외부 원격 push 됨 → secret scanner 경보 유발 가능
+>
+> **판정**: 구조적 dummy 추정이나 Apple 포털 실제 등록 여부 검증 불가 → 회전 권장
+>
+> **권장**:
+> 1. `git rm be/src/test/resources/apple-test-key.p8` (불필요)
+> 2. Apple 포털 Key ID 확인 후 무관 시 revoke 불필요 기록, 확인 불가 시 즉시 revoke
+> 3. `be/.gitignore` 에 `*.p8`, `*-key*.pem`, `*.key` 추가
+>
+> **우선순위**: **P1**
 
 ## MEDIUM
 
