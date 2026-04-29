@@ -191,7 +191,7 @@ class TodoCompletionExpListenerTest {
 
 		assertThat(uc.getCurrentExp()).isEqualTo(100);
 		assertThat(uc.getFarewellAvailableAt())
-				.isBetween(before.plusHours(48), after.plusHours(96));
+				.isBetween(before, after);
 		assertThat(todo.getExpGranted()).isTrue();
 	}
 
