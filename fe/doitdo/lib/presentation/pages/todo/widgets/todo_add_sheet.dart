@@ -264,7 +264,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           key: const ValueKey('alert'),
           child: TodoTimeSheet(
             initialTime:    _selectedTime,
-            initialEnabled: _alarmEnabled,
+            initialEnabled: true,
             embedded: true,
             onConfirm: (result) {
               setState(() {
