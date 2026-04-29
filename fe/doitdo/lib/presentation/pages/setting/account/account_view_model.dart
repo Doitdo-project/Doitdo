@@ -30,7 +30,7 @@ class AccountViewModel extends AutoDisposeAsyncNotifier<bool?> {
       await ref.read(fcmTokenRegistrarProvider).unregister();
       await ref.read(authRepositoryProvider).signOut();
       ref.invalidate(currentUserProvider);
-      ref.invalidate(welcomeViewModelProvider);
+      ref.read(welcomeViewModelProvider.notifier).reset();
       return true;
     });
   }

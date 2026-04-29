@@ -71,6 +71,13 @@ class WelcomeViewModel extends AsyncNotifier<WelcomeSuccess?> {
       return WelcomeSuccess(user: user, isNewUser: isNewUser);
     });
   }
+
+  /// 로그아웃 시 상태를 즉시 초기화.
+  ///
+  /// `ref.invalidate` 는 active watcher 가 없을 때 lazy 로 동작해
+  /// WelcomePage 가 다시 열릴 때 이전 `AsyncData(WelcomeSuccess)` 를 잠깐 보는
+  /// 레이스 컨디션이 생긴다. 이 메서드는 동기적으로 상태를 null 로 설정해 그 틈을 막는다.
+  void reset() => state = const AsyncValue.data(null);
 }
 
 final welcomeViewModelProvider =
