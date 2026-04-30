@@ -203,7 +203,15 @@ class CharacterCard extends StatelessWidget {
   // 에만 호출된다.
   String get _displayName => character!.name;
 
-  String get _displayProgressLabel => '성장률 ${character!.growthPercent}%';
+  String get _displayProgressLabel {
+    final c = character!;
+    // 성숙기는 더 자라지 않으므로 100% 도달 시 % 대신 MAX 로 표시한다.
+    // (canFarewell 플래그가 true 인 시점도 같은 의미라 stage + 100% 로 검사.)
+    if (c.stage == CharacterStage.adult && c.growthPercent >= 100) {
+      return '성장률 MAX';
+    }
+    return '성장률 ${c.growthPercent}%';
+  }
 
   double get _displayProgress =>
       character!.growthPercent.clamp(0, 100) / 100;
