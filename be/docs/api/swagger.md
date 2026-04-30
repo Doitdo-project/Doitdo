@@ -13,6 +13,12 @@
 
 각 그룹은 `OpenApiConfig` 의 `GroupedOpenApi` 빈에 의해 `packagesToScan = "com.doitdo.domain.{group}.api.controller"` 로 잡힌다. 새 컨트롤러는 반드시 이 경로 아래 위치해야 그룹에 노출된다.
 
+### TODO API 응답 정책 메모
+
+- `GET /api/todos` 응답은 `type=SOMEDAY`, `status=DONE`, `done_date < 오늘(KST)` 인 항목을 제외한다.
+- `done_date IS NULL` 인 기존 `SOMEDAY DONE` 데이터는 제외하지 않는다.
+- `GET /api/todos/search`, `GET /api/todos/calendar` 응답에는 이 제외 정책을 적용하지 않는다.
+
 ## 2. 컨트롤러 작성 템플릿 (복붙 가능)
 
 ```java
