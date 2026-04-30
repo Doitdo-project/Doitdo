@@ -7,7 +7,7 @@
 - 의존성: `springdoc-openapi-starter-webmvc-ui:2.7.0` (`be/build.gradle`)
 - 활성 프로파일: **`dev` / `local` 한정** (운영 보안)
 - 설정 위치: `com.doitdo.global.config.OpenApiConfig`
-- 9개 그룹: `auth`, `user`, `todo`, `tamagotchi`, `inventory`, `shop`, `notification`, `setting`, `global`
+- 11개 그룹: `auth`, `user`, `todo`, `tamagotchi`, `streak`, `inventory`, `shop`, `notification`, `setting`, `bugreport`, `global`
 - 인증: JWT BearerAuth (Swagger UI 의 Authorize 버튼)
 - UI: <http://localhost:8080/swagger-ui.html> (부팅 후)
 
