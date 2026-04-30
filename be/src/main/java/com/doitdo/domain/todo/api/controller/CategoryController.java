@@ -68,7 +68,7 @@ public class CategoryController {
 	public GlobalApiResponse<CategoryResp> update(
 			@AuthenticationPrincipal CustomUserDetails userDetails,
 			@PathVariable Long categoryId,
-			@RequestBody CategoryUpdateReq req) {
+			@Valid @RequestBody CategoryUpdateReq req) {
 		return GlobalApiResponse.ok("카테고리 수정 완료",
 				categoryService.update(userDetails.getUserId(), categoryId, req));
 	}
