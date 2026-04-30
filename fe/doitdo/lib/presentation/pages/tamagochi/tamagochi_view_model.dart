@@ -45,31 +45,27 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
   /// 홈 캐릭터 슬롯이 탭됐을 때 호출.
   ///
   /// 동작:
-  ///   1. 다음 action 결정 — 마지막이 eye 였으면 idle, 그 외엔 eye (현 시점은
-  ///      idle ↔ eye 만 토글). null 상태(첫 탭)는 eye 부터 시작해 "방금 눌렀다"
-  ///      는 시각적 상호작용이 이미지 변화로 드러나게 한다.
-  ///   2. 즉시 state 의 [TamagochiState.speechBubble] 을 랜덤 메시지로 갱신
+  ///   1. 즉시 state 의 [TamagochiState.speechBubble] 을 랜덤 메시지로 갱신
   ///      (네트워크보다 먼저 사용자에게 반응을 보여준다).
-  ///   3. 백그라운드에서 `GET /api/characters/me/actions/{actionType}` 호출.
-  ///      현재는 응답을 UI 에 반영하지 않고 로그만 남긴다 — 실패해도 말풍선은
-  ///      그대로 유지되어 인터랙션이 끊겨 보이지 않는다.
+  ///   2. 백그라운드에서 `GET /api/characters/me/actions/IDLE` 호출.
+  ///      응답으로 받은 gif URL 을 [actionUrl] 에 잠깐 세팅 → 평상시 EYE gif 위에
+  ///      덮어 그려 인터랙션 피드백. 실패해도 말풍선은 그대로 유지.
+  ///
+  /// 평상시(EYE) 는 로컬 에셋(`assets/gif/eye/{characterId}.gif`) 으로 처리하므로
+  /// 이 함수에서 EYE 를 호출하지 않는다 — 매 탭마다 서버에 핑 보내는 비용 회피 +
+  /// 이후 다른 인터랙션(EAT/HAPPY 등) 추가 시에도 IDLE 자리에 새 액션을 끼워
+  /// 넣기 좋다.
   ///
   /// [remainingTodayTodos] 는 "오늘의 할 일" 미완료 개수. 0 이면 칭찬 풀,
   /// 1 이상이면 잔여 todo 풀이 메시지 후보에 추가된다.
   void onCharacterTap({required int remainingTodayTodos}) {
-    final nextAction = switch (state.lastTapAction) {
-      CharacterAction.eye => CharacterAction.idle,
-      _ => CharacterAction.eye,
-    };
     final message = _pickSpeechBubble(remainingTodayTodos);
-    state = state.copyWith(
-      speechBubble: message,
-      lastTapAction: nextAction,
-    );
+    state = state.copyWith(speechBubble: message);
 
     if (_tapping) return;
     _tapping = true;
-    _triggerActionAsync(nextAction).whenComplete(() => _tapping = false);
+    _triggerActionAsync(CharacterAction.idle)
+        .whenComplete(() => _tapping = false);
   }
 
   Future<void> _triggerActionAsync(CharacterAction action) async {
