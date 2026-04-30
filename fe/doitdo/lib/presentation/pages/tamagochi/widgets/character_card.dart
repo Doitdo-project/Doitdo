@@ -295,28 +295,64 @@ class _RoundIconButton extends StatelessWidget {
   }
 }
 
+/// 캐릭터 머리 위 말풍선. 둥근 사각형 본체 + 아래로 향하는 작은 삼각형 꼬리.
+///
+/// 본체와 꼬리가 동일 색이라 시각적으로 한 도형처럼 보인다. 색상은 라이트/다크
+/// 무관 고정(흰색) — 카드 자체가 잔디 배경 위에 떠 있어 토큰을 따르면 다크에서
+/// 가독성이 깨진다.
 class _SpeechBubble extends StatelessWidget {
   const _SpeechBubble({required this.text});
 
   final String text;
 
+  static const Color _bubbleColor = Colors.white;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-      ),
-      // 흰 말풍선 배경은 라이트/다크 무관 고정. 텍스트도 토큰이 아닌 고정 어두운 색.
-      child: Text(
-        text,
-        style: AppTextStyles.bodySmall.copyWith(
-          color: Colors.black87,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+          decoration: BoxDecoration(
+            color: _bubbleColor,
+            borderRadius: BorderRadius.circular(16.r),
+          ),
+          child: Text(
+            text,
+            style: AppTextStyles.bodySmall.copyWith(color: Colors.black87),
+          ),
         ),
-      ),
+        CustomPaint(
+          size: Size(10.w, 6.h),
+          painter: _SpeechBubbleTailPainter(color: _bubbleColor),
+        ),
+      ],
     );
   }
+}
+
+/// 말풍선 하단에 붙는 작은 삼각형(꼬리). 위쪽은 평평, 아래쪽은 한 점으로 모이는
+/// 이등변 삼각형. 본체와 같은 색을 받아 한 덩어리로 그린다.
+class _SpeechBubbleTailPainter extends CustomPainter {
+  const _SpeechBubbleTailPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SpeechBubbleTailPainter old) =>
+      old.color != color;
 }
 
 /// 서버 thumbnailUrl 이 비어있거나 로드 실패했을 때 자리를 지키는 중립 플레이스홀더.
