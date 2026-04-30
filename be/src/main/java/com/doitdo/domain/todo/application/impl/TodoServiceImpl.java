@@ -31,6 +31,7 @@ import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TodoErrorCode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -85,7 +86,8 @@ public class TodoServiceImpl implements TodoService {
 				.and(TodoSpecifications.byStatus(req.status()))
 				.and(TodoSpecifications.byCategoryId(categoryId))
 				.and(TodoSpecifications.byType(req.type()))
-				.and(TodoSpecifications.byKeyword(req.q()));
+				.and(TodoSpecifications.byKeyword(req.q()))
+				.and(TodoSpecifications.excludeExpiredSomedayDone(LocalDate.now(ZoneId.of("Asia/Seoul"))));
 
 		// Sort 결정
 		Sort sort = resolveSort(req.sort());
