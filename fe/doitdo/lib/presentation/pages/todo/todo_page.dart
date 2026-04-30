@@ -347,6 +347,8 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                         return days[date.weekday % 7];
                       },
                       weekdayStyle: AppTextStyles.labelLarge.copyWith(color: colors.textSecondary),
+                      // ✅ 요일 헤더: 일요일=빨강, 토요일=파랑
+                      // weekendStyle은 토/일 동일 색상만 가능 → defaultBuilder로 구분
                       weekendStyle: AppTextStyles.labelLarge.copyWith(color: colors.textSecondary),
                     ),
                     calendarStyle: CalendarStyle(
@@ -356,11 +358,27 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                       selectedDecoration: const BoxDecoration(color: AppColors.calendarPoint, shape: BoxShape.circle),
                       selectedTextStyle: AppTextStyles.labelMedium.copyWith(color: Colors.white),
                       defaultTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textPrimary),
-                      weekendTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textPrimary),
+                      weekendTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textPrimary), // defaultBuilder가 우선 적용
                       outsideTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textHint),
                       cellMargin: const EdgeInsets.all(10),
                     ),
                     calendarBuilders: CalendarBuilders(
+                      // ✅ 날짜 숫자: 일요일=빨강, 토요일=파랑 / 요일 헤더는 모두 검정
+                      defaultBuilder: (context, day, focusedDay) {
+                        Color? textColor;
+                        if (day.weekday == DateTime.sunday) {
+                          textColor = Colors.red;
+                        } else if (day.weekday == DateTime.saturday) {
+                          textColor = Colors.blue;
+                        }
+                        if (textColor == null) return null;
+                        return Center(
+                          child: Text(
+                            '${day.day}',
+                            style: AppTextStyles.labelMedium.copyWith(color: textColor),
+                          ),
+                        );
+                      },
                       markerBuilder: (context, day, events) {
                         if (events.isEmpty) return const SizedBox.shrink();
                         var todos = events.cast<Todo>().toList();
