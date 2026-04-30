@@ -39,6 +39,7 @@
 | `shop` | purchase_logs |
 | `notification` | device_tokens |
 | `setting` | user_settings |
+| `bugreport` | bug_reports |
 
 신규 테이블/도메인이 생기면 이 표를 갱신한다.
 
