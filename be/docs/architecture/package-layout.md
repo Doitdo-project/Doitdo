@@ -218,6 +218,21 @@ UNIQUE 제약 `uk_todos_user_master_date (user_id, master_todo_id, start_date)` 
 
 `CategoryResp` 에 `colorHex` 필드 추가 (`colorId` 유지). `CategoryServiceImpl` 이 `PaletteColorRepository` 를 주입받아 N+1 없이 hex 매핑.
 
+## bugreport 도메인 구현 파일
+
+| 종류 | 경로 | 비고 |
+|---|---|---|
+| Controller | `domain/bugreport/api/controller/BugReportController.java` | `POST /api/bug-reports` 단일 엔드포인트, 201 Created |
+| Request DTO | `domain/bugreport/api/dto/req/CreateBugReportReq.java` | `title`(@Size max=100) / `content`(@Size max=500) |
+| Response DTO | `domain/bugreport/api/dto/resp/BugReportResp.java` | `bugReportId, createdAt` — `from(BugReport)` 팩토리 |
+| Application interface | `domain/bugreport/application/BugReportService.java` | `create(Long userId, CreateBugReportReq req)` |
+| Application impl | `domain/bugreport/application/impl/BugReportServiceImpl.java` | `@Transactional` save + DTO 변환 |
+| Entity | `domain/bugreport/entity/BugReport.java` | `bug_reports` 테이블 매핑, inner enum `BugReportStatus(NEW/REVIEWING/COMPLETE)`, soft delete |
+| Repository | `domain/bugreport/repository/BugReportRepository.java` | `JpaRepository<BugReport, Long>` (MVP: POST만) |
+| Migration SQL | `docs/ops/migrations/2026-04-bug-report.sql` | 수동 실행 필요 |
+
+`BugReportErrorCode` (`B` 접두, `global/exception/`) — `ErrorCodeRegistry.SOURCES` 에 등록.
+
 ## 네이밍/엔티티 규칙
 
 상세는 [`../conventions/naming.md`](../conventions/naming.md). 요약:
