@@ -26,7 +26,7 @@ public interface ErrorCode {
 
 예: `A00-001` (auth / 로그인 카테고리 / 1번)
 
-## 3. 도메인 enum (9개)
+## 3. 도메인 enum (10개)
 
 | Enum | 접두 letter | 도메인 |
 |---|---|---|
@@ -39,6 +39,7 @@ public interface ErrorCode {
 | `ShopErrorCode` | `S` | shop |
 | `NotificationErrorCode` | `N` | notification |
 | `SettingErrorCode` | `C` | setting |
+| `BugReportErrorCode` | `B` | bugreport |
 
 각 enum 의 실제 값 (코드/status/메시지) 은 enum 파일 자체가 SSOT.
 
@@ -159,6 +160,16 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 | `M09_001` | `M09-001` | 401 | 인증 토큰이 없거나 유효하지 않음 |
 | `M09_002` | `M09-002` | 404 | 해당 캐릭터의 요청 액션을 찾을 수 없음 |
 | `M09_003` | `M09-003` | 500 | 서버 내부 오류 |
+
+### `BugReportErrorCode` 신규 enum (bugreport, 2026-04, JIRA S14P31D107-442)
+
+접두 letter `B`. `ErrorCodeRegistry.SOURCES` 에 등록됨.
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `B00_001` | `B00-001` | 500 | 버그 신고 처리 중 서버 오류 |
+
+> MVP 단계에서 비즈니스 검증 에러(`G00-006` 자동 부착)로 충분. Rate Limit(`B00-003` 429) 등은 후속 이슈에서 추가.
 
 ## 5. 새 코드 추가 절차
 

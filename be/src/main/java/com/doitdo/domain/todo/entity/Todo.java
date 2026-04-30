@@ -48,10 +48,10 @@ public class Todo extends BaseTimeEntity {
 	@Column(name = "category_id")
 	private Long categoryId;
 
-	@Column(nullable = false, length = 255)
+	@Column(nullable = false, length = 20)
 	private String title;
 
-	@Column(columnDefinition = "TEXT")
+	@Column(length = 100)
 	private String content;
 
 	@Enumerated(EnumType.STRING)
