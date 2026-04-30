@@ -359,7 +359,8 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                       selectedTextStyle: AppTextStyles.labelMedium.copyWith(color: Colors.white),
                       defaultTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textPrimary),
                       weekendTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textPrimary), // defaultBuilder가 우선 적용
-                      outsideTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textHint),
+                      outsideTextStyle: AppTextStyles.labelMedium.copyWith(color: Colors.transparent),
+                      outsideDaysVisible: false,
                       cellMargin: const EdgeInsets.all(10),
                     ),
                     calendarBuilders: CalendarBuilders(
@@ -382,6 +383,9 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                       markerBuilder: (context, day, events) {
                         if (events.isEmpty) return const SizedBox.shrink();
                         var todos = events.cast<Todo>().toList();
+
+                        // ✅ 현재 포커스된 달이 아닌 날짜(이전/다음 달)는 DOT도 흐리게
+                        final isOutside = day.month != state.focusedDay.month;
 
                         // ✅ 3. 카테고리 필터 적용 시 DOT도 동일하게 필터링
                         final currentFilter = state.currentFilter;
@@ -412,7 +416,8 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                             // 좌우로 1픽셀씩 마진을 줍니다. (점 사이 간격은 여전히 2픽셀이 됩니다)
                             margin: const EdgeInsets.symmetric(horizontal: 1),
                             decoration: BoxDecoration(
-                              color: getDotColor(t.category.name),
+                              color: getDotColor(t.category.name)
+                                  .withOpacity(isOutside ? 0.3 : 1.0),
                               shape: BoxShape.circle,
                             ),
                           )).toList(),
