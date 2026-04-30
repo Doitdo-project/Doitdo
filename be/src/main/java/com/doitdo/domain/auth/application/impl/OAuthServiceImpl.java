@@ -5,7 +5,6 @@ import com.doitdo.domain.auth.api.dto.resp.OAuthLoginResp;
 import com.doitdo.domain.auth.application.OAuthService;
 import com.doitdo.domain.auth.entity.AutoProvider;
 import com.doitdo.domain.auth.entity.OAuthProvider;
-import com.doitdo.domain.auth.entity.RefreshToken;
 import com.doitdo.domain.auth.repository.AutoProviderRepository;
 import com.doitdo.domain.auth.repository.RefreshTokenRepository;
 import com.doitdo.domain.setting.entity.UserSetting;
@@ -349,13 +348,16 @@ public class OAuthServiceImpl implements OAuthService {
 		return new OAuthLoginResp(accessToken, refreshToken, UserInfoResp.from(user), isNewUser);
 	}
 
+	/**
+	 * refresh_tokens 의 user_id UNIQUE 제약과 native upsert 를 사용해 race-free 갱신.
+	 *
+	 * <p>이전 구현은 SELECT 후 없으면 INSERT 였는데, 동시 로그인 요청 시 두 트랜잭션이
+	 * 모두 empty 를 본 뒤 둘 다 INSERT 에 성공해 user_id 당 row 가 2개로 늘어나는
+	 * race 가 있었다(2026-04-29 user_id=8 사고). 다음 호출의 {@code findByUserId}
+	 * 가 NonUniqueResultException 으로 500 을 던졌다.
+	 */
 	private void saveOrUpdateRefreshToken(Long userId, String refreshToken) {
 		LocalDateTime expiresAt = LocalDateTime.now().plusNanos(refreshTokenExpiration * 1_000_000L);
-		refreshTokenRepository.findByUserId(userId)
-				.ifPresentOrElse(
-						existing -> existing.update(refreshToken, expiresAt),
-						() -> refreshTokenRepository.save(
-								RefreshToken.create(userId, refreshToken, expiresAt))
-				);
+		refreshTokenRepository.upsertByUserId(userId, refreshToken, expiresAt);
 	}
 }
