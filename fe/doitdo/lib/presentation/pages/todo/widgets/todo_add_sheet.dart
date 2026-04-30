@@ -205,7 +205,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                     alignment: Alignment.center,
                     children: [
                       ...previous,
-                      ?current,
+                      if (current != null) current,
                     ],
                   ),
                   transitionBuilder: (child, anim) =>
@@ -264,7 +264,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           key: const ValueKey('alert'),
           child: TodoTimeSheet(
             initialTime:    _selectedTime,
-            initialEnabled: true,
+            initialEnabled: _alarmEnabled,
             embedded: true,
             onConfirm: (result) {
               setState(() {
@@ -309,6 +309,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
             child: TextField(
               controller: _titleController,
               focusNode:  _titleFocusNode,
+              maxLength: 20,
               style: AppTextStyles.titleLarge.copyWith(
                 fontFamily: 'GmarketSansMedium',
                 fontWeight: FontWeight.w500,
@@ -324,6 +325,9 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
+                counterStyle: AppTextStyles.labelSmall.copyWith(
+                  color: c.textHint,
+                ),
               ),
             ),
           ),
@@ -336,19 +340,14 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 기간 — 언젠가 할 일은 날짜 변경 불가
+                  // 기간 — step 전환
                   GestureDetector(
-                    onTap: _dateResult?.type == TodoDateType.someday
-                        ? null
-                        : () => _goToStep(_Step.datePicker),
+                    onTap: () => _goToStep(_Step.datePicker),
                     child: _OptionRow(
-                      icon:      Icons.calendar_today_outlined,
-                      label:     '기간',
-                      valueText: _dateResult?.type == TodoDateType.someday
-                          ? '언젠가 할 일'
-                          : (_dateResult?.displayText ?? '미지정'),
-                      colors:   c,
-                      disabled: _dateResult?.type == TodoDateType.someday,
+                      icon: Icons.calendar_today_outlined,
+                      label: '기간',
+                      valueText: _dateResult?.displayText ?? '미지정',
+                      colors: c,
                     ),
                   ),
                   Divider(color: c.divider, height: 1, thickness: 1),
@@ -443,13 +442,11 @@ class _OptionRow extends StatelessWidget {
     required this.label,
     required this.valueText,
     required this.colors,
-    this.disabled = false,
   });
   final IconData icon;
   final String label;
   final String valueText;
   final DoitdoColors colors;
-  final bool disabled;
 
   @override
   Widget build(BuildContext context) {
@@ -463,12 +460,9 @@ class _OptionRow extends StatelessWidget {
               style: AppTextStyles.bodyMedium.copyWith(color: colors.textSecondary)),
           const Spacer(),
           Text(valueText,
-              style: AppTextStyles.bodyMedium.copyWith(
-                  color: disabled ? colors.textHint : colors.textPrimary)),
-          if (!disabled) ...[
-            const SizedBox(width: 2),
-            Icon(Icons.chevron_right, size: 16, color: colors.textHint),
-          ],
+              style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary)),
+          const SizedBox(width: 2),
+          Icon(Icons.chevron_right, size: 16, color: colors.textHint),
         ],
       ),
     );
@@ -484,7 +478,7 @@ class _MascotBubble extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Image.asset('assets/images/Dooit.png', width: 30, height: 30, filterQuality: FilterQuality.high),
+        Image.asset('assets/images/Dooit.png', width: 36, height: 36),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
