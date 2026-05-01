@@ -601,6 +601,103 @@ class TodoViewModel extends StateNotifier<TodoState> {
     );
   }
 
+  /// ✅ 오늘의 할 일 → 언젠가 할 일로 이동 (targetIndex: 언젠가 섹션 내 삽입 위치)
+  Future<void> moveToSomeday(String id, {int targetIndex = -1}) async {
+    final idx = state.allTodos.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+
+    final item = state.allTodos[idx].copyWith(
+      dateType: TodoDateType.someday,
+      date: null,
+      rangeStart: null,
+      rangeEnd: null,
+      repeatType: null,
+      repeatStartDate: null,
+      repeatEndDate: null,
+      repeatDays: null,
+    );
+
+    // 로컬 상태 업데이트 — 지정 위치에 삽입
+    final newSomeday = List<Todo>.from(state.allSomedayTodos);
+    final insertAt = (targetIndex < 0 || targetIndex > newSomeday.length)
+        ? newSomeday.length
+        : targetIndex;
+    newSomeday.insert(insertAt, item);
+
+    state = state.copyWith(
+      allTodos: state.allTodos.where((t) => t.id != id).toList(),
+      allSomedayTodos: newSomeday,
+    );
+    _updateCalendarEvents(state.allTodos);
+    _updateDisplayedTodos();
+
+    // 서버 API 호출 1: SOMEDAY 타입으로 변경
+    await AsyncValue.guard(() => _repository.updateTodo(
+      id,
+      TodoUpdateRequestDto(
+        title:    item.title,
+        content:  item.memo,
+        category: item.category.name,
+        type:     'SOMEDAY',
+        startDate: null,
+        endDate:   null,
+        alarmTime: item.alarmEnabled ? _formatTime(item.alarmTime) : null,
+        clearAlertTime: item.alarmEnabled ? null : true,
+      ),
+    ));
+
+    // 서버 API 호출 2: 우선순위 설정 (삽입 위치 기준)
+    if (insertAt < newSomeday.length) {
+      await AsyncValue.guard(
+              () => _repository.updateTodoPriority(id, insertAt + 1));
+    }
+  }
+
+  /// ✅ 언젠가 할 일 → 오늘의 할 일로 이동 (targetIndex: 오늘 섹션 내 삽입 위치)
+  Future<void> moveToToday(String id, {int targetIndex = -1}) async {
+    final idx = state.allSomedayTodos.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+
+    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final item = state.allSomedayTodos[idx].copyWith(
+      dateType: TodoDateType.normal,
+      date: today,
+    );
+
+    // 로컬 상태 업데이트 — 지정 위치에 삽입
+    final newTodos = List<Todo>.from(state.allTodos);
+    final insertAt = (targetIndex < 0 || targetIndex > newTodos.length)
+        ? newTodos.length
+        : targetIndex;
+    newTodos.insert(insertAt, item);
+
+    state = state.copyWith(
+      allSomedayTodos: state.allSomedayTodos.where((t) => t.id != id).toList(),
+      allTodos: newTodos,
+    );
+    _updateCalendarEvents(state.allTodos);
+    _updateDisplayedTodos();
+
+    // 서버 API 호출 1: NORMAL 타입 + 오늘 날짜로 변경
+    await AsyncValue.guard(() => _repository.updateTodo(
+      id,
+      TodoUpdateRequestDto(
+        title:     item.title,
+        content:   item.memo,
+        category:  item.category.name,
+        type:      'NORMAL',
+        startDate: today.toIso8601String().split('T')[0],
+        endDate:   null,
+        alarmTime: item.alarmEnabled ? _formatTime(item.alarmTime) : null,
+        clearAlertTime: item.alarmEnabled ? null : true,
+      ),
+    ));
+
+    // 서버 API 호출 2: 우선순위 설정 (삽입 위치 기준)
+    await AsyncValue.guard(
+            () => _repository.updateTodoPriority(id, insertAt + 1));
+  }
+
   Future<void> snoozeTodo(String id) async {
     final idx = state.allTodos.indexWhere((t) => t.id == id);
     if (idx == -1) return;

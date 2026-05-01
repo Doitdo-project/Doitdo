@@ -18,11 +18,14 @@ import 'package:doitdo/presentation/pages/todo/widgets/todo_add_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_detail_sheet.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_dialog.dart';
 import 'package:doitdo/presentation/widgets/common/todo_section.dart';
+import 'package:doitdo/presentation/widgets/common/todo_item_card.dart';
 import 'package:doitdo/presentation/providers/home_scroll_provider.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_full_layout.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:doitdo/core/theme/app_text_styles.dart';
+import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -395,30 +398,23 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  TodoSection(
-                                    title: '오늘의 할 일',
-                                    actionLabel: '추가하기',
-                                    onActionTap: () => _openAddSheet(
-                                      context,
-                                      DateTime.now(),
-                                    ),
-                                    todos: todayTodos,
-                                    onToggle: todoVm.toggleTodo,
-                                    onReorder: todoVm.reorderTodo,
+                                  // ✅ 오늘/언젠가 할 일 섹션 간 드래그앤드롭
+                                  _CrossSectionTodoList(
+                                    todayTitle: '오늘의 할 일',
+                                    todayTodos: todayTodos,
+                                    somedayTodos: somedayTodos,
+                                    showSomeday: true,
+                                    onToggleToday: todoVm.toggleTodo,
+                                    onToggleSomeday: todoVm.toggleSomedayTodo,
+                                    onReorderToday: todoVm.reorderTodo,
+                                    onReorderSomeday: todoVm.reorderSomedayTodo,
+                                    onMoveToSomeday: todoVm.moveToSomeday,
+                                    onMoveToToday: todoVm.moveToToday,
                                     onSnooze: todoVm.snoozeTodo,
-                                    onTodoTap: (todo) => _openDetailSheet(context, todo, false),
-                                  ),
-                                  const SizedBox(height: 24),
-                                  TodoSection(
-                                    title: '언젠가 할 일',
-                                    actionLabel: '추가하기',
-                                    onActionTap: () =>
-                                        _openAddSheet(context, null),
-                                    todos: somedayTodos,
-                                    onToggle: todoVm.toggleSomedayTodo,
-                                    onReorder: todoVm.reorderSomedayTodo,
-                                    onSnooze: null,
-                                    onTodoTap: (todo) => _openDetailSheet(context, todo, true),
+                                    onAddToday: () => _openAddSheet(context, DateTime.now()),
+                                    onAddSomeday: () => _openAddSheet(context, null),
+                                    onTapToday: (todo) => _openDetailSheet(context, todo, false),
+                                    onTapSomeday: (todo) => _openDetailSheet(context, todo, true),
                                   ),
                                 ],
                               ),
@@ -533,6 +529,221 @@ class _StatusBarScrim extends StatelessWidget {
           child: ColoredBox(color: bg),
         );
       },
+    );
+  }
+}
+
+// ✅ 오늘의 할 일 + 언젠가 할 일 섹션 간 드래그앤드롭 위젯
+// 두 섹션 헤더를 유지하면서 경계를 넘어 드래그 가능
+class _CrossSectionTodoList extends StatelessWidget {
+  const _CrossSectionTodoList({
+    required this.todayTitle,
+    required this.todayTodos,
+    required this.somedayTodos,
+    required this.showSomeday,
+    required this.onToggleToday,
+    required this.onToggleSomeday,
+    required this.onReorderToday,
+    required this.onReorderSomeday,
+    required this.onMoveToSomeday,
+    required this.onMoveToToday,
+    required this.onSnooze,
+    required this.onAddToday,
+    required this.onAddSomeday,
+    required this.onTapToday,
+    required this.onTapSomeday,
+  });
+
+  final String todayTitle;
+  final List<Todo> todayTodos;
+  final List<Todo> somedayTodos;
+  final bool showSomeday;
+  final ValueChanged<String> onToggleToday;
+  final ValueChanged<String> onToggleSomeday;
+  final ReorderCallback onReorderToday;
+  final ReorderCallback onReorderSomeday;
+  final void Function(String id, {int targetIndex}) onMoveToSomeday;
+  final void Function(String id, {int targetIndex}) onMoveToToday;
+  final void Function(String id) onSnooze;
+  final VoidCallback onAddToday;
+  final VoidCallback onAddSomeday;
+  final void Function(Todo) onTapToday;
+  final void Function(Todo) onTapSomeday;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final todayCount = todayTodos.length;
+    // 합친 리스트 구조:
+    // index 0..todayCount-1       → 오늘의 할 일 아이템
+    // index todayCount            → 언젠가 할 일 헤더 (드래그 불가)
+    // index todayCount+1..end     → 언젠가 할 일 아이템
+    // showSomeday=false면 오늘 아이템만
+
+    final int dividerIndex = todayCount; // 헤더 위치
+    final int totalCount = showSomeday
+        ? todayCount + 1 + somedayTodos.length  // 헤더 포함
+        : todayCount;
+
+    void handleReorder(int oldIndex, int newIndex) {
+      if (!showSomeday) {
+        if (oldIndex < newIndex) newIndex -= 1;
+        onReorderToday(oldIndex, newIndex);
+        return;
+      }
+
+      // 헤더(dividerIndex)를 드래그하면 무시
+      if (oldIndex == dividerIndex) return;
+
+      // newIndex가 헤더 위치면 인접 위치로 보정
+      if (newIndex == dividerIndex) newIndex += 1;
+
+      if (oldIndex < newIndex) newIndex -= 1;
+
+      final bool wasToday = oldIndex < dividerIndex;
+      // dividerIndex 기준으로 실제 섹션 경계
+      // newIndex는 헤더 제거 후 기준으로 판단
+      final bool isToday = newIndex < dividerIndex;
+
+      if (wasToday && isToday) {
+        // 오늘 섹션 내 재정렬
+        onReorderToday(oldIndex, newIndex);
+      } else if (!wasToday && !isToday) {
+        // 언젠가 섹션 내 재정렬 (헤더 offset 제거)
+        final somedayOld = oldIndex - dividerIndex - 1;
+        final somedayNew = newIndex - dividerIndex;
+        onReorderSomeday(somedayOld, somedayNew);
+      } else if (wasToday && !isToday) {
+        // ✅ 오늘 → 언젠가로 이동
+        // ✅ 오늘 item 제거로 divider가 1칸 앞으로 당겨지므로 -dividerIndex만 적용
+        final targetIdx = newIndex > dividerIndex - 1
+            ? newIndex - dividerIndex  // = newIndex - (dividerIndex - 1) - 1
+            : 0;
+        onMoveToSomeday(todayTodos[oldIndex].id, targetIndex: targetIdx);
+      } else {
+        // ✅ 언젠가 → 오늘로 이동
+        final somedayOld = oldIndex - dividerIndex - 1;
+        // ✅ someday item 제거해도 today 인덱스는 불변
+        final targetIdx = newIndex < dividerIndex ? newIndex : dividerIndex - 1;
+        onMoveToToday(somedayTodos[somedayOld].id, targetIndex: targetIdx);
+      }
+    }
+
+    Widget buildItem(BuildContext context, int index) {
+      // 오늘의 할 일 아이템
+      if (index < dividerIndex) {
+        final todo = todayTodos[index];
+        return Padding(
+          key: ValueKey('today_${todo.id}'),
+          padding: const EdgeInsets.only(bottom: 12),
+          child: SlidableTodoItemCard(
+            todo: todo,
+            index: index,
+            onToggle: () => onToggleToday(todo.id),
+            onTap: () => onTapToday(todo),
+            onSnooze: !todo.isDone ? () => onSnooze(todo.id) : null,
+          ),
+        );
+      }
+
+      // 언젠가 할 일 헤더 (드래그 불가 — ReorderableDragStartListener 미적용)
+      if (index == dividerIndex) {
+        return _SectionHeader(
+          key: const ValueKey('someday_header'),
+          title: '언젠가 할 일',
+          actionLabel: '추가하기',
+          onActionTap: onAddSomeday,
+        );
+      }
+
+      // 언젠가 할 일 아이템
+      final somedayIndex = index - dividerIndex - 1;
+      final todo = somedayTodos[somedayIndex];
+      return Padding(
+        key: ValueKey('someday_${todo.id}'),
+        padding: const EdgeInsets.only(bottom: 12),
+        child: SlidableTodoItemCard(
+          todo: todo,
+          index: index,
+          onToggle: () => onToggleSomeday(todo.id),
+          onTap: () => onTapSomeday(todo),
+          onSnooze: null,
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 오늘의 할 일 헤더 (리스트 밖)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(todayTitle,
+                style: AppTextStyles.titleSmall.copyWith(color: colors.textPrimary)),
+            GestureDetector(
+              onTap: onAddToday,
+              behavior: HitTestBehavior.opaque,
+              child: Text('추가하기',
+                  style: AppTextStyles.labelMedium.copyWith(color: colors.textSecondary)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (totalCount == 0)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: Text('할 일을 추가해보세요!',
+                  style: AppTextStyles.bodySmall.copyWith(color: colors.textHint)),
+            ),
+          )
+        else
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: totalCount,
+            onReorder: handleReorder,
+            proxyDecorator: (child, index, animation) =>
+                Material(color: Colors.transparent, elevation: 0, child: child),
+            itemBuilder: buildItem,
+          ),
+      ],
+    );
+  }
+}
+
+// 섹션 구분 헤더 (드래그 핸들 없음)
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    super.key,
+    required this.title,
+    required this.actionLabel,
+    required this.onActionTap,
+  });
+
+  final String title;
+  final String actionLabel;
+  final VoidCallback onActionTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title,
+              style: AppTextStyles.titleSmall.copyWith(color: colors.textPrimary)),
+          GestureDetector(
+            onTap: onActionTap,
+            behavior: HitTestBehavior.opaque,
+            child: Text(actionLabel,
+                style: AppTextStyles.labelMedium.copyWith(color: colors.textSecondary)),
+          ),
+        ],
+      ),
     );
   }
 }
