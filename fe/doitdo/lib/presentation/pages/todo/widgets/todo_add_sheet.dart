@@ -48,6 +48,26 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
     } else {
       _dateResult = const TodoDateResult(type: TodoDateType.someday);
     }
+
+    // 제목이 비어있으면 저장 버튼을 disable 한다 — 변화 감지를 위해 controller listener 등록.
+    // empty/non-empty 전이가 일어날 때만 setState 를 돌려 불필요한 리빌드를 줄인다.
+    _titleController.addListener(_onTitleChanged);
+
+    // 시트 진입 직후 제목 필드에 자동 포커스 → 키보드 즉시 노출.
+    // 회색 저장 버튼의 "왜 비활성?" 첫 진입 비용을 줄여준다.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _titleFocusNode.requestFocus();
+    });
+  }
+
+  bool _wasEmpty = true;
+  void _onTitleChanged() {
+    final isEmpty = _titleController.text.trim().isEmpty;
+    if (isEmpty != _wasEmpty) {
+      _wasEmpty = isEmpty;
+      setState(() {});
+    }
   }
 
   /// 단계 전환 — 키보드 닫고 setState.
@@ -58,6 +78,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
 
   @override
   void dispose() {
+    _titleController.removeListener(_onTitleChanged);
     _titleController.dispose();
     _memoController.dispose();
     _titleFocusNode.dispose();
@@ -78,21 +99,10 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
 
     final title = _titleController.text.trim();
 
-    if (title.isEmpty) {
-      _titleFocusNode.requestFocus();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('할 일을 입력해주세요.',
-              style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)),
-          backgroundColor: AppColors.calendarPoint,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(16),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
+    // 빈 제목은 저장 버튼이 disable 되어 있어 정상 경로로는 도달 불가.
+    // 안전망으로만 남겨두고 안내 SnackBar 는 띄우지 않는다 — 시트가 root navigator
+    // 위에 떠 있어 SnackBar 가 시트에 가려져 보이지 않는 문제가 있었다.
+    if (title.isEmpty) return;
 
     // ✅ 저장 시작 — 버튼 비활성화
     setState(() => _isLoading = true);
@@ -422,14 +432,37 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           ),
 
           // ── 하단 anchor: 저장 버튼 ────────────────────
-          // 저장 중에는 onPressed=null 로 disable + 라벨 변경.
+          // 저장 중이거나 제목이 비어있으면 disable. 빈 제목 가드는 SnackBar
+          // (시트에 가려짐) 대신 시각적 비활성으로 사전 차단.
+          // 비활성 색: 메인 컬러 #E2782B + alpha 50% (= 0x80E2782B)
           const SizedBox(height: 12),
-          // ✅ _isLoading 상태에 따라 버튼 비활성화 + 라벨 변경
-          DoitdoPrimaryButton(
-            height: 48,
-            label: _isLoading ? '저장 중...' : '저장하기',
-            onPressed: _isLoading ? null : () => _onSave(context),
-          ),
+          Builder(builder: (context) {
+            final canSave = !_isLoading && _titleController.text.trim().isNotEmpty;
+            final label = _isLoading ? '저장 중...' : '저장하기';
+            if (canSave) {
+              return DoitdoPrimaryButton(
+                height: 48,
+                label: label,
+                onPressed: () => _onSave(context),
+              );
+            }
+            return SizedBox(
+              height: 48,
+              width: double.infinity,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0x80E2782B),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    label,
+                    style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
+                  ),
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );

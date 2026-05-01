@@ -67,12 +67,25 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
 
   void _markDirty() {
     if (_initialized) _textDirty = true;
+    // 제목 empty/non-empty 전이 시 확인 버튼 색을 갱신.
+    // 빈 제목으로는 저장 불가 정책이라 disable 신호가 즉시 반영되어야 한다.
+    final isEmpty = _titleController.text.trim().isEmpty;
+    if (isEmpty != _wasTitleEmpty) {
+      _wasTitleEmpty = isEmpty;
+      if (mounted) setState(() {});
+    }
   }
+
+  bool _wasTitleEmpty = true;
 
   // 제목/메모 포커스가 둘 다 빠졌을 때 자동 저장
   void _onFocusChange() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      // 빈 제목이면 자동 저장 트리거하지 않음 — 확인 버튼 회색 정책과 일관.
+      // SnackBar 가 시트에 가려지는 문제로 안내도 불가능하므로 silent skip.
+      // dirty flag 도 그대로 유지 → 이후 사용자가 제목을 다시 채우고 포커스 빠지면 저장 발동.
+      if (_titleController.text.trim().isEmpty) return;
       if (!_titleFocusNode.hasFocus && !_memoFocusNode.hasFocus &&
           _textDirty && _initialized && !_isDone) {
         _textDirty = false;
@@ -125,8 +138,8 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
       type: detailDto.type == 'PERIOD'
           ? TodoDateType.range
           : (detailDto.type == 'RECURRING'
-              ? TodoDateType.repeat
-              : (detailDto.type == 'SOMEDAY' ? TodoDateType.someday : TodoDateType.normal)),
+          ? TodoDateType.repeat
+          : (detailDto.type == 'SOMEDAY' ? TodoDateType.someday : TodoDateType.normal)),
       date:            sDate,
       rangeStart:      detailDto.type == 'PERIOD'    ? sDate : null,
       rangeEnd:        detailDto.type == 'PERIOD'    ? eDate : null,
@@ -148,20 +161,9 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
     if (_isLoading) return;
 
     final title = _titleController.text.trim();
-    if (title.isEmpty) {
-      _titleFocusNode.requestFocus();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content:         Text('할 일을 입력해주세요.',
-              style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)),
-          backgroundColor: AppColors.calendarPoint,
-          behavior:        SnackBarBehavior.floating,
-          shape:           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin:          const EdgeInsets.all(16),
-        ),
-      );
-      return;
-    }
+    // 빈 제목은 확인 버튼 disable + 자동 저장 가드로 정상 경로상 도달 불가.
+    // SnackBar 안내는 시트에 가려져 보이지 않으므로 silent return.
+    if (title.isEmpty) return;
 
     setState(() => _isLoading = true);
     final vm = ref.read(todoViewModelProvider.notifier);
@@ -383,6 +385,7 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
             _isDone      = match.isNotEmpty
                 ? match.first.isDone
                 : detailDto.status == 'DONE';
+            _wasTitleEmpty = _titleController.text.trim().isEmpty;
             _initialized = true;
           });
         });
@@ -591,11 +594,33 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: DoitdoPrimaryButton(
-                  height:    48,
-                  label:     '확인',
-                  onPressed: () => _onConfirm(context),
-                ),
+                child: Builder(builder: (context) {
+                  // 빈 제목으론 저장 불가 → 확인 버튼 비활성.
+                  // _isDone 항목은 텍스트 필드가 readOnly 라 빈 제목 자체가 만들어질 수 없고,
+                  // 확인 버튼이 단순 닫기 역할을 하므로 항상 활성.
+                  // [버전 비교용] detail_sheet 비활성: 메인 컬러 #E2782B + 투명도 50%
+                  final canConfirm = _isDone || _titleController.text.trim().isNotEmpty;
+                  final button = DoitdoPrimaryButton(
+                    height:    48,
+                    label:     '확인',
+                    onPressed: canConfirm ? () => _onConfirm(context) : null,
+                  );
+                  if (canConfirm) return button;
+                  return Opacity(
+                    opacity: 0.5,
+                    child: IgnorePointer(
+                      ignoring: true,
+                      child: DoitdoPrimaryButton(
+                        height: 48,
+                        label: '확인',
+                        // onPressed null 일 때 DoitdoPrimaryButton 이 자체적으로 회색을
+                        // 그릴 가능성이 있어 dummy 콜백을 넣어 활성 시각을 유지한 뒤
+                        // Opacity 로만 흐리게 처리. IgnorePointer 가 실제 탭은 차단.
+                        onPressed: () {},
+                      ),
+                    ),
+                  );
+                }),
               ),
             ],
           ),
