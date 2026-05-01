@@ -1,4 +1,4 @@
-import 'dart:async' show unawaited;
+import 'dart:async';
 
 import 'package:doitdo/core/utils/snap_scroll_physics.dart';
 import 'package:doitdo/domain/entities/character.dart';
@@ -17,7 +17,6 @@ import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_add_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_detail_sheet.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_dialog.dart';
-import 'package:doitdo/presentation/widgets/common/todo_section.dart';
 import 'package:doitdo/presentation/widgets/common/todo_item_card.dart';
 import 'package:doitdo/presentation/providers/home_scroll_provider.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_full_layout.dart';
@@ -400,6 +399,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                 children: [
                                   // ✅ 오늘/언젠가 할 일 섹션 간 드래그앤드롭
                                   _CrossSectionTodoList(
+                                    scrollController: _scrollController,
                                     todayTitle: '오늘의 할 일',
                                     todayTodos: todayTodos,
                                     somedayTodos: somedayTodos,
@@ -534,8 +534,8 @@ class _StatusBarScrim extends StatelessWidget {
 }
 
 // ✅ 오늘의 할 일 + 언젠가 할 일 섹션 간 드래그앤드롭 위젯
-// 두 섹션 헤더를 유지하면서 경계를 넘어 드래그 가능
-class _CrossSectionTodoList extends StatelessWidget {
+// 드래그 중 화면 상/하단 근접 시 부모 ScrollController로 자동 스크롤
+class _CrossSectionTodoList extends ConsumerStatefulWidget {
   const _CrossSectionTodoList({
     required this.todayTitle,
     required this.todayTodos,
@@ -552,6 +552,7 @@ class _CrossSectionTodoList extends StatelessWidget {
     required this.onAddSomeday,
     required this.onTapToday,
     required this.onTapSomeday,
+    this.scrollController,
   });
 
   final String todayTitle;
@@ -569,104 +570,161 @@ class _CrossSectionTodoList extends StatelessWidget {
   final VoidCallback onAddSomeday;
   final void Function(Todo) onTapToday;
   final void Function(Todo) onTapSomeday;
+  final ScrollController? scrollController;
+
+  @override
+  ConsumerState<_CrossSectionTodoList> createState() => _CrossSectionTodoListState();
+}
+
+class _CrossSectionTodoListState extends ConsumerState<_CrossSectionTodoList> {
+  Timer? _scrollTimer;
+  static const double _scrollThreshold = 100.0; // 상/하단 임계치 px
+  static const double _scrollSpeed = 8.0;        // 스크롤 속도 px/tick
+
+  void _startAutoScroll(double pointerY, double screenHeight) {
+    _scrollTimer?.cancel();
+    final sc = widget.scrollController;
+    if (sc == null || !sc.hasClients) return;
+
+    _scrollTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
+      if (!sc.hasClients) { _scrollTimer?.cancel(); return; }
+      if (pointerY < _scrollThreshold) {
+        // 상단 근접 → 위로 스크롤
+        final target = (sc.offset - _scrollSpeed).clamp(0.0, sc.position.maxScrollExtent);
+        sc.jumpTo(target);
+      } else if (pointerY > screenHeight - _scrollThreshold) {
+        // 하단 근접 → 아래로 스크롤
+        final target = (sc.offset + _scrollSpeed).clamp(0.0, sc.position.maxScrollExtent);
+        sc.jumpTo(target);
+      } else {
+        _scrollTimer?.cancel();
+      }
+    });
+  }
+
+  void _stopAutoScroll() {
+    _scrollTimer?.cancel();
+    _scrollTimer = null;
+  }
+
+  @override
+  void dispose() {
+    _scrollTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final todayCount = todayTodos.length;
-    // 합친 리스트 구조:
-    // index 0..todayCount-1       → 오늘의 할 일 아이템
-    // index todayCount            → 언젠가 할 일 헤더 (드래그 불가)
-    // index todayCount+1..end     → 언젠가 할 일 아이템
-    // showSomeday=false면 오늘 아이템만
-
-    final int dividerIndex = todayCount; // 헤더 위치
-    final int totalCount = showSomeday
-        ? todayCount + 1 + somedayTodos.length  // 헤더 포함
+    final todayCount = widget.todayTodos.length;
+    final dividerIndex = todayCount;
+    final totalCount = widget.showSomeday
+        ? todayCount + 1 + widget.somedayTodos.length
         : todayCount;
 
+    void _resetReordering() {
+      // ✅ ViewModel 전역 락 해제
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          ref.read(todoViewModelProvider.notifier).finishReorder();
+        }
+      });
+    }
+
     void handleReorder(int oldIndex, int newIndex) {
-      if (!showSomeday) {
+      // ✅ ViewModel 전역 락: todo_page/tamagochi_page 중복 발화 방지
+      final vm = ref.read(todoViewModelProvider.notifier);
+      if (!vm.tryStartReorder()) return;
+
+      if (!widget.showSomeday) {
         if (oldIndex < newIndex) newIndex -= 1;
-        onReorderToday(oldIndex, newIndex);
+        widget.onReorderToday(oldIndex, newIndex);
+        _resetReordering();
         return;
       }
 
-      // 헤더(dividerIndex)를 드래그하면 무시
-      if (oldIndex == dividerIndex) return;
+      // 헤더 자체는 드래그 불가
+      if (oldIndex == dividerIndex) {
+        vm.finishReorder();
+        return;
+      }
 
-      // newIndex가 헤더 위치면 인접 위치로 보정
-      if (newIndex == dividerIndex) newIndex += 1;
-
+      // ✅ dividerIndex 특별 조정 제거 — standard adjustment만 적용
+      // today[i] → dividerIndex 드롭: if(i < N) → newIndex=N-1, isToday=true (오늘 마지막) ✓
+      // someday[j] → dividerIndex 드롭: if(j < N)=false → newIndex=N, isToday=false
+      //   → !wasToday && !isToday && newIndex==dividerIndex → 오늘 마지막으로 이동 ✓
       if (oldIndex < newIndex) newIndex -= 1;
 
       final bool wasToday = oldIndex < dividerIndex;
-      // dividerIndex 기준으로 실제 섹션 경계
-      // newIndex는 헤더 제거 후 기준으로 판단
       final bool isToday = newIndex < dividerIndex;
 
       if (wasToday && isToday) {
         // 오늘 섹션 내 재정렬
-        onReorderToday(oldIndex, newIndex);
+        widget.onReorderToday(oldIndex, newIndex);
       } else if (!wasToday && !isToday) {
-        // 언젠가 섹션 내 재정렬 (헤더 offset 제거)
-        final somedayOld = oldIndex - dividerIndex - 1;
-        final somedayNew = newIndex - dividerIndex;
-        onReorderSomeday(somedayOld, somedayNew);
+        if (newIndex == dividerIndex) {
+          // ✅ 언젠가 아이템을 divider에 드롭 → 오늘의 마지막 위치로 이동
+          final somedayOld = oldIndex - dividerIndex - 1;
+          widget.onMoveToToday(
+            widget.somedayTodos[somedayOld].id,
+            targetIndex: widget.todayTodos.length,
+          );
+        } else {
+          // 언젠가 섹션 내 재정렬
+          // ⚠️ same-section reorder 는 cross-section 과 달리 list 길이가 그대로라
+          // somedayOld 와 동일하게 `-dividerIndex - 1` 로 변환해야 한다. 이전엔
+          // `-dividerIndex` 로 변환하고 ViewModel 의 추가 `-1` 보정에 의존하던 구조였는데,
+          // ViewModel 보정을 제거한 뒤로는 이 한 줄이 안 맞으면 RangeError 가 난다.
+          final somedayOld = oldIndex - dividerIndex - 1;
+          final somedayNew = newIndex - dividerIndex - 1;
+          widget.onReorderSomeday(somedayOld, somedayNew);
+        }
       } else if (wasToday && !isToday) {
-        // ✅ 오늘 → 언젠가로 이동
-        // ✅ 오늘 item 제거로 divider가 1칸 앞으로 당겨지므로 -dividerIndex만 적용
-        final targetIdx = newIndex > dividerIndex - 1
-            ? newIndex - dividerIndex  // = newIndex - (dividerIndex - 1) - 1
-            : 0;
-        onMoveToSomeday(todayTodos[oldIndex].id, targetIndex: targetIdx);
+        // ✅ 오늘 → 언젠가 이동
+        final targetIdx = (newIndex - dividerIndex).clamp(0, widget.somedayTodos.length);
+        widget.onMoveToSomeday(widget.todayTodos[oldIndex].id, targetIndex: targetIdx);
       } else {
-        // ✅ 언젠가 → 오늘로 이동
+        // ✅ 언젠가 → 오늘 이동
         final somedayOld = oldIndex - dividerIndex - 1;
-        // ✅ someday item 제거해도 today 인덱스는 불변
-        final targetIdx = newIndex < dividerIndex ? newIndex : dividerIndex - 1;
-        onMoveToToday(somedayTodos[somedayOld].id, targetIndex: targetIdx);
+        final targetIdx = newIndex.clamp(0, widget.todayTodos.length);
+        widget.onMoveToToday(widget.somedayTodos[somedayOld].id, targetIndex: targetIdx);
       }
+      _resetReordering();
     }
 
     Widget buildItem(BuildContext context, int index) {
-      // 오늘의 할 일 아이템
       if (index < dividerIndex) {
-        final todo = todayTodos[index];
+        final todo = widget.todayTodos[index];
         return Padding(
           key: ValueKey('today_${todo.id}'),
           padding: const EdgeInsets.only(bottom: 12),
           child: SlidableTodoItemCard(
             todo: todo,
             index: index,
-            onToggle: () => onToggleToday(todo.id),
-            onTap: () => onTapToday(todo),
-            onSnooze: !todo.isDone ? () => onSnooze(todo.id) : null,
+            onToggle: () => widget.onToggleToday(todo.id),
+            onTap: () => widget.onTapToday(todo),
+            onSnooze: !todo.isDone ? () => widget.onSnooze(todo.id) : null,
           ),
         );
       }
-
-      // 언젠가 할 일 헤더 (드래그 불가 — ReorderableDragStartListener 미적용)
       if (index == dividerIndex) {
         return _SectionHeader(
           key: const ValueKey('someday_header'),
           title: '언젠가 할 일',
           actionLabel: '추가하기',
-          onActionTap: onAddSomeday,
+          onActionTap: widget.onAddSomeday,
         );
       }
-
-      // 언젠가 할 일 아이템
       final somedayIndex = index - dividerIndex - 1;
-      final todo = somedayTodos[somedayIndex];
+      final todo = widget.somedayTodos[somedayIndex];
       return Padding(
         key: ValueKey('someday_${todo.id}'),
         padding: const EdgeInsets.only(bottom: 12),
         child: SlidableTodoItemCard(
           todo: todo,
           index: index,
-          onToggle: () => onToggleSomeday(todo.id),
-          onTap: () => onTapSomeday(todo),
+          onToggle: () => widget.onToggleSomeday(todo.id),
+          onTap: () => widget.onTapSomeday(todo),
           onSnooze: null,
         ),
       );
@@ -675,14 +733,13 @@ class _CrossSectionTodoList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 오늘의 할 일 헤더 (리스트 밖)
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(todayTitle,
+            Text(widget.todayTitle,
                 style: AppTextStyles.titleSmall.copyWith(color: colors.textPrimary)),
             GestureDetector(
-              onTap: onAddToday,
+              onTap: widget.onAddToday,
               behavior: HitTestBehavior.opaque,
               child: Text('추가하기',
                   style: AppTextStyles.labelMedium.copyWith(color: colors.textSecondary)),
@@ -699,21 +756,30 @@ class _CrossSectionTodoList extends StatelessWidget {
             ),
           )
         else
-          ReorderableListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: totalCount,
-            onReorder: handleReorder,
-            proxyDecorator: (child, index, animation) =>
-                Material(color: Colors.transparent, elevation: 0, child: child),
-            itemBuilder: buildItem,
+        // ✅ Listener로 드래그 중 포인터 위치 감지 → 자동 스크롤
+          Listener(
+            onPointerMove: (event) {
+              final screenHeight = MediaQuery.of(context).size.height;
+              _startAutoScroll(event.position.dy, screenHeight);
+            },
+            onPointerUp: (_) => _stopAutoScroll(),
+            onPointerCancel: (_) => _stopAutoScroll(),
+            child: ReorderableListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: totalCount,
+              onReorder: handleReorder,
+              proxyDecorator: (child, index, animation) =>
+                  Material(color: Colors.transparent, elevation: 0, child: child),
+              itemBuilder: buildItem,
+            ),
           ),
       ],
     );
   }
 }
 
-// 섹션 구분 헤더 (드래그 핸들 없음)
+// 섹션 구분 헤더
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
     super.key,
@@ -729,8 +795,10 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    // ✅ 상단 패딩을 크게 해서 오늘 섹션 마지막 아이템과 헤더 사이
+    // 드롭 감지 영역을 충분히 확보 (off-by-one 방지)
     return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 12),
+      padding: const EdgeInsets.only(top: 28, bottom: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
