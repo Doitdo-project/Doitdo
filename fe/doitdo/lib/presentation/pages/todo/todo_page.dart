@@ -11,6 +11,7 @@ import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/notification/notification_view_model.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart'; // ✅ 추가
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
+import 'package:doitdo/presentation/providers/home_scroll_provider.dart';
 import 'package:doitdo/presentation/widgets/common/todo_section.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_add_sheet.dart';
@@ -176,6 +177,10 @@ class _TodoPageState extends ConsumerState<TodoPage> {
     });
   }
 
+  void _jumpToToday() {
+    ref.read(todoViewModelProvider.notifier).resetToToday();
+  }
+
   void _openAddSheet(BuildContext context, DateTime? date) {
     showModalBottomSheet(
       context: context, isScrollControlled: true,
@@ -199,6 +204,10 @@ class _TodoPageState extends ConsumerState<TodoPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(calendarTodayTriggerProvider, (prev, next) {
+      if (prev != null && next > prev) _jumpToToday();
+    });
+
     final state  = ref.watch(todoViewModelProvider);
     final vm     = ref.read(todoViewModelProvider.notifier);
     final colors = context.colors;
@@ -295,13 +304,18 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                                             shape: BoxShape.circle,
                                           ),
                                           child: Center(
-                                            child: Text(
-                                              unread > 9 ? '9+' : '$unread',
-                                              style: const TextStyle(
-                                                fontSize: 8,
-                                                fontWeight: FontWeight.w700,
-                                                color: Colors.white,
-                                                fontFamily: 'GmarketSansMedium',
+                                            child: MediaQuery(
+                                              data: MediaQuery.of(context).copyWith(
+                                                textScaler: TextScaler.noScaling,
+                                              ),
+                                              child: Text(
+                                                unread > 9 ? '9+' : '$unread',
+                                                style: const TextStyle(
+                                                  fontSize: 8,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Colors.white,
+                                                  fontFamily: 'GmarketSansMedium',
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -324,6 +338,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                     firstDay: DateTime.utc(2020, 1, 1),
                     lastDay: DateTime.utc(2030, 12, 31),
                     focusedDay: state.focusedDay,
+                    pageAnimationEnabled: state.pageAnimationEnabled,
                     selectedDayPredicate: (day) => state.selectedDay != null && isSameDay(state.selectedDay, day),
                     calendarFormat: state.calendarFormat,
                     availableCalendarFormats: const {CalendarFormat.month: '월간', CalendarFormat.week: '주간'},
