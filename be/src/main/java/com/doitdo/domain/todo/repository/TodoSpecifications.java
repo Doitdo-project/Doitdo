@@ -88,6 +88,22 @@ public final class TodoSpecifications {
 	}
 
 	/**
+	 * SOMEDAY DONE 의 노출 만료 처리.
+	 * NOT (type=SOMEDAY AND status=DONE AND done_date < today).
+	 * done_date=NULL 인 기존 데이터는 통과한다.
+	 */
+	public static Specification<Todo> excludeExpiredSomedayDone(LocalDate today) {
+		return (root, query, cb) -> cb.not(
+				cb.and(
+						cb.equal(root.get("type"), TodoType.SOMEDAY),
+						cb.equal(root.get("status"), TodoStatus.DONE),
+						cb.isNotNull(root.get("doneDate")),
+						cb.lessThan(root.get("doneDate"), today)
+				)
+		);
+	}
+
+	/**
 	 * 캘린더 범위 매칭. type 별 의미가 다르다.
 	 * - NORMAL: 단일 날짜 todo. {@code from <= startDate <= to} 만 매칭 (endDate 는 의미 없음).
 	 * - PERIOD: 기간형 todo. 기간이 [from, to] 와 겹치면 매칭.

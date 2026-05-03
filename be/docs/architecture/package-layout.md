@@ -34,7 +34,7 @@ domain/{domain}/
 
 ## 등록된 도메인
 
-`auth, user, todo, tamagotchi, inventory, shop, notification, setting`
+`auth, user, todo, tamagotchi, inventory, shop, notification, setting, bugreport`
 
 (노션 「엔드포인트」 카테고리 직역. 검색 기능은 `todo` 도메인 내부에서 처리.)
 
@@ -50,12 +50,12 @@ global/
  │   ├ SecurityConfig.java
  │   ├ JpaAuditingConfig.java
  │   ├ PasswordEncoderConfig.java
- │   └ OpenApiConfig.java                # springdoc-openapi 메타 + 9개 그룹 (be/feat/swagger 머지 후)
+ │   └ OpenApiConfig.java                # springdoc-openapi 메타 + 11개 그룹 (auth, user, todo, tamagotchi, streak, inventory, shop, notification, setting, bugreport, global)
  ├ entity/
  │   └ BaseTimeEntity.java               # 공통 Auditing (createdAt/updatedAt)
  ├ exception/
  │   ├ ErrorCode.java                    # 인터페이스
- │   ├ ErrorCodeRegistry.java            # 9개 도메인 enum 정적 인덱스
+ │   ├ ErrorCodeRegistry.java            # 10개 도메인 enum 정적 인덱스
  │   ├ CommonErrorCode.java              # G/G99
  │   ├ AuthErrorCode.java                # A
  │   ├ UserErrorCode.java                # U
@@ -65,6 +65,7 @@ global/
  │   ├ ShopErrorCode.java                # S
  │   ├ NotificationErrorCode.java        # N
  │   ├ SettingErrorCode.java             # C
+ │   ├ BugReportErrorCode.java           # B
  │   ├ CustomException.java
  │   └ GlobalExceptionHandler.java
  ├ swagger/                              # be/feat/swagger 머지 후 등장
@@ -172,7 +173,7 @@ domain/{domain}/
 | Application impl | `domain/notification/application/impl/NoopFcmService.java` | 기본 활성 FCM 스텁 |
 | Application impl | `domain/notification/application/impl/FirebaseFcmService.java` | `firebase.enabled=true` 시 실제 송신 |
 | Scheduler | `domain/notification/application/scheduler/EveningReminderScheduler.java` | `NotificationSettingRepository` 존재 시에만 활성 |
-| Scheduler | `domain/notification/application/scheduler/FarewellAvailabilityScheduler.java` | ADULT cap 도달 후 random 48~96h 가 지난 독립 준비 완료 캐릭터에 `TAMAGOTCHI_FAREWELL` 발송 |
+| Scheduler | `domain/notification/application/scheduler/FarewellAvailabilityScheduler.java` | ADULT cap 도달 즉시 활성화된 독립 준비 완료 캐릭터에 `TAMAGOTCHI_FAREWELL` 발송 |
 | Entity | `domain/notification/entity/Notification.java` | `notifications` 테이블 매핑 |
 | Entity | `domain/notification/entity/DeviceToken.java` | 필드 유지, 등록/비활성화 메서드만 추가 |
 | Repository | `domain/notification/repository/NotificationRepository.java` | 목록 조회 + 전체 읽음 벌크 업데이트 |
@@ -216,6 +217,21 @@ UNIQUE 제약 `uk_todos_user_master_date (user_id, master_todo_id, start_date)` 
 | Controller | `domain/todo/api/controller/PaletteController.java` | `GET /api/palettes` |
 
 `CategoryResp` 에 `colorHex` 필드 추가 (`colorId` 유지). `CategoryServiceImpl` 이 `PaletteColorRepository` 를 주입받아 N+1 없이 hex 매핑.
+
+## bugreport 도메인 구현 파일
+
+| 종류 | 경로 | 비고 |
+|---|---|---|
+| Controller | `domain/bugreport/api/controller/BugReportController.java` | `POST /api/bug-reports` 단일 엔드포인트, 201 Created |
+| Request DTO | `domain/bugreport/api/dto/req/CreateBugReportReq.java` | `title`(@Size max=100) / `content`(@Size max=500) |
+| Response DTO | `domain/bugreport/api/dto/resp/BugReportResp.java` | `bugReportId, createdAt` — `from(BugReport)` 팩토리 |
+| Application interface | `domain/bugreport/application/BugReportService.java` | `create(Long userId, CreateBugReportReq req)` |
+| Application impl | `domain/bugreport/application/impl/BugReportServiceImpl.java` | `@Transactional` save + DTO 변환 |
+| Entity | `domain/bugreport/entity/BugReport.java` | `bug_reports` 테이블 매핑, inner enum `BugReportStatus(NEW/REVIEWING/COMPLETE)`, soft delete |
+| Repository | `domain/bugreport/repository/BugReportRepository.java` | `JpaRepository<BugReport, Long>` (MVP: POST만) |
+| Migration SQL | `docs/ops/migrations/2026-04-bug-report.sql` | 수동 실행 필요 |
+
+`BugReportErrorCode` (`B` 접두, `global/exception/`) — `ErrorCodeRegistry.SOURCES` 에 등록.
 
 ## 네이밍/엔티티 규칙
 
