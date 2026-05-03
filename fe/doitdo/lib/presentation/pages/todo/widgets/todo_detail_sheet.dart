@@ -121,6 +121,10 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
       }
     }
 
+    final restoredRepeatType = (restoredDays != null && restoredDays.length == 7)
+        ? '매일'
+        : null;
+
     _dateResult = TodoDateResult(
       type: detailDto.type == 'PERIOD'
           ? TodoDateType.range
@@ -133,6 +137,7 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
       repeatStartDate: detailDto.type == 'RECURRING' ? sDate : null,
       repeatEndDate:   detailDto.type == 'RECURRING' ? eDate : null,
       repeatDays:      restoredDays,
+      repeatType:      restoredRepeatType,
     );
   }
 
@@ -237,50 +242,53 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
     final c           = context.colors;
     final fixedHeight = MediaQuery.of(context).size.height * 0.75;
 
-    return MediaQuery(
-      data:  MediaQuery.of(context).copyWith(viewInsets: EdgeInsets.zero),
-      child: Container(
-        decoration: BoxDecoration(
-          color:        c.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        height:  fixedHeight,
-        padding: const EdgeInsets.only(top: 12),
-        child: Padding(
-          // viewPadding 은 키보드 유무와 무관하게 물리적 safe area 를 반환하므로
-          // 키보드 등장/퇴장 시 padding.bottom 이 0↔34 로 바뀌는 레이아웃 흔들림이 없다.
-          padding: EdgeInsets.only(
-            bottom: max(8.0, MediaQuery.viewPaddingOf(context).bottom),
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: MediaQuery(
+        data:  MediaQuery.of(context).copyWith(viewInsets: EdgeInsets.zero),
+        child: Container(
+          decoration: BoxDecoration(
+            color:        c.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          child: Column(
-            mainAxisSize:       MainAxisSize.max,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width:  40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color:        c.border,
-                    borderRadius: BorderRadius.circular(2),
+          height:  fixedHeight,
+          padding: const EdgeInsets.only(top: 12),
+          child: Padding(
+            // viewPadding 은 키보드 유무와 무관하게 물리적 safe area 를 반환하므로
+            // 키보드 등장/퇴장 시 padding.bottom 이 0↔34 로 바뀌는 레이아웃 흔들림이 없다.
+            padding: EdgeInsets.only(
+              bottom: max(8.0, MediaQuery.viewPaddingOf(context).bottom),
+            ),
+            child: Column(
+              mainAxisSize:       MainAxisSize.max,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width:  40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color:        c.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration:       const Duration(milliseconds: 180),
-                  layoutBuilder:  (current, previous) => Stack(
-                    fit:       StackFit.expand,
-                    alignment: Alignment.center,
-                    children:  [...previous, ?current],
+                const SizedBox(height: 16),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration:       const Duration(milliseconds: 180),
+                    layoutBuilder:  (current, previous) => Stack(
+                      fit:       StackFit.expand,
+                      alignment: Alignment.center,
+                      children:  [...previous, ?current],
+                    ),
+                    transitionBuilder: (child, anim) =>
+                        FadeTransition(opacity: anim, child: child),
+                    child: _buildStep(c),
                   ),
-                  transitionBuilder: (child, anim) =>
-                      FadeTransition(opacity: anim, child: child),
-                  child: _buildStep(c),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

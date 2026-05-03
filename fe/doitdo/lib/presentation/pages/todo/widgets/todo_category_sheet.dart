@@ -50,28 +50,7 @@ class _TodoCategorySheetState extends ConsumerState<TodoCategorySheet> {
 
     final asyncCategories = ref.watch(categoryViewModelProvider);
 
-    // 상단 헤더: 마스코트 말풍선 + '수정' 버튼
-    final headerRow = Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const _MascotBubble(message: '어떤 카테고리야?'),
-        GestureDetector(
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const CategoryPage()),
-            );
-          },
-          behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: const EdgeInsets.only(right: 4.0, top: 8.0, bottom: 8.0),
-            child: Text(
-              '수정',
-              style: AppTextStyles.labelMedium.copyWith(color: colors.textSecondary),
-            ),
-          ),
-        ),
-      ],
-    );
+    const headerRow = _MascotBubble(message: '어떤 카테고리야?');
 
     Widget buildContent(List<CategoryResp> categories) {
       // 삭제 대비 안전장치: 현재 선택된 카테고리가 없으면 첫 번째 항목으로 폴백
@@ -86,9 +65,9 @@ class _TodoCategorySheetState extends ConsumerState<TodoCategorySheet> {
         }
       }
 
-      // ✅ + 추가 버튼 제거 — 카테고리 칩만 표시.
       // LayoutBuilder 로 실제 가용 너비 기준 3열 정사각형 카드 분배.
       // 카드 안: 가운데 색상 원 + 그 아래 카테고리명 (세로 배치).
+      // 카테고리 6개 미만이면 마지막 칸에 + 칩을 추가해 CategoryPage 로 진입.
       final chipsWrap = LayoutBuilder(
         builder: (context, constraints) {
           // 한 줄 3개 → 사이 간격 2개 분량 빼고 3등분.
@@ -97,55 +76,76 @@ class _TodoCategorySheetState extends ConsumerState<TodoCategorySheet> {
           return Wrap(
             spacing: chipSpacing,
             runSpacing: chipSpacing,
-            children: categories.map((cat) {
-              final isSelected = _selectedName == cat.categoryName;
-              return GestureDetector(
-                onTap: () => setState(() {
-                  _selectedName = cat.categoryName;
-                  _selectedObj = cat;
-                }),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: chipWidth,
-                  height: chipWidth, // 정사각형
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.calendarPoint
-                        : colors.surfaceAlt,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 18,
-                        height: 18,
-                        decoration: BoxDecoration(
-                          color: isSelected ? Colors.white70 : cat.color,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Padding(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 6),
-                        child: Text(
-                          cat.categoryName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: isSelected
-                                ? Colors.white
-                                : colors.textPrimary,
+            children: [
+              ...categories.map((cat) {
+                final isSelected = _selectedName == cat.categoryName;
+                return GestureDetector(
+                  onTap: () => setState(() {
+                    _selectedName = cat.categoryName;
+                    _selectedObj = cat;
+                  }),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: chipWidth,
+                    height: chipWidth, // 정사각형
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.calendarPoint
+                          : colors.surfaceAlt,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 18,
+                          height: 18,
+                          decoration: BoxDecoration(
+                            color: cat.color,
+                            shape: BoxShape.circle,
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 10),
+                        Padding(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 6),
+                          child: Text(
+                            cat.categoryName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: isSelected
+                                  ? Colors.white
+                                  : colors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+              if (categories.length < 6)
+                GestureDetector(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const CategoryPage()),
+                  ),
+                  child: Container(
+                    width: chipWidth,
+                    height: chipWidth,
+                    decoration: BoxDecoration(
+                      color: colors.surfaceAlt,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Icon(
+                      Icons.add,
+                      size: 28,
+                      color: colors.textSecondary,
+                    ),
                   ),
                 ),
-              );
-            }).toList(),
+            ],
           );
         },
       );

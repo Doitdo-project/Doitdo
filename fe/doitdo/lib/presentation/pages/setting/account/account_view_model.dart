@@ -30,14 +30,7 @@ class AccountViewModel extends AutoDisposeAsyncNotifier<bool?> {
       await ref.read(fcmTokenRegistrarProvider).unregister();
       await ref.read(authRepositoryProvider).signOut();
       ref.invalidate(currentUserProvider);
-      // welcomeViewModelProvider 는 non-autoDispose 라 로그인 성공 후 받은
-      // AsyncData(WelcomeSuccess) 가 화면 언마운트 후에도 캐시에 남는다.
-      // invalidate 만으로는 listener 가 없는 상태라 lazy 리셋이 되어,
-      // context.go(/welcome) 직후 WelcomePage 의 PostFrameCallback fallback 이
-      // 캐시된 success 를 보고 곧장 홈으로 튕기는 경합이 발생.
-      // 명시적 동기 리셋으로 race 차단.
-      ref.read(welcomeViewModelProvider.notifier).state =
-          const AsyncValue.data(null);
+      ref.read(welcomeViewModelProvider.notifier).reset();
       return true;
     });
   }

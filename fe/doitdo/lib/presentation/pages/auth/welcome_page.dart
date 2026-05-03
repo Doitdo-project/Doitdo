@@ -612,7 +612,7 @@ class _SocialButtons extends StatelessWidget {
                 ref.read(welcomeViewModelProvider.notifier).signInWithApple(),
             style: SignInWithAppleButtonStyle.black,
             text: 'Apple로 로그인',
-            height: 48.h,
+            height: 48.w,
             borderRadius: BorderRadius.circular(12.r),
           ),
           SizedBox(height: 12.h),
@@ -620,8 +620,9 @@ class _SocialButtons extends StatelessWidget {
         // 카카오 — 공식 와이드 버튼 이미지(에셋) 사용.
         // Ink.image 로 이미지를 Material 의 ink surface 로 등록해야 InkWell 의 탭
         // 리플이 이미지 위에 그려져서 "버튼 눌리는 느낌" 이 난다.
+        // height 를 .w 스케일로 맞춰 기기 가로세로 비율과 무관하게 이미지 비율 유지.
         SizedBox(
-          height: 48.h,
+          height: 48.w,
           child: Material(
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(12.r),
@@ -645,7 +646,7 @@ class _SocialButtons extends StatelessWidget {
         SizedBox(height: 12.h),
         // Google — 이미지 에셋 사용 (카카오와 동일한 방식).
         SizedBox(
-          height: 48.h,
+          height: 48.w,
           child: Material(
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(12.r),
@@ -667,7 +668,7 @@ class _SocialButtons extends StatelessWidget {
         SizedBox(height: 12.h),
         // 이메일 — 이미지 에셋 사용 (카카오와 동일한 방식).
         SizedBox(
-          height: 48.h,
+          height: 48.w,
           child: Material(
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(12.r),
