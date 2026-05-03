@@ -38,6 +38,7 @@ class WelcomeViewModel extends AsyncNotifier<WelcomeSuccess?> {
   /// Google OAuth 수행. 결과는 state 로만 노출 (반환값 없음).
   /// 성공 시 currentUserProvider 도 응답으로 받은 user 로 즉시 동기화 (추가 GET 호출 안 발생).
   Future<void> signInWithGoogle() async {
+    if (state.isLoading) return;
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final repo = ref.read(authRepositoryProvider);
@@ -51,6 +52,7 @@ class WelcomeViewModel extends AsyncNotifier<WelcomeSuccess?> {
 
   /// Kakao OAuth 수행. 규약은 [signInWithGoogle] 과 동일.
   Future<void> signInWithKakao() async {
+    if (state.isLoading) return;
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final repo = ref.read(authRepositoryProvider);
@@ -63,6 +65,7 @@ class WelcomeViewModel extends AsyncNotifier<WelcomeSuccess?> {
 
   /// Apple Sign-In 수행. 규약은 [signInWithGoogle] 과 동일.
   Future<void> signInWithApple() async {
+    if (state.isLoading) return;
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final repo = ref.read(authRepositoryProvider);
