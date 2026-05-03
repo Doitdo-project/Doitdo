@@ -238,9 +238,13 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
   Widget build(BuildContext context) {
     final c           = context.colors;
     final fixedHeight = MediaQuery.of(context).size.height * 0.75;
+    // 키보드 높이 — 시트 전체를 그만큼 위로 밀어 메모/제목이 키보드에 가려지지 않게.
+    // (이전엔 viewInsets 를 강제 0 으로 덮어써 시트 안 위젯이 키보드 위치를 알 수 없었고,
+    //  ensureVisible 도 동작하지 않아 메모 영역이 키보드 뒤에 갇혀 있었다.)
+    final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
 
-    return MediaQuery(
-      data:  MediaQuery.of(context).copyWith(viewInsets: EdgeInsets.zero),
+    return Padding(
+      padding: EdgeInsets.only(bottom: keyboardInset),
       child: Container(
         decoration: BoxDecoration(
           color:        c.surface,
@@ -451,6 +455,13 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
               controller: _titleController,
               focusNode:  _titleFocusNode,
               readOnly:   _isDone,
+              // 키보드 우측 하단 버튼을 "다음" 으로 — 누르면 메모 칸으로 자동 이동.
+              // 빈 제목으로 next 누르면 의미없는 이동이라 그대로 유지(저장 정책 일관).
+              textInputAction: TextInputAction.next,
+              onSubmitted: (_) {
+                if (_titleController.text.trim().isEmpty) return;
+                FocusScope.of(context).requestFocus(_memoFocusNode);
+              },
               style: AppTextStyles.titleLarge.copyWith(
                 fontFamily:      'GmarketSansMedium',
                 fontWeight:      FontWeight.w500,
@@ -548,24 +559,40 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                   // 메모 (직접 수정 가능)
                   Padding(
                     padding: const EdgeInsets.only(left: 8),
-                    child: TextField(
-                      controller:   _memoController,
-                      focusNode:    _memoFocusNode,
-                      readOnly:     _isDone,
-                      minLines:     4,
-                      maxLines:     null,
-                      keyboardType: TextInputType.multiline,
-                      style:        AppTextStyles.bodyMedium
-                          .copyWith(color: _isDone ? c.textHint : c.textPrimary),
-                      decoration: InputDecoration(
-                        hintText:       '메모를 입력해 보세요.',
-                        hintStyle:      AppTextStyles.bodyMedium
-                            .copyWith(color: c.textHint),
-                        border:         InputBorder.none,
-                        isDense:        true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
+                    child: Builder(builder: (innerContext) {
+                      return TextField(
+                        controller:   _memoController,
+                        focusNode:    _memoFocusNode,
+                        readOnly:     _isDone,
+                        minLines:     4,
+                        maxLines:     null,
+                        keyboardType: TextInputType.multiline,
+                        // 사용자가 메모를 직접 탭한 경우의 안전망.
+                        // 키보드가 올라온 다음 프레임에 ensureVisible 로 메모 칸을
+                        // 키보드 위 가시 영역으로 스크롤한다.
+                        onTap: () {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (!mounted) return;
+                            Scrollable.ensureVisible(
+                              innerContext,
+                              duration: const Duration(milliseconds: 250),
+                              curve: Curves.easeOut,
+                              alignment: 0.5,
+                            );
+                          });
+                        },
+                        style:        AppTextStyles.bodyMedium
+                            .copyWith(color: _isDone ? c.textHint : c.textPrimary),
+                        decoration: InputDecoration(
+                          hintText:       '메모를 입력해 보세요.',
+                          hintStyle:      AppTextStyles.bodyMedium
+                              .copyWith(color: c.textHint),
+                          border:         InputBorder.none,
+                          isDense:        true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      );
+                    }),
                   ),
                 ],
               ),
@@ -598,7 +625,7 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                   // 빈 제목으론 저장 불가 → 확인 버튼 비활성.
                   // _isDone 항목은 텍스트 필드가 readOnly 라 빈 제목 자체가 만들어질 수 없고,
                   // 확인 버튼이 단순 닫기 역할을 하므로 항상 활성.
-                  // [버전 비교용] detail_sheet 비활성: 메인 컬러 #E2782B + 투명도 50%
+                  // 비활성 스타일: 메인 컬러 #E2782B + 투명도 50% (add_sheet 와 동일)
                   final canConfirm = _isDone || _titleController.text.trim().isNotEmpty;
                   final button = DoitdoPrimaryButton(
                     height:    48,
