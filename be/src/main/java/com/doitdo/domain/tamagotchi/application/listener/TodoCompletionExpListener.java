@@ -8,6 +8,7 @@ import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.event.TodoCompletedEvent;
 import com.doitdo.domain.todo.repository.TodoRepository;
+import com.doitdo.global.cache.CacheEvictHelper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -44,6 +45,7 @@ public class TodoCompletionExpListener {
 	private final UserCharacterRepository userCharacterRepository;
 	private final CharacterRepository characterRepository;
 	private final ExpCalculator expCalculator;
+	private final CacheEvictHelper cacheEvictHelper;
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -107,6 +109,7 @@ public class TodoCompletionExpListener {
 			uc.scheduleFarewell(LocalDateTime.now());
 		}
 		todo.markExpGranted();
+		cacheEvictHelper.evictTamagotchiCurrentAfterCommit(event.userId());
 		log.debug("[exp] granted delta={} user={} todo={} currentExp={}",
 				delta, event.userId(), event.todoId(), uc.getCurrentExp());
 	}
