@@ -36,7 +36,9 @@ public class ShopController {
 	private final ShopService shopService;
 	private final RoomFurniturePlacementService roomFurniturePlacementService;
 
-	@Operation(summary = "상점 가구 목록 조회", description = "상점의 가구 목록을 조회하고 보유한 가구는 품절 상태로 표시")
+	@Operation(summary = "상점 가구 목록 조회",
+		description = "상점의 판매 가능 가구 목록을 조회한다. category query 가 있으면 해당 카테고리만 조회한다. "
+			+ "현재 사용자가 이미 보유한 가구는 owned=true, soldOut=true 로 표시한다.")
 	@GetMapping("/shop/furnitures")
 	public GlobalApiResponse<FurnitureShopResp> listFurnitures(
 		@AuthenticationPrincipal CustomUserDetails userDetails,
@@ -45,7 +47,9 @@ public class ShopController {
 		return GlobalApiResponse.ok(shopService.listFurnitures(userDetails.getUserId(), category));
 	}
 
-	@Operation(summary = "가구 구매", description = "월렛 잔액으로 가구를 구매")
+	@Operation(summary = "가구 구매",
+		description = "월렛 잔액으로 가구를 구매한다. 가구 존재/판매 여부, 중복 보유 여부, 월렛 존재 여부, 잔액을 검증한다. "
+			+ "구매 성공 시 월렛 차감, 보유 가구 생성, 구매 로그 저장을 한 트랜잭션으로 처리한다.")
 	@ApiErrorCodes({"S00-001", "S00-002", "S00-003", "S00-004", "S00-005"})
 	@PostMapping("/shop/furnitures/{furnitureId}/purchase")
 	public GlobalApiResponse<PurchaseFurnitureResp> purchaseFurniture(
@@ -56,7 +60,8 @@ public class ShopController {
 			shopService.purchaseFurniture(userDetails.getUserId(), furnitureId));
 	}
 
-	@Operation(summary = "내 보유 가구 목록 조회", description = "사용자가 구매해 보유 중인 가구 목록을 조회")
+	@Operation(summary = "내 보유 가구 목록 조회",
+		description = "현재 사용자가 구매해 보유 중인 가구 목록을 조회한다. user_furnitures 기준으로 조회하고 각 보유 가구의 Furniture 정보를 함께 반환한다.")
 	@GetMapping("/users/me/furnitures")
 	public GlobalApiResponse<UserFurnitureResp> listMyFurnitures(
 		@AuthenticationPrincipal CustomUserDetails userDetails
@@ -64,7 +69,9 @@ public class ShopController {
 		return GlobalApiResponse.ok(shopService.listMyFurnitures(userDetails.getUserId()));
 	}
 
-	@Operation(summary = "내 방 조회", description = "사용자의 방에 배치된 가구 목록을 조회")
+	@Operation(summary = "내 방 조회",
+		description = "현재 사용자의 방에 배치된 가구 목록을 조회한다. room_furniture_placements 를 zIndex 오름차순, placementId 오름차순으로 정렬하고 "
+			+ "각 배치 정보에 보유 가구와 가구 마스터 정보를 붙여 반환한다.")
 	@GetMapping("/users/me/room")
 	public GlobalApiResponse<RoomResp> getMyRoom(
 		@AuthenticationPrincipal CustomUserDetails userDetails
@@ -72,7 +79,9 @@ public class ShopController {
 		return GlobalApiResponse.ok(roomFurniturePlacementService.getMyRoom(userDetails.getUserId()));
 	}
 
-	@Operation(summary = "보유 가구 배치", description = "보유한 가구를 기본 좌표로 방에 배치")
+	@Operation(summary = "보유 가구 배치",
+		description = "현재 사용자가 보유한 가구를 방에 배치한다. userId 와 userFurnitureId 로 본인 보유 가구인지 확인한다. "
+			+ "배치 좌표는 가구 마스터의 defaultX/defaultY/zIndex 를 사용하고 rotation 은 0으로 저장한다.")
 	@ApiErrorCodes({"S01-001", "S00-001"})
 	@PostMapping("/users/me/room/furnitures/{userFurnitureId}/placements")
 	public GlobalApiResponse<RoomFurniturePlacementResp> placeFurniture(
@@ -83,7 +92,9 @@ public class ShopController {
 			roomFurniturePlacementService.placeFurniture(userDetails.getUserId(), userFurnitureId));
 	}
 
-	@Operation(summary = "배치 가구 위치 수정", description = "방에 배치된 가구의 좌표와 레이어를 수정")
+	@Operation(summary = "배치 가구 위치 수정",
+		description = "현재 사용자의 방에 배치된 가구 위치를 수정한다. placementId 와 userId 로 본인 배치인지 확인한 뒤 "
+			+ "x, y, zIndex, rotation 값을 업데이트한다.")
 	@ApiErrorCodes({"S02-001", "S01-001", "S00-001"})
 	@PatchMapping("/users/me/room/placements/{placementId}")
 	public GlobalApiResponse<RoomFurniturePlacementResp> updatePlacement(
@@ -95,7 +106,9 @@ public class ShopController {
 			roomFurniturePlacementService.updatePlacement(userDetails.getUserId(), placementId, req));
 	}
 
-	@Operation(summary = "방 가구 배치 제거", description = "보유 가구는 유지하고 방 배치만 제거")
+	@Operation(summary = "방 가구 배치 제거",
+		description = "현재 사용자의 방에서 가구 배치만 제거한다. placementId 와 userId 로 본인 배치인지 확인한다. "
+			+ "UserFurniture 는 삭제하지 않고 RoomFurniturePlacement row 만 삭제한다.")
 	@ApiErrorCodes({"S02-001"})
 	@DeleteMapping("/users/me/room/placements/{placementId}")
 	public GlobalApiResponse<Void> removePlacement(

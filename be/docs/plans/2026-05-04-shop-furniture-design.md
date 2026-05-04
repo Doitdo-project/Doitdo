@@ -410,6 +410,89 @@ Swagger 노출:
 - 방에서 제거해도 `UserFurniture` 는 남아 있다.
 - 타 사용자의 보유 가구/배치 정보는 조작할 수 없다.
 
+## 비즈니스 로직 상세 흐름
+
+### 상점 구매
+
+`POST /api/shop/furnitures/{furnitureId}/purchase`
+
+1. 가구 조회
+   - 삭제되지 않은 가구만 조회한다.
+   - 없으면 `S00-001 FURNITURE_NOT_FOUND`.
+2. 판매 여부 확인
+   - `isOnSale=false` 면 `S00-004 FURNITURE_NOT_ON_SALE`.
+3. 중복 보유 확인
+   - 같은 유저가 같은 가구를 이미 갖고 있으면 `S00-002 FURNITURE_ALREADY_OWNED`.
+4. 월렛 조회
+   - `findByUserIdForUpdate` 로 비관적 락을 잡는다.
+   - 없으면 `S00-005 WALLET_NOT_FOUND`.
+5. 잔액 차감
+   - `UserWallet.spend(price)` 로 차감한다.
+   - 잔액 부족이면 `S00-003 INSUFFICIENT_BALANCE`.
+6. 보유 가구 생성
+   - `UserFurniture.create(userId, furnitureId)` 로 생성한다.
+7. 구매 로그 저장
+   - 구매 당시 가격, 구매 후 잔액, 생성된 `userFurnitureId` 를 저장한다.
+   - 1~7은 한 트랜잭션으로 처리한다.
+
+### 상점 목록 조회
+
+`GET /api/shop/furnitures?category=CHAIR`
+
+- 판매/삭제 여부 기준으로 가구 목록을 조회한다.
+- 유저의 보유 가구 ID 목록을 조회한다.
+- 각 가구마다 `owned = 보유 여부`, `soldOut = owned || !isOnSale` 로 계산한다.
+- `category` query 가 있으면 카테고리 필터를 적용한다.
+
+### 내 보유 가구 목록
+
+`GET /api/users/me/furnitures`
+
+- `user_furnitures` 에서 내 보유 가구를 조회한다.
+- 각 보유 가구의 `Furniture` 정보를 붙여 응답한다.
+
+### 방 배치
+
+`POST /api/users/me/room/furnitures/{userFurnitureId}/placements`
+
+1. `userId + userFurnitureId` 로 보유 가구를 조회한다.
+   - 내 가구가 아니거나 없으면 `S01-001 USER_FURNITURE_NOT_FOUND`.
+2. 가구 마스터를 조회한다.
+   - 없으면 `S00-001 FURNITURE_NOT_FOUND`.
+3. `RoomFurniturePlacement.create(...)` 로 배치 정보를 만든다.
+   - 가구의 `defaultX`, `defaultY`, `zIndex` 를 사용한다.
+   - `rotation=0` 으로 시작한다.
+4. `room_furniture_placements` 에 저장한다.
+
+### 방 조회
+
+`GET /api/users/me/room`
+
+- 내 `room_furniture_placements` 를 조회한다.
+- 정렬은 `zIndex ASC`, `placementId ASC` 기준이다.
+- 각 placement 에 연결된 `UserFurniture` 와 `Furniture` 정보를 붙여 응답한다.
+
+### 배치 수정
+
+`PATCH /api/users/me/room/placements/{placementId}`
+
+- `placementId + userId` 로 조회한다.
+- 없거나 내 배치가 아니면 `S02-001 PLACEMENT_NOT_FOUND`.
+- `x`, `y`, `zIndex`, `rotation` 을 업데이트한다.
+
+### 방에서 제거
+
+`DELETE /api/users/me/room/placements/{placementId}`
+
+- `placementId + userId` 로 조회한다.
+- 없으면 `S02-001 PLACEMENT_NOT_FOUND`.
+- `RoomFurniturePlacement` 만 삭제하고 `UserFurniture` 는 유지한다.
+
+### 회원 hard delete
+
+- 기존 회원 삭제 흐름에 `roomFurniturePlacementRepository.deleteAllByUserId(userId)` 를 추가한다.
+- `user_furnitures` 삭제 전에 `room_furniture_placements` 를 먼저 삭제한다.
+
 ## 미정 사항
 
 - 방 제거 시 placement row 삭제와 `isPlaced=false` 중 어떤 방식을 쓸지.
