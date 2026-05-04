@@ -7,6 +7,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -16,7 +17,13 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Table(name = "room_furniture_placements")
+@Table(
+	name = "room_furniture_placements",
+	indexes = {
+		@Index(name = "idx_room_furniture_placements_user_id", columnList = "user_id"),
+		@Index(name = "idx_room_furniture_placements_user_furniture_id", columnList = "user_furniture_id")
+	}
+)
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
