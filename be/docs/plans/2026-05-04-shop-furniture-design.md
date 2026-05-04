@@ -16,7 +16,8 @@
 - 방 배치, 위치 수정, 방에서 제거, 다마고치 화면의 방 조회는 2차 범위로 분리한다.
 - 2차에서는 방에서 삭제하더라도 인벤토리 영구 삭제가 아니라 배치 제거로 처리한다.
 - 2차에서는 지금 가구 위치가 고정이어도, 이후 위치 수정 기능을 위해 `x`, `y` 좌표를 DB와 API에 둔다.
-- 배치 개수 제한, 위치 겹침 제한, 카테고리별 배치 제한은 2차에서도 MVP 기준으로 두지 않는다.
+- 2차-1 기준으로는 배치 개수 제한, 위치 겹침 제한, 카테고리별 배치 제한을 두지 않았다.
+- 2차-2부터 상점/인벤토리 통합 화면 요구사항에 맞춰 카테고리별 1개 배치 정책을 적용한다.
 
 ## 단계 분리
 
@@ -409,6 +410,7 @@ Swagger 노출:
 - 구매 후 기본 좌표로 방에 배치할 수 있다.
 - 방에서 제거해도 `UserFurniture` 는 남아 있다.
 - 타 사용자의 보유 가구/배치 정보는 조작할 수 없다.
+- 2차-2부터 같은 카테고리 가구를 새로 배치하면 기존 같은 카테고리 배치는 제거된다.
 
 ## 비즈니스 로직 상세 흐름
 
@@ -645,3 +647,47 @@ Swagger 노출:
 - 가구 seed 데이터 추가
 - 실제 dev DB에 마이그레이션 수동 적용 확인
 - Swagger UI에서 방 배치 응답 예시 확인
+
+### 2026-05-04 2차-2 상점/인벤토리 상태 + 미리보기 구현
+
+구현된 범위:
+
+- 상점 목록에서 `owned`, `placed`, `status` 를 함께 응답
+- 상점 상태 `PURCHASABLE`, `PLACEABLE`, `PLACED` 추가
+- 같은 카테고리 가구 배치 시 기존 같은 카테고리 placement 자동 제거
+- 이미 배치 중인 같은 가구를 다시 배치하면 기존 placement 반환
+- 상점 가구 방 미리보기 API 추가
+- 미리보기 시 같은 카테고리 기존 배치 제외
+- 미리보기 대상 가구는 저장하지 않고 `preview=true` 로 응답에만 포함
+
+구현된 API:
+
+| Method | Path | 설명 |
+|---|---|---|
+| GET | `/api/shop/furnitures/{furnitureId}/preview-room` | 특정 가구를 내 방에 놓았을 때의 미리보기 조회 |
+
+변경된 기존 API:
+
+| Method | Path | 변경 |
+|---|---|---|
+| GET | `/api/shop/furnitures` | `placed`, `status` 응답 추가 |
+| POST | `/api/users/me/room/furnitures/{userFurnitureId}/placements` | 같은 카테고리 기존 배치 자동 교체 |
+
+구현된 파일:
+
+| 종류 | 파일 |
+|---|---|
+| Response enum | `src/main/java/com/doitdo/domain/shop/api/dto/resp/FurnitureShopStatus.java` |
+
+변경된 기존 파일:
+
+- `FurnitureShopItemResp`: `placed`, `status` 추가
+- `RoomFurniturePlacementResp`: `category`, `preview` 추가
+- `ShopService`, `ShopServiceImpl`: 미리보기 API와 상점 상태 계산 추가
+- `RoomFurniturePlacementServiceImpl`: 카테고리별 1개 배치 정책 추가
+- `ShopController`: 미리보기 API 추가
+- `ShopServiceImplTest`, `RoomFurniturePlacementServiceImplTest`, `ShopControllerTest`: 2차-2 테스트 추가
+
+검증:
+
+- `.\gradlew.bat test --tests "com.doitdo.domain.shop.application.impl.ShopServiceImplTest" --tests "com.doitdo.domain.shop.application.impl.RoomFurniturePlacementServiceImplTest" --tests "com.doitdo.domain.shop.api.controller.ShopControllerTest" --no-daemon` 성공

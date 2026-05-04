@@ -225,7 +225,8 @@ UNIQUE 제약 `uk_todos_user_master_date (user_id, master_todo_id, start_date)` 
 | Controller | `domain/shop/api/controller/ShopController.java` | 가구 목록/구매/보유/방 배치 엔드포인트 |
 | Request DTO | `domain/shop/api/dto/req/UpdateRoomFurniturePlacementReq.java` | 배치 좌표/레이어 수정 요청 |
 | Response DTO | `domain/shop/api/dto/resp/FurnitureShopResp.java` | 상점 가구 목록 래퍼 |
-| Response DTO | `domain/shop/api/dto/resp/FurnitureShopItemResp.java` | 상점 가구 단일 응답, `owned/soldOut` 포함 |
+| Response DTO | `domain/shop/api/dto/resp/FurnitureShopItemResp.java` | 상점 가구 단일 응답, `owned/soldOut/placed/status` 포함 |
+| Response enum | `domain/shop/api/dto/resp/FurnitureShopStatus.java` | 상점/인벤토리 상태 (`PURCHASABLE`, `PLACEABLE`, `PLACED`) |
 | Response DTO | `domain/shop/api/dto/resp/PurchaseFurnitureResp.java` | 구매 결과, 잔액 포함 |
 | Response DTO | `domain/shop/api/dto/resp/UserFurnitureResp.java` | 보유 가구 목록 래퍼 |
 | Response DTO | `domain/shop/api/dto/resp/UserFurnitureItemResp.java` | 보유 가구 단일 응답 |
@@ -247,6 +248,8 @@ UNIQUE 제약 `uk_todos_user_master_date (user_id, master_todo_id, start_date)` 
 
 `UserWallet.spend(Integer amount)` 와 `UserWalletRepository.findByUserIdForUpdate(Long userId)` 로 구매 차감과 동시성 제어를 처리한다.
 방에서 가구를 제거할 때는 `UserFurniture` 를 삭제하지 않고 `RoomFurniturePlacement` 만 삭제한다.
+상점/인벤토리 통합 화면에서는 보유 여부와 배치 여부로 `PURCHASABLE`, `PLACEABLE`, `PLACED` 상태를 계산한다.
+방에는 카테고리별 1개 가구만 배치하며, 같은 카테고리의 새 가구를 배치하면 기존 placement 를 자동 삭제한다.
 
 ## bugreport 도메인 구현 파일
 
