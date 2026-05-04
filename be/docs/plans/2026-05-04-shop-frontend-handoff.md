@@ -250,6 +250,142 @@ GET /api/users/me/room
 - 새 가구 상태는 `PLACED` 가 된다.
 - 기존 같은 카테고리 가구는 보유 상태면 `PLACEABLE` 이 된다.
 
+## API별 상세 흐름
+
+현재 shop/room 관련 API는 총 8개다.
+
+### 1. 상점/인벤토리 목록
+
+`GET /api/shop/furnitures`
+
+흐름:
+
+1. `category` query 가 없으면 전체 가구를 조회한다.
+2. `category` query 가 있으면 해당 카테고리 가구만 조회한다.
+3. 내 보유 가구 ID 목록을 조회한다.
+4. 내 방 배치 목록을 조회한다.
+5. 배치된 `userFurnitureId` 를 실제 `furnitureId` 로 변환한다.
+6. 각 가구별 상태를 계산한다.
+   - 미보유: `owned=false`, `placed=false`, `status=PURCHASABLE`
+   - 보유+미배치: `owned=true`, `placed=false`, `status=PLACEABLE`
+   - 보유+배치중: `owned=true`, `placed=true`, `status=PLACED`
+7. 응답한다.
+
+### 2. 가구 구매
+
+`POST /api/shop/furnitures/{furnitureId}/purchase`
+
+흐름:
+
+1. 가구를 조회한다.
+2. 없으면 `S00-001`.
+3. 판매 중이 아니면 `S00-004`.
+4. 이미 보유했으면 `S00-002`.
+5. 월렛을 비관적 락으로 조회한다.
+6. 월렛이 없으면 `S00-005`.
+7. 잔액 부족이면 `S00-003`.
+8. 잔액을 차감한다.
+9. `UserFurniture` 를 생성한다.
+10. `FurniturePurchaseLog` 를 저장한다.
+11. 구매 결과를 응답한다.
+
+### 3. 내 보유 가구 목록
+
+`GET /api/users/me/furnitures`
+
+흐름:
+
+1. `user_furnitures` 에서 내 보유 가구를 조회한다.
+2. 각 보유 가구의 `Furniture` 를 조회한다.
+3. 가구 마스터 정보를 붙여서 응답한다.
+
+### 4. 가구 방 미리보기
+
+`GET /api/shop/furnitures/{furnitureId}/preview-room`
+
+흐름:
+
+1. 미리보기 대상 가구를 조회한다.
+2. 없으면 `S00-001`.
+3. 내 방 배치 목록을 조회한다.
+4. 각 배치의 `UserFurniture` 를 조회한다.
+5. 각 배치의 `Furniture` 를 조회한다.
+6. 미리보기 대상과 같은 `category` 의 기존 배치는 제외한다.
+7. 다른 카테고리 배치는 그대로 유지한다.
+8. 미리보기 대상 가구를 기본 좌표로 응답에 추가한다.
+   - `placementId=null`
+   - `userFurnitureId=null`
+   - `preview=true`
+   - 저장은 하지 않는다.
+9. 응답한다.
+
+### 5. 내 방 조회
+
+`GET /api/users/me/room`
+
+흐름:
+
+1. 내 `room_furniture_placements` 를 조회한다.
+2. `zIndex ASC`, `placementId ASC` 로 정렬한다.
+3. 각 placement 의 `UserFurniture` 를 조회한다.
+4. 각 `UserFurniture` 의 `Furniture` 를 조회한다.
+5. 배치 정보와 가구 정보를 합쳐서 응답한다.
+6. `preview=false` 로 응답한다.
+
+### 6. 보유 가구 방 배치
+
+`POST /api/users/me/room/furnitures/{userFurnitureId}/placements`
+
+흐름:
+
+1. `userId + userFurnitureId` 로 내 보유 가구를 조회한다.
+2. 없거나 내 것이 아니면 `S01-001`.
+3. 보유 가구의 `Furniture` 를 조회한다.
+4. 없으면 `S00-001`.
+5. 내 현재 방 배치 목록을 조회한다.
+6. 같은 카테고리 배치가 있는지 확인한다.
+7. 같은 가구가 이미 배치 중이면 기존 placement 를 그대로 응답한다.
+8. 같은 카테고리 다른 가구가 배치 중이면 기존 placement 를 삭제한다.
+9. 새 placement 를 생성한다.
+   - `defaultX`
+   - `defaultY`
+   - `zIndex`
+   - `rotation=0`
+10. 저장 후 응답한다.
+
+### 7. 배치 위치 수정
+
+`PATCH /api/users/me/room/placements/{placementId}`
+
+흐름:
+
+1. `placementId + userId` 로 내 배치를 조회한다.
+2. 없거나 내 것이 아니면 `S02-001`.
+3. 요청 body 의 `x`, `y`, `zIndex`, `rotation` 으로 업데이트한다.
+4. 연결된 `UserFurniture` 를 조회한다.
+5. 연결된 `Furniture` 를 조회한다.
+6. 수정된 배치 정보를 응답한다.
+
+### 8. 방 가구 배치 제거
+
+`DELETE /api/users/me/room/placements/{placementId}`
+
+흐름:
+
+1. `placementId + userId` 로 내 배치를 조회한다.
+2. 없거나 내 것이 아니면 `S02-001`.
+3. `RoomFurniturePlacement` 만 삭제한다.
+4. `UserFurniture` 는 유지한다.
+5. 204로 응답한다.
+
+핵심 정책:
+
+- 구매는 `UserFurniture` 를 만든다.
+- 배치는 `RoomFurniturePlacement` 를 만든다.
+- 방에서 제거해도 보유 가구는 남는다.
+- 방에는 카테고리별 1개만 배치된다.
+- 미리보기는 저장하지 않는다.
+
 ## 주의사항
 
 - FE에서 같은 카테고리 교체 로직을 직접 계산하지 않아도 된다. 서버가 처리한다.
