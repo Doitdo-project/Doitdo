@@ -48,3 +48,18 @@ CREATE TABLE IF NOT EXISTS furniture_purchase_logs (
     INDEX idx_furniture_purchase_logs_user_id (user_id),
     INDEX idx_furniture_purchase_logs_furniture_id (furniture_id)
 );
+
+CREATE TABLE IF NOT EXISTS room_furniture_placements (
+    placement_id      BIGINT NOT NULL AUTO_INCREMENT,
+    user_id           BIGINT NOT NULL,
+    user_furniture_id BIGINT NOT NULL,
+    x                 INT NOT NULL,
+    y                 INT NOT NULL,
+    z_index           INT NOT NULL,
+    rotation          INT NOT NULL DEFAULT 0,
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (placement_id),
+    INDEX idx_room_furniture_placements_user_id (user_id),
+    INDEX idx_room_furniture_placements_user_furniture_id (user_furniture_id)
+);

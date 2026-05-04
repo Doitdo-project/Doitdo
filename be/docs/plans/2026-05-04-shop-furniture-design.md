@@ -505,3 +505,60 @@ Swagger 노출:
 - 실제 dev DB에 마이그레이션 수동 적용 확인
 - Swagger UI에서 응답 예시 확인
 - 2차 방 배치 기능
+
+### 2026-05-04 2차-1 방 배치 코어 구현
+
+커밋 단위:
+
+- `feat : shop room furniture placement core`
+
+구현된 범위:
+
+- 보유 가구를 방에 배치하는 서비스 로직
+- 배치된 가구로 내 방 목록을 조회하는 서비스 로직
+- 배치 위치 수정 서비스 로직
+- 방에서 배치만 제거하는 서비스 로직
+- 방 배치 Controller/API
+- 방 배치 마이그레이션 SQL
+- hard delete 시 `room_furniture_placements` 삭제 연동
+- 타 사용자 보유 가구를 배치할 수 없도록 보유 가구를 `userId + userFurnitureId` 로 조회
+- 배치 삭제 시 `UserFurniture` 는 삭제하지 않고 `RoomFurniturePlacement` 만 삭제
+
+구현된 파일:
+
+| 종류 | 파일 |
+|---|---|
+| Controller | `src/main/java/com/doitdo/domain/shop/api/controller/ShopController.java` |
+| Entity | `src/main/java/com/doitdo/domain/shop/entity/RoomFurniturePlacement.java` |
+| Repository | `src/main/java/com/doitdo/domain/shop/repository/RoomFurniturePlacementRepository.java` |
+| Service | `src/main/java/com/doitdo/domain/shop/application/RoomFurniturePlacementService.java` |
+| Service impl | `src/main/java/com/doitdo/domain/shop/application/impl/RoomFurniturePlacementServiceImpl.java` |
+| Request DTO | `src/main/java/com/doitdo/domain/shop/api/dto/req/UpdateRoomFurniturePlacementReq.java` |
+| Response DTO | `src/main/java/com/doitdo/domain/shop/api/dto/resp/RoomResp.java` |
+| Response DTO | `src/main/java/com/doitdo/domain/shop/api/dto/resp/RoomFurniturePlacementResp.java` |
+| Migration SQL | `docs/ops/migrations/2026-05-shop-furniture.sql` |
+| Test | `src/test/java/com/doitdo/domain/shop/application/impl/RoomFurniturePlacementServiceImplTest.java` |
+| Test | `src/test/java/com/doitdo/domain/shop/api/controller/ShopControllerTest.java` |
+
+변경된 기존 파일:
+
+- `UserFurnitureRepository`: `findByUserIdAndUserFurnitureId(Long userId, Long userFurnitureId)` 추가
+- `ShopErrorCode`: `USER_FURNITURE_NOT_FOUND`, `PLACEMENT_NOT_FOUND` 추가
+- `UserHardDeleteService`: 탈퇴 hard delete 시 `room_furniture_placements` 삭제 추가
+- `docs/architecture/package-layout.md`: shop 방 배치 구현 파일 목록 갱신
+- `docs/architecture/erd.md`: shop 테이블 매핑 갱신
+- `docs/api/error-codes.md`: shop 방 배치 에러 코드 갱신
+
+검증:
+
+- RED: `RoomFurniturePlacementServiceImplTest` 작성 후 구현 전 컴파일 실패 확인
+- GREEN: `.\gradlew.bat test --tests "com.doitdo.domain.shop.application.impl.RoomFurniturePlacementServiceImplTest"` 성공
+- RED: `ShopControllerTest` 작성 후 컨트롤러 메서드 미존재 컴파일 실패 확인
+- GREEN: `.\gradlew.bat test --tests "com.doitdo.domain.shop.api.controller.ShopControllerTest"` 성공
+- 전체 테스트: `.\gradlew.bat test` 성공
+
+아직 안 한 것:
+
+- 가구 seed 데이터 추가
+- 실제 dev DB에 마이그레이션 수동 적용 확인
+- Swagger UI에서 방 배치 응답 예시 확인
