@@ -9,6 +9,7 @@ import com.doitdo.domain.notification.repository.NotificationRepository;
 import com.doitdo.domain.setting.repository.UserSettingRepository;
 import com.doitdo.domain.shop.repository.FurniturePurchaseLogRepository;
 import com.doitdo.domain.shop.repository.PurchaseLogRepository;
+import com.doitdo.domain.shop.repository.RoomFurniturePlacementRepository;
 import com.doitdo.domain.shop.repository.UserFurnitureRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
@@ -44,6 +45,7 @@ public class UserHardDeleteService {
     private final DeviceTokenRepository deviceTokenRepository;
     private final PurchaseLogRepository purchaseLogRepository;
     private final FurniturePurchaseLogRepository furniturePurchaseLogRepository;
+    private final RoomFurniturePlacementRepository roomFurniturePlacementRepository;
     private final UserFurnitureRepository userFurnitureRepository;
     private final SnoozeHistoryRepository snoozeHistoryRepository;
     private final TodoRepository todoRepository;
@@ -71,6 +73,7 @@ public class UserHardDeleteService {
 
         purchaseLogRepository.deleteAllByUserId(userId);
         furniturePurchaseLogRepository.deleteAllByUserId(userId);
+        roomFurniturePlacementRepository.deleteAllByUserId(userId);
         snoozeHistoryRepository.deleteAllByUserId(userId);
 
         todoRepository.hardDeleteAllByUserId(userId);
