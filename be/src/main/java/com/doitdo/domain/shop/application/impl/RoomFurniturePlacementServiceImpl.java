@@ -32,7 +32,7 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 	@Transactional(readOnly = true)
 	public RoomResp getMyRoom(Long userId) {
 		List<RoomFurniturePlacementResp> items = roomFurniturePlacementRepository
-			.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId)
+			.findAllByUserIdOrderByDisplayOrder(userId)
 			.stream()
 			.map(this::toResp)
 			.toList();
@@ -43,8 +43,7 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 	@Override
 	@Transactional
 	public RoomFurniturePlacementResp placeFurniture(Long userId, Long userFurnitureId) {
-		UserFurniture userFurniture = userFurnitureRepository.findByUserIdAndUserFurnitureId(userId, userFurnitureId)
-			.orElseThrow(() -> new CustomException(ShopErrorCode.USER_FURNITURE_NOT_FOUND));
+		UserFurniture userFurniture = findMyUserFurniture(userId, userFurnitureId);
 		Furniture furniture = findFurniture(userFurniture.getFurnitureId());
 		RoomFurniturePlacement placement = roomFurniturePlacementRepository.save(
 			RoomFurniturePlacement.create(userId, userFurnitureId, furniture)
@@ -57,9 +56,7 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 	@Transactional
 	public RoomFurniturePlacementResp updatePlacement(Long userId, Long placementId,
 		UpdateRoomFurniturePlacementReq req) {
-		RoomFurniturePlacement placement = roomFurniturePlacementRepository
-			.findByPlacementIdAndUserId(placementId, userId)
-			.orElseThrow(() -> new CustomException(ShopErrorCode.PLACEMENT_NOT_FOUND));
+		RoomFurniturePlacement placement = findMyPlacement(userId, placementId);
 		placement.updatePosition(req.x(), req.y(), req.zIndex(), req.rotation());
 
 		return toResp(placement);
@@ -68,9 +65,7 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 	@Override
 	@Transactional
 	public void removePlacement(Long userId, Long placementId) {
-		RoomFurniturePlacement placement = roomFurniturePlacementRepository
-			.findByPlacementIdAndUserId(placementId, userId)
-			.orElseThrow(() -> new CustomException(ShopErrorCode.PLACEMENT_NOT_FOUND));
+		RoomFurniturePlacement placement = findMyPlacement(userId, placementId);
 		roomFurniturePlacementRepository.delete(placement);
 	}
 
@@ -79,6 +74,16 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 			.orElseThrow(() -> new CustomException(ShopErrorCode.USER_FURNITURE_NOT_FOUND));
 		Furniture furniture = findFurniture(userFurniture.getFurnitureId());
 		return RoomFurniturePlacementResp.from(placement, furniture);
+	}
+
+	private UserFurniture findMyUserFurniture(Long userId, Long userFurnitureId) {
+		return userFurnitureRepository.findByUserIdAndUserFurnitureId(userId, userFurnitureId)
+			.orElseThrow(() -> new CustomException(ShopErrorCode.USER_FURNITURE_NOT_FOUND));
+	}
+
+	private RoomFurniturePlacement findMyPlacement(Long userId, Long placementId) {
+		return roomFurniturePlacementRepository.findByPlacementIdAndUserId(placementId, userId)
+			.orElseThrow(() -> new CustomException(ShopErrorCode.PLACEMENT_NOT_FOUND));
 	}
 
 	private Furniture findFurniture(Long furnitureId) {

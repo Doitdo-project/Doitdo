@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.doitdo.domain.shop.entity.RoomFurniturePlacement;
 
@@ -16,7 +17,7 @@ public interface RoomFurniturePlacementRepository extends JpaRepository<RoomFurn
 		where p.userId = :userId
 		order by p.zIndex asc, p.placementId asc
 		""")
-	List<RoomFurniturePlacement> findAllByUserIdOrderByZIndexAscPlacementIdAsc(Long userId);
+	List<RoomFurniturePlacement> findAllByUserIdOrderByDisplayOrder(@Param("userId") Long userId);
 
 	Optional<RoomFurniturePlacement> findByPlacementIdAndUserId(Long placementId, Long userId);
 

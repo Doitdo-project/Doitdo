@@ -49,7 +49,7 @@ class RoomFurniturePlacementServiceImplTest {
 		Furniture furniture = furniture(10L, "의자");
 		RoomFurniturePlacement placement = placement(30L, userId, 20L, 120, 300, 5, 0);
 
-		given(roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId))
+		given(roomFurniturePlacementRepository.findAllByUserIdOrderByDisplayOrder(userId))
 			.willReturn(List.of(placement));
 		given(userFurnitureRepository.findById(20L)).willReturn(Optional.of(userFurniture));
 		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(10L)).willReturn(Optional.of(furniture));
