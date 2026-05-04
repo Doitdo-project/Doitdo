@@ -161,6 +161,18 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 | `M09_002` | `M09-002` | 404 | 해당 캐릭터의 요청 액션을 찾을 수 없음 |
 | `M09_003` | `M09-003` | 500 | 서버 내부 오류 |
 
+### `ShopErrorCode` 추가 코드 (가구 상점/방 배치, 2026-05)
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `FURNITURE_NOT_FOUND` | `S00-001` | 404 | 가구를 찾을 수 없음 |
+| `FURNITURE_ALREADY_OWNED` | `S00-002` | 409 | 이미 보유한 가구 |
+| `INSUFFICIENT_BALANCE` | `S00-003` | 409 | 잔액 부족 |
+| `FURNITURE_NOT_ON_SALE` | `S00-004` | 409 | 판매 중이 아닌 가구 |
+| `WALLET_NOT_FOUND` | `S00-005` | 404 | 월렛을 찾을 수 없음 |
+| `USER_FURNITURE_NOT_FOUND` | `S01-001` | 404 | 보유 가구를 찾을 수 없음 |
+| `PLACEMENT_NOT_FOUND` | `S02-001` | 404 | 배치 정보를 찾을 수 없음 |
+
 ### `BugReportErrorCode` 신규 enum (bugreport, 2026-04, JIRA S14P31D107-442)
 
 접두 letter `B`. `ErrorCodeRegistry.SOURCES` 에 등록됨.

@@ -36,7 +36,7 @@
 | `todo` | todos, categories, palettes, palette_colors, snooze_history |
 | `tamagotchi` | characters, character_actions, character_unlocks, user_character |
 | `inventory` | items, user_items |
-| `shop` | purchase_logs |
+| `shop` | purchase_logs, furnitures, user_furnitures, furniture_purchase_logs, room_furniture_placements |
 | `notification` | device_tokens |
 | `setting` | user_settings |
 | `bugreport` | bug_reports |
