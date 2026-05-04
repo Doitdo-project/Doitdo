@@ -141,7 +141,7 @@ class ShopServiceImplTest {
 		given(userFurnitureRepository.existsByUserIdAndFurnitureId(userId, furnitureId))
 			.willReturn(false);
 		given(userWalletRepository.findByUserIdForUpdate(userId)).willReturn(Optional.of(wallet));
-		given(userFurnitureRepository.save(any(UserFurniture.class))).willReturn(savedUserFurniture);
+		given(userFurnitureRepository.saveAndFlush(any(UserFurniture.class))).willReturn(savedUserFurniture);
 
 		PurchaseFurnitureResp resp = service.purchaseFurniture(userId, furnitureId);
 
@@ -181,7 +181,7 @@ class ShopServiceImplTest {
 			.extracting(ex -> ((CustomException)ex).getErrorCode())
 			.isEqualTo(ShopErrorCode.FURNITURE_ALREADY_OWNED);
 		verify(userWalletRepository, never()).findByUserIdForUpdate(userId);
-		verify(userFurnitureRepository, never()).save(any(UserFurniture.class));
+		verify(userFurnitureRepository, never()).saveAndFlush(any(UserFurniture.class));
 	}
 
 	@Test
@@ -205,7 +205,7 @@ class ShopServiceImplTest {
 		given(userFurnitureRepository.existsByUserIdAndFurnitureId(userId, furnitureId))
 			.willReturn(false);
 		given(userWalletRepository.findByUserIdForUpdate(userId)).willReturn(Optional.of(wallet));
-		given(userFurnitureRepository.save(any(UserFurniture.class)))
+		given(userFurnitureRepository.saveAndFlush(any(UserFurniture.class)))
 			.willThrow(new DataIntegrityViolationException("duplicate user furniture"));
 
 		assertThatThrownBy(() -> service.purchaseFurniture(userId, furnitureId))
@@ -241,7 +241,7 @@ class ShopServiceImplTest {
 			.isInstanceOf(CustomException.class)
 			.extracting(ex -> ((CustomException)ex).getErrorCode())
 			.isEqualTo(ShopErrorCode.INSUFFICIENT_BALANCE);
-		verify(userFurnitureRepository, never()).save(any(UserFurniture.class));
+		verify(userFurnitureRepository, never()).saveAndFlush(any(UserFurniture.class));
 		verify(furniturePurchaseLogRepository, never()).save(any(FurniturePurchaseLog.class));
 	}
 

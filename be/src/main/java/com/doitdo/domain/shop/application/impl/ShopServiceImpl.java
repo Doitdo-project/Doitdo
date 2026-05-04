@@ -78,7 +78,7 @@ public class ShopServiceImpl implements ShopService {
 
 		UserFurniture userFurniture;
 		try {
-			userFurniture = userFurnitureRepository.save(UserFurniture.create(userId, furnitureId));
+			userFurniture = userFurnitureRepository.saveAndFlush(UserFurniture.create(userId, furnitureId));
 		} catch (DataIntegrityViolationException e) {
 			throw new CustomException(ShopErrorCode.FURNITURE_ALREADY_OWNED);
 		}
