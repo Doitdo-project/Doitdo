@@ -11,6 +11,7 @@ import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -20,7 +21,13 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Table(name = "furniture_purchase_logs")
+@Table(
+	name = "furniture_purchase_logs",
+	indexes = {
+		@Index(name = "idx_furniture_purchase_logs_user_id", columnList = "user_id"),
+		@Index(name = "idx_furniture_purchase_logs_furniture_id", columnList = "furniture_id")
+	}
+)
 @EntityListeners(AuditingEntityListener.class)
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
