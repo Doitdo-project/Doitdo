@@ -17,12 +17,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.doitdo.domain.shop.api.dto.resp.FurnitureShopItemResp;
+import com.doitdo.domain.shop.api.dto.resp.FurnitureShopStatus;
 import com.doitdo.domain.shop.api.dto.resp.PurchaseFurnitureResp;
+import com.doitdo.domain.shop.api.dto.resp.RoomResp;
 import com.doitdo.domain.shop.entity.Furniture;
 import com.doitdo.domain.shop.entity.FurniturePurchaseLog;
+import com.doitdo.domain.shop.entity.RoomFurniturePlacement;
 import com.doitdo.domain.shop.entity.UserFurniture;
 import com.doitdo.domain.shop.repository.FurniturePurchaseLogRepository;
 import com.doitdo.domain.shop.repository.FurnitureRepository;
+import com.doitdo.domain.shop.repository.RoomFurniturePlacementRepository;
 import com.doitdo.domain.shop.repository.UserFurnitureRepository;
 import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.repository.UserWalletRepository;
@@ -44,13 +48,17 @@ class ShopServiceImplTest {
 	@Mock
 	private UserWalletRepository userWalletRepository;
 
+	@Mock
+	private RoomFurniturePlacementRepository roomFurniturePlacementRepository;
+
 	@Test
 	void listFurnitures_marksOwnedFurnitureAsSoldOut() {
 		ShopServiceImpl service = new ShopServiceImpl(
 			furnitureRepository,
 			userFurnitureRepository,
 			furniturePurchaseLogRepository,
-			userWalletRepository
+			userWalletRepository,
+			roomFurniturePlacementRepository
 		);
 		Long userId = 1L;
 		Furniture chair = furniture(10L, "CHAIR_001", "의자", "CHAIR", 100, true);
@@ -60,6 +68,10 @@ class ShopServiceImplTest {
 			.willReturn(List.of(chair, desk));
 		given(userFurnitureRepository.findFurnitureIdsByUserId(userId))
 			.willReturn(List.of(10L));
+		given(userFurnitureRepository.findAllByUserIdOrderByUserFurnitureIdAsc(userId))
+			.willReturn(List.of(userFurniture(20L, userId, 10L)));
+		given(roomFurniturePlacementRepository.findAllByUserIdOrderByDisplayOrder(userId))
+			.willReturn(List.of());
 
 		List<FurnitureShopItemResp> resp = service.listFurnitures(userId, null).items();
 
@@ -67,9 +79,38 @@ class ShopServiceImplTest {
 		assertThat(resp.get(0).furnitureId()).isEqualTo(10L);
 		assertThat(resp.get(0).owned()).isTrue();
 		assertThat(resp.get(0).soldOut()).isTrue();
+		assertThat(resp.get(0).placed()).isFalse();
+		assertThat(resp.get(0).status()).isEqualTo(FurnitureShopStatus.PLACEABLE);
 		assertThat(resp.get(1).furnitureId()).isEqualTo(11L);
 		assertThat(resp.get(1).owned()).isFalse();
 		assertThat(resp.get(1).soldOut()).isFalse();
+		assertThat(resp.get(1).status()).isEqualTo(FurnitureShopStatus.PURCHASABLE);
+	}
+
+	@Test
+	void listFurnitures_marksPlacedFurnitureAsPlaced() {
+		ShopServiceImpl service = new ShopServiceImpl(
+			furnitureRepository,
+			userFurnitureRepository,
+			furniturePurchaseLogRepository,
+			userWalletRepository,
+			roomFurniturePlacementRepository
+		);
+		Long userId = 1L;
+		Furniture clock = furniture(10L, "CLOCK_001", "시계", "CLOCK", 100, true);
+		UserFurniture userFurniture = userFurniture(20L, userId, 10L);
+		RoomFurniturePlacement placement = placement(30L, userId, 20L, 120, 300, 5, 0);
+
+		given(furnitureRepository.findAllByIsDeletedFalseOrderByFurnitureIdAsc()).willReturn(List.of(clock));
+		given(userFurnitureRepository.findFurnitureIdsByUserId(userId)).willReturn(List.of(10L));
+		given(userFurnitureRepository.findAllByUserIdOrderByUserFurnitureIdAsc(userId)).willReturn(List.of(userFurniture));
+		given(roomFurniturePlacementRepository.findAllByUserIdOrderByDisplayOrder(userId)).willReturn(List.of(placement));
+
+		FurnitureShopItemResp resp = service.listFurnitures(userId, null).items().get(0);
+
+		assertThat(resp.owned()).isTrue();
+		assertThat(resp.placed()).isTrue();
+		assertThat(resp.status()).isEqualTo(FurnitureShopStatus.PLACED);
 	}
 
 	@Test
@@ -78,7 +119,8 @@ class ShopServiceImplTest {
 			furnitureRepository,
 			userFurnitureRepository,
 			furniturePurchaseLogRepository,
-			userWalletRepository
+			userWalletRepository,
+			roomFurniturePlacementRepository
 		);
 		Long userId = 1L;
 		Long furnitureId = 10L;
@@ -122,7 +164,8 @@ class ShopServiceImplTest {
 			furnitureRepository,
 			userFurnitureRepository,
 			furniturePurchaseLogRepository,
-			userWalletRepository
+			userWalletRepository,
+			roomFurniturePlacementRepository
 		);
 		Long userId = 1L;
 		Long furnitureId = 10L;
@@ -146,7 +189,8 @@ class ShopServiceImplTest {
 			furnitureRepository,
 			userFurnitureRepository,
 			furniturePurchaseLogRepository,
-			userWalletRepository
+			userWalletRepository,
+			roomFurniturePlacementRepository
 		);
 		Long userId = 1L;
 		Long furnitureId = 10L;
@@ -169,6 +213,40 @@ class ShopServiceImplTest {
 		verify(furniturePurchaseLogRepository, never()).save(any(FurniturePurchaseLog.class));
 	}
 
+	@Test
+	void previewRoom_excludesSameCategoryPlacementAndAddsPreviewFurniture() {
+		ShopServiceImpl service = new ShopServiceImpl(
+			furnitureRepository,
+			userFurnitureRepository,
+			furniturePurchaseLogRepository,
+			userWalletRepository,
+			roomFurniturePlacementRepository
+		);
+		Long userId = 1L;
+		Furniture oldClock = furniture(10L, "CLOCK_OLD", "기존 시계", "CLOCK", 100, true);
+		Furniture bed = furniture(11L, "BED_001", "침대", "BED", 200, true);
+		Furniture previewClock = furniture(12L, "CLOCK_NEW", "새 시계", "CLOCK", 150, true);
+		UserFurniture oldClockUserFurniture = userFurniture(20L, userId, 10L);
+		UserFurniture bedUserFurniture = userFurniture(21L, userId, 11L);
+		RoomFurniturePlacement oldClockPlacement = placement(30L, userId, 20L, 10, 20, 1, 0);
+		RoomFurniturePlacement bedPlacement = placement(31L, userId, 21L, 30, 40, 2, 0);
+
+		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(12L)).willReturn(Optional.of(previewClock));
+		given(roomFurniturePlacementRepository.findAllByUserIdOrderByDisplayOrder(userId))
+			.willReturn(List.of(oldClockPlacement, bedPlacement));
+		given(userFurnitureRepository.findById(20L)).willReturn(Optional.of(oldClockUserFurniture));
+		given(userFurnitureRepository.findById(21L)).willReturn(Optional.of(bedUserFurniture));
+		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(10L)).willReturn(Optional.of(oldClock));
+		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(11L)).willReturn(Optional.of(bed));
+
+		RoomResp resp = service.previewRoom(userId, 12L);
+
+		assertThat(resp.items()).hasSize(2);
+		assertThat(resp.items()).extracting("furnitureId").containsExactly(11L, 12L);
+		assertThat(resp.items().get(0).preview()).isFalse();
+		assertThat(resp.items().get(1).preview()).isTrue();
+	}
+
 	private Furniture furniture(Long furnitureId, String code, String name, String category, Integer price,
 		boolean isOnSale) {
 		return Furniture.builder()
@@ -187,6 +265,27 @@ class ShopServiceImplTest {
 			.zIndex(1)
 			.isOnSale(isOnSale)
 			.isDeleted(false)
+			.build();
+	}
+
+	private UserFurniture userFurniture(Long userFurnitureId, Long userId, Long furnitureId) {
+		return UserFurniture.builder()
+			.userFurnitureId(userFurnitureId)
+			.userId(userId)
+			.furnitureId(furnitureId)
+			.build();
+	}
+
+	private RoomFurniturePlacement placement(Long placementId, Long userId, Long userFurnitureId, Integer x, Integer y,
+		Integer zIndex, Integer rotation) {
+		return RoomFurniturePlacement.builder()
+			.placementId(placementId)
+			.userId(userId)
+			.userFurnitureId(userFurnitureId)
+			.x(x)
+			.y(y)
+			.zIndex(zIndex)
+			.rotation(rotation)
 			.build();
 	}
 }

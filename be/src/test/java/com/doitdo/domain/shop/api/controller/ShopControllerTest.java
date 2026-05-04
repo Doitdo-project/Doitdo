@@ -49,8 +49,8 @@ class ShopControllerTest {
 	@Test
 	void getMyRoom_returnsPlacedFurnitureList() {
 		RoomResp resp = new RoomResp(List.of(
-			new RoomFurniturePlacementResp(3L, 10L, 1L, "나무 의자", "https://cdn.example.com/chair.png",
-				120, 300, 80, 90, 5, 0)
+			new RoomFurniturePlacementResp(3L, 10L, 1L, "나무 의자", "CHAIR", "https://cdn.example.com/chair.png",
+				120, 300, 80, 90, 5, 0, false)
 		));
 		given(roomFurniturePlacementService.getMyRoom(1L)).willReturn(resp);
 
@@ -64,7 +64,7 @@ class ShopControllerTest {
 	@Test
 	void placeFurniture_returnsCreatedPlacement() {
 		RoomFurniturePlacementResp resp = new RoomFurniturePlacementResp(
-			3L, 10L, 1L, "나무 의자", "https://cdn.example.com/chair.png", 120, 300, 80, 90, 5, 0
+			3L, 10L, 1L, "나무 의자", "CHAIR", "https://cdn.example.com/chair.png", 120, 300, 80, 90, 5, 0, false
 		);
 		given(roomFurniturePlacementService.placeFurniture(1L, 10L)).willReturn(resp);
 
@@ -79,7 +79,7 @@ class ShopControllerTest {
 	void updatePlacement_returnsUpdatedPlacement() {
 		UpdateRoomFurniturePlacementReq req = new UpdateRoomFurniturePlacementReq(200, 350, 9, 15);
 		RoomFurniturePlacementResp resp = new RoomFurniturePlacementResp(
-			3L, 10L, 1L, "나무 의자", "https://cdn.example.com/chair.png", 200, 350, 80, 90, 9, 15
+			3L, 10L, 1L, "나무 의자", "CHAIR", "https://cdn.example.com/chair.png", 200, 350, 80, 90, 9, 15, false
 		);
 		given(roomFurniturePlacementService.updatePlacement(1L, 3L, req)).willReturn(resp);
 
@@ -97,5 +97,19 @@ class ShopControllerTest {
 		assertThat(response.getStatus()).isEqualTo(204);
 		assertThat(response.getMessage()).isEqualTo("가구 배치 제거 완료");
 		verify(roomFurniturePlacementService).removePlacement(1L, 3L);
+	}
+
+	@Test
+	void previewRoom_returnsPreviewRoom() {
+		RoomResp resp = new RoomResp(List.of(
+			new RoomFurniturePlacementResp(null, null, 2L, "새 시계", "CLOCK",
+				"https://cdn.example.com/clock.png", 120, 300, 80, 90, 5, 0, true)
+		));
+		given(shopService.previewRoom(1L, 2L)).willReturn(resp);
+
+		GlobalApiResponse<RoomResp> response = controller.previewRoom(userDetails, 2L);
+
+		assertThat(response.getStatus()).isEqualTo(200);
+		assertThat(response.getData().items().get(0).preview()).isTrue();
 	}
 }

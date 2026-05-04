@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import java.util.List;
@@ -79,6 +80,7 @@ class RoomFurniturePlacementServiceImplTest {
 		given(userFurnitureRepository.findByUserIdAndUserFurnitureId(userId, 20L))
 			.willReturn(Optional.of(userFurniture));
 		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(10L)).willReturn(Optional.of(furniture));
+		given(roomFurniturePlacementRepository.findAllByUserIdOrderByDisplayOrder(userId)).willReturn(List.of());
 		given(roomFurniturePlacementRepository.save(any(RoomFurniturePlacement.class))).willReturn(saved);
 
 		RoomFurniturePlacementResp resp = service.placeFurniture(userId, 20L);
@@ -87,6 +89,63 @@ class RoomFurniturePlacementServiceImplTest {
 		assertThat(resp.x()).isEqualTo(120);
 		assertThat(resp.y()).isEqualTo(300);
 		assertThat(resp.zIndex()).isEqualTo(5);
+	}
+
+	@Test
+	void placeFurniture_replacesExistingSameCategoryPlacement() {
+		RoomFurniturePlacementServiceImpl service = new RoomFurniturePlacementServiceImpl(
+			roomFurniturePlacementRepository,
+			userFurnitureRepository,
+			furnitureRepository
+		);
+		Long userId = 1L;
+		UserFurniture oldUserFurniture = userFurniture(20L, userId, 10L);
+		UserFurniture newUserFurniture = userFurniture(21L, userId, 11L);
+		Furniture oldClock = furniture(10L, "기존 시계", "CLOCK");
+		Furniture newClock = furniture(11L, "새 시계", "CLOCK");
+		RoomFurniturePlacement oldPlacement = placement(30L, userId, 20L, 120, 300, 5, 0);
+		RoomFurniturePlacement saved = placement(31L, userId, 21L, 120, 300, 5, 0);
+
+		given(userFurnitureRepository.findByUserIdAndUserFurnitureId(userId, 21L))
+			.willReturn(Optional.of(newUserFurniture));
+		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(11L)).willReturn(Optional.of(newClock));
+		given(roomFurniturePlacementRepository.findAllByUserIdOrderByDisplayOrder(userId))
+			.willReturn(List.of(oldPlacement));
+		given(userFurnitureRepository.findById(20L)).willReturn(Optional.of(oldUserFurniture));
+		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(10L)).willReturn(Optional.of(oldClock));
+		given(roomFurniturePlacementRepository.save(any(RoomFurniturePlacement.class))).willReturn(saved);
+
+		RoomFurniturePlacementResp resp = service.placeFurniture(userId, 21L);
+
+		verify(roomFurniturePlacementRepository).delete(oldPlacement);
+		assertThat(resp.placementId()).isEqualTo(31L);
+		assertThat(resp.userFurnitureId()).isEqualTo(21L);
+	}
+
+	@Test
+	void placeFurniture_returnsExistingPlacementWhenSameFurnitureAlreadyPlaced() {
+		RoomFurniturePlacementServiceImpl service = new RoomFurniturePlacementServiceImpl(
+			roomFurniturePlacementRepository,
+			userFurnitureRepository,
+			furnitureRepository
+		);
+		Long userId = 1L;
+		UserFurniture userFurniture = userFurniture(20L, userId, 10L);
+		Furniture clock = furniture(10L, "시계", "CLOCK");
+		RoomFurniturePlacement existingPlacement = placement(30L, userId, 20L, 120, 300, 5, 0);
+
+		given(userFurnitureRepository.findByUserIdAndUserFurnitureId(userId, 20L))
+			.willReturn(Optional.of(userFurniture));
+		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(10L)).willReturn(Optional.of(clock));
+		given(roomFurniturePlacementRepository.findAllByUserIdOrderByDisplayOrder(userId))
+			.willReturn(List.of(existingPlacement));
+		given(userFurnitureRepository.findById(20L)).willReturn(Optional.of(userFurniture));
+
+		RoomFurniturePlacementResp resp = service.placeFurniture(userId, 20L);
+
+		verify(roomFurniturePlacementRepository, never()).delete(existingPlacement);
+		verify(roomFurniturePlacementRepository, never()).save(any(RoomFurniturePlacement.class));
+		assertThat(resp.placementId()).isEqualTo(30L);
 	}
 
 	@Test
@@ -161,12 +220,16 @@ class RoomFurniturePlacementServiceImplTest {
 	}
 
 	private Furniture furniture(Long furnitureId, String name) {
+		return furniture(furnitureId, name, "CHAIR");
+	}
+
+	private Furniture furniture(Long furnitureId, String name, String category) {
 		return Furniture.builder()
 			.furnitureId(furnitureId)
 			.code("FURNITURE_" + furnitureId)
 			.name(name)
 			.description(name + " 설명")
-			.category("CHAIR")
+			.category(category)
 			.price(100)
 			.imageUrl("https://cdn.example.com/furniture.png")
 			.thumbnailUrl("https://cdn.example.com/furniture_thumb.png")
