@@ -128,10 +128,6 @@ class _SplashPageState extends ConsumerState<SplashPage>
     if (!mounted) return;
 
     if (tokens != null) {
-      // 앱 재시작으로 세션 복원되면 FCM 토큰 다시 동기화 (토큰 변경 가능성 대비).
-      // 네트워크 실패에도 메인 진입은 계속 — fire-and-forget.
-      unawaited(ref.read(fcmTokenRegistrarProvider).register());
-
       // 홈스크린 위젯이 별도 프로세스라 secure storage 에 직접 접근 못 함.
       // 앱 부팅 시마다 App Group UserDefaults 를 갱신해줘야 위젯 백그라운드 PATCH 동작.
       unawaited(ref.read(widgetSyncServiceProvider).syncAuthTokens(
@@ -147,6 +143,8 @@ class _SplashPageState extends ConsumerState<SplashPage>
         final user = await ref.read(userRepositoryProvider).getMe();
         if (!mounted) return;
         ref.read(currentUserProvider.notifier).replace(user);
+        // getMe() 성공 = 세션 유효 확인 후 FCM 등록 — 401 없이 안전하게 등록.
+        unawaited(ref.read(fcmTokenRegistrarProvider).register());
         context.go(resolvePostAuthDestination(ref, user));
       } on UnauthorizedException {
         // refresh 까지 실패한 상태 — AuthInterceptor 가 이미 로컬 토큰을 정리했을 것.

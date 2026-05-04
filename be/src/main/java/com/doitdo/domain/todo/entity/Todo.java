@@ -1,7 +1,8 @@
 package com.doitdo.domain.todo.entity;
 
-import java.time.LocalDate;
 import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Locale;
@@ -62,6 +63,9 @@ public class Todo extends BaseTimeEntity {
 	@Column(nullable = false, length = 20)
 	private TodoStatus status;
 
+	@Column(name = "done_date")
+	private LocalDate doneDate;
+
 	@Column(nullable = false)
 	private Integer priority;
 
@@ -94,8 +98,14 @@ public class Todo extends BaseTimeEntity {
 		this.isDeleted = true;
 	}
 
-	public void changeStatus(TodoStatus status) {
-		this.status = status;
+	public void changeStatus(TodoStatus next) {
+		if (next == TodoStatus.DONE && this.status != TodoStatus.DONE) {
+			this.doneDate = LocalDate.now(ZoneId.of("Asia/Seoul"));
+		}
+		if (next != TodoStatus.DONE && this.status == TodoStatus.DONE) {
+			this.doneDate = null;
+		}
+		this.status = next;
 	}
 
 	/** 경험치 지급 완료 마킹. 멱등 (이미 true 면 no-op). */

@@ -12,10 +12,13 @@ import 'package:doitdo/core/utils/app_env.dart';
 import 'package:doitdo/core/widget_sync/widget_sync_service.dart';
 import 'package:doitdo/data/datasources/auth_api.dart';
 import 'package:doitdo/data/datasources/auth_local_data_source.dart';
+import 'package:doitdo/data/datasources/bug_report_api.dart';
 import 'package:doitdo/data/datasources/user_api.dart';
 import 'package:doitdo/data/repositories/auth_repository_impl.dart';
+import 'package:doitdo/data/repositories/bug_report_repository_impl.dart';
 import 'package:doitdo/data/repositories/user_repository_impl.dart';
 import 'package:doitdo/domain/repositories/auth_repository.dart';
+import 'package:doitdo/domain/repositories/bug_report_repository.dart';
 import 'package:doitdo/domain/repositories/user_repository.dart';
 import 'package:doitdo/data/datasources/todo_api.dart';
 import 'package:doitdo/data/repositories/todo_repository_impl.dart';
@@ -160,6 +163,15 @@ final streakApiProvider = Provider<StreakApi>(
 
 final streakRepositoryProvider = Provider<StreakRepository>(
   (ref) => StreakRepositoryImpl(ref.watch(streakApiProvider)),
+);
+
+// ─── BugReport: retrofit API → Repository ──────────────────────
+final bugReportApiProvider = Provider<BugReportApi>(
+  (ref) => BugReportApi(ref.watch(dioProvider)),
+);
+
+final bugReportRepositoryProvider = Provider<BugReportRepository>(
+  (ref) => BugReportRepositoryImpl(ref.watch(bugReportApiProvider)),
 );
 
 // ─── FCM: 디바이스 토큰 등록 헬퍼 ───────────────────────────────

@@ -24,6 +24,7 @@ class RegisterViewModel extends AutoDisposeAsyncNotifier<User?> {
     required String password,
     required String username,
   }) async {
+    if (state.isLoading) return;
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final repo = ref.read(authRepositoryProvider);

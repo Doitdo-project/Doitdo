@@ -345,6 +345,22 @@ class TodoViewModel extends StateNotifier<TodoState> {
     _updateDisplayedTodos();
   }
 
+  /// 탭 진입 시 애니메이션 없이 오늘 날짜로 즉시 이동.
+  void resetToToday() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    state = state.copyWith(
+      selectedDay: today,
+      focusedDay: today,
+      pageAnimationEnabled: false,
+    );
+    _updateDisplayedTodos();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      state = state.copyWith(pageAnimationEnabled: true);
+    });
+  }
+
   Future<void> onDaySelected(DateTime selected, DateTime focused) async {
     final prevMonth = state.focusedDay.month;
     final prevYear  = state.focusedDay.year;

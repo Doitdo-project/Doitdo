@@ -238,55 +238,54 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
   Widget build(BuildContext context) {
     final c           = context.colors;
     final fixedHeight = MediaQuery.of(context).size.height * 0.75;
-    // 키보드 높이 — 시트 전체를 그만큼 위로 밀어 메모/제목이 키보드에 가려지지 않게.
-    // (이전엔 viewInsets 를 강제 0 으로 덮어써 시트 안 위젯이 키보드 위치를 알 수 없었고,
-    //  ensureVisible 도 동작하지 않아 메모 영역이 키보드 뒤에 갇혀 있었다.)
-    final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: keyboardInset),
-      child: Container(
-        decoration: BoxDecoration(
-          color:        c.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        height:  fixedHeight,
-        padding: const EdgeInsets.only(top: 12),
-        child: Padding(
-          // viewPadding 은 키보드 유무와 무관하게 물리적 safe area 를 반환하므로
-          // 키보드 등장/퇴장 시 padding.bottom 이 0↔34 로 바뀌는 레이아웃 흔들림이 없다.
-          padding: EdgeInsets.only(
-            bottom: max(8.0, MediaQuery.viewPaddingOf(context).bottom),
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: MediaQuery(
+        data:  MediaQuery.of(context).copyWith(viewInsets: EdgeInsets.zero),
+        child: Container(
+          decoration: BoxDecoration(
+            color:        c.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          child: Column(
-            mainAxisSize:       MainAxisSize.max,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width:  40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color:        c.border,
-                    borderRadius: BorderRadius.circular(2),
+          height:  fixedHeight,
+          padding: const EdgeInsets.only(top: 12),
+          child: Padding(
+            // viewPadding 은 키보드 유무와 무관하게 물리적 safe area 를 반환하므로
+            // 키보드 등장/퇴장 시 padding.bottom 이 0↔34 로 바뀌는 레이아웃 흔들림이 없다.
+            padding: EdgeInsets.only(
+              bottom: max(8.0, MediaQuery.viewPaddingOf(context).bottom),
+            ),
+            child: Column(
+              mainAxisSize:       MainAxisSize.max,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width:  40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color:        c.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration:       const Duration(milliseconds: 180),
-                  layoutBuilder:  (current, previous) => Stack(
-                    fit:       StackFit.expand,
-                    alignment: Alignment.center,
-                    children:  [...previous, ?current],
+                const SizedBox(height: 16),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration:       const Duration(milliseconds: 180),
+                    layoutBuilder:  (current, previous) => Stack(
+                      fit:       StackFit.expand,
+                      alignment: Alignment.center,
+                      children:  [...previous, ?current],
+                    ),
+                    transitionBuilder: (child, anim) =>
+                        FadeTransition(opacity: anim, child: child),
+                    child: _buildStep(c),
                   ),
-                  transitionBuilder: (child, anim) =>
-                      FadeTransition(opacity: anim, child: child),
-                  child: _buildStep(c),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
