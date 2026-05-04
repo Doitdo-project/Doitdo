@@ -17,10 +17,12 @@ public record FurnitureShopItemResp(
 	Integer height,
 	Integer zIndex,
 	boolean owned,
-	boolean soldOut
+	boolean soldOut,
+	boolean placed,
+	FurnitureShopStatus status
 ) {
 
-	public static FurnitureShopItemResp from(Furniture furniture, boolean owned) {
+	public static FurnitureShopItemResp from(Furniture furniture, boolean owned, boolean placed) {
 		boolean soldOut = owned || !Boolean.TRUE.equals(furniture.getIsOnSale());
 		return new FurnitureShopItemResp(
 			furniture.getFurnitureId(),
@@ -37,7 +39,19 @@ public record FurnitureShopItemResp(
 			furniture.getHeight(),
 			furniture.getZIndex(),
 			owned,
-			soldOut
+			soldOut,
+			placed,
+			resolveStatus(owned, placed)
 		);
+	}
+
+	private static FurnitureShopStatus resolveStatus(boolean owned, boolean placed) {
+		if (!owned) {
+			return FurnitureShopStatus.PURCHASABLE;
+		}
+		if (placed) {
+			return FurnitureShopStatus.PLACED;
+		}
+		return FurnitureShopStatus.PLACEABLE;
 	}
 }

@@ -8,13 +8,15 @@ public record RoomFurniturePlacementResp(
 	Long userFurnitureId,
 	Long furnitureId,
 	String name,
+	String category,
 	String imageUrl,
 	Integer x,
 	Integer y,
 	Integer width,
 	Integer height,
 	Integer zIndex,
-	Integer rotation
+	Integer rotation,
+	boolean preview
 ) {
 
 	public static RoomFurniturePlacementResp from(RoomFurniturePlacement placement, Furniture furniture) {
@@ -23,13 +25,33 @@ public record RoomFurniturePlacementResp(
 			placement.getUserFurnitureId(),
 			furniture.getFurnitureId(),
 			furniture.getName(),
+			furniture.getCategory(),
 			furniture.getImageUrl(),
 			placement.getX(),
 			placement.getY(),
 			furniture.getWidth(),
 			furniture.getHeight(),
 			placement.getZIndex(),
-			placement.getRotation()
+			placement.getRotation(),
+			false
+		);
+	}
+
+	public static RoomFurniturePlacementResp preview(Furniture furniture) {
+		return new RoomFurniturePlacementResp(
+			null,
+			null,
+			furniture.getFurnitureId(),
+			furniture.getName(),
+			furniture.getCategory(),
+			furniture.getImageUrl(),
+			furniture.getDefaultX(),
+			furniture.getDefaultY(),
+			furniture.getWidth(),
+			furniture.getHeight(),
+			furniture.getZIndex(),
+			0,
+			true
 		);
 	}
 }

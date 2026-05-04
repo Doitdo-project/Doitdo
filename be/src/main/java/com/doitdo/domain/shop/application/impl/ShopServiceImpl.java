@@ -10,14 +10,18 @@ import org.springframework.transaction.annotation.Transactional;
 import com.doitdo.domain.shop.api.dto.resp.FurnitureShopItemResp;
 import com.doitdo.domain.shop.api.dto.resp.FurnitureShopResp;
 import com.doitdo.domain.shop.api.dto.resp.PurchaseFurnitureResp;
+import com.doitdo.domain.shop.api.dto.resp.RoomFurniturePlacementResp;
+import com.doitdo.domain.shop.api.dto.resp.RoomResp;
 import com.doitdo.domain.shop.api.dto.resp.UserFurnitureItemResp;
 import com.doitdo.domain.shop.api.dto.resp.UserFurnitureResp;
 import com.doitdo.domain.shop.application.ShopService;
 import com.doitdo.domain.shop.entity.Furniture;
 import com.doitdo.domain.shop.entity.FurniturePurchaseLog;
+import com.doitdo.domain.shop.entity.RoomFurniturePlacement;
 import com.doitdo.domain.shop.entity.UserFurniture;
 import com.doitdo.domain.shop.repository.FurniturePurchaseLogRepository;
 import com.doitdo.domain.shop.repository.FurnitureRepository;
+import com.doitdo.domain.shop.repository.RoomFurniturePlacementRepository;
 import com.doitdo.domain.shop.repository.UserFurnitureRepository;
 import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.repository.UserWalletRepository;
@@ -34,6 +38,7 @@ public class ShopServiceImpl implements ShopService {
 	private final UserFurnitureRepository userFurnitureRepository;
 	private final FurniturePurchaseLogRepository furniturePurchaseLogRepository;
 	private final UserWalletRepository userWalletRepository;
+	private final RoomFurniturePlacementRepository roomFurniturePlacementRepository;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -42,10 +47,12 @@ public class ShopServiceImpl implements ShopService {
 			? furnitureRepository.findAllByIsDeletedFalseOrderByFurnitureIdAsc()
 			: furnitureRepository.findAllByCategoryAndIsDeletedFalseOrderByFurnitureIdAsc(category);
 		Set<Long> ownedFurnitureIds = new HashSet<>(userFurnitureRepository.findFurnitureIdsByUserId(userId));
+		Set<Long> placedFurnitureIds = findPlacedFurnitureIds(userId);
 		List<FurnitureShopItemResp> items = furnitures.stream()
 			.map(furniture -> FurnitureShopItemResp.from(
 				furniture,
-				ownedFurnitureIds.contains(furniture.getFurnitureId())
+				ownedFurnitureIds.contains(furniture.getFurnitureId()),
+				placedFurnitureIds.contains(furniture.getFurnitureId())
 			))
 			.toList();
 
@@ -95,5 +102,46 @@ public class ShopServiceImpl implements ShopService {
 			.toList();
 
 		return new UserFurnitureResp(items);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public RoomResp previewRoom(Long userId, Long furnitureId) {
+		Furniture previewFurniture = findFurniture(furnitureId);
+		List<RoomFurniturePlacementResp> items = roomFurniturePlacementRepository
+			.findAllByUserIdOrderByDisplayOrder(userId)
+			.stream()
+			.map(this::toRoomResp)
+			.filter(item -> !previewFurniture.getCategory().equals(item.category()))
+			.toList();
+
+		List<RoomFurniturePlacementResp> previewItems = new java.util.ArrayList<>(items);
+		previewItems.add(RoomFurniturePlacementResp.preview(previewFurniture));
+		return new RoomResp(previewItems);
+	}
+
+	private Set<Long> findPlacedFurnitureIds(Long userId) {
+		List<UserFurniture> userFurnitures = userFurnitureRepository.findAllByUserIdOrderByUserFurnitureIdAsc(userId);
+		java.util.Map<Long, Long> furnitureIdByUserFurnitureId = userFurnitures.stream()
+			.collect(java.util.stream.Collectors.toMap(UserFurniture::getUserFurnitureId, UserFurniture::getFurnitureId));
+
+		return roomFurniturePlacementRepository.findAllByUserIdOrderByDisplayOrder(userId)
+			.stream()
+			.map(RoomFurniturePlacement::getUserFurnitureId)
+			.map(furnitureIdByUserFurnitureId::get)
+			.filter(java.util.Objects::nonNull)
+			.collect(java.util.stream.Collectors.toSet());
+	}
+
+	private RoomFurniturePlacementResp toRoomResp(RoomFurniturePlacement placement) {
+		UserFurniture userFurniture = userFurnitureRepository.findById(placement.getUserFurnitureId())
+			.orElseThrow(() -> new CustomException(ShopErrorCode.USER_FURNITURE_NOT_FOUND));
+		Furniture furniture = findFurniture(userFurniture.getFurnitureId());
+		return RoomFurniturePlacementResp.from(placement, furniture);
+	}
+
+	private Furniture findFurniture(Long furnitureId) {
+		return furnitureRepository.findByFurnitureIdAndIsDeletedFalse(furnitureId)
+			.orElseThrow(() -> new CustomException(ShopErrorCode.FURNITURE_NOT_FOUND));
 	}
 }

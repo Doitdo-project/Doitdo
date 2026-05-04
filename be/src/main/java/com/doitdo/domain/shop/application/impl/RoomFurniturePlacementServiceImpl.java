@@ -45,6 +45,18 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 	public RoomFurniturePlacementResp placeFurniture(Long userId, Long userFurnitureId) {
 		UserFurniture userFurniture = findMyUserFurniture(userId, userFurnitureId);
 		Furniture furniture = findFurniture(userFurniture.getFurnitureId());
+		java.util.Optional<RoomFurniturePlacement> currentPlacement = roomFurniturePlacementRepository
+			.findAllByUserIdOrderByDisplayOrder(userId)
+			.stream()
+			.filter(placement -> isSameCategoryPlacement(placement, furniture))
+			.findFirst();
+		if (currentPlacement.isPresent()) {
+			RoomFurniturePlacement placement = currentPlacement.get();
+			if (placement.getUserFurnitureId().equals(userFurnitureId)) {
+				return RoomFurniturePlacementResp.from(placement, furniture);
+			}
+			roomFurniturePlacementRepository.delete(placement);
+		}
 		RoomFurniturePlacement placement = roomFurniturePlacementRepository.save(
 			RoomFurniturePlacement.create(userId, userFurnitureId, furniture)
 		);
@@ -84,6 +96,13 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 	private RoomFurniturePlacement findMyPlacement(Long userId, Long placementId) {
 		return roomFurniturePlacementRepository.findByPlacementIdAndUserId(placementId, userId)
 			.orElseThrow(() -> new CustomException(ShopErrorCode.PLACEMENT_NOT_FOUND));
+	}
+
+	private boolean isSameCategoryPlacement(RoomFurniturePlacement placement, Furniture furniture) {
+		UserFurniture placedUserFurniture = userFurnitureRepository.findById(placement.getUserFurnitureId())
+			.orElseThrow(() -> new CustomException(ShopErrorCode.USER_FURNITURE_NOT_FOUND));
+		Furniture placedFurniture = findFurniture(placedUserFurniture.getFurnitureId());
+		return furniture.getCategory().equals(placedFurniture.getCategory());
 	}
 
 	private Furniture findFurniture(Long furnitureId) {

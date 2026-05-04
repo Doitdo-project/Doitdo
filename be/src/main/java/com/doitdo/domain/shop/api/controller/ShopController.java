@@ -38,7 +38,8 @@ public class ShopController {
 
 	@Operation(summary = "상점 가구 목록 조회",
 		description = "상점의 판매 가능 가구 목록을 조회한다. category query 가 있으면 해당 카테고리만 조회한다. "
-			+ "현재 사용자가 이미 보유한 가구는 owned=true, soldOut=true 로 표시한다.")
+			+ "현재 사용자가 이미 보유한 가구는 owned=true, 방에 배치 중인 가구는 placed=true 로 표시한다. "
+			+ "status 는 PURCHASABLE, PLACEABLE, PLACED 중 하나로 반환한다.")
 	@GetMapping("/shop/furnitures")
 	public GlobalApiResponse<FurnitureShopResp> listFurnitures(
 		@AuthenticationPrincipal CustomUserDetails userDetails,
@@ -69,6 +70,18 @@ public class ShopController {
 		return GlobalApiResponse.ok(shopService.listMyFurnitures(userDetails.getUserId()));
 	}
 
+	@Operation(summary = "가구 방 미리보기",
+		description = "상점의 특정 가구를 현재 사용자의 방에 배치했을 때의 미리보기 목록을 조회한다. 실제 배치는 저장하지 않는다. "
+			+ "미리보기 대상과 같은 카테고리의 기존 배치는 응답에서 제외하고 preview=true 항목으로 대상 가구를 포함한다.")
+	@ApiErrorCodes({"S00-001"})
+	@GetMapping("/shop/furnitures/{furnitureId}/preview-room")
+	public GlobalApiResponse<RoomResp> previewRoom(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@PathVariable Long furnitureId
+	) {
+		return GlobalApiResponse.ok(shopService.previewRoom(userDetails.getUserId(), furnitureId));
+	}
+
 	@Operation(summary = "내 방 조회",
 		description = "현재 사용자의 방에 배치된 가구 목록을 조회한다. room_furniture_placements 를 zIndex 오름차순, placementId 오름차순으로 정렬하고 "
 			+ "각 배치 정보에 보유 가구와 가구 마스터 정보를 붙여 반환한다.")
@@ -81,6 +94,7 @@ public class ShopController {
 
 	@Operation(summary = "보유 가구 배치",
 		description = "현재 사용자가 보유한 가구를 방에 배치한다. userId 와 userFurnitureId 로 본인 보유 가구인지 확인한다. "
+			+ "같은 카테고리의 기존 배치가 있으면 기존 placement 를 제거하고 새 가구로 교체한다. "
 			+ "배치 좌표는 가구 마스터의 defaultX/defaultY/zIndex 를 사용하고 rotation 은 0으로 저장한다.")
 	@ApiErrorCodes({"S01-001", "S00-001"})
 	@PostMapping("/users/me/room/furnitures/{userFurnitureId}/placements")
