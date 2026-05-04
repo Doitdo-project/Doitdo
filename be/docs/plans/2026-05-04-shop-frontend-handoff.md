@@ -11,7 +11,28 @@
 
 ## 상점 진입 시 호출
 
-상점 화면에 처음 들어오면 아래 2개 API를 호출한다.
+상점 화면에 처음 들어오면 아래 1개 API를 호출한다.
+
+### 통합 진입 데이터
+
+`GET /api/shop/entry`
+
+Query:
+
+| 이름 | 필수 | 설명 |
+|---|---|---|
+| `category` | N | 아이템 목록을 특정 카테고리로 제한할 때 사용 |
+
+응답:
+
+| 필드 | 설명 |
+|---|---|
+| `furnitures` | 상점/인벤토리 아이템 목록. `GET /api/shop/furnitures` 와 같은 구조 |
+| `room` | 실제 내 방 배치 목록. `GET /api/users/me/room` 과 같은 구조 |
+
+FE는 상점 진입 시 이 API 하나로 아이템 목록과 방 도화지를 동시에 렌더링한다.
+
+아래 2개 API는 개별 재조회가 필요할 때 사용할 수 있다.
 
 ### 1. 아이템 목록
 
@@ -205,8 +226,7 @@ Request:
 ### 상점 진입
 
 ```text
-GET /api/shop/furnitures
-GET /api/users/me/room
+GET /api/shop/entry
 ```
 
 결과:
@@ -252,9 +272,20 @@ GET /api/users/me/room
 
 ## API별 상세 흐름
 
-현재 shop/room 관련 API는 총 8개다.
+현재 shop/room 관련 API는 총 9개다.
 
-### 1. 상점/인벤토리 목록
+### 1. 상점 진입 데이터 조회
+
+`GET /api/shop/entry`
+
+흐름:
+
+1. `category` query 를 받는다.
+2. `GET /api/shop/furnitures` 와 같은 가구 목록 데이터를 만든다.
+3. `GET /api/users/me/room` 과 같은 실제 방 배치 데이터를 만든다.
+4. `furnitures`, `room` 을 한 응답으로 묶어 반환한다.
+
+### 2. 상점/인벤토리 목록
 
 `GET /api/shop/furnitures`
 
@@ -271,7 +302,7 @@ GET /api/users/me/room
    - 보유+배치중: `owned=true`, `placed=true`, `status=PLACED`
 7. 응답한다.
 
-### 2. 가구 구매
+### 3. 가구 구매
 
 `POST /api/shop/furnitures/{furnitureId}/purchase`
 
@@ -289,7 +320,7 @@ GET /api/users/me/room
 10. `FurniturePurchaseLog` 를 저장한다.
 11. 구매 결과를 응답한다.
 
-### 3. 내 보유 가구 목록
+### 4. 내 보유 가구 목록
 
 `GET /api/users/me/furnitures`
 
@@ -299,7 +330,7 @@ GET /api/users/me/room
 2. 각 보유 가구의 `Furniture` 를 조회한다.
 3. 가구 마스터 정보를 붙여서 응답한다.
 
-### 4. 가구 방 미리보기
+### 5. 가구 방 미리보기
 
 `GET /api/shop/furnitures/{furnitureId}/preview-room`
 
@@ -319,7 +350,7 @@ GET /api/users/me/room
    - 저장은 하지 않는다.
 9. 응답한다.
 
-### 5. 내 방 조회
+### 6. 내 방 조회
 
 `GET /api/users/me/room`
 
@@ -332,7 +363,7 @@ GET /api/users/me/room
 5. 배치 정보와 가구 정보를 합쳐서 응답한다.
 6. `preview=false` 로 응답한다.
 
-### 6. 보유 가구 방 배치
+### 7. 보유 가구 방 배치
 
 `POST /api/users/me/room/furnitures/{userFurnitureId}/placements`
 
@@ -353,7 +384,7 @@ GET /api/users/me/room
    - `rotation=0`
 10. 저장 후 응답한다.
 
-### 7. 배치 위치 수정
+### 8. 배치 위치 수정
 
 `PATCH /api/users/me/room/placements/{placementId}`
 
@@ -366,7 +397,7 @@ GET /api/users/me/room
 5. 연결된 `Furniture` 를 조회한다.
 6. 수정된 배치 정보를 응답한다.
 
-### 8. 방 가구 배치 제거
+### 9. 방 가구 배치 제거
 
 `DELETE /api/users/me/room/placements/{placementId}`
 

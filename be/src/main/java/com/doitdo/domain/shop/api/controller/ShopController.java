@@ -17,6 +17,7 @@ import com.doitdo.domain.shop.api.dto.resp.FurnitureShopResp;
 import com.doitdo.domain.shop.api.dto.resp.PurchaseFurnitureResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomFurniturePlacementResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomResp;
+import com.doitdo.domain.shop.api.dto.resp.ShopEntryResp;
 import com.doitdo.domain.shop.api.dto.resp.UserFurnitureResp;
 import com.doitdo.domain.shop.application.RoomFurniturePlacementService;
 import com.doitdo.domain.shop.application.ShopService;
@@ -35,6 +36,21 @@ public class ShopController {
 
 	private final ShopService shopService;
 	private final RoomFurniturePlacementService roomFurniturePlacementService;
+
+	@Operation(summary = "상점 진입 데이터 조회",
+		description = "상점 진입 시 필요한 가구 목록과 현재 내 방 배치 정보를 한 번에 조회한다. "
+			+ "furnitures 는 구매/보유/배치 상태를 포함하고, room 은 실제 저장된 방 배치만 포함한다.")
+	@GetMapping("/shop/entry")
+	public GlobalApiResponse<ShopEntryResp> getShopEntry(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@RequestParam(required = false) String category
+	) {
+		Long userId = userDetails.getUserId();
+		return GlobalApiResponse.ok(new ShopEntryResp(
+			shopService.listFurnitures(userId, category),
+			roomFurniturePlacementService.getMyRoom(userId)
+		));
+	}
 
 	@Operation(summary = "상점 가구 목록 조회",
 		description = "상점의 판매 가능 가구 목록을 조회한다. category query 가 있으면 해당 카테고리만 조회한다. "

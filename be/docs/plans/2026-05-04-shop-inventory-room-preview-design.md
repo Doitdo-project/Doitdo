@@ -84,7 +84,19 @@
 
 | Method | Path | 설명 |
 |---|---|---|
+| GET | `/api/shop/entry` | 상점 진입용 가구 목록 + 실제 내 방 통합 조회 |
 | GET | `/api/shop/furnitures/{furnitureId}/preview-room` | 특정 가구를 내 방에 놓았을 때의 미리보기 조회 |
+
+### 상점 진입 API
+
+`GET /api/shop/entry`
+
+상점 화면 최초 진입 시 사용한다.
+
+- `furnitures`: `GET /api/shop/furnitures` 와 같은 상점/인벤토리 목록
+- `room`: `GET /api/users/me/room` 과 같은 실제 방 배치 목록
+- `category` query 가 있으면 `furnitures` 목록에만 카테고리 필터를 적용한다.
+- `room` 은 실제 방 전체를 유지한다.
 
 처리 순서:
 
