@@ -13,6 +13,7 @@ import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.event.TodoCompletedEvent;
 import com.doitdo.domain.todo.repository.TodoRepository;
+import com.doitdo.global.cache.CacheEvictHelper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -42,12 +43,15 @@ class TodoCompletionExpListenerTest {
 	@Mock
 	private ExpCalculator expCalculator;
 
+	@Mock
+	private CacheEvictHelper cacheEvictHelper;
+
 	private TodoCompletionExpListener listener;
 
 	@BeforeEach
 	void setUp() {
 		listener = new TodoCompletionExpListener(
-				todoRepository, userCharacterRepository, characterRepository, expCalculator);
+				todoRepository, userCharacterRepository, characterRepository, expCalculator, cacheEvictHelper);
 	}
 
 	private Todo buildTodo(Long todoId, boolean expGranted) {
