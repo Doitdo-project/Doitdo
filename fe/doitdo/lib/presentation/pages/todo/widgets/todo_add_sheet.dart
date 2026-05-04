@@ -30,8 +30,6 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
   final _titleController = TextEditingController();
   final _memoController  = TextEditingController();
   final _titleFocusNode  = FocusNode();
-  // 제목 → 메모 자동 이동에 사용. 키보드의 "다음" 키로 호출.
-  final _memoFocusNode   = FocusNode();
 
   _Step _step = _Step.main;
 
@@ -84,7 +82,6 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
     _titleController.dispose();
     _memoController.dispose();
     _titleFocusNode.dispose();
-    _memoFocusNode.dispose();
     super.dispose();
   }
 
@@ -323,15 +320,6 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
               controller: _titleController,
               focusNode:  _titleFocusNode,
               maxLength: 20,
-              // 키보드 우측 하단 버튼을 "다음" 으로 — 누르면 메모 칸으로 자동 이동.
-              // 사용자에게 "다음 입력 칸이 있다" 는 사실을 시각적으로 알리는 효과도 있음.
-              textInputAction: TextInputAction.next,
-              onSubmitted: (_) {
-                // 빈 제목이면 메모로 넘어가도 무의미하므로 그대로 유지.
-                // (저장 버튼도 빈 제목엔 비활성이라 정책 일관)
-                if (_titleController.text.trim().isEmpty) return;
-                FocusScope.of(context).requestFocus(_memoFocusNode);
-              },
               style: AppTextStyles.titleLarge.copyWith(
                 fontFamily: 'GmarketSansMedium',
                 fontWeight: FontWeight.w500,
@@ -422,38 +410,21 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                   const SizedBox(height: 16),
                   Padding(
                     padding: const EdgeInsets.only(left: 8),
-                    child: Builder(builder: (innerContext) {
-                      return TextField(
-                        controller: _memoController,
-                        focusNode:  _memoFocusNode,
-                        minLines: 4,
-                        maxLines: null,
-                        keyboardType: TextInputType.multiline,
-                        // 사용자가 직접 메모를 탭한 경우의 안전망.
-                        // 한 프레임 뒤에 키보드가 올라온 후 ensureVisible 로 메모 칸이
-                        // 키보드 위 가시 영역에 들어오게 스크롤한다.
-                        onTap: () {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (!mounted) return;
-                            Scrollable.ensureVisible(
-                              innerContext,
-                              duration: const Duration(milliseconds: 250),
-                              curve: Curves.easeOut,
-                              alignment: 0.5,
-                            );
-                          });
-                        },
-                        style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary),
-                        decoration: InputDecoration(
-                          hintText: '메모를 입력해 보세요.',
-                          hintStyle: AppTextStyles.bodyMedium
-                              .copyWith(color: c.textHint),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      );
-                    }),
+                    child: TextField(
+                      controller: _memoController,
+                      minLines: 4,
+                      maxLines: null,
+                      keyboardType: TextInputType.multiline,
+                      style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: '메모를 입력해 보세요.',
+                        hintStyle: AppTextStyles.bodyMedium
+                            .copyWith(color: c.textHint),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -461,34 +432,16 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           ),
 
           // ── 하단 anchor: 저장 버튼 ────────────────────
-          // 저장 중이거나 제목이 비어있으면 disable. 빈 제목 가드는 SnackBar
-          // (시트에 가려짐) 대신 시각적 비활성으로 사전 차단.
-          // 비활성 색: 메인 컬러 #E2782B + alpha 50% (= 0x80E2782B)
+          // 저장 중이거나 제목이 비어있으면 탭 차단. 색상은 메인 컬러 그대로 유지.
           const SizedBox(height: 12),
           Builder(builder: (context) {
             final canSave = !_isLoading && _titleController.text.trim().isNotEmpty;
-            final label = _isLoading ? '저장 중...' : '저장하기';
-            if (canSave) {
-              return DoitdoPrimaryButton(
+            return IgnorePointer(
+              ignoring: !canSave,
+              child: DoitdoPrimaryButton(
                 height: 48,
-                label: label,
+                label: _isLoading ? '저장 중...' : '저장하기',
                 onPressed: () => _onSave(context),
-              );
-            }
-            return SizedBox(
-              height: 48,
-              width: double.infinity,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: const Color(0x80E2782B),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    label,
-                    style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
-                  ),
-                ),
               ),
             );
           }),
