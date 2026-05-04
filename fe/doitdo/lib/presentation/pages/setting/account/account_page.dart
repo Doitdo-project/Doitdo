@@ -8,6 +8,7 @@ import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/auth/welcome_view_model.dart';
 import 'package:doitdo/presentation/pages/setting/account/account_view_model.dart';
+import 'package:doitdo/presentation/providers/active_palette_provider.dart';
 import 'package:doitdo/presentation/pages/setting/account/widgets/password_change_dialog.dart';
 import 'package:doitdo/presentation/pages/setting/widgets/withdraw_password_sheet.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
@@ -174,6 +175,7 @@ Future<void> _handleWithdraw(BuildContext context, WidgetRef ref) async {
   // 서버가 이미 모든 토큰을 무효화했으므로 logout API 호출은 불필요.
   ref.read(welcomeViewModelProvider.notifier).reset();
   ref.invalidate(currentUserProvider);
+  await ref.read(activePaletteProvider.notifier).clear();
   await ref.read(authRepositoryProvider).signOut(skipServerLogout: true);
   if (!context.mounted) return;
   context.go(AppRoutes.welcome);
