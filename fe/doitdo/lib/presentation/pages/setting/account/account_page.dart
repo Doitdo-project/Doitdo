@@ -6,6 +6,7 @@ import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
+import 'package:doitdo/presentation/pages/auth/welcome_view_model.dart';
 import 'package:doitdo/presentation/pages/setting/account/account_view_model.dart';
 import 'package:doitdo/presentation/pages/setting/account/widgets/password_change_dialog.dart';
 import 'package:doitdo/presentation/pages/setting/widgets/withdraw_password_sheet.dart';
@@ -169,10 +170,11 @@ Future<void> _handleWithdraw(BuildContext context, WidgetRef ref) async {
   if (success != true) return;
   if (!context.mounted) return;
 
-  // 탈퇴 성공 → 로컬 토큰 + SDK 세션 정리.
-  // signOut 안의 서버 logout 호출은 이미 세션이 정리된 상태라 401 떨어질 수 있는데,
-  // signOut 이 try/catch 로 무시하도록 설계돼 있어 영향 없음.
-  await ref.read(authRepositoryProvider).signOut();
+  // 탈퇴 성공 → 로컬 토큰 + SDK 세션만 정리.
+  // 서버가 이미 모든 토큰을 무효화했으므로 logout API 호출은 불필요.
+  ref.read(welcomeViewModelProvider.notifier).reset();
+  ref.invalidate(currentUserProvider);
+  await ref.read(authRepositoryProvider).signOut(skipServerLogout: true);
   if (!context.mounted) return;
   context.go(AppRoutes.welcome);
   ScaffoldMessenger.of(context).showSnackBar(

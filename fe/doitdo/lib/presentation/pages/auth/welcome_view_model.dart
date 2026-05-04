@@ -44,8 +44,11 @@ class WelcomeViewModel extends AsyncNotifier<WelcomeSuccess?> {
       final repo = ref.read(authRepositoryProvider);
       final (user, _, isNewUser) = await repo.signInWithGoogle();
       ref.read(currentUserProvider.notifier).replace(user);
-      // FCM 토큰 등록은 비동기 부수효과 — 실패해도 로그인 흐름을 막지 않는다.
-      unawaited(ref.read(fcmTokenRegistrarProvider).register());
+      // 온보딩 미완료 유저는 서버가 FCM 등록을 403으로 막으므로 스킵.
+      // 온보딩 완료 후 OnboardingAgreementsViewModel 에서 등록한다.
+      if (user.isOnboardingComplete) {
+        unawaited(ref.read(fcmTokenRegistrarProvider).register());
+      }
       return WelcomeSuccess(user: user, isNewUser: isNewUser);
     });
   }
@@ -58,7 +61,9 @@ class WelcomeViewModel extends AsyncNotifier<WelcomeSuccess?> {
       final repo = ref.read(authRepositoryProvider);
       final (user, _, isNewUser) = await repo.signInWithKakao();
       ref.read(currentUserProvider.notifier).replace(user);
-      unawaited(ref.read(fcmTokenRegistrarProvider).register());
+      if (user.isOnboardingComplete) {
+        unawaited(ref.read(fcmTokenRegistrarProvider).register());
+      }
       return WelcomeSuccess(user: user, isNewUser: isNewUser);
     });
   }
@@ -71,6 +76,9 @@ class WelcomeViewModel extends AsyncNotifier<WelcomeSuccess?> {
       final repo = ref.read(authRepositoryProvider);
       final (user, _, isNewUser) = await repo.signInWithApple();
       ref.read(currentUserProvider.notifier).replace(user);
+      if (user.isOnboardingComplete) {
+        unawaited(ref.read(fcmTokenRegistrarProvider).register());
+      }
       return WelcomeSuccess(user: user, isNewUser: isNewUser);
     });
   }
