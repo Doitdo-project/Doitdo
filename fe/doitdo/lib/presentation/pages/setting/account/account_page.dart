@@ -169,10 +169,9 @@ Future<void> _handleWithdraw(BuildContext context, WidgetRef ref) async {
   if (success != true) return;
   if (!context.mounted) return;
 
-  // 탈퇴 성공 → 로컬 토큰 + SDK 세션 정리.
-  // signOut 안의 서버 logout 호출은 이미 세션이 정리된 상태라 401 떨어질 수 있는데,
-  // signOut 이 try/catch 로 무시하도록 설계돼 있어 영향 없음.
-  await ref.read(authRepositoryProvider).signOut();
+  // 탈퇴 성공 → 로컬 토큰 + SDK 세션만 정리.
+  // 서버가 이미 모든 토큰을 무효화했으므로 logout API 호출은 불필요.
+  await ref.read(authRepositoryProvider).signOut(skipServerLogout: true);
   if (!context.mounted) return;
   context.go(AppRoutes.welcome);
   ScaffoldMessenger.of(context).showSnackBar(
