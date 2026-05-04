@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,8 +12,8 @@ import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/notification/notification_view_model.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart'; // ✅ 추가
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
+import 'package:doitdo/presentation/widgets/common/todo_item_card.dart';
 import 'package:doitdo/presentation/providers/home_scroll_provider.dart';
-import 'package:doitdo/presentation/widgets/common/todo_section.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_add_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_detail_sheet.dart';
@@ -25,6 +26,13 @@ class TodoPage extends ConsumerStatefulWidget {
 }
 
 class _TodoPageState extends ConsumerState<TodoPage> {
+  final _todoScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _todoScrollController.dispose();
+    super.dispose();
+  }
   final _formatBtnKey = GlobalKey();
   final _filterBtnKey = GlobalKey();
 
@@ -362,6 +370,8 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                         return days[date.weekday % 7];
                       },
                       weekdayStyle: AppTextStyles.labelLarge.copyWith(color: colors.textSecondary),
+                      // ✅ 요일 헤더: 일요일=빨강, 토요일=파랑
+                      // weekendStyle은 토/일 동일 색상만 가능 → defaultBuilder로 구분
                       weekendStyle: AppTextStyles.labelLarge.copyWith(color: colors.textSecondary),
                     ),
                     calendarStyle: CalendarStyle(
@@ -371,14 +381,34 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                       selectedDecoration: const BoxDecoration(color: AppColors.calendarPoint, shape: BoxShape.circle),
                       selectedTextStyle: AppTextStyles.labelMedium.copyWith(color: Colors.white),
                       defaultTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textPrimary),
-                      weekendTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textPrimary),
-                      outsideTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textHint),
+                      weekendTextStyle: AppTextStyles.labelMedium.copyWith(color: colors.textPrimary), // defaultBuilder가 우선 적용
+                      outsideTextStyle: AppTextStyles.labelMedium.copyWith(color: Colors.transparent),
+                      outsideDaysVisible: false,
                       cellMargin: const EdgeInsets.all(10),
                     ),
                     calendarBuilders: CalendarBuilders(
+                      // ✅ 날짜 숫자: 일요일=빨강, 토요일=파랑 / 요일 헤더는 모두 검정
+                      defaultBuilder: (context, day, focusedDay) {
+                        Color? textColor;
+                        if (day.weekday == DateTime.sunday) {
+                          textColor = Colors.red;
+                        } else if (day.weekday == DateTime.saturday) {
+                          textColor = Colors.blue;
+                        }
+                        if (textColor == null) return null;
+                        return Center(
+                          child: Text(
+                            '${day.day}',
+                            style: AppTextStyles.labelMedium.copyWith(color: textColor),
+                          ),
+                        );
+                      },
                       markerBuilder: (context, day, events) {
                         if (events.isEmpty) return const SizedBox.shrink();
                         var todos = events.cast<Todo>().toList();
+
+                        // ✅ 현재 포커스된 달이 아닌 날짜(이전/다음 달)는 DOT도 흐리게
+                        final isOutside = day.month != state.focusedDay.month;
 
                         // ✅ 3. 카테고리 필터 적용 시 DOT도 동일하게 필터링
                         final currentFilter = state.currentFilter;
@@ -409,7 +439,8 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                             // 좌우로 1픽셀씩 마진을 줍니다. (점 사이 간격은 여전히 2픽셀이 됩니다)
                             margin: const EdgeInsets.symmetric(horizontal: 1),
                             decoration: BoxDecoration(
-                              color: getDotColor(t.category.name),
+                              color: getDotColor(t.category.name)
+                                  .withOpacity(isOutside ? 0.3 : 1.0),
                               shape: BoxShape.circle,
                             ),
                           )).toList(),
@@ -486,6 +517,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
           // ══════════════════════════════════════
           Expanded(
             child: SingleChildScrollView(
+              controller: _todoScrollController,
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
               ),
@@ -493,33 +525,314 @@ class _TodoPageState extends ConsumerState<TodoPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TodoSection(
-                    title: _sectionTitle(state.currentFilter),
-                    todos: state.todos,
-                    onToggle: vm.toggleTodo,
-                    onReorder: vm.reorderTodo,
+                  // ✅ 오늘의 할 일 + 언젠가 할 일을 단일 ReorderableListView로 합침
+                  // 섹션 경계(todayCount)를 넘으면 moveToSomeday/moveToToday 호출
+                  _CrossSectionTodoList(
+                    scrollController: _todoScrollController,
+                    todayTitle: _sectionTitle(state.currentFilter),
+                    todayTodos: state.todos,
+                    somedayTodos: state.currentFilter == 'all' || !state.currentFilter.startsWith('cat:')
+                        ? state.somedayTodos
+                        : [],
+                    showSomeday: state.currentFilter == 'all' || !state.currentFilter.startsWith('cat:'),
+                    onToggleToday: vm.toggleTodo,
+                    onToggleSomeday: vm.toggleSomedayTodo,
+                    onReorderToday: vm.reorderTodo,
+                    onReorderSomeday: vm.reorderSomedayTodo,
+                    onMoveToSomeday: vm.moveToSomeday,
+                    onMoveToToday: vm.moveToToday,
                     onSnooze: vm.snoozeTodo,
-                    actionLabel: '추가하기',
-                    onActionTap: () => _openAddSheet(context, state.selectedDay ?? DateTime.now()),
-                    onTodoTap: (todo) => _openDetailSheet(context, todo, false),
+                    onAddToday: () => _openAddSheet(context, state.selectedDay ?? DateTime.now()),
+                    onAddSomeday: () => _openAddSheet(context, null),
+                    onTapToday: (todo) => _openDetailSheet(context, todo, false),
+                    onTapSomeday: (todo) => _openDetailSheet(context, todo, true),
                   ),
-                  // 카테고리별/유형별 필터 시 언젠가 할 일 섹션 숨기기
-                  if (state.currentFilter == 'all' || !state.currentFilter.startsWith('cat:')) ...[
-                    const SizedBox(height: 24),
-                    TodoSection(
-                      title: '언젠가 할 일',
-                      todos: state.somedayTodos,
-                      onToggle: vm.toggleSomedayTodo,
-                      onReorder: vm.reorderSomedayTodo,
-                      onSnooze: null,
-                      actionLabel: '추가하기',
-                      onActionTap: () => _openAddSheet(context, null),
-                      onTodoTap: (todo) => _openDetailSheet(context, todo, true),
-                    ),
-                  ],
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ✅ 오늘의 할 일 + 언젠가 할 일 섹션 간 드래그앤드롭 위젯
+// 드래그 중 화면 상/하단 근접 시 부모 ScrollController로 자동 스크롤
+class _CrossSectionTodoList extends ConsumerStatefulWidget {
+  const _CrossSectionTodoList({
+    required this.todayTitle,
+    required this.todayTodos,
+    required this.somedayTodos,
+    required this.showSomeday,
+    required this.onToggleToday,
+    required this.onToggleSomeday,
+    required this.onReorderToday,
+    required this.onReorderSomeday,
+    required this.onMoveToSomeday,
+    required this.onMoveToToday,
+    required this.onSnooze,
+    required this.onAddToday,
+    required this.onAddSomeday,
+    required this.onTapToday,
+    required this.onTapSomeday,
+    this.scrollController,
+  });
+
+  final String todayTitle;
+  final List<Todo> todayTodos;
+  final List<Todo> somedayTodos;
+  final bool showSomeday;
+  final ValueChanged<String> onToggleToday;
+  final ValueChanged<String> onToggleSomeday;
+  final ReorderCallback onReorderToday;
+  final ReorderCallback onReorderSomeday;
+  final void Function(String id, {int targetIndex}) onMoveToSomeday;
+  final void Function(String id, {int targetIndex}) onMoveToToday;
+  final void Function(String id) onSnooze;
+  final VoidCallback onAddToday;
+  final VoidCallback onAddSomeday;
+  final void Function(Todo) onTapToday;
+  final void Function(Todo) onTapSomeday;
+  final ScrollController? scrollController;
+
+  @override
+  ConsumerState<_CrossSectionTodoList> createState() => _CrossSectionTodoListState();
+}
+
+class _CrossSectionTodoListState extends ConsumerState<_CrossSectionTodoList> {
+  Timer? _scrollTimer;
+  static const double _scrollThreshold = 100.0; // 상/하단 임계치 px
+  static const double _scrollSpeed = 8.0;        // 스크롤 속도 px/tick
+
+  void _startAutoScroll(double pointerY, double screenHeight) {
+    _scrollTimer?.cancel();
+    final sc = widget.scrollController;
+    if (sc == null || !sc.hasClients) return;
+
+    _scrollTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
+      if (!sc.hasClients) { _scrollTimer?.cancel(); return; }
+      if (pointerY < _scrollThreshold) {
+        // 상단 근접 → 위로 스크롤
+        final target = (sc.offset - _scrollSpeed).clamp(0.0, sc.position.maxScrollExtent);
+        sc.jumpTo(target);
+      } else if (pointerY > screenHeight - _scrollThreshold) {
+        // 하단 근접 → 아래로 스크롤
+        final target = (sc.offset + _scrollSpeed).clamp(0.0, sc.position.maxScrollExtent);
+        sc.jumpTo(target);
+      } else {
+        _scrollTimer?.cancel();
+      }
+    });
+  }
+
+  void _stopAutoScroll() {
+    _scrollTimer?.cancel();
+    _scrollTimer = null;
+  }
+
+  @override
+  void dispose() {
+    _scrollTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final todayCount = widget.todayTodos.length;
+    final dividerIndex = todayCount;
+    final totalCount = widget.showSomeday
+        ? todayCount + 1 + widget.somedayTodos.length
+        : todayCount;
+
+    void _resetReordering() {
+      // ✅ ViewModel 전역 락 해제
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          ref.read(todoViewModelProvider.notifier).finishReorder();
+        }
+      });
+    }
+
+    void handleReorder(int oldIndex, int newIndex) {
+      // ✅ ViewModel 전역 락: todo_page/tamagochi_page 중복 발화 방지
+      final vm = ref.read(todoViewModelProvider.notifier);
+      if (!vm.tryStartReorder()) return;
+
+      if (!widget.showSomeday) {
+        if (oldIndex < newIndex) newIndex -= 1;
+        widget.onReorderToday(oldIndex, newIndex);
+        _resetReordering();
+        return;
+      }
+
+      // 헤더 자체는 드래그 불가
+      if (oldIndex == dividerIndex) {
+        vm.finishReorder();
+        return;
+      }
+
+      // ✅ dividerIndex 특별 조정 제거 — standard adjustment만 적용
+      // today[i] → dividerIndex 드롭: if(i < N) → newIndex=N-1, isToday=true (오늘 마지막) ✓
+      // someday[j] → dividerIndex 드롭: if(j < N)=false → newIndex=N, isToday=false
+      //   → !wasToday && !isToday && newIndex==dividerIndex → 오늘 마지막으로 이동 ✓
+      if (oldIndex < newIndex) newIndex -= 1;
+
+      final bool wasToday = oldIndex < dividerIndex;
+      final bool isToday = newIndex < dividerIndex;
+
+      if (wasToday && isToday) {
+        // 오늘 섹션 내 재정렬
+        widget.onReorderToday(oldIndex, newIndex);
+      } else if (!wasToday && !isToday) {
+        if (newIndex == dividerIndex) {
+          // ✅ 언젠가 아이템을 divider에 드롭 → 오늘의 마지막 위치로 이동
+          final somedayOld = oldIndex - dividerIndex - 1;
+          widget.onMoveToToday(
+            widget.somedayTodos[somedayOld].id,
+            targetIndex: widget.todayTodos.length,
+          );
+        } else {
+          // 언젠가 섹션 내 재정렬
+          // ⚠️ same-section reorder 는 cross-section 과 달리 list 길이가 그대로라
+          // somedayOld 와 동일하게 `-dividerIndex - 1` 로 변환해야 한다. 이전엔
+          // `-dividerIndex` 로 변환하고 ViewModel 의 추가 `-1` 보정에 의존하던 구조였는데,
+          // ViewModel 보정을 제거한 뒤로는 이 한 줄이 안 맞으면 RangeError 가 난다.
+          final somedayOld = oldIndex - dividerIndex - 1;
+          final somedayNew = newIndex - dividerIndex - 1;
+          widget.onReorderSomeday(somedayOld, somedayNew);
+        }
+      } else if (wasToday && !isToday) {
+        // ✅ 오늘 → 언젠가 이동
+        final targetIdx = (newIndex - dividerIndex).clamp(0, widget.somedayTodos.length);
+        widget.onMoveToSomeday(widget.todayTodos[oldIndex].id, targetIndex: targetIdx);
+      } else {
+        // ✅ 언젠가 → 오늘 이동
+        final somedayOld = oldIndex - dividerIndex - 1;
+        final targetIdx = newIndex.clamp(0, widget.todayTodos.length);
+        widget.onMoveToToday(widget.somedayTodos[somedayOld].id, targetIndex: targetIdx);
+      }
+      _resetReordering();
+    }
+
+    Widget buildItem(BuildContext context, int index) {
+      if (index < dividerIndex) {
+        final todo = widget.todayTodos[index];
+        return Padding(
+          key: ValueKey('today_${todo.id}'),
+          padding: const EdgeInsets.only(bottom: 12),
+          child: SlidableTodoItemCard(
+            todo: todo,
+            index: index,
+            onToggle: () => widget.onToggleToday(todo.id),
+            onTap: () => widget.onTapToday(todo),
+            onSnooze: !todo.isDone ? () => widget.onSnooze(todo.id) : null,
+          ),
+        );
+      }
+      if (index == dividerIndex) {
+        return _SectionHeader(
+          key: const ValueKey('someday_header'),
+          title: '언젠가 할 일',
+          actionLabel: '추가하기',
+          onActionTap: widget.onAddSomeday,
+        );
+      }
+      final somedayIndex = index - dividerIndex - 1;
+      final todo = widget.somedayTodos[somedayIndex];
+      return Padding(
+        key: ValueKey('someday_${todo.id}'),
+        padding: const EdgeInsets.only(bottom: 12),
+        child: SlidableTodoItemCard(
+          todo: todo,
+          index: index,
+          onToggle: () => widget.onToggleSomeday(todo.id),
+          onTap: () => widget.onTapSomeday(todo),
+          onSnooze: null,
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(widget.todayTitle,
+                style: AppTextStyles.titleSmall.copyWith(color: colors.textPrimary)),
+            GestureDetector(
+              onTap: widget.onAddToday,
+              behavior: HitTestBehavior.opaque,
+              child: Text('추가하기',
+                  style: AppTextStyles.labelMedium.copyWith(color: colors.textSecondary)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (totalCount == 0)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: Text('할 일을 추가해보세요!',
+                  style: AppTextStyles.bodySmall.copyWith(color: colors.textHint)),
+            ),
+          )
+        else
+        // ✅ Listener로 드래그 중 포인터 위치 감지 → 자동 스크롤
+          Listener(
+            onPointerMove: (event) {
+              final screenHeight = MediaQuery.of(context).size.height;
+              _startAutoScroll(event.position.dy, screenHeight);
+            },
+            onPointerUp: (_) => _stopAutoScroll(),
+            onPointerCancel: (_) => _stopAutoScroll(),
+            child: ReorderableListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: totalCount,
+              onReorder: handleReorder,
+              proxyDecorator: (child, index, animation) =>
+                  Material(color: Colors.transparent, elevation: 0, child: child),
+              itemBuilder: buildItem,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// 섹션 구분 헤더
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    super.key,
+    required this.title,
+    required this.actionLabel,
+    required this.onActionTap,
+  });
+
+  final String title;
+  final String actionLabel;
+  final VoidCallback onActionTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    // ✅ 상단 패딩을 크게 해서 오늘 섹션 마지막 아이템과 헤더 사이
+    // 드롭 감지 영역을 충분히 확보 (off-by-one 방지)
+    return Padding(
+      padding: const EdgeInsets.only(top: 28, bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title,
+              style: AppTextStyles.titleSmall.copyWith(color: colors.textPrimary)),
+          GestureDetector(
+            onTap: onActionTap,
+            behavior: HitTestBehavior.opaque,
+            child: Text(actionLabel,
+                style: AppTextStyles.labelMedium.copyWith(color: colors.textSecondary)),
           ),
         ],
       ),

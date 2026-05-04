@@ -13,6 +13,19 @@ import 'package:doitdo/presentation/providers/app_data_providers.dart';
 import 'package:doitdo/data/models/todo_update_request_dto.dart';
 
 class TodoViewModel extends StateNotifier<TodoState> {
+  // ✅ 전역 reorder 락: todo_page/tamagochi_page 두 인스턴스 중복 방지
+  bool _isReordering = false;
+
+  bool tryStartReorder() {
+    if (_isReordering) return false;
+    _isReordering = true;
+    return true;
+  }
+
+  void finishReorder() {
+    _isReordering = false;
+  }
+
   TodoViewModel(this._repository, this._widgetSync)
       : super(TodoState(
     selectedDay: DateTime(
@@ -488,22 +501,33 @@ class TodoViewModel extends StateNotifier<TodoState> {
   }
 
   Future<void> reorderTodo(int oldIndex, int newIndex) async {
-    if (oldIndex < newIndex) newIndex -= 1;
+    // ⚠️ ReorderableListView newIndex 보정은 호출자(_CrossSectionTodoList.handleReorder)에서
+    // 이미 처리하므로 여기서 다시 -= 1 하지 않는다. 두 번 보정하면 "내릴 때만 1칸 위로
+    // 어긋나는" 버그가 발생.
     final list = List<Todo>.from(state.todos);
     final Todo item = list.removeAt(oldIndex);
+
+    // ✅ insert 전에 anchor 계산 — insert 후엔 list[newIndex]가 item 자신이 되어 버림
+    final String? anchorId = newIndex < list.length ? list[newIndex].id : null;
     list.insert(newIndex, item);
 
-    // ✅ allTodos도 같이 순서 변경 — _updateDisplayedTodos 호출 시 덮어씌워지는 문제 방지
     final allList = List<Todo>.from(state.allTodos);
     final allIdx = allList.indexWhere((t) => t.id == item.id);
     if (allIdx != -1) {
       allList.removeAt(allIdx);
-      allList.insert(newIndex, item);
+      final int allInsertIdx = anchorId == null
+          ? allList.length
+          : () {
+        final idx = allList.indexWhere((t) => t.id == anchorId);
+        return idx == -1 ? allList.length : idx;
+      }();
+      allList.insert(allInsertIdx, item);
     }
 
     state = state.copyWith(todos: list, allTodos: allList);
 
-    final newPriority = newIndex + 1;
+    // ✅ allTodos 기준 실제 위치로 우선순위 계산 (완료된 항목 포함)
+    final newPriority = allList.indexWhere((t) => t.id == item.id) + 1;
     await AsyncValue.guard(
           () => _repository.updateTodoPriority(item.id, newPriority),
     );
@@ -596,17 +620,25 @@ class TodoViewModel extends StateNotifier<TodoState> {
   }
 
   Future<void> reorderSomedayTodo(int oldIndex, int newIndex) async {
-    if (oldIndex < newIndex) newIndex -= 1;
+    // ⚠️ reorderTodo 와 동일 — 호출자에서 이미 보정하므로 여기선 보정하지 않는다.
     final list = List<Todo>.from(state.somedayTodos);
     final Todo item = list.removeAt(oldIndex);
+
+    // ✅ insert 전에 anchor 계산
+    final String? anchorId = newIndex < list.length ? list[newIndex].id : null;
     list.insert(newIndex, item);
 
-    // ✅ allSomedayTodos도 같이 순서 변경
     final allList = List<Todo>.from(state.allSomedayTodos);
     final allIdx = allList.indexWhere((t) => t.id == item.id);
     if (allIdx != -1) {
       allList.removeAt(allIdx);
-      allList.insert(newIndex, item);
+      final int allInsertIdx = anchorId == null
+          ? allList.length
+          : () {
+        final idx = allList.indexWhere((t) => t.id == anchorId);
+        return idx == -1 ? allList.length : idx;
+      }();
+      allList.insert(allInsertIdx, item);
     }
 
     state = state.copyWith(somedayTodos: list, allSomedayTodos: allList);
@@ -615,6 +647,107 @@ class TodoViewModel extends StateNotifier<TodoState> {
     await AsyncValue.guard(
           () => _repository.updateTodoPriority(item.id, newPriority),
     );
+  }
+
+  /// ✅ 오늘의 할 일 → 언젠가 할 일로 이동 (targetIndex: 언젠가 섹션 내 삽입 위치)
+  Future<void> moveToSomeday(String id, {int targetIndex = -1}) async {
+    final idx = state.allTodos.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+
+    final item = state.allTodos[idx].copyWith(
+      dateType: TodoDateType.someday,
+      date: null,
+      rangeStart: null,
+      rangeEnd: null,
+      repeatType: null,
+      repeatStartDate: null,
+      repeatEndDate: null,
+      repeatDays: null,
+    );
+
+    // 로컬 상태 업데이트 — 지정 위치에 삽입
+    final newSomeday = List<Todo>.from(state.allSomedayTodos);
+    final insertAt = (targetIndex < 0 || targetIndex > newSomeday.length)
+        ? newSomeday.length
+        : targetIndex;
+    newSomeday.insert(insertAt, item);
+
+    final newAllTodos = state.allTodos.where((t) => t.id != id).toList();
+    state = state.copyWith(
+      allTodos: newAllTodos,
+      allSomedayTodos: newSomeday,
+    );
+    _updateCalendarEvents(newAllTodos);
+    _updateDisplayedTodos();
+
+    // ✅ 완료된 항목은 서버가 type 변경 422 반환 → updateTodo 건너뜀
+    if (!item.isDone) {
+      await AsyncValue.guard(() => _repository.updateTodo(
+        id,
+        TodoUpdateRequestDto(
+          title:    item.title,
+          content:  item.memo,
+          category: item.category.name,
+          type:     'SOMEDAY',
+          startDate: null,
+          endDate:   null,
+          alarmTime: item.alarmEnabled ? _formatTime(item.alarmTime) : null,
+          clearAlertTime: item.alarmEnabled ? null : true,
+        ),
+      ));
+    }
+
+    // 우선순위 설정 (완료 여부 무관하게 항상 적용)
+    await AsyncValue.guard(
+            () => _repository.updateTodoPriority(id, insertAt + 1));
+  }
+
+  /// ✅ 언젠가 할 일 → 오늘의 할 일로 이동 (targetIndex: 오늘 섹션 내 삽입 위치)
+  Future<void> moveToToday(String id, {int targetIndex = -1}) async {
+    final idx = state.allSomedayTodos.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+
+    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final item = state.allSomedayTodos[idx].copyWith(
+      dateType: TodoDateType.normal,
+      date: today,
+    );
+
+    // 로컬 상태 업데이트 — 지정 위치에 삽입
+    final newTodos = List<Todo>.from(state.allTodos);
+    final insertAt = (targetIndex < 0 || targetIndex > newTodos.length)
+        ? newTodos.length
+        : targetIndex;
+    newTodos.insert(insertAt, item);
+
+    final newAllSomeday = state.allSomedayTodos.where((t) => t.id != id).toList();
+    state = state.copyWith(
+      allSomedayTodos: newAllSomeday,
+      allTodos: newTodos,
+    );
+    _updateCalendarEvents(newTodos);
+    _updateDisplayedTodos();
+
+    // ✅ 완료된 항목은 서버가 type 변경 422 반환 → updateTodo 건너뜀
+    if (!item.isDone) {
+      await AsyncValue.guard(() => _repository.updateTodo(
+        id,
+        TodoUpdateRequestDto(
+          title:     item.title,
+          content:   item.memo,
+          category:  item.category.name,
+          type:      'NORMAL',
+          startDate: today.toIso8601String().split('T')[0],
+          endDate:   null,
+          alarmTime: item.alarmEnabled ? _formatTime(item.alarmTime) : null,
+          clearAlertTime: item.alarmEnabled ? null : true,
+        ),
+      ));
+    }
+
+    // 우선순위 설정 (완료 여부 무관하게 항상 적용)
+    await AsyncValue.guard(
+            () => _repository.updateTodoPriority(id, insertAt + 1));
   }
 
   Future<void> snoozeTodo(String id) async {
