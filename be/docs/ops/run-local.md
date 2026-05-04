@@ -4,6 +4,24 @@
 
 - JDK 21 + `env/.env.dev` 준비 완료 ([env-setup.md](env-setup.md))
 - dev DB 접근 가능 (원격 `168.107.48.80`)
+- Redis 7 접근 가능 (`env/.env.dev`의 `SPRING_DATA_REDIS_HOST` / `SPRING_DATA_REDIS_PORT`)
+
+## Redis
+
+로컬 docker compose에 redis 서비스가 있는 경우:
+
+```bash
+docker compose -f docker-compose.local.yml up -d redis
+```
+
+호스트에서 직접 띄운 Redis를 쓰는 개인 환경은 `env/.env.local`에 아래처럼 둔다.
+
+```properties
+REDIS_HOST=localhost
+REDIS_PORT=6379
+SPRING_DATA_REDIS_HOST=localhost
+SPRING_DATA_REDIS_PORT=6379
+```
 
 ## 부팅
 
@@ -48,4 +66,5 @@ curl http://localhost:8080/db-check    # DB SELECT 1 실행
 
 - 부팅 즉시 `Failed to determine a suitable driver class` → `env/.env.dev` 누락 또는 경로 오타.
 - 부팅 즉시 `Communications link failure` → DB 호스트 도달 불가 (VPN/방화벽).
+- 부팅 즉시 Redis connection 실패 → Redis 컨테이너 실행 여부와 `SPRING_DATA_REDIS_HOST` / `SPRING_DATA_REDIS_PORT` 확인.
 - `/swagger-ui.html` 404 → 활성 프로파일이 `dev` / `local` 이 아님.
