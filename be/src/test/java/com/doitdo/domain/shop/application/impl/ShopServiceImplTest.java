@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import com.doitdo.domain.shop.api.dto.resp.FurnitureShopItemResp;
 import com.doitdo.domain.shop.api.dto.resp.FurnitureShopStatus;
@@ -70,7 +71,7 @@ class ShopServiceImplTest {
 			.willReturn(List.of(10L));
 		given(userFurnitureRepository.findAllByUserIdOrderByUserFurnitureIdAsc(userId))
 			.willReturn(List.of(userFurniture(20L, userId, 10L)));
-		given(roomFurniturePlacementRepository.findAllByUserIdOrderByDisplayOrder(userId))
+		given(roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId))
 			.willReturn(List.of());
 
 		List<FurnitureShopItemResp> resp = service.listFurnitures(userId, null).items();
@@ -104,7 +105,7 @@ class ShopServiceImplTest {
 		given(furnitureRepository.findAllByIsDeletedFalseOrderByFurnitureIdAsc()).willReturn(List.of(clock));
 		given(userFurnitureRepository.findFurnitureIdsByUserId(userId)).willReturn(List.of(10L));
 		given(userFurnitureRepository.findAllByUserIdOrderByUserFurnitureIdAsc(userId)).willReturn(List.of(userFurniture));
-		given(roomFurniturePlacementRepository.findAllByUserIdOrderByDisplayOrder(userId)).willReturn(List.of(placement));
+		given(roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId)).willReturn(List.of(placement));
 
 		FurnitureShopItemResp resp = service.listFurnitures(userId, null).items().get(0);
 
@@ -184,6 +185,37 @@ class ShopServiceImplTest {
 	}
 
 	@Test
+	void purchaseFurniture_convertsDuplicateUserFurnitureSaveFailureToAlreadyOwned() {
+		ShopServiceImpl service = new ShopServiceImpl(
+			furnitureRepository,
+			userFurnitureRepository,
+			furniturePurchaseLogRepository,
+			userWalletRepository,
+			roomFurniturePlacementRepository
+		);
+		Long userId = 1L;
+		Long furnitureId = 10L;
+		UserWallet wallet = UserWallet.builder()
+			.userId(userId)
+			.balance(150)
+			.build();
+
+		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(furnitureId))
+			.willReturn(Optional.of(furniture(furnitureId, "CHAIR_001", "chair", "CHAIR", 100, true)));
+		given(userFurnitureRepository.existsByUserIdAndFurnitureId(userId, furnitureId))
+			.willReturn(false);
+		given(userWalletRepository.findByUserIdForUpdate(userId)).willReturn(Optional.of(wallet));
+		given(userFurnitureRepository.save(any(UserFurniture.class)))
+			.willThrow(new DataIntegrityViolationException("duplicate user furniture"));
+
+		assertThatThrownBy(() -> service.purchaseFurniture(userId, furnitureId))
+			.isInstanceOf(CustomException.class)
+			.extracting(ex -> ((CustomException)ex).getErrorCode())
+			.isEqualTo(ShopErrorCode.FURNITURE_ALREADY_OWNED);
+		verify(furniturePurchaseLogRepository, never()).save(any(FurniturePurchaseLog.class));
+	}
+
+	@Test
 	void purchaseFurniture_rejectsInsufficientBalance() {
 		ShopServiceImpl service = new ShopServiceImpl(
 			furnitureRepository,
@@ -232,7 +264,7 @@ class ShopServiceImplTest {
 		RoomFurniturePlacement bedPlacement = placement(31L, userId, 21L, 30, 40, 2, 0);
 
 		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(12L)).willReturn(Optional.of(previewClock));
-		given(roomFurniturePlacementRepository.findAllByUserIdOrderByDisplayOrder(userId))
+		given(roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId))
 			.willReturn(List.of(oldClockPlacement, bedPlacement));
 		given(userFurnitureRepository.findById(20L)).willReturn(Optional.of(oldClockUserFurniture));
 		given(userFurnitureRepository.findById(21L)).willReturn(Optional.of(bedUserFurniture));

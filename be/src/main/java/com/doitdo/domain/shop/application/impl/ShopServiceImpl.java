@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,7 +76,12 @@ public class ShopServiceImpl implements ShopService {
 			.orElseThrow(() -> new CustomException(ShopErrorCode.WALLET_NOT_FOUND));
 		wallet.spend(furniture.getPrice());
 
-		UserFurniture userFurniture = userFurnitureRepository.save(UserFurniture.create(userId, furnitureId));
+		UserFurniture userFurniture;
+		try {
+			userFurniture = userFurnitureRepository.save(UserFurniture.create(userId, furnitureId));
+		} catch (DataIntegrityViolationException e) {
+			throw new CustomException(ShopErrorCode.FURNITURE_ALREADY_OWNED);
+		}
 		furniturePurchaseLogRepository.save(FurniturePurchaseLog.create(
 			userId,
 			userFurniture.getUserFurnitureId(),
@@ -109,7 +115,7 @@ public class ShopServiceImpl implements ShopService {
 	public RoomResp previewRoom(Long userId, Long furnitureId) {
 		Furniture previewFurniture = findFurniture(furnitureId);
 		List<RoomFurniturePlacementResp> items = roomFurniturePlacementRepository
-			.findAllByUserIdOrderByDisplayOrder(userId)
+			.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId)
 			.stream()
 			.map(this::toRoomResp)
 			.filter(item -> !previewFurniture.getCategory().equals(item.category()))
@@ -125,7 +131,7 @@ public class ShopServiceImpl implements ShopService {
 		java.util.Map<Long, Long> furnitureIdByUserFurnitureId = userFurnitures.stream()
 			.collect(java.util.stream.Collectors.toMap(UserFurniture::getUserFurnitureId, UserFurniture::getFurnitureId));
 
-		return roomFurniturePlacementRepository.findAllByUserIdOrderByDisplayOrder(userId)
+		return roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId)
 			.stream()
 			.map(RoomFurniturePlacement::getUserFurnitureId)
 			.map(furnitureIdByUserFurnitureId::get)

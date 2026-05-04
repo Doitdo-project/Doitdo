@@ -32,7 +32,7 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 	@Transactional(readOnly = true)
 	public RoomResp getMyRoom(Long userId) {
 		List<RoomFurniturePlacementResp> items = roomFurniturePlacementRepository
-			.findAllByUserIdOrderByDisplayOrder(userId)
+			.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId)
 			.stream()
 			.map(this::toResp)
 			.toList();
@@ -46,7 +46,7 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 		UserFurniture userFurniture = findMyUserFurniture(userId, userFurnitureId);
 		Furniture furniture = findFurniture(userFurniture.getFurnitureId());
 		java.util.Optional<RoomFurniturePlacement> currentPlacement = roomFurniturePlacementRepository
-			.findAllByUserIdOrderByDisplayOrder(userId)
+			.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId)
 			.stream()
 			.filter(placement -> isSameCategoryPlacement(placement, furniture))
 			.findFirst();
