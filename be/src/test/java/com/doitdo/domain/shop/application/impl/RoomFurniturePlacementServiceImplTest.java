@@ -50,7 +50,7 @@ class RoomFurniturePlacementServiceImplTest {
 		Furniture furniture = furniture(10L, "의자");
 		RoomFurniturePlacement placement = placement(30L, userId, 20L, 120, 300, 5, 0);
 
-		given(roomFurniturePlacementRepository.findAllByUserIdOrderByDisplayOrder(userId))
+		given(roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId))
 			.willReturn(List.of(placement));
 		given(userFurnitureRepository.findById(20L)).willReturn(Optional.of(userFurniture));
 		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(10L)).willReturn(Optional.of(furniture));
@@ -80,7 +80,7 @@ class RoomFurniturePlacementServiceImplTest {
 		given(userFurnitureRepository.findByUserIdAndUserFurnitureId(userId, 20L))
 			.willReturn(Optional.of(userFurniture));
 		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(10L)).willReturn(Optional.of(furniture));
-		given(roomFurniturePlacementRepository.findAllByUserIdOrderByDisplayOrder(userId)).willReturn(List.of());
+		given(roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId)).willReturn(List.of());
 		given(roomFurniturePlacementRepository.save(any(RoomFurniturePlacement.class))).willReturn(saved);
 
 		RoomFurniturePlacementResp resp = service.placeFurniture(userId, 20L);
@@ -109,7 +109,7 @@ class RoomFurniturePlacementServiceImplTest {
 		given(userFurnitureRepository.findByUserIdAndUserFurnitureId(userId, 21L))
 			.willReturn(Optional.of(newUserFurniture));
 		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(11L)).willReturn(Optional.of(newClock));
-		given(roomFurniturePlacementRepository.findAllByUserIdOrderByDisplayOrder(userId))
+		given(roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId))
 			.willReturn(List.of(oldPlacement));
 		given(userFurnitureRepository.findById(20L)).willReturn(Optional.of(oldUserFurniture));
 		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(10L)).willReturn(Optional.of(oldClock));
@@ -137,7 +137,7 @@ class RoomFurniturePlacementServiceImplTest {
 		given(userFurnitureRepository.findByUserIdAndUserFurnitureId(userId, 20L))
 			.willReturn(Optional.of(userFurniture));
 		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(10L)).willReturn(Optional.of(clock));
-		given(roomFurniturePlacementRepository.findAllByUserIdOrderByDisplayOrder(userId))
+		given(roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId))
 			.willReturn(List.of(existingPlacement));
 		given(userFurnitureRepository.findById(20L)).willReturn(Optional.of(userFurniture));
 

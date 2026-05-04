@@ -12,6 +12,7 @@
 - 이미 보유한 가구는 상점에서 품절처럼 표시한다.
 - 구매 재화는 기존 `user_wallets.balance` 를 사용한다.
 - 구매 시 포인트 차감, 보유 가구 생성, 구매 로그 저장은 한 트랜잭션으로 처리한다.
+- 동시 구매 요청으로 `user_furnitures` UNIQUE 제약이 충돌하면 `S00-002 FURNITURE_ALREADY_OWNED` 로 응답한다.
 - 1차 MVP는 상점 구매와 보유 처리까지만 구현한다.
 - 방 배치, 위치 수정, 방에서 제거, 다마고치 화면의 방 조회는 2차 범위로 분리한다.
 - 2차에서는 방에서 삭제하더라도 인벤토리 영구 삭제가 아니라 배치 제거로 처리한다.
@@ -433,6 +434,7 @@ Swagger 노출:
    - 잔액 부족이면 `S00-003 INSUFFICIENT_BALANCE`.
 6. 보유 가구 생성
    - `UserFurniture.create(userId, furnitureId)` 로 생성한다.
+   - 동시 요청으로 `unique(user_id, furniture_id)` 제약이 충돌하면 `S00-002 FURNITURE_ALREADY_OWNED` 로 변환한다.
 7. 구매 로그 저장
    - 구매 당시 가격, 구매 후 잔액, 생성된 `userFurnitureId` 를 저장한다.
    - 1~7은 한 트랜잭션으로 처리한다.
@@ -538,6 +540,7 @@ Swagger 노출:
 - 판매 중이 아닌 가구 구매 차단
 - 내 보유 가구 목록 조회
 - 가구 구매 로그 저장
+- 동시 구매로 보유 가구 UNIQUE 제약이 충돌하면 `FURNITURE_ALREADY_OWNED` 로 응답
 
 구현된 API:
 
@@ -583,6 +586,7 @@ Swagger 노출:
 - RED: `ShopServiceImplTest` 작성 후 구현 전 컴파일 실패 확인
 - GREEN: `.\gradlew.bat test --tests "com.doitdo.domain.shop.application.impl.ShopServiceImplTest"` 성공
 - 전체 테스트: `.\gradlew.bat test --rerun-tasks` 성공
+- 2026-05-04 리뷰 반영 검증: `.\gradlew.bat test --tests "com.doitdo.domain.shop.application.impl.ShopServiceImplTest" --tests "com.doitdo.domain.shop.application.impl.RoomFurniturePlacementServiceImplTest" --no-daemon --offline` 성공
 
 아직 안 한 것:
 
