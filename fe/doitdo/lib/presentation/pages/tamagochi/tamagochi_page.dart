@@ -345,10 +345,8 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                             character: character,
                             isCharacterLoading: isCharacterLoading,
                             topSafePadding: topInset,
-                            onTapShop: () => _showComingSoon(
-                              context,
-                              '상점 기능은 아직 준비 중이에요.',
-                            ),
+                            onTapShop: () =>
+                                context.push(AppRoutes.tamagochiShop),
                             onTapCollection: () =>
                                 context.push(AppRoutes.tamagochiCollection),
                             onEggTap: _handleEggTap,

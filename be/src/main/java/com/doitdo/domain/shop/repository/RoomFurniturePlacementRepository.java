@@ -17,7 +17,7 @@ public interface RoomFurniturePlacementRepository extends JpaRepository<RoomFurn
 		where p.userId = :userId
 		order by p.zIndex asc, p.placementId asc
 		""")
-	List<RoomFurniturePlacement> findAllByUserIdOrderByDisplayOrder(@Param("userId") Long userId);
+	List<RoomFurniturePlacement> findAllByUserIdOrderByZIndexAscPlacementIdAsc(@Param("userId") Long userId);
 
 	Optional<RoomFurniturePlacement> findByPlacementIdAndUserId(Long placementId, Long userId);
 

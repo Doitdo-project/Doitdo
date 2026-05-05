@@ -15,6 +15,7 @@ import 'package:doitdo/presentation/pages/collection/collection_page.dart';
 import 'package:doitdo/presentation/pages/onboarding/onboarding_agreements_page.dart';
 import 'package:doitdo/presentation/pages/onboarding/onboarding_birth_date_page.dart';
 import 'package:doitdo/presentation/pages/setting/setting_page.dart';
+import 'package:doitdo/presentation/pages/shop/shop_page.dart';
 import 'package:doitdo/presentation/pages/splash/splash_page.dart';
 import 'package:doitdo/presentation/pages/tamagochi/character_hatch_page.dart';
 import 'package:doitdo/presentation/pages/tamagochi/character_naming_page.dart';
@@ -38,6 +39,7 @@ class AppRoutes {
   static const String todo = '/todo';
   static const String tamagochi = '/tamagochi';
   static const String tamagochiCollection = '/tamagochi/collection';
+  static const String tamagochiShop = '/tamagochi/shop';
   static const String tamagochiHatch = '/tamagochi/hatch';
   static const String tamagochiNaming = '/tamagochi/naming';
   static const String setting = '/setting';
@@ -194,6 +196,12 @@ final GoRouter appRouter = GoRouter(
                   path: 'collection',
                   parentNavigatorKey: _rootNavigatorKey,
                   builder: (context, state) => const CollectionPage(),
+                ),
+                // '/tamagochi/shop' — 방 꾸미기 상점 (전체 화면).
+                GoRoute(
+                  path: 'shop',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) => const ShopPage(),
                 ),
                 // '/tamagochi/hatch' — 알을 10회 두드려 부화시키는 전체 화면.
                 GoRoute(

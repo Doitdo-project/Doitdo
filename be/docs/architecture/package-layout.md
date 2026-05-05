@@ -232,6 +232,7 @@ UNIQUE 제약 `uk_todos_user_master_date (user_id, master_todo_id, start_date)` 
 | Response DTO | `domain/shop/api/dto/resp/UserFurnitureItemResp.java` | 보유 가구 단일 응답 |
 | Response DTO | `domain/shop/api/dto/resp/RoomResp.java` | 내 방 배치 가구 목록 래퍼 |
 | Response DTO | `domain/shop/api/dto/resp/RoomFurniturePlacementResp.java` | 배치 가구 단일 응답 |
+| Response DTO | `domain/shop/api/dto/resp/ShopEntryResp.java` | 상점 진입용 가구 목록 + 실제 방 통합 응답 |
 | Application interface | `domain/shop/application/ShopService.java` | 가구 목록/구매/보유 목록 인터페이스 |
 | Application interface | `domain/shop/application/RoomFurniturePlacementService.java` | 내 방 조회/배치/수정/제거 인터페이스 |
 | Application impl | `domain/shop/application/impl/ShopServiceImpl.java` | 월렛 차감 + 보유 생성 + 구매 로그 저장 |

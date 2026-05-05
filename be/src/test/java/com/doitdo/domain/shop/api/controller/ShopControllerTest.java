@@ -14,8 +14,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.shop.api.dto.req.UpdateRoomFurniturePlacementReq;
+import com.doitdo.domain.shop.api.dto.resp.FurnitureShopResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomFurniturePlacementResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomResp;
+import com.doitdo.domain.shop.api.dto.resp.ShopEntryResp;
 import com.doitdo.domain.shop.application.RoomFurniturePlacementService;
 import com.doitdo.domain.shop.application.ShopService;
 import com.doitdo.domain.user.entity.User;
@@ -44,6 +46,23 @@ class ShopControllerTest {
 			.isDeleted(false)
 			.build();
 		userDetails = new CustomUserDetails(user);
+	}
+
+	@Test
+	void getShopEntry_returnsFurnituresAndRoom() {
+		FurnitureShopResp furnitures = new FurnitureShopResp(List.of());
+		RoomResp room = new RoomResp(List.of(
+			new RoomFurniturePlacementResp(3L, 10L, 1L, "나무 의자", "CHAIR", "https://cdn.example.com/chair.png",
+				120, 300, 80, 90, 5, 0, false)
+		));
+		given(shopService.listFurnitures(1L, "CHAIR")).willReturn(furnitures);
+		given(roomFurniturePlacementService.getMyRoom(1L)).willReturn(room);
+
+		GlobalApiResponse<ShopEntryResp> response = controller.getShopEntry(userDetails, "CHAIR");
+
+		assertThat(response.getStatus()).isEqualTo(200);
+		assertThat(response.getData().furnitures()).isSameAs(furnitures);
+		assertThat(response.getData().room()).isSameAs(room);
 	}
 
 	@Test
