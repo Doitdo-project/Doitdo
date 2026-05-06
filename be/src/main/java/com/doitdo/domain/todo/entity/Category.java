@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -14,7 +15,12 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Table(name = "categories")
+@Table(
+		name = "categories",
+		indexes = {
+				@Index(name = "idx_categories_user_name", columnList = "user_id, category_name")
+		}
+)
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
