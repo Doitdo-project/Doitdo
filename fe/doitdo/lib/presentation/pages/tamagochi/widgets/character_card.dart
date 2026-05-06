@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/domain/entities/character.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/pixel_icon_box.dart';
+import 'package:doitdo/presentation/pages/tamagochi/widgets/room_layer.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /// 다마고치 메인 상단의 방 일러스트 카드.
 ///
@@ -59,16 +59,12 @@ class CharacterCard extends StatelessWidget {
     return SizedBox(
       // 침대/창문 일러스트가 잘리지 않도록 충분한 높이 확보. 캐릭터는 카드 하단
       // (= 바닥 영역) 에 정렬되어 발을 바닥에 두고 있는 것처럼 보이게 한다.
-      height: 260.h + topSafePadding,
+      height: 250.h + topSafePadding,
       child: Stack(
         children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/main_background.png',
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.none,
-            ),
-          ),
+          // 방 배경 + 가구 합성. listMyFurnitures() 결과를 zIndex 순서로 쌓아
+          // 그리고, 응답 전/실패 시 정적 자산으로 폴백.
+          const Positioned.fill(child: RoomLayer()),
 
           // 진화/부화/독립 같은 주요 액션 중의 작은 스피너. copyWithPrevious 덕에
           // 이전 캐릭터 데이터는 그대로 남아 있고, 이 작은 스피너만 카드 좌측
@@ -87,13 +83,13 @@ class CharacterCard extends StatelessWidget {
               ),
             ),
 
-          // 중앙 하단: 말풍선 + 캐릭터. 카드 안쪽 바닥에 StatusPill 이 떠있으므로
-          // 캐릭터는 그보다 위에 서게 bottom 여백을 충분히 잡는다.
+          // 중앙 하단: 말풍선 + 캐릭터. RoomLayer 가 들어올린 바닥선 위에
+          // 캐릭터 발이 정확히 닿도록 같은 inset 을 공유한다 (RoomLayer.characterBottomInset).
           Positioned(
             left: 0,
             right: 0,
             top: topSafePadding,
-            bottom: 64.h,
+            bottom: RoomLayer.characterBottomInset.h,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -176,7 +172,7 @@ class CharacterCard extends StatelessWidget {
       key: ValueKey('grown-$imageUrl-${c.characterId}-${state.actionTick}'),
       thumbnailUrl: imageUrl,
       eyeGifCharacterId: isAction ? null : c.characterId,
-      imageHeight: 100.h,
+      imageHeight: 112.h,
       onTap: onCharacterTap,
     );
   }
