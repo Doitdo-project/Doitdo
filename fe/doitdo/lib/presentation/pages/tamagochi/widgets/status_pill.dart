@@ -142,12 +142,18 @@ class _StatusPillState extends State<StatusPill> {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(12.r),
+        // 두 단 그림자 — 가까운 sharper + 멀리 더 넓고 흐릿한 톤. 카드와 카드
         boxShadow: [
           BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+          BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -156,7 +162,7 @@ class _StatusPillState extends State<StatusPill> {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
             decoration: BoxDecoration(
               color: colors.streakCardBg.withValues(alpha: 0.75),
               borderRadius: BorderRadius.circular(16.r),
@@ -190,27 +196,7 @@ class _StatusPillState extends State<StatusPill> {
                 SizedBox(width: 14.w),
                 Expanded(
                   flex: 3,
-                  child: Container(
-                    height: 8.h,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE5E1D6).withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(4.r),
-                    ),
-                    alignment: Alignment.centerLeft,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 600),
-                          curve: Curves.easeOutCubic,
-                          width: constraints.maxWidth * progress,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF8FC57A),
-                            borderRadius: BorderRadius.circular(4.r),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+                  child: _ExpBar(progress: progress),
                 ),
                 SizedBox(width: 14.w),
                 GestureDetector(
@@ -218,10 +204,15 @@ class _StatusPillState extends State<StatusPill> {
                   onTap: _onStreakTap,
                   behavior: HitTestBehavior.opaque,
                   child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF4E6),
-                      borderRadius: BorderRadius.circular(10.r),
+                      color: const Color(0xFFFFF1DC),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: const Color(0xFFFFD9A8),
+                        width: 1,
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -231,7 +222,7 @@ class _StatusPillState extends State<StatusPill> {
                         Text(
                           widget.streakDays.toString(),
                           style: AppTextStyles.bodyMedium.copyWith(
-                            color: const Color(0xFFE2782B),
+                            color: const Color(0xFFD86A1F),
                             fontWeight: FontWeight.w800,
                             height: 1.1,
                           ),
@@ -244,6 +235,61 @@ class _StatusPillState extends State<StatusPill> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// EXP 진행 바.
+///
+/// - 트랙: 살짝 옴폭한 라이트 그레이 (안쪽 그림자 효과로 깊이감).
+/// - 채움: 위→아래로 연한→진한 초록 세로 그라데이션 + 미세 하이라이트.
+/// - 둥근 endcap (radius = 높이의 절반) — 가는 캡슐 형태.
+/// - 진척 변화 시 600ms easeOutCubic 으로 자연스럽게 늘어난다.
+class _ExpBar extends StatelessWidget {
+  const _ExpBar({required this.progress});
+
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(999);
+    return Container(
+      height: 9.h,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE9E4D6),
+        borderRadius: radius,
+        // 트랙 안쪽 살짝 어두운 inner-shadow 효과 (위쪽이 진한 톤).
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFD9D2C0), Color(0xFFEFEBDF)],
+        ),
+      ),
+      alignment: Alignment.centerLeft,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeOutCubic,
+            width: constraints.maxWidth * progress,
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFA9D793), Color(0xFF7BB964)],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF6FA958).withValues(alpha: 0.35),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

@@ -386,7 +386,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                 Positioned(
                                   left: 0,
                                   right: 0,
-                                  bottom: 8.h,
+                                  bottom: 16.h,
                                   child: StatusPill(
                                     character: character,
                                     streakDays: streak.currentCount,
