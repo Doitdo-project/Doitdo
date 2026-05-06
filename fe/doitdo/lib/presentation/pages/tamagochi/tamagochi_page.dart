@@ -11,7 +11,7 @@ import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/character_card.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/farewell_banner.dart';
-import 'package:doitdo/presentation/pages/tamagochi/widgets/streak_section.dart';
+import 'package:doitdo/presentation/pages/tamagochi/widgets/status_pill.dart';
 import 'package:doitdo/presentation/pages/todo/todo_state.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_add_sheet.dart';
@@ -39,10 +39,11 @@ class TamagochiPage extends ConsumerStatefulWidget {
 }
 
 class _TamagochiPageState extends ConsumerState<TamagochiPage> {
-  // StreakSection 대략 높이 계산에 사용.
-  // 수직 padding 16*2 + 타이틀 ~20 + gap 10 + (dot 22 + gap 4 + 날짜 label ~16) ≈ 104
-  static const double _streakSectionHeight = 104;
-  static const double _streakTopGap = 16;
+  /// 캐릭터 카드 + 상태 알약을 합친 시각적 헤더 높이의 근사치.
+  /// StatusPill 이 카드 하단을 -16.h 만큼 침범하면서 ~50.h 노출되므로
+  /// 카드 본체(260.h) + ~34.h ≈ 294.h. snap / 상태바 토글 임계만 잡으면 되니
+  /// 정확하지 않아도 무방.
+  static const double _headerHeightExclTopInset = 294;
 
   /// 헤더가 보이는 상태인지. 상태바 오버레이 + 아이콘 색 전환에만 쓰인다.
   /// 매 스크롤마다 build 가 다시 돌지 않도록 ValueNotifier 로 분리.
@@ -292,9 +293,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     final isCharacterLoading = characterAsync.isLoading;
     final topInset = MediaQuery.paddingOf(context).top;
 
-    final double headerHeight = 200.h +
-        _streakTopGap +
-        _streakSectionHeight;
+    final double headerHeight = _headerHeightExclTopInset.h + topInset;
 
     return ValueListenableBuilder<bool>(
       valueListenable: _headerVisible,
@@ -340,26 +339,51 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          CharacterCard(
-                            state: state,
-                            character: character,
-                            isCharacterLoading: isCharacterLoading,
-                            topSafePadding: topInset,
-                            onTapShop: () =>
-                                context.push(AppRoutes.tamagochiShop),
-                            onTapCollection: () =>
-                                context.push(AppRoutes.tamagochiCollection),
-                            onEggTap: _handleEggTap,
-                            onCharacterTap: () {
-                              final remaining = todayTodos
-                                  .where((t) => !t.isDone)
-                                  .length;
-                              ref
-                                  .read(tamagochiViewModelProvider.notifier)
-                                  .onCharacterTap(
-                                remainingTodayTodos: remaining,
-                              );
-                            },
+                          // 캐릭터 카드 + 상태 알약을 한 Stack 으로 묶어, 알약이
+                          // 카드 안쪽 바닥 부근에 떠있는 모양으로 배치한다.
+                          // (Transform.translate 로 끌어올리면 layout slot 이 그대로
+                          // 남아 아래에 빈 공간이 생기므로 Stack 으로 처리.)
+                          Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              CharacterCard(
+                                state: state,
+                                character: character,
+                                isCharacterLoading: isCharacterLoading,
+                                topSafePadding: topInset,
+                                onTapShop: () =>
+                                    context.push(AppRoutes.tamagochiShop),
+                                onTapCollection: () => context
+                                    .push(AppRoutes.tamagochiCollection),
+                                onEggTap: _handleEggTap,
+                                onCharacterTap: () {
+                                  final remaining = todayTodos
+                                      .where((t) => !t.isDone)
+                                      .length;
+                                  ref
+                                      .read(tamagochiViewModelProvider
+                                          .notifier)
+                                      .onCharacterTap(
+                                        remainingTodayTodos: remaining,
+                                      );
+                                },
+                              ),
+                              if (character != null && !character.isEgg)
+                                Positioned(
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 8.h,
+                                  child: StatusPill(
+                                    character: character,
+                                    streakDays: streak.currentCount,
+                                    streakSlots: streakWindow.slots,
+                                    isRewardClaimable:
+                                        streak.hasCompletedBlock,
+                                    isClaimingReward: _claimingReward,
+                                    onClaimReward: _handleClaimReward,
+                                  ),
+                                ),
+                            ],
                           ),
                           if (character?.canFarewell ?? false) ...[
                             SizedBox(height: 12.h),
@@ -371,15 +395,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                 onTap: _handleFarewellTap,
                               ),
                             ),
-                            SizedBox(height: 12.h),
                           ],
-                          StreakSection(
-                            streakDays: streak.currentCount,
-                            slots: streakWindow.slots,
-                            isRewardClaimable: streak.hasCompletedBlock,
-                            isClaimingReward: _claimingReward,
-                            onClaimReward: _handleClaimReward,
-                          ),
                         ],
                       ),
                     ),
