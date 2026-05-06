@@ -11,6 +11,7 @@ import 'package:doitdo/presentation/pages/todo/todo_state.dart';
 import 'package:doitdo/domain/repositories/todo_repository.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
 import 'package:doitdo/data/models/todo_update_request_dto.dart';
+import 'package:doitdo/data/models/todo_detail_response_dto.dart';
 
 class TodoViewModel extends StateNotifier<TodoState> {
   // ✅ 전역 reorder 락: todo_page/tamagochi_page 두 인스턴스 중복 방지
@@ -385,6 +386,52 @@ class TodoViewModel extends StateNotifier<TodoState> {
     state = state.copyWith(allTodos: [...state.allTodos, todo]);
     _updateCalendarEvents(state.allTodos);
     _updateDisplayedTodos();
+  }
+
+  /// POST /api/todos 응답 DTO 를 Todo 로 변환해 적절한 리스트에 삽입한다.
+  /// SOMEDAY 타입은 allSomedayTodos 에, 그 외는 allTodos 에 추가한다.
+  /// fetchTodos 없이 POST 응답만으로 목록을 옵티미스틱하게 갱신할 때 사용한다.
+  void insertCreatedTodo(TodoDetailResponseDto dto) {
+    final todo = _dtoToTodo(dto);
+    if (todo.dateType == TodoDateType.someday) {
+      state = state.copyWith(
+        allSomedayTodos: [...state.allSomedayTodos, todo],
+      );
+    } else {
+      state = state.copyWith(
+        allTodos: [...state.allTodos, todo],
+      );
+      _updateCalendarEvents(state.allTodos);
+    }
+    _updateDisplayedTodos();
+  }
+
+  /// TodoDetailResponseDto → Todo 변환 헬퍼.
+  /// fetchTodos 의 DTO 매핑 로직과 동일한 규칙을 따른다.
+  Todo _dtoToTodo(TodoDetailResponseDto dto) {
+    final dateType = _mapTypeFromServer(dto.type);
+    return Todo(
+      id: dto.todoId.toString(),
+      title: dto.title,
+      isDone: dto.status == 'DONE',
+      category: TodoCategory(
+        name: dto.category ?? '기타',
+        colorKey: _colorKey(dto.category),
+      ),
+      date: dto.startDate != null ? DateTime.tryParse(dto.startDate!) : null,
+      rangeEnd: dto.type == 'PERIOD' && dto.endDate != null
+          ? DateTime.tryParse(dto.endDate!)
+          : null,
+      repeatEndDate: dto.type == 'RECURRING' && dto.endDate != null
+          ? DateTime.tryParse(dto.endDate!)
+          : null,
+      alarmTime: _parseTime(dto.alarmTime),
+      alarmEnabled: dto.alarmTime != null,
+      dateType: dateType,
+      repeatDays: dto.daysOfWeek != null && dto.daysOfWeek!.isNotEmpty
+          ? _parseDaysOfWeek(dto.daysOfWeek!)
+          : null,
+    );
   }
 
   Future<void> toggleTodo(String id) async {

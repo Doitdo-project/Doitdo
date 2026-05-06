@@ -7,7 +7,6 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
 import 'package:doitdo/presentation/pages/todo/todo_add_notifier.dart';
-import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_category_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_date_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_time_sheet.dart';
@@ -142,18 +141,6 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           );
         }
         return;
-      }
-
-      // ✅ 노티파이어 내부에서 fetchTodos/fetchCalendarData 가 실행됨.
-      // 구버전 노티파이어 대비 안전망으로 한 번 더 호출.
-      if (context.mounted) {
-        try {
-          final vm = ref.read(todoViewModelProvider.notifier);
-          await vm.fetchTodos();
-          await vm.fetchCalendarData();
-        } catch (_) {
-          // 갱신 실패해도 닫기는 진행
-        }
       }
 
       // ✅ mounted 확인 후 딱 한 번만 pop

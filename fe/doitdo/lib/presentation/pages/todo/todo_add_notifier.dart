@@ -19,9 +19,9 @@ class TodoAddNotifier extends AsyncNotifier<void> {
 
   /// 새로운 할 일을 서버에 생성하도록 요청합니다.
   ///
-  /// 성공 시 [TodoViewModel] 의 목록과 캘린더 데이터를 함께 갱신해서
-  /// 호출자(시트)의 lifecycle / context.mounted 와 무관하게 홈/투두 양쪽이
-  /// 동일한 최신 상태를 보게 한다.
+  /// POST 응답에 포함된 생성된 TODO 객체를 [TodoViewModel.insertCreatedTodo] 로
+  /// 목록에 즉시 prepend 한다. 이를 통해 후속 GET /api/todos 재호출 없이
+  /// 홈/투두 양쪽 화면이 최신 상태를 반영한다.
   Future<void> createTodo(Todo newTodo) async {
     // 1. 로딩 상태로 변경 (UI에서 로딩 스피너를 보여줄 수 있음)
     state = const AsyncValue.loading();
@@ -30,15 +30,15 @@ class TodoAddNotifier extends AsyncNotifier<void> {
     state = await AsyncValue.guard(() async {
       final repository = ref.read(todoRepositoryProvider);
 
-      // 서버로 데이터 전송
-      await repository.createTodo(newTodo);
+      // POST 응답으로 서버가 반환한 생성된 TODO DTO 를 받아서
+      // fetchTodos 없이 목록에 직접 삽입한다 (옵티미스틱 prepend).
+      final created = await repository.createTodo(newTodo);
 
-      // ✅ 성공 후 즉시 갱신 — 홈(다마고치) / 투두 페이지 양쪽이 같은
+      // ✅ 성공 후 즉시 삽입 — 홈(다마고치) / 투두 페이지 양쪽이 같은
       //    todoViewModelProvider 를 watch 하고 있으므로 한 번만 갱신해도
-      //    두 화면 모두 최신 상태로 리빌드된다.
-      final vm = ref.read(todoViewModelProvider.notifier);
-      await vm.fetchTodos();
-      await vm.fetchCalendarData();
+      //    두 화면 모두 최신 상태로 리빌드된다. SOMEDAY/일반 타입 분기는
+      //    insertCreatedTodo 내부에서 처리한다.
+      ref.read(todoViewModelProvider.notifier).insertCreatedTodo(created);
     });
   }
 }
