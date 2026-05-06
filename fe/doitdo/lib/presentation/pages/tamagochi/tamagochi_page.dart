@@ -276,9 +276,15 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
               .evolve(nextChar.userCharacterId);
         });
 
-    // 새로 isDone=true 로 전환된 todoId 가 있을 때만 캐릭터 재조회.
-    // _doneCount 비교는 TODO 생성(addTodo) 시 state 교체 타이밍에도 발화할 수 있어
-    // done-id 집합 차분으로 "실제로 완료된 항목이 늘었는지" 를 정확히 판별한다.
+    // 타마고치 탭 진입 시 스트릭 silent refresh.
+    ref.listen<int>(tamagochiEnterTriggerProvider, (_, __) {
+      ref.read(streakViewModelProvider.notifier).refresh();
+    });
+
+    // Todo 완료 count 가 증가하면 exp 가 올라갔을 가능성이 있으므로 캐릭터 재조회.
+    // 새로 isDone=true 로 전환된 todoId 가 있을 때만 발화 — _doneCount 비교는
+    // TODO 생성(addTodo) 시 state 교체 타이밍에도 발화할 수 있어 done-id 집합
+    // 차분으로 "실제로 완료된 항목이 늘었는지" 를 정확히 판별한다.
     // BE 는 AFTER_COMMIT 리스너로 exp 를 비동기 부여하므로 곧장 GET /me 를 부르면
     // 옛 값을 받을 수 있다. 200ms 먼저 조회해보고 exp 변화가 없으면 500ms 뒤 한 번 더.
     ref.listen<TodoState>(todoViewModelProvider, (prev, next) {
