@@ -7,6 +7,7 @@ import com.doitdo.domain.auth.repository.AutoProviderRepository;
 import com.doitdo.domain.auth.repository.RefreshTokenRepository;
 import com.doitdo.domain.setting.entity.UserSetting;
 import com.doitdo.domain.setting.repository.UserSettingRepository;
+import com.doitdo.domain.shop.application.DefaultFurnitureRegistrar;
 import com.doitdo.domain.streak.entity.UserStreak;
 import com.doitdo.domain.streak.repository.UserStreakRepository;
 import com.doitdo.domain.todo.application.DefaultCategoryRegistrar;
@@ -63,6 +64,7 @@ public class OAuthPersistenceService {
 	private final RefreshTokenRepository refreshTokenRepository;
 	private final JwtUtil jwtUtil;
 	private final DefaultCategoryRegistrar defaultCategoryRegistrar;
+	private final DefaultFurnitureRegistrar defaultFurnitureRegistrar;
 
 	@Value("${jwt.refresh-token-expiration}")
 	private long refreshTokenExpiration;
@@ -151,6 +153,7 @@ public class OAuthPersistenceService {
 		userStreakRepository.save(UserStreak.create(user.getUserId()));
 		autoProviderRepository.save(AutoProvider.create(user.getUserId(), providerName, providerUid));
 		defaultCategoryRegistrar.registerFor(user.getUserId());
+		defaultFurnitureRegistrar.registerFor(user.getUserId());
 
 		return issueTokens(user, true);
 	}
@@ -178,6 +181,7 @@ public class OAuthPersistenceService {
 		userStreakRepository.save(UserStreak.create(user.getUserId()));
 		autoProviderRepository.save(AutoProvider.create(user.getUserId(), providerName, providerUid));
 		defaultCategoryRegistrar.registerFor(user.getUserId());
+		defaultFurnitureRegistrar.registerFor(user.getUserId());
 
 		return issueTokens(user, true);
 	}
@@ -224,6 +228,7 @@ public class OAuthPersistenceService {
 		autoProviderRepository.save(AutoProvider.createWithRefreshToken(
 				user.getUserId(), providerName, providerUid, appleRefreshToken));
 		defaultCategoryRegistrar.registerFor(user.getUserId());
+		defaultFurnitureRegistrar.registerFor(user.getUserId());
 
 		return issueTokens(user, true);
 	}

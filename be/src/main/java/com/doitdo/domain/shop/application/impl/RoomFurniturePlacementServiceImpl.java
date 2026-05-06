@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.doitdo.domain.shop.api.dto.req.UpdateRoomFurniturePlacementReq;
 import com.doitdo.domain.shop.api.dto.resp.RoomFurniturePlacementResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomResp;
+import com.doitdo.domain.shop.application.DefaultFurnitureRegistrar;
 import com.doitdo.domain.shop.application.RoomFurniturePlacementService;
 import com.doitdo.domain.shop.entity.Furniture;
 import com.doitdo.domain.shop.entity.RoomFurniturePlacement;
@@ -27,17 +28,36 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 	private final RoomFurniturePlacementRepository roomFurniturePlacementRepository;
 	private final UserFurnitureRepository userFurnitureRepository;
 	private final FurnitureRepository furnitureRepository;
+	private final DefaultFurnitureRegistrar defaultFurnitureRegistrar;
 
 	@Override
-	@Transactional(readOnly = true)
+	@Transactional
 	public RoomResp getMyRoom(Long userId) {
-		List<RoomFurniturePlacementResp> items = roomFurniturePlacementRepository
-			.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId)
-			.stream()
-			.map(this::toResp)
-			.toList();
+		List<RoomFurniturePlacement> placements =
+			roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId);
+		if (missingWallOrFloor(placements)) {
+			defaultFurnitureRegistrar.registerFor(userId);
+			placements = roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId);
+		}
+
+		List<RoomFurniturePlacementResp> items = placements.stream()
+				.map(this::toResp)
+				.toList();
 
 		return new RoomResp(items);
+	}
+
+	private boolean missingWallOrFloor(List<RoomFurniturePlacement> placements) {
+		java.util.Set<String> categories = placements.stream()
+				.map(this::findFurnitureCategory)
+				.collect(java.util.stream.Collectors.toSet());
+		return !categories.contains("WALL") || !categories.contains("FLOOR");
+	}
+
+	private String findFurnitureCategory(RoomFurniturePlacement placement) {
+		UserFurniture userFurniture = userFurnitureRepository.findById(placement.getUserFurnitureId())
+				.orElseThrow(() -> new CustomException(ShopErrorCode.USER_FURNITURE_NOT_FOUND));
+		return findFurniture(userFurniture.getFurnitureId()).getCategory();
 	}
 
 	@Override

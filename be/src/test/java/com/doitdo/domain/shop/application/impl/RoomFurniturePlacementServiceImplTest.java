@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.doitdo.domain.shop.api.dto.req.UpdateRoomFurniturePlacementReq;
 import com.doitdo.domain.shop.api.dto.resp.RoomFurniturePlacementResp;
+import com.doitdo.domain.shop.application.DefaultFurnitureRegistrar;
 import com.doitdo.domain.shop.entity.Furniture;
 import com.doitdo.domain.shop.entity.RoomFurniturePlacement;
 import com.doitdo.domain.shop.entity.UserFurniture;
@@ -38,13 +39,21 @@ class RoomFurniturePlacementServiceImplTest {
 	@Mock
 	private FurnitureRepository furnitureRepository;
 
-	@Test
-	void getMyRoom_returnsPlacedFurniture() {
-		RoomFurniturePlacementServiceImpl service = new RoomFurniturePlacementServiceImpl(
+	@Mock
+	private DefaultFurnitureRegistrar defaultFurnitureRegistrar;
+
+	private RoomFurniturePlacementServiceImpl buildService() {
+		return new RoomFurniturePlacementServiceImpl(
 			roomFurniturePlacementRepository,
 			userFurnitureRepository,
-			furnitureRepository
+			furnitureRepository,
+			defaultFurnitureRegistrar
 		);
+	}
+
+	@Test
+	void getMyRoom_returnsPlacedFurniture() {
+		RoomFurniturePlacementServiceImpl service = buildService();
 		Long userId = 1L;
 		UserFurniture userFurniture = userFurniture(20L, userId, 10L);
 		Furniture furniture = furniture(10L, "의자");
@@ -66,12 +75,38 @@ class RoomFurniturePlacementServiceImplTest {
 	}
 
 	@Test
+	void getMyRoom_registersDefaultFurnitureWhenWallAndFloorAreMissing() {
+		RoomFurniturePlacementServiceImpl service = buildService();
+		Long userId = 1L;
+		UserFurniture chairUserFurniture = userFurniture(19L, userId, 10L);
+		UserFurniture wallUserFurniture = userFurniture(20L, userId, 57L);
+		UserFurniture floorUserFurniture = userFurniture(21L, userId, 58L);
+		Furniture chair = furniture(10L, "의자", "CHAIR");
+		Furniture wall = furniture(57L, "기본 벽지", "WALL");
+		Furniture floor = furniture(58L, "기본 바닥", "FLOOR");
+		RoomFurniturePlacement chairPlacement = placement(29L, userId, 19L, 120, 300, 5, 0);
+		RoomFurniturePlacement wallPlacement = placement(30L, userId, 20L, 0, 0, 0, 0);
+		RoomFurniturePlacement floorPlacement = placement(31L, userId, 21L, 0, 420, 1, 0);
+
+		given(roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId))
+			.willReturn(List.of(chairPlacement), List.of(wallPlacement, floorPlacement, chairPlacement));
+		given(userFurnitureRepository.findById(19L)).willReturn(Optional.of(chairUserFurniture));
+		given(userFurnitureRepository.findById(20L)).willReturn(Optional.of(wallUserFurniture));
+		given(userFurnitureRepository.findById(21L)).willReturn(Optional.of(floorUserFurniture));
+		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(10L)).willReturn(Optional.of(chair));
+		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(57L)).willReturn(Optional.of(wall));
+		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(58L)).willReturn(Optional.of(floor));
+
+		List<RoomFurniturePlacementResp> items = service.getMyRoom(userId).items();
+
+		verify(defaultFurnitureRegistrar).registerFor(userId);
+		assertThat(items).hasSize(3);
+		assertThat(items).extracting(RoomFurniturePlacementResp::category).containsExactly("WALL", "FLOOR", "CHAIR");
+	}
+
+	@Test
 	void placeFurniture_usesFurnitureDefaultPosition() {
-		RoomFurniturePlacementServiceImpl service = new RoomFurniturePlacementServiceImpl(
-			roomFurniturePlacementRepository,
-			userFurnitureRepository,
-			furnitureRepository
-		);
+		RoomFurniturePlacementServiceImpl service = buildService();
 		Long userId = 1L;
 		UserFurniture userFurniture = userFurniture(20L, userId, 10L);
 		Furniture furniture = furniture(10L, "의자");
@@ -93,11 +128,7 @@ class RoomFurniturePlacementServiceImplTest {
 
 	@Test
 	void placeFurniture_replacesExistingSameCategoryPlacement() {
-		RoomFurniturePlacementServiceImpl service = new RoomFurniturePlacementServiceImpl(
-			roomFurniturePlacementRepository,
-			userFurnitureRepository,
-			furnitureRepository
-		);
+		RoomFurniturePlacementServiceImpl service = buildService();
 		Long userId = 1L;
 		UserFurniture oldUserFurniture = userFurniture(20L, userId, 10L);
 		UserFurniture newUserFurniture = userFurniture(21L, userId, 11L);
@@ -124,11 +155,7 @@ class RoomFurniturePlacementServiceImplTest {
 
 	@Test
 	void placeFurniture_returnsExistingPlacementWhenSameFurnitureAlreadyPlaced() {
-		RoomFurniturePlacementServiceImpl service = new RoomFurniturePlacementServiceImpl(
-			roomFurniturePlacementRepository,
-			userFurnitureRepository,
-			furnitureRepository
-		);
+		RoomFurniturePlacementServiceImpl service = buildService();
 		Long userId = 1L;
 		UserFurniture userFurniture = userFurniture(20L, userId, 10L);
 		Furniture clock = furniture(10L, "시계", "CLOCK");
@@ -150,11 +177,7 @@ class RoomFurniturePlacementServiceImplTest {
 
 	@Test
 	void updatePlacement_changesPosition() {
-		RoomFurniturePlacementServiceImpl service = new RoomFurniturePlacementServiceImpl(
-			roomFurniturePlacementRepository,
-			userFurnitureRepository,
-			furnitureRepository
-		);
+		RoomFurniturePlacementServiceImpl service = buildService();
 		Long userId = 1L;
 		RoomFurniturePlacement placement = placement(30L, userId, 20L, 120, 300, 5, 0);
 		UserFurniture userFurniture = userFurniture(20L, userId, 10L);
@@ -179,11 +202,7 @@ class RoomFurniturePlacementServiceImplTest {
 
 	@Test
 	void removePlacement_deletesOnlyPlacement() {
-		RoomFurniturePlacementServiceImpl service = new RoomFurniturePlacementServiceImpl(
-			roomFurniturePlacementRepository,
-			userFurnitureRepository,
-			furnitureRepository
-		);
+		RoomFurniturePlacementServiceImpl service = buildService();
 		Long userId = 1L;
 		RoomFurniturePlacement placement = placement(30L, userId, 20L, 120, 300, 5, 0);
 
@@ -197,11 +216,7 @@ class RoomFurniturePlacementServiceImplTest {
 
 	@Test
 	void placeFurniture_rejectsOtherUsersFurniture() {
-		RoomFurniturePlacementServiceImpl service = new RoomFurniturePlacementServiceImpl(
-			roomFurniturePlacementRepository,
-			userFurnitureRepository,
-			furnitureRepository
-		);
+		RoomFurniturePlacementServiceImpl service = buildService();
 
 		given(userFurnitureRepository.findByUserIdAndUserFurnitureId(1L, 20L)).willReturn(Optional.empty());
 
