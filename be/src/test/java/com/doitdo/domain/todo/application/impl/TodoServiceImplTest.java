@@ -16,6 +16,7 @@ import com.doitdo.domain.todo.entity.Todo.TodoType;
 import com.doitdo.domain.todo.repository.CategoryRepository;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository;
 import com.doitdo.domain.todo.repository.TodoRepository;
+import com.doitdo.global.cache.CacheEvictHelper;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TodoErrorCode;
 import java.time.LocalDate;
@@ -50,6 +51,9 @@ class TodoServiceImplTest {
 	@Mock
 	private ApplicationEventPublisher eventPublisher;
 
+	@Mock
+	private CacheEvictHelper cacheEvictHelper;
+
 	private TodoServiceImpl service;
 
 	@BeforeEach
@@ -60,7 +64,8 @@ class TodoServiceImplTest {
 				snoozeHistoryRepository,
 				recurrenceService,
 				userStreakService,
-				eventPublisher);
+				eventPublisher,
+				cacheEvictHelper);
 	}
 
 	@Test

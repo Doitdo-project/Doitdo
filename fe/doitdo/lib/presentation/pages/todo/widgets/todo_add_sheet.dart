@@ -48,6 +48,26 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
     } else {
       _dateResult = const TodoDateResult(type: TodoDateType.someday);
     }
+
+    // 제목이 비어있으면 저장 버튼을 disable 한다 — 변화 감지를 위해 controller listener 등록.
+    // empty/non-empty 전이가 일어날 때만 setState 를 돌려 불필요한 리빌드를 줄인다.
+    _titleController.addListener(_onTitleChanged);
+
+    // 시트 진입 직후 제목 필드에 자동 포커스 → 키보드 즉시 노출.
+    // 회색 저장 버튼의 "왜 비활성?" 첫 진입 비용을 줄여준다.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _titleFocusNode.requestFocus();
+    });
+  }
+
+  bool _wasEmpty = true;
+  void _onTitleChanged() {
+    final isEmpty = _titleController.text.trim().isEmpty;
+    if (isEmpty != _wasEmpty) {
+      _wasEmpty = isEmpty;
+      setState(() {});
+    }
   }
 
   /// 단계 전환 — 키보드 닫고 setState.
@@ -58,6 +78,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
 
   @override
   void dispose() {
+    _titleController.removeListener(_onTitleChanged);
     _titleController.dispose();
     _memoController.dispose();
     _titleFocusNode.dispose();
@@ -78,21 +99,10 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
 
     final title = _titleController.text.trim();
 
-    if (title.isEmpty) {
-      _titleFocusNode.requestFocus();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('할 일을 입력해주세요.',
-              style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)),
-          backgroundColor: AppColors.calendarPoint,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(16),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
+    // 빈 제목은 저장 버튼이 disable 되어 있어 정상 경로로는 도달 불가.
+    // 안전망으로만 남겨두고 안내 SnackBar 는 띄우지 않는다 — 시트가 root navigator
+    // 위에 떠 있어 SnackBar 가 시트에 가려져 보이지 않는 문제가 있었다.
+    if (title.isEmpty) return;
 
     // ✅ 저장 시작 — 버튼 비활성화
     setState(() => _isLoading = true);
@@ -205,7 +215,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                     alignment: Alignment.center,
                     children: [
                       ...previous,
-                      ?current,
+                      if (current != null) current,
                     ],
                   ),
                   transitionBuilder: (child, anim) =>
@@ -264,7 +274,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           key: const ValueKey('alert'),
           child: TodoTimeSheet(
             initialTime:    _selectedTime,
-            initialEnabled: true,
+            initialEnabled: _alarmEnabled,
             embedded: true,
             onConfirm: (result) {
               setState(() {
@@ -309,6 +319,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
             child: TextField(
               controller: _titleController,
               focusNode:  _titleFocusNode,
+              maxLength: 20,
               style: AppTextStyles.titleLarge.copyWith(
                 fontFamily: 'GmarketSansMedium',
                 fontWeight: FontWeight.w500,
@@ -324,6 +335,9 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
+                counterStyle: AppTextStyles.labelSmall.copyWith(
+                  color: c.textHint,
+                ),
               ),
             ),
           ),
@@ -336,19 +350,14 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 기간 — 언젠가 할 일은 날짜 변경 불가
+                  // 기간 — step 전환
                   GestureDetector(
-                    onTap: _dateResult?.type == TodoDateType.someday
-                        ? null
-                        : () => _goToStep(_Step.datePicker),
+                    onTap: () => _goToStep(_Step.datePicker),
                     child: _OptionRow(
-                      icon:      Icons.calendar_today_outlined,
-                      label:     '기간',
-                      valueText: _dateResult?.type == TodoDateType.someday
-                          ? '언젠가 할 일'
-                          : (_dateResult?.displayText ?? '미지정'),
-                      colors:   c,
-                      disabled: _dateResult?.type == TodoDateType.someday,
+                      icon: Icons.calendar_today_outlined,
+                      label: '기간',
+                      valueText: _dateResult?.displayText ?? '미지정',
+                      colors: c,
                     ),
                   ),
                   Divider(color: c.divider, height: 1, thickness: 1),
@@ -423,14 +432,19 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           ),
 
           // ── 하단 anchor: 저장 버튼 ────────────────────
-          // 저장 중에는 onPressed=null 로 disable + 라벨 변경.
+          // 저장 중이거나 제목이 비어있으면 탭 차단. 색상은 메인 컬러 그대로 유지.
           const SizedBox(height: 12),
-          // ✅ _isLoading 상태에 따라 버튼 비활성화 + 라벨 변경
-          DoitdoPrimaryButton(
-            height: 48,
-            label: _isLoading ? '저장 중...' : '저장하기',
-            onPressed: _isLoading ? null : () => _onSave(context),
-          ),
+          Builder(builder: (context) {
+            final canSave = !_isLoading && _titleController.text.trim().isNotEmpty;
+            return IgnorePointer(
+              ignoring: !canSave,
+              child: DoitdoPrimaryButton(
+                height: 48,
+                label: _isLoading ? '저장 중...' : '저장하기',
+                onPressed: () => _onSave(context),
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -443,13 +457,11 @@ class _OptionRow extends StatelessWidget {
     required this.label,
     required this.valueText,
     required this.colors,
-    this.disabled = false,
   });
   final IconData icon;
   final String label;
   final String valueText;
   final DoitdoColors colors;
-  final bool disabled;
 
   @override
   Widget build(BuildContext context) {
@@ -463,12 +475,9 @@ class _OptionRow extends StatelessWidget {
               style: AppTextStyles.bodyMedium.copyWith(color: colors.textSecondary)),
           const Spacer(),
           Text(valueText,
-              style: AppTextStyles.bodyMedium.copyWith(
-                  color: disabled ? colors.textHint : colors.textPrimary)),
-          if (!disabled) ...[
-            const SizedBox(width: 2),
-            Icon(Icons.chevron_right, size: 16, color: colors.textHint),
-          ],
+              style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary)),
+          const SizedBox(width: 2),
+          Icon(Icons.chevron_right, size: 16, color: colors.textHint),
         ],
       ),
     );
@@ -484,7 +493,7 @@ class _MascotBubble extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Image.asset('assets/images/Dooit.png', width: 30, height: 30, filterQuality: FilterQuality.high),
+        Image.asset('assets/images/Dooit.png', width: 36, height: 36),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
