@@ -5,19 +5,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:doitdo/core/theme/app_text_styles.dart';
-import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/domain/entities/character.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
 
-/// 다마고치 메인 상단의 초록 배경 카드.
+/// 다마고치 메인 상단의 방 일러스트 카드.
 ///
-/// [character] 상태에 따라 중앙 슬롯을 분기:
-/// - null : 미수령 — 로딩 스피너 (정상 플로우에선 거의 보이지 않음)
-/// - isEgg: 알 아이콘 + TAP 배지. 탭하면 [onEggTap] 이 호출되어 부화 페이지로 이동
-/// - else : thumbnailUrl 로 캐릭터 이미지
+/// 캐릭터 단계별 분기:
+/// - null    : 미수령 — 로딩 스피너 (정상 플로우에선 거의 보이지 않음)
+/// - isEgg   : 알 아이콘 + TAP 배지. 탭하면 [onEggTap] 으로 부화 페이지로 이동.
+/// - 그 외   : thumbnailUrl 로 캐릭터 이미지.
 ///
-/// 이름/성장률/경험치/상점/도감 UI("chrome")는 **부화 이후**(egg 가 아닌 상태)
-/// 에만 노출된다.
+/// 우측 상단 [상점/도감] 아이콘은 부화 이후에만 노출. 이름/단계/경험치/스트릭은
+/// 카드 바깥의 [StatusPill] 가 담당하므로 이 위젯에는 더 이상 표시되지 않는다.
 class CharacterCard extends StatelessWidget {
   const CharacterCard({
     super.key,
@@ -43,40 +42,36 @@ class CharacterCard extends StatelessWidget {
   /// 알을 탭했을 때 호출. 부화 페이지로 이동 + 복귀 시 재조회는 부모가 담당.
   final VoidCallback? onEggTap;
 
-  /// 부화 이후 캐릭터 본체를 탭했을 때 호출. 서버에 액션 핑을 보내고 말풍선을
-  /// 갱신하는 인터랙션. 알 단계에서는 [onEggTap] 으로 라우팅된다.
+  /// 부화 이후 캐릭터 본체를 탭했을 때 호출.
   final VoidCallback? onCharacterTap;
 
   /// 카드가 상태바 영역까지 확장될 때 content 가 상태바 아이콘과 겹치지 않도록
-  /// 밀어낼 상단 여백. 배경(grass) 은 이 영역까지 그대로 이어지고, 내부 content
+  /// 밀어낼 상단 여백. 배경(bg_grass)은 이 영역까지 그대로 이어지고, 내부 content
   /// 좌표만 이 값만큼 내려간다.
   final double topSafePadding;
 
-  // 카드 배경이 테마와 무관하게 고정이라 DoitdoColors 가 아닌 로컬 상수.
-  static const Color _expBarBg = Color(0xFF3F4A3A);
-  static const Color _expBarFill = Color(0xFFF5D33C);
-
   @override
   Widget build(BuildContext context) {
-    // 미수령 중이거나 알 상태면 이름/성장률/상점/도감 UI 는 숨긴다.
+    // 미수령 중이거나 알 상태면 우측 상점/도감 아이콘은 숨긴다.
     final hideChrome = character == null || character!.isEgg;
 
     return SizedBox(
-      height: 200.h + topSafePadding,
+      // 침대/창문 일러스트가 잘리지 않도록 충분한 높이 확보. 캐릭터는 카드 하단
+      // (= 바닥 영역) 에 정렬되어 발을 바닥에 두고 있는 것처럼 보이게 한다.
+      height: 260.h + topSafePadding,
       child: Stack(
         children: [
           Positioned.fill(
             child: Image.asset(
-              'assets/images/bg_grass.png',
+              'assets/images/main_background.png',
               fit: BoxFit.cover,
               filterQuality: FilterQuality.none,
             ),
           ),
 
-          // 진화/부화/독립 같은 주요 액션 중의 로딩 표시. copyWithPrevious 덕에
-          // 이전 캐릭터 데이터는 그대로 남아 있고, 이 작은 스피너만 카드 왼쪽
-          // 상단에 얹혀 "서버 갱신 중" 만 표현한다. 홈 전체를 덮지 않으므로 아래
-          // 투두 영역은 그대로 상호작용 가능.
+          // 진화/부화/독립 같은 주요 액션 중의 작은 스피너. copyWithPrevious 덕에
+          // 이전 캐릭터 데이터는 그대로 남아 있고, 이 작은 스피너만 카드 좌측
+          // 상단에 얹혀 "서버 갱신 중" 만 표현한다.
           if (isCharacterLoading && character != null)
             Positioned(
               top: topSafePadding + 10.h,
@@ -91,19 +86,19 @@ class CharacterCard extends StatelessWidget {
               ),
             ),
 
-          // 중앙: 말풍선 + 캐릭터 (캐릭터 상태에 따라 분기)
-          // 하단 크롬이 없을 땐 아래 패딩을 줄여 캐릭터를 중앙에 가깝게 배치.
-          // 상태바 영역(topSafePadding) 은 비워 중앙 정렬 기준이 그 아래 영역.
+          // 중앙 하단: 말풍선 + 캐릭터. 카드 안쪽 바닥에 StatusPill 이 떠있으므로
+          // 캐릭터는 그보다 위에 서게 bottom 여백을 충분히 잡는다.
           Positioned(
             left: 0,
             right: 0,
             top: topSafePadding,
-            bottom: hideChrome ? 0 : 24.h,
+            bottom: 64.h,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 if (_speechText != null) ...[
                   _SpeechBubble(text: _speechText!),
+                  SizedBox(height: 8.h),
                 ],
                 _buildCharacterSlot(),
               ],
@@ -129,118 +124,18 @@ class CharacterCard extends StatelessWidget {
                 ],
               ),
             ),
-
-          // 하단: 레벨/EXP 텍스트 + 경험치 바 — 캐릭터 수령 이후에만 노출
-          if (!hideChrome)
-            Positioned(
-              left: 16.w,
-              right: 16.w,
-              bottom: 14.h,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (_stageLabel != null) ...[
-                            _StageBadge(label: _stageLabel!),
-                            SizedBox(width: 6.w),
-                          ],
-                          Text(
-                            _displayName,
-                            style: AppTextStyles.titleSmall.copyWith(
-                              color: Colors.black,
-                            ),
-                          ),
-                          if (_stageHint != null) ...[
-                            SizedBox(width: 4.w),
-                            _StageHintIcon(message: _stageHint!),
-                          ],
-                        ],
-                      ),
-                      Text(
-                        _displayProgressLabel,
-                        style: AppTextStyles.labelMedium.copyWith(
-                          color: Colors.black.withValues(alpha: 0.45),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 6.h),
-                  ClipRRect(  
-                    borderRadius: BorderRadius.circular(6.r),
-                    child: LinearProgressIndicator(
-                      value: _displayProgress,
-                      minHeight: 10.h,
-                      backgroundColor: _expBarBg,
-                      valueColor: const AlwaysStoppedAnimation(_expBarFill),
-                    ),
-                  ),
-                ],
-              ),
-            ),
         ],
       ),
     );
   }
 
   // ─── 렌더 분기 ────────────────────────────────────────────────
-  // 캐릭터 상태(character == null / egg / 그 외) 에 따라 중앙 슬롯과
-  // 하단 텍스트/바 값을 결정한다. 아직 API 가 없는 필드(level/exp) 는
-  // 미수령 단계에서는 플레이스홀더로, 수령 후에는 growthPercent 로 채운다.
 
   String? get _speechText {
-    // 캐릭터가 아직 없거나(network slow / receive 진행 중) 알 단계면 말풍선을
-    // 띄우지 않는다. 예전에는 character == null && !isLoading 조건일 때
-    // "알이 도착했어요!" 를 띄웠는데, 서버 응답이 느려 load → receiveEgg 사이
-    // 짧은 윈도우에서 실제 알이 도착하지도 않은 상태로 떠 오해를 줘서 제거.
     if (character == null) return null;
     if (character?.isEgg ?? false) return null;
     return state.speechBubble;
   }
-
-  // 아래 getter 들은 하단 크롬이 노출되는 경우(character != null && !isEgg)
-  // 에만 호출된다.
-  String get _displayName => character!.name;
-
-  String get _displayProgressLabel {
-    final c = character!;
-    // 성숙기는 더 자라지 않으므로 100% 도달 시 % 대신 MAX 로 표시한다.
-    // (canFarewell 플래그가 true 인 시점도 같은 의미라 stage + 100% 로 검사.)
-    if (c.stage == CharacterStage.adult && c.growthPercent >= 100) {
-      return '성장률 MAX';
-    }
-    return '성장률 ${c.growthPercent}%';
-  }
-
-  double get _displayProgress =>
-      character!.growthPercent.clamp(0, 100) / 100;
-
-  /// 단계별 가이드. 알/미확정 단계는 null (호출부에서 툴팁 자체를 숨김).
-  String? get _stageHint {
-    final c = character;
-    if (c == null) return null;
-    switch (c.stage) {
-      case CharacterStage.egg:
-      case CharacterStage.other:
-        return null;
-      case CharacterStage.infant:
-        return '할 일을 완료해 경험치를 모아보세요.\n100% 달성 시 성장기로 진화해요.';
-      case CharacterStage.juvenile:
-        return '꾸준히 할 일을 완료하면 성숙기로 자라나요.';
-      case CharacterStage.adult:
-        if (c.canFarewell) {
-          return '독립할 준비가 됐어요. 배웅하면 다음 알이 도착해요.';
-        }
-        return '조금만 더 함께하면 독립할 수 있어요.';
-    }
-  }
-
-  /// 단계 배지 문구. 미정 단계(other)면 null → 배지 생략.
-  String? get _stageLabel => character?.stage.badgeLabel;
 
   Widget _buildCharacterSlot() {
     if (isCharacterLoading && character == null) {
@@ -263,23 +158,14 @@ class CharacterCard extends StatelessWidget {
     if (c.isEgg) {
       return _EggSlot(imageUrl: c.thumbnailUrl, onTap: onEggTap);
     }
-    // 평상시는 정적 thumbnailUrl(png). 3-5초 간격으로 랜덤하게 1-2초 동안
-    // 로컬 EYE gif (assets/animations/eye/{characterId}.gif) 로 swap 해 깜빡임을
-    // 표현 — 매번 서버에 핑 보내는 비용 회피. 깜빡임 타이머는 _GrownCharacter
-    // 가 자체적으로 관리.
-    //
+    // 평상시 정적 thumbnailUrl(png) + 3-5초 간격 랜덤 깜빡임 (로컬 EYE gif).
     // 탭 후 서버가 내려준 동작 gif (idle 등) 가 있으면 그 url 로 잠시 swap.
-    // tick 을 key 에 섞어 같은 url 이 다시 와도 처음부터 재생되게 한다.
-    // png / 깜빡임 gif / 액션 gif 모두 같은 height 로 통일해 전환 시 캐릭터가
-    // 커지거나 작아져 보이는 일이 없도록 한다.
     final overrideUrl = state.actionUrl;
     final isAction = overrideUrl != null && overrideUrl.isNotEmpty;
     final imageUrl = isAction ? overrideUrl : c.thumbnailUrl;
     return _GrownCharacter(
       key: ValueKey('grown-$imageUrl-${c.characterId}-${state.actionTick}'),
       thumbnailUrl: imageUrl,
-      // 액션 중엔 thumbnailUrl 자리에 액션 gif 가 들어오므로 깜빡임 타이머
-      // 비활성화 — null 전달.
       eyeGifCharacterId: isAction ? null : c.characterId,
       imageHeight: 100.h,
       onTap: onCharacterTap,
@@ -305,8 +191,6 @@ class _RoundIconButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(10.r),
         child: Padding(
           padding: EdgeInsets.all(8.w),
-          // 카드 자체가 라이트/다크 무관 고정 잔디 배경 + 흰 버튼이라
-          // 아이콘도 토큰이 아닌 고정 어두운 색으로 둔다 (다크에서 흰 위 흰 회피).
           child: Icon(icon, size: 20.sp, color: Colors.black87),
         ),
       ),
@@ -314,11 +198,7 @@ class _RoundIconButton extends StatelessWidget {
   }
 }
 
-/// 캐릭터 머리 위 말풍선. 둥근 사각형 본체 + 아래로 향하는 작은 삼각형 꼬리.
-///
-/// 본체와 꼬리가 동일 색이라 시각적으로 한 도형처럼 보인다. 색상은 라이트/다크
-/// 무관 고정(흰색) — 카드 자체가 잔디 배경 위에 떠 있어 토큰을 따르면 다크에서
-/// 가독성이 깨진다.
+/// 캐릭터 머리 위 말풍선. 둥근 사각형 본체 + 아래 향하는 작은 삼각형 꼬리.
 class _SpeechBubble extends StatelessWidget {
   const _SpeechBubble({required this.text});
 
@@ -351,8 +231,6 @@ class _SpeechBubble extends StatelessWidget {
   }
 }
 
-/// 말풍선 하단에 붙는 작은 삼각형(꼬리). 위쪽은 평평, 아래쪽은 한 점으로 모이는
-/// 이등변 삼각형. 본체와 같은 색을 받아 한 덩어리로 그린다.
 class _SpeechBubbleTailPainter extends CustomPainter {
   const _SpeechBubbleTailPainter({required this.color});
 
@@ -375,7 +253,6 @@ class _SpeechBubbleTailPainter extends CustomPainter {
 }
 
 /// 서버 thumbnailUrl 이 비어있거나 로드 실패했을 때 자리를 지키는 중립 플레이스홀더.
-/// 특정 캐릭터 에셋(한라봉 등) 을 깔면 엉뚱한 캐릭터가 보이는 오해를 낳으므로 비움.
 class _CharacterPlaceholder extends StatelessWidget {
   const _CharacterPlaceholder();
 
@@ -394,11 +271,7 @@ class _CharacterPlaceholder extends StatelessWidget {
   }
 }
 
-/// 아직 알을 수령하지 않은 상태. 캐릭터 자리에 떠있는 알 + "알 받기" CTA.
-///
-/// 아직 캐릭터 조회가 끝나지 않았거나(아주 짧은 순간) 서버가 캐릭터를
-/// 내려주지 않은 상태. 정상 플로우에서는 로그인 직후 `ensureCharacter()` 가
-/// 자동으로 알을 수령하므로 이 슬롯은 거의 보이지 않는다. 방어적으로 스피너만.
+/// 아직 알을 수령하지 않은 상태의 방어용 스피너.
 class _UnreceivedSlot extends StatelessWidget {
   const _UnreceivedSlot();
 
@@ -422,7 +295,6 @@ class _UnreceivedSlot extends StatelessWidget {
 
 /// 알 상태. 탭하면 [onTap] 으로 전달만 하고, 실제 부화 카운팅/애니메이션은
 /// 전용 페이지([CharacterHatchPage])에서 처리된다.
-/// 서버가 알 단계에서도 [imageUrl] 을 내려주므로 그 이미지를 사용.
 class _EggSlot extends StatelessWidget {
   const _EggSlot({required this.imageUrl, this.onTap});
 
@@ -459,7 +331,6 @@ class _EggSlot extends StatelessWidget {
   }
 }
 
-/// 알 이미지. 서버 url 사용 → 실패/빈값이면 Icons.egg fallback.
 class _EggImage extends StatelessWidget {
   const _EggImage({required this.imageUrl, required this.size});
 
@@ -481,90 +352,19 @@ class _EggImage extends StatelessWidget {
   Widget _fallback() => Icon(Icons.egg, size: size * 0.88, color: Colors.white);
 }
 
-/// 이름 옆 info 아이콘. 탭하면 현재 단계 기준 안내 문구가 잠깐 떠오른다.
-///
-/// 모바일에선 Tooltip 기본 트리거가 long-press 라 발견성이 떨어져서
-/// [TooltipTriggerMode.tap] 으로 교체하고 유지 시간도 살짝 늘렸다.
-class _StageHintIcon extends StatelessWidget {
-  const _StageHintIcon({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: message,
-      triggerMode: TooltipTriggerMode.tap,
-      showDuration: const Duration(seconds: 4),
-      waitDuration: Duration.zero,
-      preferBelow: true,
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(8.r),
-      ),
-      textStyle: AppTextStyles.labelSmall.copyWith(
-        color: Colors.white,
-        height: 1.4,
-      ),
-      child: Icon(
-        Icons.info_outline_rounded,
-        size: 14.sp,
-        color: Colors.black.withValues(alpha: 0.45),
-      ),
-    );
-  }
-}
-
-/// 이름 앞에 붙는 진화 단계 배지 (네모). 유년기/성장기/성숙기.
-class _StageBadge extends StatelessWidget {
-  const _StageBadge({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6.r),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.12)),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.labelSmall.copyWith(
-          color: Colors.black.withValues(alpha: 0.75),
-          fontSize: 11.sp,
-          height: 1.0,
-        ),
-      ),
-    );
-  }
-}
-
 /// 이미 부화한 (egg 이외의) 캐릭터.
 ///
 /// 평상시 표시:
-///   - 정적 [thumbnailUrl] (서버 png) 가 기본 — 액션도 깜빡임도 없을 때 보이는 모습.
+///   - 정적 [thumbnailUrl] (서버 png) 가 기본.
 ///   - [eyeGifCharacterId] 가 주어지면 자체 Timer 로 3-5초 간격마다 1-2초 동안
-///     로컬 EYE gif (`assets/animations/eye/{id}.gif`) 로 swap 해 눈 깜빡임을
-///     표현. swap 동안에는 png 대신 gif 가 그려지고, 사이클이 끝나면 다시 png 로
-///     복귀해 다음 깜빡임을 스케줄.
-///   - 같은 id 에 `_2` 변형이 있는 캐릭터(예: 9, 18) 는 매 깜빡임마다 50/50 으로
-///     base / 변형 중 하나를 랜덤 선택해 살짝 다른 인상을. 변형이 없는 캐릭터는
-///     errorBuilder 체인이 base 로 자동 회귀.
-///   - 에셋이 번들에 없거나 로드 실패 시 [thumbnailUrl] 폴백, 그것도 실패하면
-///     중립 플레이스홀더.
+///     로컬 EYE gif (`assets/animations/eye/{id}.gif`) 로 swap 해 깜빡임을 표현.
+///   - 같은 id 에 `_2` 변형이 있는 캐릭터는 매 깜빡임마다 50/50 으로 base / 변형
+///     중 하나를 랜덤 선택. 변형이 없으면 errorBuilder 체인이 base 로 자동 회귀.
+///   - 에셋 / 네트워크 모두 실패 시 중립 플레이스홀더.
 ///
 /// 액션 중(idle 등 서버 동작 gif) 에는 호출측이 [eyeGifCharacterId] 를 null 로
-/// 두고 [thumbnailUrl] 자리에 액션 gif URL 을 넣어 — 깜빡임 타이머는 자동으로
+/// 두고 [thumbnailUrl] 에 액션 gif URL 을 넣어 — 깜빡임 타이머는 자동으로
 /// 멈추고 액션 gif 가 그대로 그려진다.
-///
-/// [onTap] 이 주어지면 캐릭터 영역을 탭으로 받아 인터랙션 핑(IDLE) + 말풍선
-/// 랜덤 갱신을 트리거한다. placeholder/이미지 어느 쪽이든 동일 hit area 가 잡히도록
-/// HitTestBehavior.opaque 로 묶는다.
 class _GrownCharacter extends StatefulWidget {
   const _GrownCharacter({
     super.key,
@@ -574,16 +374,9 @@ class _GrownCharacter extends StatefulWidget {
     this.onTap,
   });
 
-  /// 평상시 정적 png URL + 액션 중 동작 gif URL. 비어있으면 placeholder.
   final String thumbnailUrl;
-
-  /// png / 깜빡임 gif / 액션 gif 모두 같은 height 로 그려져 전환 시 사이즈
-  /// 점프가 없도록 호출측이 통일된 값을 넘긴다.
   final double imageHeight;
-
-  /// 평상시 깜빡임용 로컬 EYE gif 매핑 키. null 이면 깜빡임 비활성 (액션 중).
   final int? eyeGifCharacterId;
-
   final VoidCallback? onTap;
 
   @override
@@ -593,18 +386,15 @@ class _GrownCharacter extends StatefulWidget {
 class _GrownCharacterState extends State<_GrownCharacter> {
   static final _rng = Random();
 
-  /// 깜빡임 사이 간격 (3-5초 사이 랜덤).
   static const _intervalMin = Duration(milliseconds: 2000);
   static const _intervalMax = Duration(milliseconds: 4000);
 
-  /// 깜빡임 한 번이 보이는 시간 (1-2초 사이 랜덤).
   static const _blinkMin = Duration(milliseconds: 500);
   static const _blinkMax = Duration(milliseconds: 1000);
 
   Timer? _scheduleTimer;
   Timer? _blinkTimer;
 
-  /// 깜빡임 중 표시할 EYE gif asset path. null 이면 정적 png 표시.
   String? _blinkAsset;
 
   @override
@@ -616,7 +406,6 @@ class _GrownCharacterState extends State<_GrownCharacter> {
   @override
   void didUpdateWidget(covariant _GrownCharacter old) {
     super.didUpdateWidget(old);
-    // characterId 변경 또는 액션 모드 진입/이탈 시 사이클 리셋.
     if (widget.eyeGifCharacterId != old.eyeGifCharacterId) {
       _cancelTimers();
       _blinkAsset = null;
@@ -645,8 +434,6 @@ class _GrownCharacterState extends State<_GrownCharacter> {
     if (!mounted) return;
     final id = widget.eyeGifCharacterId;
     if (id == null) return;
-    // 매 깜빡임마다 base/_2 50/50 랜덤. 변형이 없는 캐릭터는 errorBuilder 체인이
-    // base 로 자동 회귀 → 코드에서 변형 보유 ID 를 별도 관리하지 않아도 됨.
     final useVariant = _rng.nextBool();
     final path = useVariant
         ? 'assets/animations/eye/${id}_2.gif'
@@ -683,7 +470,6 @@ class _GrownCharacterState extends State<_GrownCharacter> {
     final blinkAsset = _blinkAsset;
     Widget image;
     if (blinkAsset != null && id != null) {
-      // _2 시도 시 base 로 떨어지는 체인 — 변형 없는 캐릭터에서 자연 회귀.
       final base = 'assets/animations/eye/$id.gif';
       image = Image.asset(
         blinkAsset,
