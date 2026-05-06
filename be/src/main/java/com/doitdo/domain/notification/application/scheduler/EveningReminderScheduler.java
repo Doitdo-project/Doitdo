@@ -4,6 +4,7 @@ import com.doitdo.domain.notification.application.NotificationService;
 import com.doitdo.domain.setting.entity.UserSetting;
 import com.doitdo.domain.setting.repository.UserSettingRepository;
 import com.doitdo.domain.todo.repository.TodoRepository;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -28,13 +29,15 @@ public class EveningReminderScheduler {
 
 	@Scheduled(cron = "0 * * * * *", zone = "Asia/Seoul")
 	public void run() {
-		LocalTime now = LocalTime.now(ZoneId.of("Asia/Seoul")).withSecond(0).withNano(0);
+		ZoneId zone = ZoneId.of("Asia/Seoul");
+		LocalTime now = LocalTime.now(zone).withSecond(0).withNano(0);
+		LocalDate today = LocalDate.now(zone);
 
 		List<UserSetting> targets =
 				userSettingRepository.findAllByEveningReminderEnabledTrueAndEveningReminderTime(now);
 
 		for (UserSetting s : targets) {
-			long pending = todoRepository.countPendingByUserId(s.getUserId());
+			long pending = todoRepository.countPendingByUserIdAndToday(s.getUserId(), today);
 			if (pending == 0) {
 				continue;
 			}

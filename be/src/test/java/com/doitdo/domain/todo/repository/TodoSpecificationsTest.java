@@ -66,6 +66,22 @@ class TodoSpecificationsTest {
 	}
 
 	@Test
+	void countPendingByUserIdAndTodayCountsOnlyTodayVisiblePendingTodos() {
+		saveWithDates(TodoType.NORMAL, TodoStatus.TODO, TODAY, null);
+		saveWithDates(TodoType.NORMAL, TodoStatus.TODO, TODAY.minusDays(1), null);
+		saveWithDates(TodoType.NORMAL, TodoStatus.TODO, TODAY.plusDays(1), null);
+		saveWithDates(TodoType.PERIOD, TodoStatus.IN_PROGRESS, TODAY.minusDays(1), TODAY.plusDays(1));
+		saveWithDates(TodoType.PERIOD, TodoStatus.TODO, TODAY.minusDays(3), TODAY.minusDays(1));
+		saveWithDates(TodoType.SOMEDAY, TodoStatus.TODO, null, null);
+		saveWithDates(TodoType.RECURRING, TodoStatus.TODO, TODAY, null);
+		saveWithDates(TodoType.NORMAL, TodoStatus.DONE, TODAY, null);
+
+		long count = todoRepository.countPendingByUserIdAndToday(USER_ID, TODAY);
+
+		assertThat(count).isEqualTo(2);
+	}
+
+	@Test
 	void excludeExpiredSomedayDoneIncludesPeriodDoneCompletedBeforeToday() {
 		Todo todo = save(TodoType.PERIOD, TodoStatus.DONE, TODAY.minusDays(1));
 
@@ -101,6 +117,20 @@ class TodoSpecificationsTest {
 				.priority(1)
 				.startDate(type == TodoType.SOMEDAY ? null : TODAY)
 				.endDate(type == TodoType.PERIOD ? TODAY.plusDays(1) : null)
+				.isDeleted(false)
+				.expGranted(false)
+				.build());
+	}
+
+	private Todo saveWithDates(TodoType type, TodoStatus status, LocalDate startDate, LocalDate endDate) {
+		return todoRepository.saveAndFlush(Todo.builder()
+				.userId(USER_ID)
+				.title(type.name())
+				.type(type)
+				.status(status)
+				.priority(1)
+				.startDate(startDate)
+				.endDate(endDate)
 				.isDeleted(false)
 				.expGranted(false)
 				.build());
