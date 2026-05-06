@@ -15,5 +15,5 @@ public interface FurnitureRepository extends JpaRepository<Furniture, Long> {
 
 	Optional<Furniture> findByFurnitureIdAndIsDeletedFalse(Long furnitureId);
 
-	Optional<Furniture> findByCode(String code);
+	Optional<Furniture> findByCodeAndIsDeletedFalse(String code);
 }

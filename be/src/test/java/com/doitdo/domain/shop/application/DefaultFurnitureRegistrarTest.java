@@ -55,8 +55,8 @@ class DefaultFurnitureRegistrarTest {
 		UserFurniture savedWall = userFurniture(100L, userId, 57L);
 		UserFurniture savedFloor = userFurniture(101L, userId, 58L);
 
-		given(furnitureRepository.findByCode("DEFAULT_WALL")).willReturn(Optional.of(wall));
-		given(furnitureRepository.findByCode("DEFAULT_FLOOR")).willReturn(Optional.of(floor));
+		given(furnitureRepository.findByCodeAndIsDeletedFalse("DEFAULT_WALL")).willReturn(Optional.of(wall));
+		given(furnitureRepository.findByCodeAndIsDeletedFalse("DEFAULT_FLOOR")).willReturn(Optional.of(floor));
 		given(userFurnitureRepository.findByUserIdAndFurnitureId(userId, 57L)).willReturn(Optional.empty());
 		given(userFurnitureRepository.findByUserIdAndFurnitureId(userId, 58L)).willReturn(Optional.empty());
 		given(userFurnitureRepository.save(any(UserFurniture.class))).willReturn(savedWall, savedFloor);
@@ -96,8 +96,8 @@ class DefaultFurnitureRegistrarTest {
 		UserFurniture ownedWall = userFurniture(100L, userId, 57L);
 		UserFurniture ownedFloor = userFurniture(101L, userId, 58L);
 
-		given(furnitureRepository.findByCode("DEFAULT_WALL")).willReturn(Optional.of(wall));
-		given(furnitureRepository.findByCode("DEFAULT_FLOOR")).willReturn(Optional.of(floor));
+		given(furnitureRepository.findByCodeAndIsDeletedFalse("DEFAULT_WALL")).willReturn(Optional.of(wall));
+		given(furnitureRepository.findByCodeAndIsDeletedFalse("DEFAULT_FLOOR")).willReturn(Optional.of(floor));
 		given(userFurnitureRepository.findByUserIdAndFurnitureId(userId, 57L)).willReturn(Optional.of(ownedWall));
 		given(userFurnitureRepository.findByUserIdAndFurnitureId(userId, 58L)).willReturn(Optional.of(ownedFloor));
 

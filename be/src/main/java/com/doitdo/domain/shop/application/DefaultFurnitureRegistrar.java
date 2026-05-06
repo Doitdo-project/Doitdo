@@ -28,7 +28,7 @@ public class DefaultFurnitureRegistrar {
 	@Transactional
 	public void registerFor(Long userId) {
 		for (String code : DEFAULT_FURNITURE_CODES) {
-			Furniture furniture = furnitureRepository.findByCode(code)
+			Furniture furniture = furnitureRepository.findByCodeAndIsDeletedFalse(code)
 					.orElseThrow(() -> new CustomException(CommonErrorCode.INTERNAL_SERVER_ERROR,
 							"기본 가구가 초기화되지 않았습니다. code=" + code));
 			UserFurniture userFurniture = userFurnitureRepository

@@ -145,7 +145,7 @@ public class DataInitializer implements CommandLineRunner {
 
 	private void initializeDefaultFurnitures() {
 		for (FurnitureSeed seed : FURNITURE_SEEDS) {
-			if (furnitureRepository.findByCode(seed.code()).isPresent()) {
+			if (furnitureRepository.findByCodeAndIsDeletedFalse(seed.code()).isPresent()) {
 				continue;
 			}
 

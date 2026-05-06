@@ -36,8 +36,8 @@ class DataInitializerTest {
 				furnitureRepository
 		);
 		given(paletteRepository.count()).willReturn(1L);
-		given(furnitureRepository.findByCode("DEFAULT_WALL")).willReturn(Optional.empty());
-		given(furnitureRepository.findByCode("DEFAULT_FLOOR")).willReturn(Optional.empty());
+		given(furnitureRepository.findByCodeAndIsDeletedFalse("DEFAULT_WALL")).willReturn(Optional.empty());
+		given(furnitureRepository.findByCodeAndIsDeletedFalse("DEFAULT_FLOOR")).willReturn(Optional.empty());
 
 		initializer.run();
 
