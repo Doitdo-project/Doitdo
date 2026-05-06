@@ -43,44 +43,40 @@ class DefaultFurnitureRegistrarTest {
 	}
 
 	@Test
-	void registerForGrantsAndPlacesDefaultWallAndFloor() {
+	void registerForGrantsAndPlacesDefaultBackground() {
 		DefaultFurnitureRegistrar registrar = new DefaultFurnitureRegistrar(
 				furnitureRepository,
 				userFurnitureRepository,
 				roomFurniturePlacementRepository
 		);
 		Long userId = 1L;
-		Furniture wall = furniture(57L, "DEFAULT_WALL", "WALL", 0, 0, 0);
-		Furniture floor = furniture(58L, "DEFAULT_FLOOR", "FLOOR", 0, 420, 1);
-		UserFurniture savedWall = userFurniture(100L, userId, 57L);
-		UserFurniture savedFloor = userFurniture(101L, userId, 58L);
+		Furniture background = furniture(57L, "DEFAULT_BACKGROUND", "BACKGROUND", 0, 0, 0);
+		UserFurniture savedBackground = userFurniture(100L, userId, 57L);
 
-		given(furnitureRepository.findByCodeAndIsDeletedFalse("DEFAULT_WALL")).willReturn(Optional.of(wall));
-		given(furnitureRepository.findByCodeAndIsDeletedFalse("DEFAULT_FLOOR")).willReturn(Optional.of(floor));
+		given(furnitureRepository.findByCodeAndIsDeletedFalse("DEFAULT_BACKGROUND")).willReturn(Optional.of(background));
 		given(userFurnitureRepository.findByUserIdAndFurnitureId(userId, 57L)).willReturn(Optional.empty());
-		given(userFurnitureRepository.findByUserIdAndFurnitureId(userId, 58L)).willReturn(Optional.empty());
-		given(userFurnitureRepository.save(any(UserFurniture.class))).willReturn(savedWall, savedFloor);
+		given(userFurnitureRepository.save(any(UserFurniture.class))).willReturn(savedBackground);
 
 		registrar.registerFor(userId);
 
 		ArgumentCaptor<UserFurniture> userFurnitureCaptor = ArgumentCaptor.forClass(UserFurniture.class);
-		verify(userFurnitureRepository, times(2)).save(userFurnitureCaptor.capture());
+		verify(userFurnitureRepository, times(1)).save(userFurnitureCaptor.capture());
 		assertThat(userFurnitureCaptor.getAllValues())
 				.extracting(UserFurniture::getFurnitureId)
-				.containsExactly(57L, 58L);
+				.containsExactly(57L);
 
 		ArgumentCaptor<RoomFurniturePlacement> placementCaptor =
 				ArgumentCaptor.forClass(RoomFurniturePlacement.class);
-		verify(roomFurniturePlacementRepository, times(2)).save(placementCaptor.capture());
+		verify(roomFurniturePlacementRepository, times(1)).save(placementCaptor.capture());
 		assertThat(placementCaptor.getAllValues())
 				.extracting(RoomFurniturePlacement::getUserFurnitureId)
-				.containsExactly(100L, 101L);
+				.containsExactly(100L);
 		assertThat(placementCaptor.getAllValues())
 				.extracting(RoomFurniturePlacement::getX)
-				.containsExactly(0, 0);
+				.containsExactly(0);
 		assertThat(placementCaptor.getAllValues())
 				.extracting(RoomFurniturePlacement::getY)
-				.containsExactly(0, 420);
+				.containsExactly(0);
 	}
 
 	@Test
@@ -91,25 +87,21 @@ class DefaultFurnitureRegistrarTest {
 				roomFurniturePlacementRepository
 		);
 		Long userId = 1L;
-		Furniture wall = furniture(57L, "DEFAULT_WALL", "WALL", 0, 0, 0);
-		Furniture floor = furniture(58L, "DEFAULT_FLOOR", "FLOOR", 0, 420, 1);
-		UserFurniture ownedWall = userFurniture(100L, userId, 57L);
-		UserFurniture ownedFloor = userFurniture(101L, userId, 58L);
+		Furniture background = furniture(57L, "DEFAULT_BACKGROUND", "BACKGROUND", 0, 0, 0);
+		UserFurniture ownedBackground = userFurniture(100L, userId, 57L);
 
-		given(furnitureRepository.findByCodeAndIsDeletedFalse("DEFAULT_WALL")).willReturn(Optional.of(wall));
-		given(furnitureRepository.findByCodeAndIsDeletedFalse("DEFAULT_FLOOR")).willReturn(Optional.of(floor));
-		given(userFurnitureRepository.findByUserIdAndFurnitureId(userId, 57L)).willReturn(Optional.of(ownedWall));
-		given(userFurnitureRepository.findByUserIdAndFurnitureId(userId, 58L)).willReturn(Optional.of(ownedFloor));
+		given(furnitureRepository.findByCodeAndIsDeletedFalse("DEFAULT_BACKGROUND")).willReturn(Optional.of(background));
+		given(userFurnitureRepository.findByUserIdAndFurnitureId(userId, 57L)).willReturn(Optional.of(ownedBackground));
 
 		registrar.registerFor(userId);
 
 		verify(userFurnitureRepository, never()).save(any(UserFurniture.class));
 		ArgumentCaptor<RoomFurniturePlacement> placementCaptor =
 				ArgumentCaptor.forClass(RoomFurniturePlacement.class);
-		verify(roomFurniturePlacementRepository, times(2)).save(placementCaptor.capture());
+		verify(roomFurniturePlacementRepository, times(1)).save(placementCaptor.capture());
 		assertThat(placementCaptor.getAllValues())
 				.extracting(RoomFurniturePlacement::getUserFurnitureId)
-				.containsExactly(100L, 101L);
+				.containsExactly(100L);
 	}
 
 	private Furniture furniture(Long furnitureId, String code, String category, Integer defaultX, Integer defaultY,

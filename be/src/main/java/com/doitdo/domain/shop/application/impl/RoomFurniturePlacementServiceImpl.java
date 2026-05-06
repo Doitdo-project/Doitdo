@@ -40,7 +40,7 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 	public RoomResp getMyRoom(Long userId) {
 		List<RoomFurniturePlacement> placements =
 			roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId);
-		if (missingWallOrFloor(placements)) {
+		if (missingBackground(placements)) {
 			defaultFurnitureRegistrar.registerFor(userId);
 			placements = roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId);
 		}
@@ -52,7 +52,7 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 		return new RoomResp(items);
 	}
 
-	private boolean missingWallOrFloor(List<RoomFurniturePlacement> placements) {
+	private boolean missingBackground(List<RoomFurniturePlacement> placements) {
 		List<Long> userFurnitureIds = placements.stream()
 				.map(RoomFurniturePlacement::getUserFurnitureId)
 				.toList();
@@ -76,7 +76,7 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 				.filter(Objects::nonNull)
 				.map(Furniture::getCategory)
 				.collect(Collectors.toSet());
-		return !categories.contains("WALL") || !categories.contains("FLOOR");
+		return !categories.contains("BACKGROUND");
 	}
 
 	@Override

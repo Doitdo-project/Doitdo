@@ -56,11 +56,13 @@ class RoomFurniturePlacementServiceImplTest {
 		RoomFurniturePlacementServiceImpl service = buildService();
 		Long userId = 1L;
 		UserFurniture userFurniture = userFurniture(20L, userId, 10L);
-		Furniture furniture = furniture(10L, "의자");
+		Furniture furniture = furniture(10L, "기본 배경", "BACKGROUND");
 		RoomFurniturePlacement placement = placement(30L, userId, 20L, 120, 300, 5, 0);
 
 		given(roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId))
 			.willReturn(List.of(placement));
+		given(userFurnitureRepository.findAllById(List.of(20L))).willReturn(List.of(userFurniture));
+		given(furnitureRepository.findAllById(List.of(10L))).willReturn(List.of(furniture));
 		given(userFurnitureRepository.findById(20L)).willReturn(Optional.of(userFurniture));
 		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(10L)).willReturn(Optional.of(furniture));
 
@@ -75,35 +77,30 @@ class RoomFurniturePlacementServiceImplTest {
 	}
 
 	@Test
-	void getMyRoom_registersDefaultFurnitureWhenWallAndFloorAreMissing() {
+	void getMyRoom_registersDefaultFurnitureWhenBackgroundIsMissing() {
 		RoomFurniturePlacementServiceImpl service = buildService();
 		Long userId = 1L;
 		UserFurniture chairUserFurniture = userFurniture(19L, userId, 10L);
-		UserFurniture wallUserFurniture = userFurniture(20L, userId, 57L);
-		UserFurniture floorUserFurniture = userFurniture(21L, userId, 58L);
+		UserFurniture backgroundUserFurniture = userFurniture(20L, userId, 57L);
 		Furniture chair = furniture(10L, "의자", "CHAIR");
-		Furniture wall = furniture(57L, "기본 벽지", "WALL");
-		Furniture floor = furniture(58L, "기본 바닥", "FLOOR");
+		Furniture background = furniture(57L, "기본 배경", "BACKGROUND");
 		RoomFurniturePlacement chairPlacement = placement(29L, userId, 19L, 120, 300, 5, 0);
-		RoomFurniturePlacement wallPlacement = placement(30L, userId, 20L, 0, 0, 0, 0);
-		RoomFurniturePlacement floorPlacement = placement(31L, userId, 21L, 0, 420, 1, 0);
+		RoomFurniturePlacement backgroundPlacement = placement(30L, userId, 20L, 0, 0, 0, 0);
 
 		given(roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId))
-			.willReturn(List.of(chairPlacement), List.of(wallPlacement, floorPlacement, chairPlacement));
+			.willReturn(List.of(chairPlacement), List.of(backgroundPlacement, chairPlacement));
 		given(userFurnitureRepository.findAllById(List.of(19L))).willReturn(List.of(chairUserFurniture));
 		given(furnitureRepository.findAllById(List.of(10L))).willReturn(List.of(chair));
-		given(userFurnitureRepository.findById(20L)).willReturn(Optional.of(wallUserFurniture));
-		given(userFurnitureRepository.findById(21L)).willReturn(Optional.of(floorUserFurniture));
+		given(userFurnitureRepository.findById(20L)).willReturn(Optional.of(backgroundUserFurniture));
 		given(userFurnitureRepository.findById(19L)).willReturn(Optional.of(chairUserFurniture));
-		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(57L)).willReturn(Optional.of(wall));
-		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(58L)).willReturn(Optional.of(floor));
+		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(57L)).willReturn(Optional.of(background));
 		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(10L)).willReturn(Optional.of(chair));
 
 		List<RoomFurniturePlacementResp> items = service.getMyRoom(userId).items();
 
 		verify(defaultFurnitureRegistrar).registerFor(userId);
-		assertThat(items).hasSize(3);
-		assertThat(items).extracting(RoomFurniturePlacementResp::category).containsExactly("WALL", "FLOOR", "CHAIR");
+		assertThat(items).hasSize(2);
+		assertThat(items).extracting(RoomFurniturePlacementResp::category).containsExactly("BACKGROUND", "CHAIR");
 	}
 
 	@Test

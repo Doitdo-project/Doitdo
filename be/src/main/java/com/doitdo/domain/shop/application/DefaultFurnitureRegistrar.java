@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DefaultFurnitureRegistrar {
 
 	private static final List<String> DEFAULT_FURNITURE_CODES = List.of(
-			"DEFAULT_WALL", "DEFAULT_FLOOR"
+			"DEFAULT_BACKGROUND"
 	);
 
 	private final FurnitureRepository furnitureRepository;
