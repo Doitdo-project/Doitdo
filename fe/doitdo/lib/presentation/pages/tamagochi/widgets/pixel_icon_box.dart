@@ -3,7 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /// 픽셀 아트 풍 정사각 아이콘 박스.
 ///
-/// `assets/images/eg_icon_box.png` 의 노치 모서리 + 다크브라운 외곽선 +
 /// 크림 내부 + 우하단 하드 픽셀 섀도 형태를 코드로 재현해, 임의의 자식
 /// 위젯(보통 [Icon])을 감싸 픽셀 톤 진입 버튼처럼 보이게 한다.
 ///
