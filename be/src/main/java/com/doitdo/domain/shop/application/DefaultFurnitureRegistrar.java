@@ -29,8 +29,10 @@ public class DefaultFurnitureRegistrar {
 			Furniture furniture = furnitureRepository.findByCode(code)
 					.orElseThrow(() -> new CustomException(CommonErrorCode.INTERNAL_SERVER_ERROR,
 							"기본 가구가 초기화되지 않았습니다. code=" + code));
-			UserFurniture userFurniture = userFurnitureRepository.save(
-					UserFurniture.create(userId, furniture.getFurnitureId()));
+			UserFurniture userFurniture = userFurnitureRepository
+					.findByUserIdAndFurnitureId(userId, furniture.getFurnitureId())
+					.orElseGet(() -> userFurnitureRepository.save(
+							UserFurniture.create(userId, furniture.getFurnitureId())));
 			roomFurniturePlacementRepository.save(
 					RoomFurniturePlacement.create(userId, userFurniture.getUserFurnitureId(), furniture));
 		}

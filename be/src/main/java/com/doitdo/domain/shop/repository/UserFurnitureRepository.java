@@ -13,6 +13,8 @@ public interface UserFurnitureRepository extends JpaRepository<UserFurniture, Lo
 
 	boolean existsByUserIdAndFurnitureId(Long userId, Long furnitureId);
 
+	Optional<UserFurniture> findByUserIdAndFurnitureId(Long userId, Long furnitureId);
+
 	Optional<UserFurniture> findByUserIdAndUserFurnitureId(Long userId, Long userFurnitureId);
 
 	List<UserFurniture> findAllByUserIdOrderByUserFurnitureIdAsc(Long userId);
