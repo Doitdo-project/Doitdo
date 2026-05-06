@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +9,7 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
 import 'package:doitdo/presentation/pages/todo/todo_add_notifier.dart';
+import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_category_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_date_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_time_sheet.dart';
@@ -93,63 +96,42 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
   }
 
   Future<void> _onSave(BuildContext context) async {
-    // ✅ 저장 중이면 즉시 차단 — 연타 중복 생성 방지
     if (_isLoading) return;
-
     final title = _titleController.text.trim();
-
-    // 빈 제목은 저장 버튼이 disable 되어 있어 정상 경로로는 도달 불가.
-    // 안전망으로만 남겨두고 안내 SnackBar 는 띄우지 않는다 — 시트가 root navigator
-    // 위에 떠 있어 SnackBar 가 시트에 가려져 보이지 않는 문제가 있었다.
     if (title.isEmpty) return;
 
-    // ✅ 저장 시작 — 버튼 비활성화
     setState(() => _isLoading = true);
 
-    try {
-      final r = _dateResult;
-      final todo = Todo(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        title: title,
-        category: TodoCategory.fromName(_selectedCategory),
-        categoryId: _selectedCategoryId,
-        isDone: false,
-        memo: _memoController.text.trim().isEmpty ? null : _memoController.text.trim(),
-        alarmTime:       _alarmEnabled ? _selectedTime : null,
-        alarmEnabled:    _alarmEnabled,
-        dateType:        r?.type ?? TodoDateType.someday,
-        date:            r?.date,
-        rangeStart:      r?.rangeStart,
-        rangeEnd:        r?.rangeEnd,
-        repeatType:      r?.repeatType,
-        repeatStartDate: r?.repeatStartDate,
-        repeatEndDate:   r?.repeatEndDate,
-        period:          r?.repeatType == '매주' ? 7 : null,
-        repeatDays:      r?.repeatDays,
-      );
+    final r = _dateResult;
+    final localId = 'local_${DateTime.now().millisecondsSinceEpoch}';
+    final todo = Todo(
+      id: localId,
+      title: title,
+      category: TodoCategory.fromName(_selectedCategory),
+      categoryId: _selectedCategoryId,
+      isDone: false,
+      memo: _memoController.text.trim().isEmpty ? null : _memoController.text.trim(),
+      alarmTime:       _alarmEnabled ? _selectedTime : null,
+      alarmEnabled:    _alarmEnabled,
+      dateType:        r?.type ?? TodoDateType.someday,
+      date:            r?.date,
+      rangeStart:      r?.rangeStart,
+      rangeEnd:        r?.rangeEnd,
+      repeatType:      r?.repeatType,
+      repeatStartDate: r?.repeatStartDate,
+      repeatEndDate:   r?.repeatEndDate,
+      period:          r?.repeatType == '매주' ? 7 : null,
+      repeatDays:      r?.repeatDays,
+    );
 
-      await ref.read(todoAddNotifierProvider.notifier).createTodo(todo);
+    // 1. 낙관적 삽입 — 목록에 즉시 표시
+    ref.read(todoViewModelProvider.notifier).insertLocalTodo(todo);
 
-      final resultState = ref.read(todoAddNotifierProvider);
-      if (resultState.hasError) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('서버 저장 실패: ${resultState.error}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        return;
-      }
+    // 2. 시트 즉시 닫기 — 사용자 체감 latency 0ms
+    if (context.mounted) Navigator.of(context).pop();
 
-      // ✅ mounted 확인 후 딱 한 번만 pop
-      if (context.mounted) Navigator.of(context).pop();
-
-    } finally {
-      // ✅ 성공/실패/예외 무관하게 항상 로딩 해제
-      if (mounted) setState(() => _isLoading = false);
-    }
+    // 3. API 호출 백그라운드 — 성공: 로컬 ID → 서버 ID 교체, 실패: 제거 + 에러 상태
+    unawaited(ref.read(todoAddNotifierProvider.notifier).createTodo(todo, localId));
   }
 
   @override
