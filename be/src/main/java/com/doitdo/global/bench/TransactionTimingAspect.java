@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
  *   [Aspect] end
  * </pre>
  *
- * <p>측정 범위는 인증 도메인의 application 레이어로 제한 — 다른 트랜잭션이 노이즈로 끼지 않게.
+ * <p>측정 범위는 인증 / TODO / 다마고치 도메인의 application 레이어로 제한 — 다른 트랜잭션이 노이즈로 끼지 않게.
  *
  * <p>운영 환경에 의도치 않게 적재되더라도 {@link Profile} 조건이 클래스 자체를 비활성화한다.
  */
@@ -33,8 +33,11 @@ import org.springframework.stereotype.Component;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class TransactionTimingAspect {
 
-    @Around("@annotation(org.springframework.transaction.annotation.Transactional) "
-            + "&& execution(* com.doitdo.domain.auth.application..*(..))")
+    @Around("@annotation(org.springframework.transaction.annotation.Transactional) && ("
+            + "execution(* com.doitdo.domain.auth.application..*(..))"
+            + " || execution(* com.doitdo.domain.todo.application..*(..))"
+            + " || execution(* com.doitdo.domain.tamagotchi.application..*(..))"
+            + ")")
     public Object measure(ProceedingJoinPoint pjp) throws Throwable {
         long start = System.nanoTime();
         boolean threw = false;
