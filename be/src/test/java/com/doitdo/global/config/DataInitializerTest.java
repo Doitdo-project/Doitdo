@@ -29,41 +29,38 @@ class DataInitializerTest {
 	private FurnitureRepository furnitureRepository;
 
 	@Test
-	void runSeedsDefaultWallAndFloorEvenWhenPalettesAlreadyExist() {
+	void runSeedsDefaultBackgroundEvenWhenPalettesAlreadyExist() {
 		DataInitializer initializer = new DataInitializer(
 				paletteRepository,
 				paletteColorRepository,
 				furnitureRepository
 		);
 		given(paletteRepository.count()).willReturn(1L);
-		given(furnitureRepository.findByCode("DEFAULT_WALL")).willReturn(Optional.empty());
-		given(furnitureRepository.findByCode("DEFAULT_FLOOR")).willReturn(Optional.empty());
+		given(furnitureRepository.findByCodeAndIsDeletedFalse("DEFAULT_BACKGROUND")).willReturn(Optional.empty());
 
 		initializer.run();
 
 		ArgumentCaptor<Furniture> captor = ArgumentCaptor.forClass(Furniture.class);
-		verify(furnitureRepository, times(2)).save(captor.capture());
+		verify(furnitureRepository, times(1)).save(captor.capture());
 
 		assertThat(captor.getAllValues())
 				.extracting(Furniture::getCode)
-				.containsExactly("DEFAULT_WALL", "DEFAULT_FLOOR");
+				.containsExactly("DEFAULT_BACKGROUND");
 		assertThat(captor.getAllValues())
 				.extracting(Furniture::getCategory)
-				.containsExactly("WALL", "FLOOR");
+				.containsExactly("BACKGROUND");
 		assertThat(captor.getAllValues())
 				.extracting(Furniture::getPrice)
-				.containsExactly(0, 0);
+				.containsExactly(0);
 		assertThat(captor.getAllValues())
 				.extracting(Furniture::getImageUrl)
 				.containsExactly(
-						"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/wall/default_wall.webp",
-						"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/floor/default_floor.webp"
+						"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/default_background.webp"
 				);
 		assertThat(captor.getAllValues())
 				.extracting(Furniture::getThumbnailUrl)
 				.containsExactly(
-						"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/wall/default_wall.webp",
-						"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/floor/default_floor.webp"
+						"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/default_background.webp"
 				);
 	}
 }

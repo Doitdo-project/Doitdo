@@ -86,28 +86,16 @@ public class DataInitializer implements CommandLineRunner {
 
 	private static final List<FurnitureSeed> FURNITURE_SEEDS = List.of(
 			new FurnitureSeed(
-					"DEFAULT_WALL",
-					"기본 벽지",
-					"신규 사용자 기본 벽지",
-					"WALL",
-					"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/wall/default_wall.webp",
+					"DEFAULT_BACKGROUND",
+					"기본 배경",
+					"신규 사용자 기본 배경",
+					"BACKGROUND",
+					"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/default_background.webp",
 					0,
 					0,
 					390,
-					420,
+					640,
 					0
-			),
-			new FurnitureSeed(
-					"DEFAULT_FLOOR",
-					"기본 바닥",
-					"신규 사용자 기본 바닥",
-					"FLOOR",
-					"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/floor/default_floor.webp",
-					0,
-					420,
-					390,
-					220,
-					1
 			)
 	);
 
@@ -145,7 +133,7 @@ public class DataInitializer implements CommandLineRunner {
 
 	private void initializeDefaultFurnitures() {
 		for (FurnitureSeed seed : FURNITURE_SEEDS) {
-			if (furnitureRepository.findByCode(seed.code()).isPresent()) {
+			if (furnitureRepository.findByCodeAndIsDeletedFalse(seed.code()).isPresent()) {
 				continue;
 			}
 

@@ -1,7 +1,6 @@
--- 기본 벽지/바닥 가구 seed
+-- 기본 배경 가구 seed
 -- S3 업로드 예정 경로:
--- - furniture/wall/default_wall.webp
--- - furniture/floor/default_floor.webp
+-- - furniture/background/default_background.webp
 
 INSERT INTO furnitures (
     code,
@@ -22,36 +21,18 @@ INSERT INTO furnitures (
     updated_at
 ) VALUES
     (
-        'DEFAULT_WALL',
-        '기본 벽지',
-        '신규 사용자 기본 벽지',
-        'WALL',
+        'DEFAULT_BACKGROUND',
+        '기본 배경',
+        '신규 사용자 기본 배경',
+        'BACKGROUND',
         0,
-        'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/wall/default_wall.webp',
-        'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/wall/default_wall.webp',
+        'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/default_background.webp',
+        'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/default_background.webp',
         0,
         0,
         390,
-        420,
+        640,
         0,
-        0,
-        0,
-        NOW(),
-        NOW()
-    ),
-    (
-        'DEFAULT_FLOOR',
-        '기본 바닥',
-        '신규 사용자 기본 바닥',
-        'FLOOR',
-        0,
-        'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/floor/default_floor.webp',
-        'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/floor/default_floor.webp',
-        0,
-        420,
-        390,
-        220,
-        1,
         0,
         0,
         NOW(),
