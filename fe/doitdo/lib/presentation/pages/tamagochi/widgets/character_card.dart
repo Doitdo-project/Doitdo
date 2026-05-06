@@ -1,6 +1,3 @@
-import 'dart:async';
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -206,15 +203,7 @@ class CharacterCard extends StatelessWidget {
   // 에만 호출된다.
   String get _displayName => character!.name;
 
-  String get _displayProgressLabel {
-    final c = character!;
-    // 성숙기는 더 자라지 않으므로 100% 도달 시 % 대신 MAX 로 표시한다.
-    // (canFarewell 플래그가 true 인 시점도 같은 의미라 stage + 100% 로 검사.)
-    if (c.stage == CharacterStage.adult && c.growthPercent >= 100) {
-      return '성장률 MAX';
-    }
-    return '성장률 ${c.growthPercent}%';
-  }
+  String get _displayProgressLabel => '성장률 ${character!.growthPercent}%';
 
   double get _displayProgress =>
       character!.growthPercent.clamp(0, 100) / 100;
@@ -263,25 +252,17 @@ class CharacterCard extends StatelessWidget {
     if (c.isEgg) {
       return _EggSlot(imageUrl: c.thumbnailUrl, onTap: onEggTap);
     }
-    // 평상시는 정적 thumbnailUrl(png). 3-5초 간격으로 랜덤하게 1-2초 동안
-    // 로컬 EYE gif (assets/animations/eye/{characterId}.gif) 로 swap 해 깜빡임을
-    // 표현 — 매번 서버에 핑 보내는 비용 회피. 깜빡임 타이머는 _GrownCharacter
-    // 가 자체적으로 관리.
-    //
-    // 탭 후 서버가 내려준 동작 gif (idle 등) 가 있으면 그 url 로 잠시 swap.
+    // 탭 후 서버가 내려준 동작 gif 가 있으면 그 url 로 잠시 swap.
     // tick 을 key 에 섞어 같은 url 이 다시 와도 처음부터 재생되게 한다.
-    // png / 깜빡임 gif / 액션 gif 모두 같은 height 로 통일해 전환 시 캐릭터가
-    // 커지거나 작아져 보이는 일이 없도록 한다.
+    // 정적 png 와 액션 gif 는 캔버스 비율이 달라 같은 height 로 그리면 gif 쪽
+    // 캐릭터가 작아 보인다 — 그래서 액션 표시 동안만 살짝 키워준다.
     final overrideUrl = state.actionUrl;
     final isAction = overrideUrl != null && overrideUrl.isNotEmpty;
     final imageUrl = isAction ? overrideUrl : c.thumbnailUrl;
     return _GrownCharacter(
-      key: ValueKey('grown-$imageUrl-${c.characterId}-${state.actionTick}'),
+      key: ValueKey('grown-$imageUrl-${state.actionTick}'),
       thumbnailUrl: imageUrl,
-      // 액션 중엔 thumbnailUrl 자리에 액션 gif 가 들어오므로 깜빡임 타이머
-      // 비활성화 — null 전달.
-      eyeGifCharacterId: isAction ? null : c.characterId,
-      imageHeight: 100.h,
+      imageHeight: isAction ? 120.h : 94.h,
       onTap: onCharacterTap,
     );
   }
@@ -314,64 +295,28 @@ class _RoundIconButton extends StatelessWidget {
   }
 }
 
-/// 캐릭터 머리 위 말풍선. 둥근 사각형 본체 + 아래로 향하는 작은 삼각형 꼬리.
-///
-/// 본체와 꼬리가 동일 색이라 시각적으로 한 도형처럼 보인다. 색상은 라이트/다크
-/// 무관 고정(흰색) — 카드 자체가 잔디 배경 위에 떠 있어 토큰을 따르면 다크에서
-/// 가독성이 깨진다.
 class _SpeechBubble extends StatelessWidget {
   const _SpeechBubble({required this.text});
 
   final String text;
 
-  static const Color _bubbleColor = Colors.white;
-
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-          decoration: BoxDecoration(
-            color: _bubbleColor,
-            borderRadius: BorderRadius.circular(16.r),
-          ),
-          child: Text(
-            text,
-            style: AppTextStyles.bodySmall.copyWith(color: Colors.black87),
-          ),
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+      ),
+      // 흰 말풍선 배경은 라이트/다크 무관 고정. 텍스트도 토큰이 아닌 고정 어두운 색.
+      child: Text(
+        text,
+        style: AppTextStyles.bodySmall.copyWith(
+          color: Colors.black87,
         ),
-        CustomPaint(
-          size: Size(10.w, 6.h),
-          painter: _SpeechBubbleTailPainter(color: _bubbleColor),
-        ),
-      ],
+      ),
     );
   }
-}
-
-/// 말풍선 하단에 붙는 작은 삼각형(꼬리). 위쪽은 평평, 아래쪽은 한 점으로 모이는
-/// 이등변 삼각형. 본체와 같은 색을 받아 한 덩어리로 그린다.
-class _SpeechBubbleTailPainter extends CustomPainter {
-  const _SpeechBubbleTailPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color;
-    final path = Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width, 0)
-      ..lineTo(size.width / 2, size.height)
-      ..close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SpeechBubbleTailPainter old) =>
-      old.color != color;
 }
 
 /// 서버 thumbnailUrl 이 비어있거나 로드 실패했을 때 자리를 지키는 중립 플레이스홀더.
@@ -544,173 +489,52 @@ class _StageBadge extends StatelessWidget {
   }
 }
 
-/// 이미 부화한 (egg 이외의) 캐릭터.
+/// 이미 부화한 (egg 이외의) 캐릭터. **항상** 서버 thumbnailUrl 을 사용.
+/// url 이 비었거나 로드 실패 시에만 중립 플레이스홀더로 대체.
 ///
-/// 평상시 표시:
-///   - 정적 [thumbnailUrl] (서버 png) 가 기본 — 액션도 깜빡임도 없을 때 보이는 모습.
-///   - [eyeGifCharacterId] 가 주어지면 자체 Timer 로 3-5초 간격마다 1-2초 동안
-///     로컬 EYE gif (`assets/animations/eye/{id}.gif`) 로 swap 해 눈 깜빡임을
-///     표현. swap 동안에는 png 대신 gif 가 그려지고, 사이클이 끝나면 다시 png 로
-///     복귀해 다음 깜빡임을 스케줄.
-///   - 같은 id 에 `_2` 변형이 있는 캐릭터(예: 9, 18) 는 매 깜빡임마다 50/50 으로
-///     base / 변형 중 하나를 랜덤 선택해 살짝 다른 인상을. 변형이 없는 캐릭터는
-///     errorBuilder 체인이 base 로 자동 회귀.
-///   - 에셋이 번들에 없거나 로드 실패 시 [thumbnailUrl] 폴백, 그것도 실패하면
-///     중립 플레이스홀더.
-///
-/// 액션 중(idle 등 서버 동작 gif) 에는 호출측이 [eyeGifCharacterId] 를 null 로
-/// 두고 [thumbnailUrl] 자리에 액션 gif URL 을 넣어 — 깜빡임 타이머는 자동으로
-/// 멈추고 액션 gif 가 그대로 그려진다.
-///
-/// [onTap] 이 주어지면 캐릭터 영역을 탭으로 받아 인터랙션 핑(IDLE) + 말풍선
-/// 랜덤 갱신을 트리거한다. placeholder/이미지 어느 쪽이든 동일 hit area 가 잡히도록
+/// [onTap] 이 주어지면 캐릭터 영역을 탭으로 받아 인터랙션 핑(IDLE/EYE) + 말풍선
+/// 랜덤 갱신을 트리거한다. plceholder/이미지 어느 쪽이든 동일 hit area 가 잡히도록
 /// HitTestBehavior.opaque 로 묶는다.
-class _GrownCharacter extends StatefulWidget {
+class _GrownCharacter extends StatelessWidget {
   const _GrownCharacter({
     super.key,
     required this.thumbnailUrl,
     required this.imageHeight,
-    this.eyeGifCharacterId,
     this.onTap,
   });
 
-  /// 평상시 정적 png URL + 액션 중 동작 gif URL. 비어있으면 placeholder.
   final String thumbnailUrl;
 
-  /// png / 깜빡임 gif / 액션 gif 모두 같은 height 로 그려져 전환 시 사이즈
-  /// 점프가 없도록 호출측이 통일된 값을 넘긴다.
+  /// 실제 이미지가 그려지는 height. 정적 png 와 액션 gif 의 캔버스 padding 이
+  /// 달라 같은 height 면 캐릭터 사이즈가 달라 보여 호출자가 직접 결정한다.
+  /// 슬롯 자체 박스는 [_slotHeight] 로 고정해 png ↔ gif 전환 시 위 말풍선이
+  /// 흔들리지 않게 한다.
   final double imageHeight;
-
-  /// 평상시 깜빡임용 로컬 EYE gif 매핑 키. null 이면 깜빡임 비활성 (액션 중).
-  final int? eyeGifCharacterId;
 
   final VoidCallback? onTap;
 
-  @override
-  State<_GrownCharacter> createState() => _GrownCharacterState();
-}
-
-class _GrownCharacterState extends State<_GrownCharacter> {
-  static final _rng = Random();
-
-  /// 깜빡임 사이 간격 (3-5초 사이 랜덤).
-  static const _intervalMin = Duration(milliseconds: 2000);
-  static const _intervalMax = Duration(milliseconds: 4000);
-
-  /// 깜빡임 한 번이 보이는 시간 (1-2초 사이 랜덤).
-  static const _blinkMin = Duration(milliseconds: 500);
-  static const _blinkMax = Duration(milliseconds: 1000);
-
-  Timer? _scheduleTimer;
-  Timer? _blinkTimer;
-
-  /// 깜빡임 중 표시할 EYE gif asset path. null 이면 정적 png 표시.
-  String? _blinkAsset;
-
-  @override
-  void initState() {
-    super.initState();
-    _scheduleNextBlink();
-  }
-
-  @override
-  void didUpdateWidget(covariant _GrownCharacter old) {
-    super.didUpdateWidget(old);
-    // characterId 변경 또는 액션 모드 진입/이탈 시 사이클 리셋.
-    if (widget.eyeGifCharacterId != old.eyeGifCharacterId) {
-      _cancelTimers();
-      _blinkAsset = null;
-      _scheduleNextBlink();
-    }
-  }
-
-  @override
-  void dispose() {
-    _cancelTimers();
-    super.dispose();
-  }
-
-  void _cancelTimers() {
-    _scheduleTimer?.cancel();
-    _blinkTimer?.cancel();
-  }
-
-  void _scheduleNextBlink() {
-    if (widget.eyeGifCharacterId == null) return;
-    final delay = _randomDuration(_intervalMin, _intervalMax);
-    _scheduleTimer = Timer(delay, _startBlink);
-  }
-
-  void _startBlink() {
-    if (!mounted) return;
-    final id = widget.eyeGifCharacterId;
-    if (id == null) return;
-    // 매 깜빡임마다 base/_2 50/50 랜덤. 변형이 없는 캐릭터는 errorBuilder 체인이
-    // base 로 자동 회귀 → 코드에서 변형 보유 ID 를 별도 관리하지 않아도 됨.
-    final useVariant = _rng.nextBool();
-    final path = useVariant
-        ? 'assets/animations/eye/${id}_2.gif'
-        : 'assets/animations/eye/$id.gif';
-    setState(() => _blinkAsset = path);
-    final duration = _randomDuration(_blinkMin, _blinkMax);
-    _blinkTimer = Timer(duration, () {
-      if (!mounted) return;
-      setState(() => _blinkAsset = null);
-      _scheduleNextBlink();
-    });
-  }
-
-  Duration _randomDuration(Duration min, Duration max) {
-    final spanMs = max.inMilliseconds - min.inMilliseconds;
-    final extra = spanMs > 0 ? _rng.nextInt(spanMs + 1) : 0;
-    return Duration(milliseconds: min.inMilliseconds + extra);
-  }
+  /// 캐릭터 슬롯이 차지하는 고정 box height. png(80.h) / gif(120.h) 중 큰 값으로
+  /// 잡아 두면 어느 쪽을 그리든 위·아래 레이아웃이 움직이지 않는다.
+  static double get _slotHeight => 120.0.h;
 
   @override
   Widget build(BuildContext context) {
-    final id = widget.eyeGifCharacterId;
-
-    final fallback = widget.thumbnailUrl.isEmpty
+    final image = thumbnailUrl.isEmpty
         ? const _CharacterPlaceholder()
         : Image.network(
-            widget.thumbnailUrl,
-            height: widget.imageHeight,
+            thumbnailUrl,
+            height: imageHeight,
             fit: BoxFit.contain,
             filterQuality: FilterQuality.medium,
             errorBuilder: (_, _, _) => const _CharacterPlaceholder(),
           );
-
-    final blinkAsset = _blinkAsset;
-    Widget image;
-    if (blinkAsset != null && id != null) {
-      // _2 시도 시 base 로 떨어지는 체인 — 변형 없는 캐릭터에서 자연 회귀.
-      final base = 'assets/animations/eye/$id.gif';
-      image = Image.asset(
-        blinkAsset,
-        height: widget.imageHeight,
-        fit: BoxFit.contain,
-        filterQuality: FilterQuality.medium,
-        errorBuilder: (_, _, _) => blinkAsset == base
-            ? fallback
-            : Image.asset(
-                base,
-                height: widget.imageHeight,
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.medium,
-                errorBuilder: (_, _, _) => fallback,
-              ),
-      );
-    } else {
-      image = fallback;
-    }
-
     final slot = SizedBox(
-      height: widget.imageHeight,
+      height: _slotHeight,
       child: Center(child: image),
     );
-    if (widget.onTap == null) return slot;
+    if (onTap == null) return slot;
     return GestureDetector(
-      onTap: widget.onTap,
+      onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: slot,
     );

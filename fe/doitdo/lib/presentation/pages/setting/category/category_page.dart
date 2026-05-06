@@ -77,19 +77,14 @@ class CategoryPage extends ConsumerWidget {
     int newPaletteId,
     PaletteListResp palettes,
   ) async {
-    final prevPaletteId = ref.read(activePaletteProvider);
-    // 낙관적: 팔레트 이름 즉시 변경
-    await ref.read(activePaletteProvider.notifier).set(newPaletteId);
     try {
       await ref.read(categoryViewModelProvider.notifier).applyPaletteToAll(
             newPaletteId: newPaletteId,
             paletteList: palettes,
           );
+      await ref.read(activePaletteProvider.notifier).set(newPaletteId);
     } catch (e) {
-      // 실패: 팔레트 이름·카테고리 모두 서버 진실 상태로 복구
-      if (prevPaletteId != null) {
-        await ref.read(activePaletteProvider.notifier).set(prevPaletteId);
-      }
+      // 서버 진실 상태로 다시 동기화 — partial 적용 잔존 방지.
       ref.invalidate(categoryViewModelProvider);
       if (context.mounted) _showError(context, e);
     }
@@ -156,7 +151,7 @@ class CategoryPage extends ConsumerWidget {
                     _handlePaletteChange(context, ref, newPaletteId, palettes),
               ),
               const SizedBox(height: 24),
-              const _SectionLabel('내 카테고리 (최대 6개)'),
+              const _SectionLabel('내 카테고리'),
               const SizedBox(height: 8),
               _CategoryCard(
                 categories: categories,
@@ -227,8 +222,7 @@ class _CategoryCard extends StatelessWidget {
                   onEdit: () => onEdit(c),
                   onDelete: () => onDelete(c),
                 ),
-              if (categories.length < 6)
-                _AddCategoryRow(onTap: onAddTap),
+              _AddCategoryRow(onTap: onAddTap),
             ],
           ),
         ),

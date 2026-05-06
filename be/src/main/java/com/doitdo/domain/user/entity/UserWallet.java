@@ -1,8 +1,6 @@
 package com.doitdo.domain.user.entity;
 
 import com.doitdo.global.entity.BaseTimeEntity;
-import com.doitdo.global.exception.CustomException;
-import com.doitdo.global.exception.ShopErrorCode;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -44,12 +42,5 @@ public class UserWallet extends BaseTimeEntity {
 
 	public void addBalance(Integer amount) {
 		this.balance += amount;
-	}
-
-	public void spend(Integer amount) {
-		if (this.balance < amount) {
-			throw new CustomException(ShopErrorCode.INSUFFICIENT_BALANCE);
-		}
-		this.balance -= amount;
 	}
 }

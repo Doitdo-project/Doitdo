@@ -36,13 +36,11 @@ import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterHistoryRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.user.repository.UserRepository;
-import com.doitdo.global.cache.CacheEvictHelper;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TamagotchiErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
 
 @Service
 @RequiredArgsConstructor
@@ -57,7 +55,6 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 	private final CharacterSpeciesBackgroundRepository characterSpeciesBackgroundRepository;
 	private final UserRepository userRepository;
 	private final ApplicationEventPublisher eventPublisher;
-	private final CacheEvictHelper cacheEvictHelper;
 
 	@Override
 	@Transactional
@@ -184,7 +181,6 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			UserCharacterHistory.ActorType.USER, userId, "name updated");
 		log.info("event=CHARACTER_NAME_UPDATED userId={} userCharacterId={}",
 			userId, userCharacter.getUserCharacterId());
-		cacheEvictHelper.evictTamagotchiCurrentAfterCommit(userId);
 
 		return new UpdateCharacterNameResp(
 			userCharacter.getCharacterId(),
@@ -194,7 +190,6 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 
 	@Override
 	@Transactional(readOnly = true)
-	@Cacheable(value = "tamagotchi:current", key = "#userId", unless = "#result == null")
 	public CurrentCharacterResp getCurrentCharacter(Long userId) {
 		UserCharacter userCharacter = userCharacterRepository
 			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
@@ -272,7 +267,6 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			userId, userCharacter.getUserCharacterId(), "EGG", "BABY", userCharacter.getName()));
 		log.info("event=CHARACTER_HATCHED userId={} userCharacterId={} beforeStage=EGG afterStage=BABY",
 			userId, userCharacter.getUserCharacterId());
-		cacheEvictHelper.evictTamagotchiCurrentAfterCommit(userId);
 
 		return new HatchCharacterResp(
 			babyCharacter.getCharacterId(),
@@ -332,7 +326,6 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			userId, userCharacter.getUserCharacterId(), beforeStage.name(), afterStage.name(), userCharacter.getName()));
 		log.info("event=CHARACTER_EVOLVED userId={} userCharacterId={} beforeStage={} afterStage={}",
 			userId, userCharacter.getUserCharacterId(), beforeStage.name(), afterStage.name());
-		cacheEvictHelper.evictTamagotchiCurrentAfterCommit(userId);
 
 		return new EvolutionResp(
 			userCharacter.getUserCharacterId(),
@@ -425,7 +418,6 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			savedNextEggCharacter.getUserCharacterId(), adultUserCharacter.getName()));
 		log.info("event=CHARACTER_FAREWELL userId={} userCharacterId={} nextUserCharacterId={}",
 			userId, adultUserCharacter.getUserCharacterId(), savedNextEggCharacter.getUserCharacterId());
-		cacheEvictHelper.evictTamagotchiCurrentAfterCommit(userId);
 
 		return new FarewellResp(
 			adultUserCharacter.getUserCharacterId(),

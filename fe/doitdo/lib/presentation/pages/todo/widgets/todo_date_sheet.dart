@@ -97,7 +97,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
   DateTime? _repeatEndDate;
 
   static const _weekdaysKo = ['일', '월', '화', '수', '목', '금', '토'];
-  static const _repeatTypes = ['매일', '매주', '매월', '매년'];
+  static const _repeatTypes = ['매주', '매월', '매년'];
 
   @override
   void initState() {
@@ -110,11 +110,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
       _selectedDay = init.date ?? widget.initialDate ?? DateTime.now();
       _rangeStart = init.rangeStart;
       _rangeEnd = init.rangeEnd;
-      // 7일 전체 선택이면 '매일'로 복원
-      _repeatType = init.repeatType ??
-          ((init.repeatDays != null && init.repeatDays!.length == 7)
-              ? '매일'
-              : '매주');
+      _repeatType = init.repeatType ?? '매주';
       _repeatStartDate = init.repeatStartDate ?? widget.initialDate ?? DateTime.now();
       _repeatEndDate = init.repeatEndDate;
 
@@ -268,10 +264,6 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
     final result = <DateTime>[];
 
     switch (_repeatType) {
-      case '매일':
-        for (final days in [7, 14, 30, 60, 90, 180]) {
-          result.add(start.add(Duration(days: days)));
-        }
       case '매주':
         final selDays = [
           for (int i = 0; i < 7; i++) if (_selectedWeekdays[i]) i,
@@ -701,9 +693,11 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
                     rangeEnd: _rangeEnd,
                   );
                 case 2:
-                  final selectedDayIndices = _repeatType == '매일'
-                      ? List.generate(7, (i) => i)
-                      : [for (int i = 0; i < 7; i++) if (_selectedWeekdays[i]) i];
+                // 선택된 요일 인덱스 목록 저장
+                  final selectedDayIndices = [
+                    for (int i = 0; i < 7; i++)
+                      if (_selectedWeekdays[i]) i,
+                  ];
                   result = TodoDateResult(
                     type: TodoDateType.repeat,
                     repeatStartDate: _repeatStartDate,

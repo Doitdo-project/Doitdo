@@ -83,7 +83,6 @@ class ErrorCodeRegistryTest {
 		assertPrefix(ShopErrorCode.class, 'S');
 		assertPrefix(NotificationErrorCode.class, 'N');
 		assertPrefix(SettingErrorCode.class, 'C');
-		assertPrefix(BugReportErrorCode.class, 'B');
 	}
 
 	private void assertPrefix(Class<? extends ErrorCode> enumClass, char expectedPrefix) {

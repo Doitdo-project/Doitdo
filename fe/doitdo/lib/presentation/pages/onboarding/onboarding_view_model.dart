@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:doitdo/core/errors/exceptions.dart';
@@ -140,8 +138,6 @@ class OnboardingAgreementsViewModel extends AutoDisposeAsyncNotifier<User?> {
                 ref.read(currentUserProvider).valueOrNull?.hasPassword ??
                     user.hasPassword,
           ));
-      // 온보딩 완료 시점에 FCM 토큰 등록 — 이전 소셜 로그인 시에는 서버가 403으로 막았음.
-      unawaited(ref.read(fcmTokenRegistrarProvider).register());
       return user;
     });
   }

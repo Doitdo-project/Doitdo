@@ -31,7 +31,7 @@ public class Category {
 	@Column(name = "color_id", nullable = false)
 	private Integer colorId;
 
-	@Column(name = "category_name", length = 10)
+	@Column(name = "category_name", length = 20)
 	private String categoryName;
 
 	// ── 정적 팩토리 ────────────────────────────────────────────────────
