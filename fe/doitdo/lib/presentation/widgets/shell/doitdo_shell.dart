@@ -44,12 +44,13 @@ class DoitdoShell extends ConsumerWidget {
 
     navigationShell.goBranch(index, initialLocation: true);
 
-    // 홈(다마고치): 어느 탭에서 오든 항상 상단으로 즉시 이동
+    // 홈(다마고치): 어느 탭에서 오든 항상 상단으로 즉시 이동 + 스트릭 갱신 트리거
     if (index == _homeIndex) {
       final controller = ref.read(homeScrollControllerProvider);
       if (controller != null && controller.hasClients) {
         controller.jumpTo(0);
       }
+      ref.read(tamagochiEnterTriggerProvider.notifier).update((v) => v + 1);
     }
   }
 
