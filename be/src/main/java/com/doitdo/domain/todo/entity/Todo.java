@@ -18,6 +18,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import lombok.AccessLevel;
@@ -28,7 +29,16 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Table(name = "todos")
+@Table(
+		name = "todos",
+		indexes = {
+				@Index(name = "idx_todos_list_default", columnList = "user_id, is_deleted, start_date, todo_id"),
+				@Index(name = "idx_todos_list_type", columnList = "user_id, is_deleted, type, start_date, todo_id"),
+				@Index(name = "idx_todos_list_status", columnList = "user_id, is_deleted, status, start_date, todo_id"),
+				@Index(name = "idx_todos_list_category", columnList = "user_id, is_deleted, category_id, start_date, todo_id"),
+				@Index(name = "idx_todos_list_priority", columnList = "user_id, is_deleted, priority, start_date, todo_id")
+		}
+)
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
