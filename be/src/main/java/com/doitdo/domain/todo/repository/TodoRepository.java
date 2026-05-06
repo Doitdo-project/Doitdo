@@ -60,6 +60,21 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 			""")
 	long countPendingByUserId(@Param("userId") Long userId);
 
+	@Query("""
+			select count(t) from Todo t
+			where t.userId = :userId
+			  and t.status <> com.doitdo.domain.todo.entity.Todo.TodoStatus.DONE
+			  and t.isDeleted = false
+			  and t.type <> com.doitdo.domain.todo.entity.Todo.TodoType.RECURRING
+			  and (
+			      (t.type = com.doitdo.domain.todo.entity.Todo.TodoType.NORMAL and t.startDate = :today)
+			      or (t.type = com.doitdo.domain.todo.entity.Todo.TodoType.PERIOD
+			          and t.startDate <= :today
+			          and (t.endDate is null or t.endDate >= :today))
+			  )
+			""")
+	long countPendingByUserIdAndToday(@Param("userId") Long userId, @Param("today") LocalDate today);
+
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("UPDATE Todo t SET t.isDeleted = true WHERE t.userId = :userId AND t.isDeleted = false")
 	int softDeleteAllByUserId(@Param("userId") Long userId);
