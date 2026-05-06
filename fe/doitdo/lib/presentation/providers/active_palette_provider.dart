@@ -26,11 +26,6 @@ class ActivePaletteNotifier extends StateNotifier<int?> {
     state = paletteId;
     await _prefs.setInt(_key, paletteId);
   }
-
-  Future<void> clear() async {
-    state = null;
-    await _prefs.remove(_key);
-  }
 }
 
 final activePaletteProvider =

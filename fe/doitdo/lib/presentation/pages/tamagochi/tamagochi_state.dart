@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'package:doitdo/domain/entities/character.dart';
+
 /// 다마고치 메인 화면 전용 상태.
 ///
 /// 캐릭터 본체(이름/단계/성장률) 는 `characterViewModelProvider`,
@@ -7,8 +9,9 @@ import 'package:flutter/foundation.dart';
 /// 스트릭(연속 달성) 은 `streakViewModelProvider` 에서 가져온다.
 /// 이 상태에는 아직 BE 엔드포인트가 없거나, 화면 단일 소유 데이터만 남겨둔다:
 ///   - [speechBubble] 캐릭터 말풍선 (tap 인터랙션으로 갱신)
+///   - [lastTapAction] 캐릭터 탭으로 마지막에 보낸 action — IDLE/EYE 토글에 사용
 ///   - [actionUrl] 마지막 action 응답으로 받은 동작 gif URL.
-///                 null 이면 평상시(로컬 EYE gif) 그대로, 값이 있으면 그 gif 로 swap.
+///                 null 이면 정적 썸네일(png) 그대로, 값이 있으면 그 gif 로 swap.
 ///   - [actionTick] 같은 url 이 다시 떨어졌을 때 Image.network 가 캐시 때문에
 ///                 재생을 처음부터 안 하는 걸 막기 위한 단조증가 카운터.
 ///                 위젯 key 에 섞어 강제 remount 시킨다.
@@ -19,6 +22,7 @@ import 'package:flutter/foundation.dart';
 class TamagochiState {
   const TamagochiState({
     this.speechBubble,
+    this.lastTapAction,
     this.actionUrl,
     this.actionTick = 0,
   });
@@ -26,7 +30,12 @@ class TamagochiState {
   /// 캐릭터 말풍선 문구. null 이면 말풍선 숨김.
   final String? speechBubble;
 
-  /// 마지막 action 응답으로 받은 gif URL. null 이면 평상시(로컬 EYE gif) 사용.
+  /// 캐릭터를 탭해 마지막으로 서버에 보낸 action.
+  /// null 이면 아직 한 번도 탭하지 않은 상태 — 다음 탭은 [CharacterAction.idle].
+  /// idle 다음은 eye, eye 다음은 idle 로 토글된다.
+  final CharacterAction? lastTapAction;
+
+  /// 마지막 action 응답으로 받은 gif URL. null 이면 정적 thumbnail 사용.
   final String? actionUrl;
 
   /// action 응답 도착마다 증가. 같은 URL 이 또 와도 widget key 가 바뀌면서
@@ -35,12 +44,14 @@ class TamagochiState {
 
   TamagochiState copyWith({
     String? speechBubble,
+    CharacterAction? lastTapAction,
     String? actionUrl,
     int? actionTick,
     bool clearActionUrl = false,
   }) {
     return TamagochiState(
       speechBubble: speechBubble ?? this.speechBubble,
+      lastTapAction: lastTapAction ?? this.lastTapAction,
       // copyWith 의 nullable 파라미터는 null 을 "변경 없음" 으로 다루기 때문에
       // 명시적으로 null 로 되돌리려면 [clearActionUrl] 플래그를 사용한다.
       actionUrl: clearActionUrl ? null : (actionUrl ?? this.actionUrl),

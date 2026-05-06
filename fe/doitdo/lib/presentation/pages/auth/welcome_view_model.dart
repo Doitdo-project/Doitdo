@@ -38,57 +38,39 @@ class WelcomeViewModel extends AsyncNotifier<WelcomeSuccess?> {
   /// Google OAuth 수행. 결과는 state 로만 노출 (반환값 없음).
   /// 성공 시 currentUserProvider 도 응답으로 받은 user 로 즉시 동기화 (추가 GET 호출 안 발생).
   Future<void> signInWithGoogle() async {
-    if (state.isLoading) return;
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final repo = ref.read(authRepositoryProvider);
       final (user, _, isNewUser) = await repo.signInWithGoogle();
       ref.read(currentUserProvider.notifier).replace(user);
-      // 온보딩 미완료 유저는 서버가 FCM 등록을 403으로 막으므로 스킵.
-      // 온보딩 완료 후 OnboardingAgreementsViewModel 에서 등록한다.
-      if (user.isOnboardingComplete) {
-        unawaited(ref.read(fcmTokenRegistrarProvider).register());
-      }
+      // FCM 토큰 등록은 비동기 부수효과 — 실패해도 로그인 흐름을 막지 않는다.
+      unawaited(ref.read(fcmTokenRegistrarProvider).register());
       return WelcomeSuccess(user: user, isNewUser: isNewUser);
     });
   }
 
   /// Kakao OAuth 수행. 규약은 [signInWithGoogle] 과 동일.
   Future<void> signInWithKakao() async {
-    if (state.isLoading) return;
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final repo = ref.read(authRepositoryProvider);
       final (user, _, isNewUser) = await repo.signInWithKakao();
       ref.read(currentUserProvider.notifier).replace(user);
-      if (user.isOnboardingComplete) {
-        unawaited(ref.read(fcmTokenRegistrarProvider).register());
-      }
+      unawaited(ref.read(fcmTokenRegistrarProvider).register());
       return WelcomeSuccess(user: user, isNewUser: isNewUser);
     });
   }
 
   /// Apple Sign-In 수행. 규약은 [signInWithGoogle] 과 동일.
   Future<void> signInWithApple() async {
-    if (state.isLoading) return;
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final repo = ref.read(authRepositoryProvider);
       final (user, _, isNewUser) = await repo.signInWithApple();
       ref.read(currentUserProvider.notifier).replace(user);
-      if (user.isOnboardingComplete) {
-        unawaited(ref.read(fcmTokenRegistrarProvider).register());
-      }
       return WelcomeSuccess(user: user, isNewUser: isNewUser);
     });
   }
-
-  /// 로그아웃 시 상태를 즉시 초기화.
-  ///
-  /// `ref.invalidate` 는 active watcher 가 없을 때 lazy 로 동작해
-  /// WelcomePage 가 다시 열릴 때 이전 `AsyncData(WelcomeSuccess)` 를 잠깐 보는
-  /// 레이스 컨디션이 생긴다. 이 메서드는 동기적으로 상태를 null 로 설정해 그 틈을 막는다.
-  void reset() => state = const AsyncValue.data(null);
 }
 
 final welcomeViewModelProvider =

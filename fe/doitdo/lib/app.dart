@@ -6,7 +6,6 @@ import 'package:doitdo/core/theme/app_theme.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/providers/current_user_provider.dart';
-import 'package:doitdo/presentation/providers/font_scale_provider.dart';
 import 'package:doitdo/presentation/providers/theme_mode_provider.dart';
 import 'package:doitdo/presentation/widgets/shell/doitdo_web_preview_shell.dart';
 
@@ -58,7 +57,6 @@ class _DoitdoAppState extends ConsumerState<DoitdoApp>
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
-    final fontScale = ref.watch(fontScaleProvider);
 
     final app = MaterialApp.router(
       title: 'doitdo',
@@ -67,12 +65,6 @@ class _DoitdoAppState extends ConsumerState<DoitdoApp>
       themeMode: themeMode,
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
-      builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(
-          textScaler: TextScaler.linear(fontScale),
-        ),
-        child: child!,
-      ),
     );
 
     // 웹 프리뷰 모드에서는 DoitdoWebPreviewShell 이 내부적으로 ScreenUtil.configure 를

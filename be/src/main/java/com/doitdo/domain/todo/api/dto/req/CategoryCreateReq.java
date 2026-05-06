@@ -2,7 +2,6 @@ package com.doitdo.domain.todo.api.dto.req;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 
 /**
  * T10 POST /categories 카테고리 생성 요청 DTO.
@@ -12,7 +11,6 @@ import jakarta.validation.constraints.Size;
 public record CategoryCreateReq(
 
 		@NotBlank
-		@Size(max = 10)
 		String name,
 
 		@NotNull

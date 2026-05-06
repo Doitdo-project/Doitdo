@@ -67,25 +67,12 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
 
   void _markDirty() {
     if (_initialized) _textDirty = true;
-    // 제목 empty/non-empty 전이 시 확인 버튼 색을 갱신.
-    // 빈 제목으로는 저장 불가 정책이라 disable 신호가 즉시 반영되어야 한다.
-    final isEmpty = _titleController.text.trim().isEmpty;
-    if (isEmpty != _wasTitleEmpty) {
-      _wasTitleEmpty = isEmpty;
-      if (mounted) setState(() {});
-    }
   }
-
-  bool _wasTitleEmpty = true;
 
   // 제목/메모 포커스가 둘 다 빠졌을 때 자동 저장
   void _onFocusChange() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      // 빈 제목이면 자동 저장 트리거하지 않음 — 확인 버튼 회색 정책과 일관.
-      // SnackBar 가 시트에 가려지는 문제로 안내도 불가능하므로 silent skip.
-      // dirty flag 도 그대로 유지 → 이후 사용자가 제목을 다시 채우고 포커스 빠지면 저장 발동.
-      if (_titleController.text.trim().isEmpty) return;
       if (!_titleFocusNode.hasFocus && !_memoFocusNode.hasFocus &&
           _textDirty && _initialized && !_isDone) {
         _textDirty = false;
@@ -138,8 +125,8 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
       type: detailDto.type == 'PERIOD'
           ? TodoDateType.range
           : (detailDto.type == 'RECURRING'
-          ? TodoDateType.repeat
-          : (detailDto.type == 'SOMEDAY' ? TodoDateType.someday : TodoDateType.normal)),
+              ? TodoDateType.repeat
+              : (detailDto.type == 'SOMEDAY' ? TodoDateType.someday : TodoDateType.normal)),
       date:            sDate,
       rangeStart:      detailDto.type == 'PERIOD'    ? sDate : null,
       rangeEnd:        detailDto.type == 'PERIOD'    ? eDate : null,
@@ -161,9 +148,20 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
     if (_isLoading) return;
 
     final title = _titleController.text.trim();
-    // 빈 제목은 확인 버튼 disable + 자동 저장 가드로 정상 경로상 도달 불가.
-    // SnackBar 안내는 시트에 가려져 보이지 않으므로 silent return.
-    if (title.isEmpty) return;
+    if (title.isEmpty) {
+      _titleFocusNode.requestFocus();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:         Text('할 일을 입력해주세요.',
+              style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)),
+          backgroundColor: AppColors.calendarPoint,
+          behavior:        SnackBarBehavior.floating,
+          shape:           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin:          const EdgeInsets.all(16),
+        ),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
     final vm = ref.read(todoViewModelProvider.notifier);
@@ -239,53 +237,50 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
     final c           = context.colors;
     final fixedHeight = MediaQuery.of(context).size.height * 0.75;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: MediaQuery(
-        data:  MediaQuery.of(context).copyWith(viewInsets: EdgeInsets.zero),
-        child: Container(
-          decoration: BoxDecoration(
-            color:        c.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+    return MediaQuery(
+      data:  MediaQuery.of(context).copyWith(viewInsets: EdgeInsets.zero),
+      child: Container(
+        decoration: BoxDecoration(
+          color:        c.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        height:  fixedHeight,
+        padding: const EdgeInsets.only(top: 12),
+        child: Padding(
+          // viewPadding 은 키보드 유무와 무관하게 물리적 safe area 를 반환하므로
+          // 키보드 등장/퇴장 시 padding.bottom 이 0↔34 로 바뀌는 레이아웃 흔들림이 없다.
+          padding: EdgeInsets.only(
+            bottom: max(8.0, MediaQuery.viewPaddingOf(context).bottom),
           ),
-          height:  fixedHeight,
-          padding: const EdgeInsets.only(top: 12),
-          child: Padding(
-            // viewPadding 은 키보드 유무와 무관하게 물리적 safe area 를 반환하므로
-            // 키보드 등장/퇴장 시 padding.bottom 이 0↔34 로 바뀌는 레이아웃 흔들림이 없다.
-            padding: EdgeInsets.only(
-              bottom: max(8.0, MediaQuery.viewPaddingOf(context).bottom),
-            ),
-            child: Column(
-              mainAxisSize:       MainAxisSize.max,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width:  40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color:        c.border,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+          child: Column(
+            mainAxisSize:       MainAxisSize.max,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width:  40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color:        c.border,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration:       const Duration(milliseconds: 180),
-                    layoutBuilder:  (current, previous) => Stack(
-                      fit:       StackFit.expand,
-                      alignment: Alignment.center,
-                      children:  [...previous, ?current],
-                    ),
-                    transitionBuilder: (child, anim) =>
-                        FadeTransition(opacity: anim, child: child),
-                    child: _buildStep(c),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration:       const Duration(milliseconds: 180),
+                  layoutBuilder:  (current, previous) => Stack(
+                    fit:       StackFit.expand,
+                    alignment: Alignment.center,
+                    children:  [...previous, ?current],
                   ),
+                  transitionBuilder: (child, anim) =>
+                      FadeTransition(opacity: anim, child: child),
+                  child: _buildStep(c),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -388,7 +383,6 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
             _isDone      = match.isNotEmpty
                 ? match.first.isDone
                 : detailDto.status == 'DONE';
-            _wasTitleEmpty = _titleController.text.trim().isEmpty;
             _initialized = true;
           });
         });
@@ -597,17 +591,11 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Builder(builder: (context) {
-                  final canConfirm = _isDone || _titleController.text.trim().isNotEmpty;
-                  return IgnorePointer(
-                    ignoring: !canConfirm,
-                    child: DoitdoPrimaryButton(
-                      height:    48,
-                      label:     '확인',
-                      onPressed: () => _onConfirm(context),
-                    ),
-                  );
-                }),
+                child: DoitdoPrimaryButton(
+                  height:    48,
+                  label:     '확인',
+                  onPressed: () => _onConfirm(context),
+                ),
               ),
             ],
           ),

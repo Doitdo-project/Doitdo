@@ -11,9 +11,11 @@ import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_padding_layout.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
 
-/// 알 부화 직후 이름을 짓는 화면.
+/// 알 부화 직후 이름을 짓는 화면 (STEP 3/3).
 ///
-/// 한 번 정한 이름은 변경 불가(스펙 합의)이므로 입력창 하단에 안내를 노출한다.
+/// 현재 이름 저장 API 스펙이 미확정이라, 제출 버튼은 로컬 검증 + 화면 pop 만
+/// 수행한다. 스펙 확정 후 [_submit] 에서 `ref.read(characterViewModelProvider
+/// .notifier).renameCharacter(name)` 류를 호출하도록 연결하면 된다.
 class CharacterNamingPage extends ConsumerStatefulWidget {
   const CharacterNamingPage({super.key});
 
@@ -25,47 +27,26 @@ class CharacterNamingPage extends ConsumerStatefulWidget {
 class _CharacterNamingPageState extends ConsumerState<CharacterNamingPage> {
   static const int _minLen = 2;
   static const int _maxLen = 8;
-  static const List<String> _suggestionPool = [
-    '오둥이', '포비', '미치비', '말랑이',
-    '콩이', '모찌', '푸딩이', '꼬미',
-    '밤이', '솜이', '별이', '달이',
-    '토리', '호두', '쫀득이', '뽀삐',
-  ];
+  static const List<String> _suggestions = ['오둥이', '포비', '미치비', '말랑이'];
 
   final _controller = TextEditingController();
-  final _focusNode = FocusNode();
   bool _submitting = false;
 
   @override
-  void initState() {
-    super.initState();
-    _focusNode.addListener(_onFocusChange);
-  }
-
-  @override
   void dispose() {
-    _focusNode.removeListener(_onFocusChange);
-    _focusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
-
-  void _onFocusChange() => setState(() {});
 
   bool get _isValid {
     final v = _controller.text.trim();
     return v.length >= _minLen && v.length <= _maxLen;
   }
 
-  void _useRandomSuggestion() {
-    final current = _controller.text.trim();
-    final candidates =
-        _suggestionPool.where((n) => n != current).toList()..shuffle();
-    if (candidates.isEmpty) return;
-    final pick = candidates.first;
-    _controller.text = pick;
+  void _useSuggestion(String name) {
+    _controller.text = name;
     _controller.selection = TextSelection.fromPosition(
-      TextPosition(offset: pick.length),
+      TextPosition(offset: name.length),
     );
     setState(() {});
   }
@@ -93,99 +74,83 @@ class _CharacterNamingPageState extends ConsumerState<CharacterNamingPage> {
     final colors = context.colors;
     final characterAsync = ref.watch(characterViewModelProvider);
     final character = characterAsync.valueOrNull;
-    final length = _controller.text.trim().length;
-    final isFocused = _focusNode.hasFocus;
 
     return DoitdoScaffold(
       body: DoitdoPaddingLayout(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(vertical: 16.h),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '새 친구에게\n이름을 지어주세요',
-                      style: AppTextStyles.titleLarge.copyWith(
-                        color: colors.textPrimary,
-                        fontSize: 24.sp,
-                        height: 1.3,
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      '한 번 정하면 바꿀 수 없으니, 신중히 지어주세요!',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                    SizedBox(height: 32.h),
-                    Center(child: _CharacterPreview(character: character)),
-                    SizedBox(height: 40.h),
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: isFocused
-                                ? colors.primary
-                                : colors.divider,
-                            width: isFocused ? 1.5 : 1,
-                          ),
-                        ),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _controller,
-                              focusNode: _focusNode,
-                              maxLength: _maxLen,
-                              style: AppTextStyles.titleSmall.copyWith(
-                                color: colors.textPrimary,
-                                fontSize: 18.sp,
-                              ),
-                              decoration: InputDecoration(
-                                hintText: '이름 입력',
-                                hintStyle: AppTextStyles.bodyMedium.copyWith(
-                                  color: colors.textHint,
-                                ),
-                                counterText: '',
-                                isCollapsed: true,
-                                contentPadding: EdgeInsets.symmetric(
-                                  vertical: 10.h,
-                                ),
-                                border: InputBorder.none,
-                                enabledBorder: InputBorder.none,
-                                focusedBorder: InputBorder.none,
-                              ),
-                              onChanged: (_) => setState(() {}),
-                              onSubmitted: (_) => _submit(),
-                            ),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            '$length/$_maxLen',
-                            style: AppTextStyles.labelSmall.copyWith(
-                              color: colors.textSecondary,
-                            ),
-                          ),
-                          SizedBox(width: 8.w),
-                          _RecommendButton(onTap: _useRandomSuggestion),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+            SizedBox(height: 16.h),
+            Text(
+              'STEP 3/3',
+              style: AppTextStyles.labelMedium.copyWith(
+                color: colors.textSecondary,
               ),
             ),
+            SizedBox(height: 6.h),
+            Text(
+              '새 친구에게 이름을\n지어주세요',
+              style: AppTextStyles.titleLarge.copyWith(
+                color: colors.textPrimary,
+                fontSize: 24.sp,
+                height: 1.3,
+              ),
+            ),
+            SizedBox(height: 32.h),
+            Center(child: _CharacterPreview(character: character)),
+            SizedBox(height: 32.h),
+            TextField(
+              controller: _controller,
+              maxLength: _maxLen,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.titleSmall.copyWith(
+                color: colors.textPrimary,
+              ),
+              decoration: InputDecoration(
+                hintText: '이름 입력 ($_minLen~$_maxLen자)',
+                hintStyle: AppTextStyles.bodyMedium.copyWith(
+                  color: colors.textHint,
+                ),
+                counterText: '',
+                filled: true,
+                fillColor: colors.surface,
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                  borderSide: BorderSide(color: colors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                  borderSide: BorderSide(color: colors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                  borderSide: BorderSide(color: colors.primary, width: 1.5),
+                ),
+              ),
+              onChanged: (_) => setState(() {}),
+              onSubmitted: (_) => _submit(),
+            ),
             SizedBox(height: 12.h),
+            Wrap(
+              spacing: 8.w,
+              runSpacing: 8.h,
+              alignment: WrapAlignment.center,
+              children: [
+                for (final name in _suggestions)
+                  _SuggestionChip(
+                    label: name,
+                    selected: _controller.text.trim() == name,
+                    onTap: () => _useSuggestion(name),
+                  ),
+              ],
+            ),
+            const Spacer(),
             DoitdoPrimaryButton(
               label: '이름 짓기',
-              onPressed: (_isValid && !_submitting) ? _submit : null,
+              onPressed:
+                  (_isValid && !_submitting) ? _submit : null,
             ),
             SizedBox(height: 16.h),
           ],
@@ -210,16 +175,15 @@ class _CharacterPreview extends StatelessWidget {
     }
     return Image.network(
       url,
-      height: 150.h,
+      height: 140.h,
       fit: BoxFit.contain,
-      filterQuality: FilterQuality.none,
       errorBuilder: (_, _, _) => _previewPlaceholder(context),
     );
   }
 
   Widget _previewPlaceholder(BuildContext context) {
     return SizedBox(
-      height: 150.h,
+      height: 140.h,
       child: Center(
         child: Icon(
           Icons.pets,
@@ -231,42 +195,37 @@ class _CharacterPreview extends StatelessWidget {
   }
 }
 
-class _RecommendButton extends StatelessWidget {
-  const _RecommendButton({required this.onTap});
+class _SuggestionChip extends StatelessWidget {
+  const _SuggestionChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
+  final String label;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Material(
-      color: colors.surface,
+      color: selected ? colors.primary : colors.surface,
       borderRadius: BorderRadius.circular(20.r),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(20.r),
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20.r),
             border: Border.all(color: colors.border),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.refresh,
-                size: 12.sp,
-                color: colors.textSecondary,
-              ),
-              SizedBox(width: 4.w),
-              Text(
-                '추천',
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: colors.textSecondary,
-                ),
-              ),
-            ],
+          child: Text(
+            label,
+            style: AppTextStyles.labelMedium.copyWith(
+              color: selected ? colors.onPrimary : colors.textPrimary,
+            ),
           ),
         ),
       ),

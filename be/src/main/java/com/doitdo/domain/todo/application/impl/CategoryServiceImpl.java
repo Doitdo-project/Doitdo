@@ -9,14 +9,12 @@ import com.doitdo.domain.todo.entity.Category;
 import com.doitdo.domain.todo.entity.PaletteColor;
 import com.doitdo.domain.todo.repository.CategoryRepository;
 import com.doitdo.domain.todo.repository.PaletteColorRepository;
-import com.doitdo.global.cache.CacheEvictHelper;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TodoErrorCode;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,7 +27,6 @@ public class CategoryServiceImpl implements CategoryService {
 
 	private final CategoryRepository categoryRepository;
 	private final PaletteColorRepository paletteColorRepository;
-	private final CacheEvictHelper cacheEvictHelper;
 
 	/**
 	 * T10 — 카테고리 생성.
@@ -49,8 +46,6 @@ public class CategoryServiceImpl implements CategoryService {
 		Category category = categoryRepository.save(Category.create(userId, req.name(), req.colorId()));
 		String colorHex = resolveColorHex(category.getColorId());
 		log.info("event=CATEGORY_CREATED userId={} categoryId={}", userId, category.getCategoryId());
-		cacheEvictHelper.evictCategoriesAfterCommit(userId);
-		cacheEvictHelper.evictUserTodosAfterCommit(userId);
 		return CategoryResp.from(category, colorHex);
 	}
 
@@ -70,8 +65,6 @@ public class CategoryServiceImpl implements CategoryService {
 
 		categoryRepository.delete(category);
 		log.info("event=CATEGORY_DELETED userId={} categoryId={}", userId, categoryId);
-		cacheEvictHelper.evictCategoriesAfterCommit(userId);
-		cacheEvictHelper.evictUserTodosAfterCommit(userId);
 	}
 
 	/**
@@ -105,8 +98,6 @@ public class CategoryServiceImpl implements CategoryService {
 		category.update(req.name(), req.colorId());
 		String colorHex = resolveColorHex(category.getColorId());
 		log.info("event=CATEGORY_UPDATED userId={} categoryId={}", userId, categoryId);
-		cacheEvictHelper.evictCategoriesAfterCommit(userId);
-		cacheEvictHelper.evictUserTodosAfterCommit(userId);
 		return CategoryResp.from(category, colorHex);
 	}
 
@@ -117,7 +108,6 @@ public class CategoryServiceImpl implements CategoryService {
 	 */
 	@Override
 	@Transactional(readOnly = true)
-	@Cacheable(value = "categories", key = "#userId", unless = "#result == null")
 	public CategoryListResp list(Long userId) {
 		Map<Integer, String> colorIdToHex = buildColorIdToHexMap();
 		return CategoryListResp.from(

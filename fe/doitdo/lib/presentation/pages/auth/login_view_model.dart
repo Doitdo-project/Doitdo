@@ -25,7 +25,6 @@ class LoginViewModel extends AutoDisposeAsyncNotifier<User?> {
     required String username,
     required String password,
   }) async {
-    if (state.isLoading) return;
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final repo = ref.read(authRepositoryProvider);

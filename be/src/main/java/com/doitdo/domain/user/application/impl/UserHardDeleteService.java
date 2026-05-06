@@ -7,10 +7,7 @@ import com.doitdo.domain.inventory.repository.UserItemRepository;
 import com.doitdo.domain.notification.repository.DeviceTokenRepository;
 import com.doitdo.domain.notification.repository.NotificationRepository;
 import com.doitdo.domain.setting.repository.UserSettingRepository;
-import com.doitdo.domain.shop.repository.FurniturePurchaseLogRepository;
 import com.doitdo.domain.shop.repository.PurchaseLogRepository;
-import com.doitdo.domain.shop.repository.RoomFurniturePlacementRepository;
-import com.doitdo.domain.shop.repository.UserFurnitureRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.todo.repository.CategoryRepository;
@@ -44,9 +41,6 @@ public class UserHardDeleteService {
     private final AutoProviderRepository autoProviderRepository;
     private final DeviceTokenRepository deviceTokenRepository;
     private final PurchaseLogRepository purchaseLogRepository;
-    private final FurniturePurchaseLogRepository furniturePurchaseLogRepository;
-    private final RoomFurniturePlacementRepository roomFurniturePlacementRepository;
-    private final UserFurnitureRepository userFurnitureRepository;
     private final SnoozeHistoryRepository snoozeHistoryRepository;
     private final TodoRepository todoRepository;
     private final NotificationRepository notificationRepository;
@@ -72,8 +66,6 @@ public class UserHardDeleteService {
         deviceTokenRepository.deleteAllByUserId(userId);
 
         purchaseLogRepository.deleteAllByUserId(userId);
-        furniturePurchaseLogRepository.deleteAllByUserId(userId);
-        roomFurniturePlacementRepository.deleteAllByUserId(userId);
         snoozeHistoryRepository.deleteAllByUserId(userId);
 
         todoRepository.hardDeleteAllByUserId(userId);
@@ -82,7 +74,6 @@ public class UserHardDeleteService {
 
         categoryRepository.deleteAllByUserId(userId);
         userItemRepository.deleteAllByUserId(userId);
-        userFurnitureRepository.deleteAllByUserId(userId);
         userWalletRepository.deleteByUserId(userId);
         userSettingRepository.deleteByUserId(userId);
         characterUnlockRepository.deleteAllByUserId(userId);

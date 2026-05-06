@@ -1,8 +1,7 @@
 package com.doitdo.domain.todo.entity;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.DayOfWeek;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Locale;
@@ -49,10 +48,10 @@ public class Todo extends BaseTimeEntity {
 	@Column(name = "category_id")
 	private Long categoryId;
 
-	@Column(nullable = false, length = 20)
+	@Column(nullable = false, length = 255)
 	private String title;
 
-	@Column(length = 100)
+	@Column(columnDefinition = "TEXT")
 	private String content;
 
 	@Enumerated(EnumType.STRING)
@@ -62,9 +61,6 @@ public class Todo extends BaseTimeEntity {
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 20)
 	private TodoStatus status;
-
-	@Column(name = "done_date")
-	private LocalDate doneDate;
 
 	@Column(nullable = false)
 	private Integer priority;
@@ -98,14 +94,8 @@ public class Todo extends BaseTimeEntity {
 		this.isDeleted = true;
 	}
 
-	public void changeStatus(TodoStatus next) {
-		if (next == TodoStatus.DONE && this.status != TodoStatus.DONE) {
-			this.doneDate = LocalDate.now(ZoneId.of("Asia/Seoul"));
-		}
-		if (next != TodoStatus.DONE && this.status == TodoStatus.DONE) {
-			this.doneDate = null;
-		}
-		this.status = next;
+	public void changeStatus(TodoStatus status) {
+		this.status = status;
 	}
 
 	/** 경험치 지급 완료 마킹. 멱등 (이미 true 면 no-op). */

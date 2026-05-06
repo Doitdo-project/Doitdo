@@ -1,7 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:doitdo/presentation/pages/auth/welcome_view_model.dart';
-import 'package:doitdo/presentation/providers/active_palette_provider.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
 import 'package:doitdo/presentation/providers/current_user_provider.dart';
 
@@ -30,9 +28,7 @@ class AccountViewModel extends AutoDisposeAsyncNotifier<bool?> {
       // 전에) 먼저 시도. 실패하더라도 로그아웃 흐름은 계속 진행한다.
       await ref.read(fcmTokenRegistrarProvider).unregister();
       await ref.read(authRepositoryProvider).signOut();
-      await ref.read(activePaletteProvider.notifier).clear();
       ref.invalidate(currentUserProvider);
-      ref.read(welcomeViewModelProvider.notifier).reset();
       return true;
     });
   }

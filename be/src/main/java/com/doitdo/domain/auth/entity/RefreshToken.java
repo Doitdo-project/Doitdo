@@ -12,7 +12,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,12 +20,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Table(
-	name = "refresh_tokens",
-	uniqueConstraints = {
-		@UniqueConstraint(name = "uk_user_id", columnNames = "user_id")
-	}
-)
+@Table(name = "refresh_tokens")
 @EntityListeners(AuditingEntityListener.class)
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)

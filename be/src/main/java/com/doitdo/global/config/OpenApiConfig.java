@@ -105,14 +105,6 @@ public class OpenApiConfig {
     }
 
     @Bean
-    public GroupedOpenApi bugreport() {
-        return GroupedOpenApi.builder()
-            .group("bugreport")
-            .packagesToScan("com.doitdo.domain.bugreport.api.controller")
-            .build();
-    }
-
-    @Bean
     public GroupedOpenApi global() {
         return GroupedOpenApi.builder()
             .group("global")

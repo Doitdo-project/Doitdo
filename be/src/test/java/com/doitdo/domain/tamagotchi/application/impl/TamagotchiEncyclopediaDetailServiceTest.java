@@ -25,7 +25,6 @@ import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterHistoryRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.user.repository.UserRepository;
-import com.doitdo.global.cache.CacheEvictHelper;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TamagotchiErrorCode;
 
@@ -56,9 +55,6 @@ class TamagotchiEncyclopediaDetailServiceTest {
 	@Mock
 	private ApplicationEventPublisher eventPublisher;
 
-	@Mock
-	private CacheEvictHelper cacheEvictHelper;
-
 	private TamagotchiServiceImpl service() {
 		return new TamagotchiServiceImpl(
 			characterActionRepository,
@@ -68,8 +64,7 @@ class TamagotchiEncyclopediaDetailServiceTest {
 			userCharacterHistoryRepository,
 			characterSpeciesBackgroundRepository,
 			userRepository,
-			eventPublisher,
-			cacheEvictHelper
+			eventPublisher
 		);
 	}
 

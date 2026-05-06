@@ -7,10 +7,7 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/setting/widgets/default_screen_sheet.dart';
 import 'package:doitdo/presentation/pages/setting/widgets/theme_mode_sheet.dart';
-import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
-import 'package:doitdo/presentation/pages/setting/widgets/font_scale_sheet.dart';
 import 'package:doitdo/presentation/providers/default_screen_provider.dart';
-import 'package:doitdo/presentation/providers/font_scale_provider.dart';
 import 'package:doitdo/presentation/providers/theme_mode_provider.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_padding_layout.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
@@ -26,11 +23,8 @@ class SettingPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // CategoryPage 진입 전 팔레트 데이터를 미리 fetch해 로딩 스피너를 없앤다.
-    ref.read(paletteProvider);
     final themeMode = ref.watch(themeModeProvider);
     final defaultScreen = ref.watch(defaultScreenProvider);
-    final fontScale = ref.watch(fontScaleProvider);
 
     return DoitdoScaffold(
       body: DoitdoPaddingLayout(
@@ -78,22 +72,6 @@ class SettingPage extends ConsumerWidget {
                   trailing: _themeModeLabel(context, themeMode),
                   onTap: () => _openThemeModeSheet(context, ref),
                 ),
-                _SettingTile(
-                  icon: Icons.text_fields_rounded,
-                  label: '글자 크기',
-                  trailing: _fontScaleLabel(fontScale),
-                  onTap: () => _openFontScaleSheet(context, ref, fontScale),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _SettingCard(
-              children: [
-                _SettingTile(
-                  icon: Icons.chat_bubble_outline_rounded,
-                  label: '문의하기',
-                  onTap: () => context.push(AppRoutes.bugReport),
-                ),
               ],
             ),
             const SizedBox(height: 40),
@@ -124,23 +102,6 @@ Future<void> _openThemeModeSheet(BuildContext context, WidgetRef ref) async {
   // [이전] / 바깥 탭 = null, [확인] = 선택한 ThemeMode.
   if (picked != null && picked != currentMode) {
     await ref.read(themeModeProvider.notifier).set(picked);
-  }
-}
-
-String _fontScaleLabel(double scale) {
-  if (scale < 0.95) return '작게';
-  if (scale > 1.05) return '크게';
-  return '기본';
-}
-
-Future<void> _openFontScaleSheet(
-    BuildContext context, WidgetRef ref, double current) async {
-  final picked = await showFontScaleSheet(
-    context: context,
-    current: current,
-  );
-  if (picked != null && picked != current) {
-    await ref.read(fontScaleProvider.notifier).set(picked);
   }
 }
 

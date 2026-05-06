@@ -21,8 +21,7 @@ public final class ErrorCodeRegistry {
 		InventoryErrorCode.class,
 		ShopErrorCode.class,
 		NotificationErrorCode.class,
-		SettingErrorCode.class,
-		BugReportErrorCode.class
+		SettingErrorCode.class
 	);
 
 	private static final Map<String, ErrorCode> CODE_INDEX;

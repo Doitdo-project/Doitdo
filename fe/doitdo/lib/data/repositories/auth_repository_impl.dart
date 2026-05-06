@@ -268,16 +268,14 @@ class AuthRepositoryImpl extends BaseRepository implements AuthRepository {
   }
 
   @override
-  Future<void> signOut({bool skipServerLogout = false}) async {
+  Future<void> signOut() async {
     // 서버 세션 종료는 실패해도 로컬 정리는 반드시 수행.
     // safeApiCallNoData 는 DioException 을 타입드 예외로 변환하지만, 여기서는
     // 네트워크 실패에도 로컬만 비워주는 게 UX 상 자연스러워 try 로 감싼다.
-    if (!skipServerLogout) {
-      try {
-        await safeApiCallNoData(() => authApi.logout());
-      } catch (_) {
-        // no-op — 로컬 정리는 아래에서 계속 진행.
-      }
+    try {
+      await safeApiCallNoData(() => authApi.logout());
+    } catch (_) {
+      // no-op — 로컬 정리는 아래에서 계속 진행.
     }
     await local.clear();
     // 홈스크린 위젯에 남은 토큰/TODO 데이터도 비운다 — 디바이스를 다른 사람이 받았을 때

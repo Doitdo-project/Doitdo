@@ -102,10 +102,6 @@ class Todo {
         if (rangeEnd == null) return '$s ~';
         return '$s ~ ${rangeEnd!.month}월 ${rangeEnd!.day}일';
       case TodoDateType.repeat:
-        if (repeatType == '매일' || (repeatDays != null && repeatDays!.length == 7)) {
-          if (repeatStartDate == null) return '매일 반복';
-          return '매일 | ${repeatStartDate!.month}월 ${repeatStartDate!.day}일부터';
-        }
         if (repeatDays != null && repeatDays!.isNotEmpty) {
           const ko = ['일', '월', '화', '수', '목', '금', '토'];
           final days = repeatDays!.map((i) => ko[i]).join('·');

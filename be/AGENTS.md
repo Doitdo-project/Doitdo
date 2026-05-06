@@ -18,7 +18,7 @@
 ## 1. 프로젝트 한눈에
 
 - 서비스: **doitdo** (TODO + 다마고치)
-- 스택: Spring Boot 3.5.13 / Java 21 / Gradle / MariaDB / JPA / Redis / Spring Security
+- 스택: Spring Boot 3.5.13 / Java 21 / Gradle / MariaDB / JPA / Spring Security
 - 패키지 루트: `com.doitdo`
 - 진입점: `com.doitdo.DoitdoApplication`
 - 활성 프로파일: `dev` (원격 테스트 DB)

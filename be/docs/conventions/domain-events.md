@@ -107,26 +107,3 @@ public class XxxServiceImpl {
 ```
 
 발행은 항상 **조건부**로 한다. 상태가 이미 해당 단계면 이벤트를 발행하지 않는다 (중복 발행 방지).
-
----
-
-## 8. 과거 Todo 경험치 제외 정책 (S14P31D107-475)
-
-`TodoCompletionExpListener` 는 `expGranted` 멱등성 체크 직후, UC 조회 전에 **과거 기준일 가드**를 수행한다.
-
-### 기준일 결정 규칙
-
-| TodoType | 기준일 (criteriaDate) |
-|---|---|
-| `SOMEDAY` | `null` → 가드 통과 (날짜 무관 지급) |
-| `PERIOD` | `endDate != null` 이면 `endDate`, 아니면 `startDate` |
-| `NORMAL` / 그 외 | `startDate` |
-
-- `criteriaDate.isBefore(today)` 이면 `return` (skip). `expGranted` 마킹 없음.
-- `today` = `LocalDate.now(ZoneId.of("Asia/Seoul"))` (KST 기준)
-
-### 설계 의도
-
-- 날짜가 지난 Todo 를 뒤늦게 완료해도 경험치를 받을 수 없다.
-- `SOMEDAY` 는 날짜 개념이 없는 타입이므로 언제 완료해도 지급한다.
-- 스킵 시 `expGranted` 를 마킹하지 않는다 — 날짜 오류가 수정되는 경우는 없으므로 재진입 시에도 동일하게 스킵된다.
