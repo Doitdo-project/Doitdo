@@ -7,6 +7,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/domain/entities/character.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
+import 'package:doitdo/presentation/pages/tamagochi/widgets/pixel_icon_box.dart';
 
 /// 다마고치 메인 상단의 방 일러스트 카드.
 ///
@@ -105,21 +106,29 @@ class CharacterCard extends StatelessWidget {
             ),
           ),
 
-          // 우측 상단 아이콘 (상점 / 도감) — 캐릭터 수령 이후에만 노출
+          // 우측 상단 아이콘 (상점 / 도감) — 캐릭터 수령 이후에만 노출.
+          // 픽셀 톤 방 일러스트와 결을 맞추기 위해 PixelIconBox 로 감싸고,
+          // 아이콘은 shop / book 으로 교체.
           if (!hideChrome)
             Positioned(
               top: topSafePadding + 8.h,
               right: 16.w,
               child: Column(
                 children: [
-                  _RoundIconButton(
-                    icon: Icons.shopping_basket_outlined,
-                    onTap: onTapShop,
-                  ),
-                  SizedBox(height: 8.h),
-                  _RoundIconButton(
-                    icon: Icons.menu_book_outlined,
+                  PixelIconBox(
                     onTap: onTapCollection,
+                    child: Image.asset(
+                      'assets/images/book.png',
+                      width: 24.w,
+                    ),
+                  ),
+                  SizedBox(height: 10.h),
+                  PixelIconBox(
+                    onTap: onTapShop,
+                    child: Image.asset(
+                      'assets/images/shop.png',
+                      width: 24.w,
+                    ),
                   ),
                 ],
               ),
@@ -169,31 +178,6 @@ class CharacterCard extends StatelessWidget {
       eyeGifCharacterId: isAction ? null : c.characterId,
       imageHeight: 100.h,
       onTap: onCharacterTap,
-    );
-  }
-}
-
-class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({required this.icon, this.onTap});
-
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10.r),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10.r),
-        child: Padding(
-          padding: EdgeInsets.all(8.w),
-          child: Icon(icon, size: 20.sp, color: Colors.black87),
-        ),
-      ),
     );
   }
 }
