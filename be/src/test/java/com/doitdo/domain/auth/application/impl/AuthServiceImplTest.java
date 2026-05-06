@@ -20,6 +20,7 @@ import com.doitdo.domain.auth.api.dto.req.SignupReq;
 import com.doitdo.domain.auth.api.dto.resp.SignupResp;
 import com.doitdo.domain.auth.repository.RefreshTokenRepository;
 import com.doitdo.domain.setting.repository.UserSettingRepository;
+import com.doitdo.domain.shop.application.DefaultFurnitureRegistrar;
 import com.doitdo.domain.streak.repository.UserStreakRepository;
 import com.doitdo.domain.tamagotchi.entity.Character;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
@@ -62,6 +63,9 @@ class AuthServiceImplTest {
 	private DefaultCategoryRegistrar defaultCategoryRegistrar;
 
 	@Mock
+	private DefaultFurnitureRegistrar defaultFurnitureRegistrar;
+
+	@Mock
 	private CharacterRepository characterRepository;
 
 	@Mock
@@ -78,6 +82,7 @@ class AuthServiceImplTest {
 			authenticationManager,
 			jwtUtil,
 			defaultCategoryRegistrar,
+			defaultFurnitureRegistrar,
 			characterRepository,
 			userCharacterRepository
 		);
@@ -118,5 +123,6 @@ class AuthServiceImplTest {
 		ArgumentCaptor<UserCharacter> captor = forClass(UserCharacter.class);
 		then(userCharacterRepository).should().save(captor.capture());
 		assertThat(captor.getValue().getCharacterId()).isEqualTo(26L);
+		then(defaultFurnitureRegistrar).should().registerFor(1L);
 	}
 }

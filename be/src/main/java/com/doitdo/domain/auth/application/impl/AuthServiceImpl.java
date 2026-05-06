@@ -12,6 +12,7 @@ import com.doitdo.domain.auth.entity.RefreshToken;
 import com.doitdo.domain.auth.repository.RefreshTokenRepository;
 import com.doitdo.domain.setting.entity.UserSetting;
 import com.doitdo.domain.setting.repository.UserSettingRepository;
+import com.doitdo.domain.shop.application.DefaultFurnitureRegistrar;
 import com.doitdo.domain.streak.entity.UserStreak;
 import com.doitdo.domain.streak.repository.UserStreakRepository;
 import com.doitdo.domain.tamagotchi.entity.Character;
@@ -56,6 +57,7 @@ public class AuthServiceImpl implements AuthService {
 	private final AuthenticationManager authenticationManager;
 	private final JwtUtil jwtUtil;
 	private final DefaultCategoryRegistrar defaultCategoryRegistrar;
+	private final DefaultFurnitureRegistrar defaultFurnitureRegistrar;
 	private final CharacterRepository characterRepository;
 	private final UserCharacterRepository userCharacterRepository;
 
@@ -82,6 +84,7 @@ public class AuthServiceImpl implements AuthService {
 		userSettingRepository.save(UserSetting.create(user.getUserId()));
 		userStreakRepository.save(UserStreak.create(user.getUserId()));
 		defaultCategoryRegistrar.registerFor(user.getUserId());
+		defaultFurnitureRegistrar.registerFor(user.getUserId());
 
 		// 회원가입 직후부터 exp 시스템 대상이 되도록 EGG UserCharacter 자동 생성.
 		// 기존 /api/characters/me/egg (receiveEgg) 는 이미 멱등이라 호환성 영향 없음.
