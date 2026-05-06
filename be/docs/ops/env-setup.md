@@ -35,6 +35,28 @@ cp be/env/.env.dev.example be/env/.env.dev
 |---|---|---|---|
 | `jpa.ddl.auto` | `update` | `validate` / `update` / `create` / `create-drop` / `none` | Hibernate 스키마 전략. 공용 dev DB 에 영향 가므로 개인 환경에선 `validate` 권장. `env/.env.dev` 에 지정. |
 
+## 2-1-1. SQL 로깅 토글
+
+운영 기본값은 `false` (로그 없음). 디버깅 필요 시 `env/.env.dev` 에 아래 변수를 추가한다.
+
+| 변수 | 기본값 | 용도 |
+|---|---|---|
+| `JPA_SHOW_SQL` | `false` | `spring.jpa.show-sql` 토글 |
+| `JPA_FORMAT_SQL` | `false` | Hibernate `format_sql` 토글 |
+| `LOG_HIBERNATE_SQL` | `INFO` | `org.hibernate.SQL` 로거 레벨 |
+| `LOG_HIBERNATE_BIND` | `WARN` | 바인딩 파라미터 로거 레벨 |
+
+SQL 전체 활성화 예시:
+
+```properties
+JPA_SHOW_SQL=true
+JPA_FORMAT_SQL=true
+LOG_HIBERNATE_SQL=DEBUG
+LOG_HIBERNATE_BIND=TRACE
+```
+
+상세 설명: [`../architecture/observability.md`](../architecture/observability.md)
+
 ## 2-2. Redis 설정
 
 Spring Cache는 Redis를 사용한다. Docker 내부 dev/prod 환경은 `redis`, 호스트에서 직접 실행하는 local 환경은 `localhost`를 쓴다.

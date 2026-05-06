@@ -89,6 +89,10 @@ com.doitdo
 - ERD 원본/도메인 매핑: [`erd.md`](erd.md)
 - Redis 캐싱: [`caching.md`](caching.md)
 
+## 관측성
+
+액세스 로그 / 트랜잭션 타이밍 AOP / SQL 로깅 토글: [`observability.md`](observability.md)
+
 ## 환경/실행
 
 - 로컬 부팅: [`../ops/run-local.md`](../ops/run-local.md)
