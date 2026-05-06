@@ -276,14 +276,22 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
               .evolve(nextChar.userCharacterId);
         });
 
-    // Todo 완료 count 가 증가하면 exp 가 올라갔을 가능성이 있으므로 캐릭터 재조회.
+    // 새로 isDone=true 로 전환된 todoId 가 있을 때만 캐릭터 재조회.
+    // _doneCount 비교는 TODO 생성(addTodo) 시 state 교체 타이밍에도 발화할 수 있어
+    // done-id 집합 차분으로 "실제로 완료된 항목이 늘었는지" 를 정확히 판별한다.
     // BE 는 AFTER_COMMIT 리스너로 exp 를 비동기 부여하므로 곧장 GET /me 를 부르면
     // 옛 값을 받을 수 있다. 200ms 먼저 조회해보고 exp 변화가 없으면 500ms 뒤 한 번 더.
     ref.listen<TodoState>(todoViewModelProvider, (prev, next) {
       if (prev == null) return;
-      final prevDone = _doneCount(prev);
-      final nextDone = _doneCount(next);
-      if (nextDone > prevDone) {
+      final prevDoneIds = {
+        ...prev.allTodos.where((t) => t.isDone).map((t) => t.id),
+        ...prev.allSomedayTodos.where((t) => t.isDone).map((t) => t.id),
+      };
+      final nextDoneIds = {
+        ...next.allTodos.where((t) => t.isDone).map((t) => t.id),
+        ...next.allSomedayTodos.where((t) => t.isDone).map((t) => t.id),
+      };
+      if (nextDoneIds.difference(prevDoneIds).isNotEmpty) {
         _refreshCharacterAfterTodoDone();
       }
     });
@@ -443,11 +451,6 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     );
   }
 }
-
-/// TodoState 의 완료된 할 일 총 개수 (오늘의 할 일 + 언젠가 할 일).
-int _doneCount(TodoState s) =>
-    s.allTodos.where((t) => t.isDone).length +
-        s.allSomedayTodos.where((t) => t.isDone).length;
 
 /// 해당 Todo 가 "오늘의 할 일" 에 포함되는지. 단일 날짜는 동일 일자, 기간은 오늘이
 /// 시작~종료 사이, 반복은 시작일이 오늘 이전이고 종료일이 없거나 오늘 이후면 포함.
