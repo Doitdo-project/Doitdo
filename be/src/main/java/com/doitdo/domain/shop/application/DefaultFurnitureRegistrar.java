@@ -11,6 +11,7 @@ import com.doitdo.global.exception.CustomException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
@@ -24,6 +25,7 @@ public class DefaultFurnitureRegistrar {
 	private final UserFurnitureRepository userFurnitureRepository;
 	private final RoomFurniturePlacementRepository roomFurniturePlacementRepository;
 
+	@Transactional
 	public void registerFor(Long userId) {
 		for (String code : DEFAULT_FURNITURE_CODES) {
 			Furniture furniture = furnitureRepository.findByCode(code)
