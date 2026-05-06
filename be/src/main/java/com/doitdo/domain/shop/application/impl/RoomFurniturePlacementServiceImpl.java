@@ -1,6 +1,11 @@
 package com.doitdo.domain.shop.application.impl;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,16 +53,30 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 	}
 
 	private boolean missingWallOrFloor(List<RoomFurniturePlacement> placements) {
-		java.util.Set<String> categories = placements.stream()
-				.map(this::findFurnitureCategory)
-				.collect(java.util.stream.Collectors.toSet());
-		return !categories.contains("WALL") || !categories.contains("FLOOR");
-	}
+		List<Long> userFurnitureIds = placements.stream()
+				.map(RoomFurniturePlacement::getUserFurnitureId)
+				.toList();
+		Map<Long, UserFurniture> userFurnitureById = userFurnitureRepository.findAllById(userFurnitureIds)
+				.stream()
+				.collect(Collectors.toMap(UserFurniture::getUserFurnitureId, Function.identity()));
+		List<Long> furnitureIds = userFurnitureById.values()
+				.stream()
+				.map(UserFurniture::getFurnitureId)
+				.toList();
+		Map<Long, Furniture> furnitureById = furnitureRepository.findAllById(furnitureIds)
+				.stream()
+				.collect(Collectors.toMap(Furniture::getFurnitureId, Function.identity()));
 
-	private String findFurnitureCategory(RoomFurniturePlacement placement) {
-		UserFurniture userFurniture = userFurnitureRepository.findById(placement.getUserFurnitureId())
-				.orElseThrow(() -> new CustomException(ShopErrorCode.USER_FURNITURE_NOT_FOUND));
-		return findFurniture(userFurniture.getFurnitureId()).getCategory();
+		Set<String> categories = placements.stream()
+				.map(RoomFurniturePlacement::getUserFurnitureId)
+				.map(userFurnitureById::get)
+				.filter(Objects::nonNull)
+				.map(UserFurniture::getFurnitureId)
+				.map(furnitureById::get)
+				.filter(Objects::nonNull)
+				.map(Furniture::getCategory)
+				.collect(Collectors.toSet());
+		return !categories.contains("WALL") || !categories.contains("FLOOR");
 	}
 
 	@Override

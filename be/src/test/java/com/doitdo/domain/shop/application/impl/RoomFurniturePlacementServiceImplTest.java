@@ -90,12 +90,14 @@ class RoomFurniturePlacementServiceImplTest {
 
 		given(roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId))
 			.willReturn(List.of(chairPlacement), List.of(wallPlacement, floorPlacement, chairPlacement));
-		given(userFurnitureRepository.findById(19L)).willReturn(Optional.of(chairUserFurniture));
+		given(userFurnitureRepository.findAllById(List.of(19L))).willReturn(List.of(chairUserFurniture));
+		given(furnitureRepository.findAllById(List.of(10L))).willReturn(List.of(chair));
 		given(userFurnitureRepository.findById(20L)).willReturn(Optional.of(wallUserFurniture));
 		given(userFurnitureRepository.findById(21L)).willReturn(Optional.of(floorUserFurniture));
-		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(10L)).willReturn(Optional.of(chair));
+		given(userFurnitureRepository.findById(19L)).willReturn(Optional.of(chairUserFurniture));
 		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(57L)).willReturn(Optional.of(wall));
 		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(58L)).willReturn(Optional.of(floor));
+		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(10L)).willReturn(Optional.of(chair));
 
 		List<RoomFurniturePlacementResp> items = service.getMyRoom(userId).items();
 
