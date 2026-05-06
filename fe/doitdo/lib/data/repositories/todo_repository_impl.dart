@@ -1,3 +1,4 @@
+import 'package:doitdo/core/errors/exceptions.dart';
 import 'package:doitdo/core/network/base_repository.dart';
 import 'package:doitdo/data/datasources/todo_api.dart';
 import 'package:doitdo/domain/repositories/todo_repository.dart';
@@ -16,7 +17,7 @@ class TodoRepositoryImpl extends BaseRepository implements TodoRepository {
   final TodoApi _todoApi;
 
   @override
-  Future<void> createTodo(Todo todo) async {
+  Future<TodoDetailResponseDto> createTodo(Todo todo) async {
     // ✏️ 수정: dateType 에 맞는 startDate 선택
     DateTime? startDateObj;
     switch (todo.dateType) {
@@ -81,7 +82,18 @@ class TodoRepositoryImpl extends BaseRepository implements TodoRepository {
       if (formattedAlertTime != null) 'alertTime': formattedAlertTime,
     };
 
-    await safeApiCallNoData(() => _todoApi.createTodo(body));
+    // POST 응답의 data 필드를 TodoDetailResponseDto 로 파싱해 반환한다.
+    // TodoApi.createTodo 가 ApiResponse<dynamic> 을 반환하므로
+    // data 를 Map<String, dynamic> 으로 캐스팅 후 fromJson 호출.
+    final response = await _todoApi.createTodo(body);
+    if (!response.isSuccess) {
+      throw ServerException(response.message, statusCode: response.status);
+    }
+    final rawData = response.data;
+    if (rawData == null) {
+      throw const ServerException('TODO 생성 응답에 data 가 없습니다.');
+    }
+    return TodoDetailResponseDto.fromJson(rawData as Map<String, dynamic>);
   }
 
   // [T03] 상태 변경 구현
