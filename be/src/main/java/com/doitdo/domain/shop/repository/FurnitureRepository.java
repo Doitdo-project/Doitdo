@@ -14,4 +14,6 @@ public interface FurnitureRepository extends JpaRepository<Furniture, Long> {
 	List<Furniture> findAllByCategoryAndIsDeletedFalseOrderByFurnitureIdAsc(String category);
 
 	Optional<Furniture> findByFurnitureIdAndIsDeletedFalse(Long furnitureId);
+
+	Optional<Furniture> findByCode(String code);
 }

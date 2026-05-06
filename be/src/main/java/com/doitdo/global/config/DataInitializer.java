@@ -1,5 +1,7 @@
 package com.doitdo.global.config;
 
+import com.doitdo.domain.shop.entity.Furniture;
+import com.doitdo.domain.shop.repository.FurnitureRepository;
 import com.doitdo.domain.todo.entity.Palette;
 import com.doitdo.domain.todo.entity.PaletteColor;
 import com.doitdo.domain.todo.repository.PaletteColorRepository;
@@ -25,6 +27,19 @@ public class DataInitializer implements CommandLineRunner {
 	 * 기본 카테고리(공부/운동/업무/집안일/기타) 색상으로 사용된다.
 	 */
 	private record PaletteSeed(String name, List<String> colors) {}
+
+	private record FurnitureSeed(
+			String code,
+			String name,
+			String description,
+			String category,
+			String imageUrl,
+			Integer defaultX,
+			Integer defaultY,
+			Integer width,
+			Integer height,
+			Integer zIndex
+	) {}
 
 	private static final List<PaletteSeed> PALETTE_SEEDS = List.of(
 			new PaletteSeed("기본", List.of(
@@ -69,12 +84,45 @@ public class DataInitializer implements CommandLineRunner {
 			))
 	);
 
+	private static final List<FurnitureSeed> FURNITURE_SEEDS = List.of(
+			new FurnitureSeed(
+					"DEFAULT_WALL",
+					"기본 벽지",
+					"신규 사용자 기본 벽지",
+					"WALL",
+					"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/wall/default_wall.webp",
+					0,
+					0,
+					390,
+					420,
+					0
+			),
+			new FurnitureSeed(
+					"DEFAULT_FLOOR",
+					"기본 바닥",
+					"신규 사용자 기본 바닥",
+					"FLOOR",
+					"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/floor/default_floor.webp",
+					0,
+					420,
+					390,
+					220,
+					1
+			)
+	);
+
 	private final PaletteRepository paletteRepository;
 	private final PaletteColorRepository paletteColorRepository;
+	private final FurnitureRepository furnitureRepository;
 
 	@Override
 	@Transactional
 	public void run(String... args) {
+		initializePalettes();
+		initializeDefaultFurnitures();
+	}
+
+	private void initializePalettes() {
 		if (paletteRepository.count() > 0) {
 			return;
 		}
@@ -92,6 +140,32 @@ public class DataInitializer implements CommandLineRunner {
 				));
 			}
 			log.info("Palette '{}' with {} colors initialized", seed.name(), seed.colors().size());
+		}
+	}
+
+	private void initializeDefaultFurnitures() {
+		for (FurnitureSeed seed : FURNITURE_SEEDS) {
+			if (furnitureRepository.findByCode(seed.code()).isPresent()) {
+				continue;
+			}
+
+			furnitureRepository.save(Furniture.builder()
+					.code(seed.code())
+					.name(seed.name())
+					.description(seed.description())
+					.category(seed.category())
+					.price(0)
+					.imageUrl(seed.imageUrl())
+					.thumbnailUrl(seed.imageUrl())
+					.defaultX(seed.defaultX())
+					.defaultY(seed.defaultY())
+					.width(seed.width())
+					.height(seed.height())
+					.zIndex(seed.zIndex())
+					.isOnSale(false)
+					.isDeleted(false)
+					.build());
+			log.info("Default furniture '{}' initialized", seed.code());
 		}
 	}
 }
