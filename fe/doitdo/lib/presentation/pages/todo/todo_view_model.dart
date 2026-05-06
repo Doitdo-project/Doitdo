@@ -406,6 +406,55 @@ class TodoViewModel extends StateNotifier<TodoState> {
     _updateDisplayedTodos();
   }
 
+  /// 낙관적 UI: 로컬 ID 를 가진 Todo 를 즉시 목록에 삽입.
+  /// API 응답 전 사용자에게 즉각적인 피드백을 준다.
+  void insertLocalTodo(Todo todo) {
+    if (todo.dateType == TodoDateType.someday) {
+      state = state.copyWith(
+        allSomedayTodos: [...state.allSomedayTodos, todo],
+      );
+    } else {
+      state = state.copyWith(allTodos: [...state.allTodos, todo]);
+      _updateCalendarEvents(state.allTodos);
+    }
+    _updateDisplayedTodos();
+  }
+
+  /// 낙관적 UI: API 성공 후 로컬 Todo 를 서버 응답으로 교체 (실제 ID 반영).
+  void replaceLocalTodo(String localId, TodoDetailResponseDto dto) {
+    final serverTodo = _dtoToTodo(dto);
+    if (state.allSomedayTodos.any((t) => t.id == localId)) {
+      state = state.copyWith(
+        allSomedayTodos: state.allSomedayTodos
+            .map((t) => t.id == localId ? serverTodo : t)
+            .toList(),
+      );
+    } else {
+      final updated = state.allTodos
+          .map((t) => t.id == localId ? serverTodo : t)
+          .toList();
+      state = state.copyWith(allTodos: updated);
+      _updateCalendarEvents(updated);
+    }
+    _updateDisplayedTodos();
+  }
+
+  /// 낙관적 UI: API 실패 시 로컬 Todo 를 목록에서 제거.
+  void removeLocalTodo(String localId) {
+    if (state.allSomedayTodos.any((t) => t.id == localId)) {
+      state = state.copyWith(
+        allSomedayTodos: state.allSomedayTodos
+            .where((t) => t.id != localId)
+            .toList(),
+      );
+    } else {
+      final updated = state.allTodos.where((t) => t.id != localId).toList();
+      state = state.copyWith(allTodos: updated);
+      _updateCalendarEvents(updated);
+    }
+    _updateDisplayedTodos();
+  }
+
   /// TodoDetailResponseDto → Todo 변환 헬퍼.
   /// fetchTodos 의 DTO 매핑 로직과 동일한 규칙을 따른다.
   Todo _dtoToTodo(TodoDetailResponseDto dto) {
