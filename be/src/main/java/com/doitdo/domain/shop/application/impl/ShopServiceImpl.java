@@ -2,6 +2,7 @@ package com.doitdo.domain.shop.application.impl;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -46,7 +47,8 @@ public class ShopServiceImpl implements ShopService {
 	public FurnitureShopResp listFurnitures(Long userId, String category) {
 		List<Furniture> furnitures = category == null || category.isBlank()
 			? furnitureRepository.findAllByIsDeletedFalseOrderByFurnitureIdAsc()
-			: furnitureRepository.findAllByCategoryAndIsDeletedFalseOrderByFurnitureIdAsc(category);
+			: furnitureRepository.findAllByCategoryAndIsDeletedFalseOrderByFurnitureIdAsc(
+				category.trim().toUpperCase(Locale.ROOT));
 		Set<Long> ownedFurnitureIds = new HashSet<>(userFurnitureRepository.findFurnitureIdsByUserId(userId));
 		Set<Long> placedFurnitureIds = findPlacedFurnitureIds(userId);
 		List<FurnitureShopItemResp> items = furnitures.stream()
