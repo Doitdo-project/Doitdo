@@ -88,8 +88,7 @@ class CharacterCard extends StatelessWidget {
           Positioned(
             left: 0,
             right: 0,
-            top: topSafePadding,
-            bottom: RoomLayer.characterBottomInset.h,
+            top: topSafePadding+48,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -172,7 +171,7 @@ class CharacterCard extends StatelessWidget {
       key: ValueKey('grown-$imageUrl-${c.characterId}-${state.actionTick}'),
       thumbnailUrl: imageUrl,
       eyeGifCharacterId: isAction ? null : c.characterId,
-      imageHeight: 112.h,
+      imageHeight: 120.h,
       onTap: onCharacterTap,
     );
   }
@@ -372,6 +371,10 @@ class _GrownCharacterState extends State<_GrownCharacter> {
   static const _blinkMin = Duration(milliseconds: 500);
   static const _blinkMax = Duration(milliseconds: 1000);
 
+  // [DEV-TEMP] 평상시 png ↔ blink gif 토글을 끄고 base eye gif 만 항상 노출한다.
+  // 정식 캐릭터 png/webp 에셋이 들어오면 false 로 돌려 원래 깜빡임 흐름 복구.
+  static const bool _alwaysShowBaseGif = true;
+
   Timer? _scheduleTimer;
   Timer? _blinkTimer;
 
@@ -405,6 +408,7 @@ class _GrownCharacterState extends State<_GrownCharacter> {
   }
 
   void _scheduleNextBlink() {
+    if (_alwaysShowBaseGif) return;
     if (widget.eyeGifCharacterId == null) return;
     final delay = _randomDuration(_intervalMin, _intervalMax);
     _scheduleTimer = Timer(delay, _startBlink);
@@ -449,7 +453,16 @@ class _GrownCharacterState extends State<_GrownCharacter> {
 
     final blinkAsset = _blinkAsset;
     Widget image;
-    if (blinkAsset != null && id != null) {
+    if (_alwaysShowBaseGif && id != null) {
+      // [DEV-TEMP] 토글 없이 base eye gif 만. 로드 실패 시 png 폴백.
+      image = Image.asset(
+        'assets/animations/eye/$id.gif',
+        height: widget.imageHeight,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.medium,
+        errorBuilder: (_, _, _) => fallback,
+      );
+    } else if (blinkAsset != null && id != null) {
       final base = 'assets/animations/eye/$id.gif';
       image = Image.asset(
         blinkAsset,
