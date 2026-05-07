@@ -20,6 +20,7 @@ import com.doitdo.domain.user.api.dto.req.RegisterBirthDateReq;
 import com.doitdo.domain.user.api.dto.req.WithdrawReq;
 import com.doitdo.domain.user.api.dto.resp.CheckDuplicateResp;
 import com.doitdo.domain.user.api.dto.resp.UserInfoResp;
+import com.doitdo.domain.user.api.dto.resp.WalletBalanceResp;
 import com.doitdo.domain.user.application.UserService;
 import com.doitdo.domain.user.entity.User;
 import com.doitdo.domain.user.repository.UserRepository;
@@ -86,6 +87,14 @@ public class UserServiceImpl implements UserService {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new CustomException(UserErrorCode.U01_002));
 		return UserInfoResp.from(user);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public WalletBalanceResp getMyBalance(Long userId) {
+		return userWalletRepository.findByUserId(userId)
+				.map(wallet -> new WalletBalanceResp(wallet.getBalance()))
+				.orElseThrow(() -> new CustomException(UserErrorCode.U05_001));
 	}
 
 	@Override

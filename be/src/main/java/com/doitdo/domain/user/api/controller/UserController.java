@@ -7,8 +7,10 @@ import com.doitdo.domain.user.api.dto.req.RegisterBirthDateReq;
 import com.doitdo.domain.user.api.dto.req.WithdrawReq;
 import com.doitdo.domain.user.api.dto.resp.CheckDuplicateResp;
 import com.doitdo.domain.user.api.dto.resp.UserInfoResp;
+import com.doitdo.domain.user.api.dto.resp.WalletBalanceResp;
 import com.doitdo.domain.user.application.UserService;
 import com.doitdo.global.api.response.GlobalApiResponse;
+import com.doitdo.global.swagger.ApiErrorCodes;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -49,6 +51,14 @@ public class UserController {
 	public GlobalApiResponse<UserInfoResp> getMyInfo(
 			@AuthenticationPrincipal CustomUserDetails userDetails) {
 		return GlobalApiResponse.ok(userService.getMyInfo(userDetails.getUserId()));
+	}
+
+	@Operation(summary = "내 잔액 조회", description = "로그인한 사용자 본인의 월렛 잔액을 조회")
+	@ApiErrorCodes({"U05-001"})
+	@GetMapping("/me/balance")
+	public GlobalApiResponse<WalletBalanceResp> getMyBalance(
+			@AuthenticationPrincipal CustomUserDetails userDetails) {
+		return GlobalApiResponse.ok(userService.getMyBalance(userDetails.getUserId()));
 	}
 
 	@Operation(summary = "비밀번호 변경", description = "현재 비밀번호 확인 후 새 비밀번호로 변경. 소셜 계정은 불가. 변경 시 기존 refresh token 무효화")

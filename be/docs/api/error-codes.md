@@ -146,6 +146,12 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 |---|---|---|---|
 | `U00_009` | `U00-009` | 403 | 온보딩 미완료 사용자가 보호 API 호출 시 차단 |
 
+### `UserErrorCode` 추가 코드 (내 잔액 조회, 2026-05)
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `U05_001` | `U05-001` | 404 | 지갑 데이터를 찾을 수 없음 |
+
 ### `TodoErrorCode` 추가 코드 (alert/recurrence redesign, 2026-04)
 
 | 상수 | code | HTTP | 의미 |
