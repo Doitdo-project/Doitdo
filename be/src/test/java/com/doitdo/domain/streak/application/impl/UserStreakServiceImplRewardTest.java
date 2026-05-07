@@ -63,9 +63,9 @@ class UserStreakServiceImplRewardTest {
 
 		assertThat(resp.rewarded()).isTrue();
 		assertThat(resp.streakCount()).isEqualTo(7);
-		assertThat(resp.rewardAmount()).isEqualTo(100);
-		assertThat(resp.balance()).isEqualTo(100);
-		assertThat(wallet.getBalance()).isEqualTo(100);
+		assertThat(resp.rewardAmount()).isEqualTo(200);
+		assertThat(resp.balance()).isEqualTo(200);
+		assertThat(wallet.getBalance()).isEqualTo(200);
 		verify(streakRewardLogRepository).save(org.mockito.ArgumentMatchers.any(StreakRewardLog.class));
 	}
 

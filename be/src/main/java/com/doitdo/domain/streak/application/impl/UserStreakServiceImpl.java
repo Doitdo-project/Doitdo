@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserStreakServiceImpl implements UserStreakService {
 
 	private static final int REWARD_INTERVAL_DAYS = 7;
-	private static final int SEVEN_DAY_REWARD_AMOUNT = 100;
+	private static final int SEVEN_DAY_REWARD_AMOUNT = 200;
 
 	private final UserStreakRepository userStreakRepository;
 	private final UserWalletRepository userWalletRepository;
