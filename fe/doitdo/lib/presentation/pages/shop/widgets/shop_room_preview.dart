@@ -105,8 +105,6 @@ Color _categoryAccent(ShopCategory category) {
       return const Color(0xFF6FA86F);
     case ShopCategory.rug:
       return const Color(0xFFD08AA0);
-    case ShopCategory.wardrobe:
-      return const Color(0xFF8B7E66);
     case ShopCategory.etc:
       return AppColors.shopText;
   }

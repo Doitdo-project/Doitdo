@@ -32,13 +32,12 @@ class RoomFurnitureSlot {
 /// `BACKGROUND` 카테고리는 별도 처리(컨테이너 꽉 채우는 베이스) 라 여기 없다.
 /// 매칭 슬롯이 없는 카테고리는 [kRoomFurnitureFallbackSlot] 으로 대피.
 const Map<ShopCategory, RoomFurnitureSlot> kRoomFurnitureSlots = {
-  ShopCategory.bed:      RoomFurnitureSlot(left: 0.00, bottom: 0.00, width: 0.32, height: 0.38),
+  ShopCategory.bed:      RoomFurnitureSlot(left: 0.00, bottom: 0.00, width: 0.26, height: 0.34),
   ShopCategory.plant:    RoomFurnitureSlot(right: 0.04, bottom: 0.04, width: 0.16, height: 0.28),
-  ShopCategory.rug:      RoomFurnitureSlot(left: 0.36, bottom: 0.03, width: 0.32, height: 0.32),
-  ShopCategory.desk:     RoomFurnitureSlot(left: 0.04, top: 0.32, width: 0.30, height: 0.30),
-  ShopCategory.tv:       RoomFurnitureSlot(right: 0.01, top: 0.26, width: 0.22, height: 0.22),
-  ShopCategory.wardrobe: RoomFurnitureSlot(right: 0.00, top: 0.38, width: 0.24, height: 0.24),
-  ShopCategory.window:   RoomFurnitureSlot(right: 0.28, top: 0.08, width: 0.32, height: 0.32),
+  ShopCategory.rug:      RoomFurnitureSlot(left: 0.36, bottom: 0.12, width: 0.30, height: 0.28),
+  ShopCategory.desk:     RoomFurnitureSlot(left: 0.04, top: 0.32, width: 0.28, height: 0.30),
+  ShopCategory.tv:       RoomFurnitureSlot(right: 0.0, top: 0.30, width: 0.28, height: 0.28),
+  ShopCategory.window:   RoomFurnitureSlot(right: 0.30, top: 0.08, width: 0.28, height: 0.28),
   ShopCategory.clock:    RoomFurnitureSlot(left: 0.08, top: 0.12, width: 0.12, height: 0.12),
 };
 

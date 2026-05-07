@@ -13,7 +13,6 @@ enum ShopCategory {
   tv('티비', Icons.tv_outlined),
   plant('화분', Icons.local_florist_outlined),
   rug('카펫', Icons.texture_rounded),
-  wardrobe('옷장', Icons.checkroom_rounded),
   etc('기타', Icons.more_horiz_rounded);
 
   const ShopCategory(this.label, this.icon);
@@ -43,8 +42,6 @@ enum ShopCategory {
         return ShopCategory.plant;
       case 'RUG':
         return ShopCategory.rug;
-      case 'WARDROBE':
-        return ShopCategory.wardrobe;
       default:
         return ShopCategory.etc;
     }
