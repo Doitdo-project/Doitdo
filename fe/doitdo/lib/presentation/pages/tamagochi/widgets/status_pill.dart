@@ -1,11 +1,10 @@
 import 'dart:ui';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/domain/entities/character.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /// 캐릭터 카드 하단에 떠있는 가로형 상태 알약(카드).
 ///
@@ -66,7 +65,13 @@ class _StatusPillState extends State<StatusPill> {
   void _showPopover({
     required GlobalKey anchorKey,
     required Widget Function(BuildContext) builder,
+    double? maxWidth,
   }) {
+    // 탭 콜백이 발화하는 시점에 부모가 rebuild 되면서 이 State 가 deactivate
+    // 직전인 경우가 있다 (예: 슬라이더 드래그 중 setState 폭격). 그 상태에서
+    // `Overlay.of(context)` 를 호출하면 "deactivated widget's ancestor is unsafe"
+    // 가 던져지므로 mounted 로 한 번 더 가드.
+    if (!mounted) return;
     _hidePopover();
 
     final box = anchorKey.currentContext?.findRenderObject() as RenderBox?;
@@ -77,39 +82,63 @@ class _StatusPillState extends State<StatusPill> {
     final anchorSize = box.size;
     final screen = overlayBox.size;
     final horizontalPadding = 16.w;
-    final tailCenterX = pos.dx + anchorSize.width / 2;
-    final tailRelX = (tailCenterX - horizontalPadding)
-        .clamp(20.w, screen.width - horizontalPadding * 2 - 20.w);
+    final anchorCenterX = pos.dx + anchorSize.width / 2;
 
-    _entry = OverlayEntry(builder: (ctx) {
-      return Stack(
-        children: [
-          // 바깥 탭 → 닫기 (배경 흐림 없이 투명).
-          Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _hidePopover,
-            ),
-          ),
-          Positioned(
-            left: horizontalPadding,
-            right: horizontalPadding,
-            // 팝오버 하단이 anchor 윗변 바로 위(8.h gap)에 닿도록.
-            bottom: screen.height - pos.dy + 8.h,
-            child: _PopoverCard(
-              tailLeft: tailRelX,
-              child: builder(ctx),
-            ),
-          ),
-        ],
+    // [maxWidth] 가 주어지면 카드를 그 너비로 잡고 anchor 중앙을 따라가도록
+    // 좌우 패딩 안에서 클램프. 없으면 기존처럼 화면 좌우 패딩까지 꽉 채운다.
+    final double? cardLeft;
+    final double? cardRight;
+    final double? cardWidth;
+    final double tailRelX;
+    if (maxWidth != null) {
+      final w = maxWidth;
+      final left = (anchorCenterX - w / 2)
+          .clamp(horizontalPadding, screen.width - horizontalPadding - w);
+      cardLeft = left;
+      cardRight = null;
+      cardWidth = w;
+      tailRelX = (anchorCenterX - left).clamp(20.w, w - 20.w);
+    } else {
+      cardLeft = horizontalPadding;
+      cardRight = horizontalPadding;
+      cardWidth = null;
+      tailRelX = (anchorCenterX - horizontalPadding).clamp(
+        20.w,
+        screen.width - horizontalPadding * 2 - 20.w,
       );
-    });
+    }
+
+    _entry = OverlayEntry(
+      builder: (ctx) {
+        return Stack(
+          children: [
+            // 바깥 탭 → 닫기 (배경 흐림 없이 투명).
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _hidePopover,
+              ),
+            ),
+            Positioned(
+              left: cardLeft,
+              right: cardRight,
+              width: cardWidth,
+              // 팝오버 하단이 anchor 윗변 바로 위(8.h gap)에 닿도록.
+              bottom: screen.height - pos.dy + 8.h,
+              child: _PopoverCard(tailLeft: tailRelX, child: builder(ctx)),
+            ),
+          ],
+        );
+      },
+    );
     overlayState.insert(_entry!);
   }
 
   void _onStageTap() {
+    // 단계 안내는 헤더 + breadcrumb 3 뱃지 + 한 줄 footer 뿐이라 좁게.
     _showPopover(
       anchorKey: _stageKey,
+      maxWidth: 260.w,
       builder: (_) => _StageInfoContent(character: widget.character),
     );
   }
@@ -117,6 +146,7 @@ class _StatusPillState extends State<StatusPill> {
   void _onStreakTap() {
     _showPopover(
       anchorKey: _streakKey,
+      maxWidth: 300.w,
       builder: (_) => _StreakInfoContent(
         streakDays: widget.streakDays,
         slots: widget.streakSlots,
@@ -125,9 +155,9 @@ class _StatusPillState extends State<StatusPill> {
         onClaimReward: widget.onClaimReward == null
             ? null
             : () {
-          _hidePopover();
-          widget.onClaimReward!();
-        },
+                _hidePopover();
+                widget.onClaimReward!();
+              },
       ),
     );
   }
@@ -140,14 +170,20 @@ class _StatusPillState extends State<StatusPill> {
     final progress = (c.growthPercent.clamp(0, 100)) / 100;
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      margin: EdgeInsets.symmetric(horizontal: 24.w),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(12.r),
+        // 두 단 그림자 — 가까운 sharper + 멀리 더 넓고 흐릿한 톤. 카드와 카드
         boxShadow: [
           BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+          BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -156,9 +192,9 @@ class _StatusPillState extends State<StatusPill> {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
             decoration: BoxDecoration(
-              color: colors.streakCardBg.withValues(alpha: 0.75),
+              color: colors.streakCardBg.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(16.r),
               border: Border.all(
                 color: Colors.white.withValues(alpha: 0.6),
@@ -172,7 +208,11 @@ class _StatusPillState extends State<StatusPill> {
                   key: _stageKey,
                   onTap: _onStageTap,
                   behavior: HitTestBehavior.opaque,
-                  child: _StageBadge(stage: c.stage, label: stageLabel),
+                  child: _StageBadge(
+                    stage: c.stage,
+                    label: stageLabel,
+                    compact: true,
+                  ),
                 ),
                 SizedBox(width: 10.w),
                 Flexible(
@@ -188,50 +228,42 @@ class _StatusPillState extends State<StatusPill> {
                   ),
                 ),
                 SizedBox(width: 14.w),
-                Expanded(
-                  flex: 3,
-                  child: Container(
-                    height: 8.h,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE5E1D6).withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(4.r),
-                    ),
-                    alignment: Alignment.centerLeft,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 600),
-                          curve: Curves.easeOutCubic,
-                          width: constraints.maxWidth * progress,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF8FC57A),
-                            borderRadius: BorderRadius.circular(4.r),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
+                Expanded(flex: 3, child: _ExpBar(progress: progress)),
                 SizedBox(width: 14.w),
                 GestureDetector(
                   key: _streakKey,
                   onTap: _onStreakTap,
                   behavior: HitTestBehavior.opaque,
                   child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                    // 좌측 stage compact 뱃지와 동일한 고정 높이(20.h)로 강제.
+                    // streak 쪽은 border 1px + 화염 아이콘 12.sp 때문에 자연 높이가
+                    // 더 컸어서, 양쪽 모두 height 로 잠그고 alignment.center 로 컨텐츠
+                    // 수직 중앙 정렬. shape(border/색)은 각자 그대로 유지.
+                    height: 20.h,
+                    alignment: Alignment.center,
+                    padding: EdgeInsets.symmetric(horizontal: 8.w),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF4E6),
-                      borderRadius: BorderRadius.circular(10.r),
+                      color: const Color(0xFFFFF1DC),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: const Color(0xFFFFD9A8),
+                        width: 1,
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('🔥', style: TextStyle(fontSize: 12.sp, height: 1.1)),
-                        SizedBox(width: 4.w),
+                        Image.asset(
+                          'assets/images/fire.png',
+                          width: 12.sp,
+                          height: 12.sp,
+                          filterQuality: FilterQuality.medium,
+                        ),
+                        SizedBox(width: 3.w),
                         Text(
                           widget.streakDays.toString(),
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: const Color(0xFFE2782B),
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: const Color(0xFFD86A1F),
                             fontWeight: FontWeight.w800,
                             height: 1.1,
                           ),
@@ -249,12 +281,76 @@ class _StatusPillState extends State<StatusPill> {
   }
 }
 
+/// EXP 진행 바.
+///
+/// - 트랙: 살짝 옴폭한 라이트 그레이 (안쪽 그림자 효과로 깊이감).
+/// - 채움: 위→아래로 연한→진한 초록 세로 그라데이션 + 미세 하이라이트.
+/// - 둥근 endcap (radius = 높이의 절반) — 가는 캡슐 형태.
+/// - 진척 변화 시 600ms easeOutCubic 으로 자연스럽게 늘어난다.
+class _ExpBar extends StatelessWidget {
+  const _ExpBar({required this.progress});
+
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(999);
+    return Container(
+      height: 9.h,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE9E4D6),
+        borderRadius: radius,
+        // 트랙 안쪽 살짝 어두운 inner-shadow 효과 (위쪽이 진한 톤).
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFD9D2C0), Color(0xFFEFEBDF)],
+        ),
+      ),
+      alignment: Alignment.centerLeft,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeOutCubic,
+            width: constraints.maxWidth * progress,
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFA9D793), Color(0xFF7BB964)],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF6FA958).withValues(alpha: 0.35),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 /// `[유년기]` 같은 단계 라벨을 둥근 알약으로. 라이트/다크 무관 고정 색.
+///
+/// [compact] true 면 padding / 폰트가 한 단계 작아진다 — StatusPill 본체 행
+/// 안에서는 좁은 공간이라 compact 로 쓰고, 단계 안내 popover 의 breadcrumb
+/// 에서는 기본(=non-compact) 으로 써서 시각적 무게감을 살린다.
 class _StageBadge extends StatelessWidget {
-  const _StageBadge({required this.stage, required this.label});
+  const _StageBadge({
+    required this.stage,
+    required this.label,
+    this.compact = false,
+  });
 
   final CharacterStage stage;
   final String label;
+  final bool compact;
 
   Color get _bg {
     switch (stage) {
@@ -286,15 +382,30 @@ class _StageBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // compact 는 StatusPill 본체에서 우측 streak pill 과 높이를 맞춰야 한다.
+    // streak 쪽이 border 1px + 화염 아이콘 12.sp 때문에 자연 높이가 ~20.h 라
+    // compact 도 동일하게 고정 height + 수직 center 정렬. shape(pill/각진 라운드)은
+    // 그대로. non-compact 는 popover breadcrumb 용이라 자연 높이 유지.
+    final hPad = compact ? 8.w : 10.w;
+    final vPad = compact ? 3.h : 6.h;
+    final radius = compact ? 999.0 : 8.r;
+    final textStyle = compact
+        ? AppTextStyles.labelSmall
+        : AppTextStyles.labelMedium;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+      height: compact ? 20.h : null,
+      alignment: compact ? Alignment.center : null,
+      padding: EdgeInsets.symmetric(
+        horizontal: hPad,
+        vertical: compact ? 0 : vPad,
+      ),
       decoration: BoxDecoration(
         color: _bg,
-        borderRadius: BorderRadius.circular(8.r),
+        borderRadius: BorderRadius.circular(radius),
       ),
       child: Text(
         label,
-        style: AppTextStyles.labelMedium.copyWith(
+        style: textStyle.copyWith(
           color: _fg,
           fontWeight: FontWeight.w700,
           height: 1.1,
@@ -376,46 +487,35 @@ class _StageInfoContent extends StatelessWidget {
 
   final Character character;
 
+  /// 표시 순서. 현재 단계는 [_StageBreadcrumb] 가 강조.
+  static const List<(CharacterStage, String)> _stages = [
+    (CharacterStage.infant, '유년기'),
+    (CharacterStage.juvenile, '성장기'),
+    (CharacterStage.adult, '성숙기'),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final name = character.name;
-    final current = character.stage;
     return Padding(
-      padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 14.h),
+      padding: EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 14.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            '$name는 자라고 있어요',
+            '${character.name}는 자라고 있어요',
             style: AppTextStyles.bodyMedium.copyWith(
               color: Colors.black,
               fontWeight: FontWeight.w700,
             ),
           ),
-          SizedBox(height: 12.h),
-          _StageRow(
-            label: '유년기',
-            description: '알에서 막 깨어난 단계예요.',
-            isCurrent: current == CharacterStage.infant,
-          ),
-          SizedBox(height: 8.h),
-          _StageRow(
-            label: '성장기',
-            description: '활발하게 자라는 단계예요.',
-            isCurrent: current == CharacterStage.juvenile,
-          ),
-          SizedBox(height: 8.h),
-          _StageRow(
-            label: '성숙기',
-            description: '독립을 앞둔 마지막 단계예요.',
-            isCurrent: current == CharacterStage.adult,
-          ),
+          SizedBox(height: 10.h),
+          _StageBreadcrumb(current: character.stage, stages: _stages),
           SizedBox(height: 12.h),
           Container(height: 1, color: const Color(0xFFF0F0F0)),
           SizedBox(height: 10.h),
           Text(
-            '할 일을 완료할 때마다 경험치가 쌓이고,\n성숙기를 모두 채우면 $name는 독립해요.',
+            '할 일을 완료할 때마다 경험치가 쌓이고,\n성숙기를 모두 채우면 ${character.name}는 독립해요.',
             style: AppTextStyles.labelSmall.copyWith(
               color: Colors.black54,
               height: 1.5,
@@ -427,57 +527,36 @@ class _StageInfoContent extends StatelessWidget {
   }
 }
 
-class _StageRow extends StatelessWidget {
-  const _StageRow({
-    required this.label,
-    required this.description,
-    required this.isCurrent,
-  });
+/// `[유년기] → [성장기] → [성숙기]` 한 줄. 카드 본체에서 쓰는 [_StageBadge] 와
+/// 같은 색감을 그대로 사용해 캐릭터 옆에 떠있던 뱃지와 시각적으로 이어지게 한다.
+/// 현재 단계는 풀 컬러, 나머지는 페이드 + 작은 화살표 구분자.
+class _StageBreadcrumb extends StatelessWidget {
+  const _StageBreadcrumb({required this.current, required this.stages});
 
-  final String label;
-  final String description;
-  final bool isCurrent;
+  final CharacterStage current;
+  final List<(CharacterStage, String)> stages;
 
   @override
   Widget build(BuildContext context) {
-    final labelColor = isCurrent ? const Color(0xFFB8702A) : Colors.black87;
-    final descColor = isCurrent ? const Color(0xFF8C5A22) : Colors.black54;
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-      decoration: BoxDecoration(
-        color: isCurrent ? const Color(0xFFFCE3C2) : const Color(0xFFF8F6F2),
-        borderRadius: BorderRadius.circular(10.r), // 메인 카드에 맞춰 둥글기 소폭 조정
+    final separator = Padding(
+      padding: EdgeInsets.symmetric(horizontal: 4.w),
+      child: Icon(
+        Icons.arrow_forward_rounded,
+        size: 14.sp,
+        color: Colors.black26,
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            label,
-            style: AppTextStyles.labelMedium.copyWith(
-              color: labelColor,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8.w),
-            child: Text(
-              '|',
-              style: AppTextStyles.labelMedium.copyWith(
-                color: descColor.withValues(alpha: 0.3),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              description,
-              style: AppTextStyles.labelSmall.copyWith(color: descColor),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+    );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < stages.length; i++) ...[
+          if (i > 0) separator,
+          Opacity(
+            opacity: stages[i].$1 == current ? 1.0 : 0.45,
+            child: _StageBadge(stage: stages[i].$1, label: stages[i].$2),
           ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -508,20 +587,31 @@ class _StreakInfoContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '🔥 $streakDays일째 함께하고 있어요',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: Colors.black,
-              fontWeight: FontWeight.w700,
-            ),
+          Row(
+            children: [
+              Image.asset(
+                'assets/images/fire.png',
+                width: 16.sp,
+                height: 16.sp,
+                filterQuality: FilterQuality.medium,
+              ),
+              SizedBox(width: 6.w),
+              Text(
+                '$streakDays일째 함께하고 있어요',
+                style: AppTextStyles.bodySmall.copyWith(color: Colors.black),
+              ),
+            ],
           ),
           SizedBox(height: 12.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              for (var i = 0; i < 7; i++)
-                _StreakDot(achieved: slots[i]),
-            ],
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4.w),
+            // 이 수치를 키울수록 더 좁아집니다
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                for (var i = 0; i < 7; i++) _StreakDot(achieved: slots[i]),
+              ],
+            ),
           ),
           SizedBox(height: 12.h),
           if (showReward) ...[
@@ -557,11 +647,12 @@ class _StreakDot extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Container(
-      width: 24,
-      height: 24,
+      width: 16,
+      height: 16,
       decoration: BoxDecoration(
-        color:
-        achieved ? colors.streakDotActive : colors.streakDotInactive.withValues(alpha: 0.5),
+        color: achieved
+            ? colors.streakDotActive
+            : colors.streakDotInactive.withValues(alpha: 0.5),
         shape: BoxShape.circle,
       ),
     );
@@ -587,20 +678,20 @@ class _RewardButton extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
           child: isLoading
               ? const SizedBox(
-            width: 14,
-            height: 14,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-            ),
-          )
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
               : Text(
-            '🎁 보상 받기',
-            style: AppTextStyles.labelMedium.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+                  '🎁 보상 받기',
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
         ),
       ),
     );

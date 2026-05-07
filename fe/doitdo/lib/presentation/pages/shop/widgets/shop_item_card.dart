@@ -109,7 +109,17 @@ class _Preview extends StatelessWidget {
               borderRadius: BorderRadius.circular(12.r),
             ),
             alignment: Alignment.center,
-            child: Icon(item.category.icon, size: 40.sp, color: accent),
+            padding: EdgeInsets.all(6.w),
+            child: item.imageUrl.isEmpty
+                ? Icon(item.category.icon, size: 36.sp, color: accent)
+                : Image.network(
+                    item.imageUrl,
+                    width: 64.w,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.medium,
+                    errorBuilder: (_, _, _) =>
+                        Icon(item.category.icon, size: 36.sp, color: accent),
+                  ),
           ),
         ),
         if (item.status == ItemStatus.placed)
@@ -123,12 +133,6 @@ class _Preview extends StatelessWidget {
             top: 6.h,
             left: 6.w,
             child: const _StatusBadge.owned(),
-          ),
-        if (item.isNew && item.status == ItemStatus.notOwned)
-          Positioned(
-            top: 6.h,
-            right: 6.w,
-            child: const _NewBadge(),
           ),
         if (isPreviewing)
           Positioned(
@@ -168,28 +172,6 @@ class _StatusBadge extends StatelessWidget {
         label,
         style: AppTextStyles.labelSmall.copyWith(
           color: fg,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _NewBadge extends StatelessWidget {
-  const _NewBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(8.r),
-      ),
-      child: Text(
-        'NEW',
-        style: AppTextStyles.labelSmall.copyWith(
-          color: Colors.white,
           fontWeight: FontWeight.w700,
         ),
       ),

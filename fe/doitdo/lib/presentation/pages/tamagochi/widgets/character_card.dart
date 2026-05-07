@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:math';
-
-import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'dart:ui';
 
 import 'package:doitdo/core/theme/app_text_styles.dart';
+import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/domain/entities/character.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
+import 'package:doitdo/presentation/pages/tamagochi/widgets/room_layer.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /// 다마고치 메인 상단의 방 일러스트 카드.
 ///
@@ -58,16 +60,12 @@ class CharacterCard extends StatelessWidget {
     return SizedBox(
       // 침대/창문 일러스트가 잘리지 않도록 충분한 높이 확보. 캐릭터는 카드 하단
       // (= 바닥 영역) 에 정렬되어 발을 바닥에 두고 있는 것처럼 보이게 한다.
-      height: 260.h + topSafePadding,
+      height: 250.h + topSafePadding,
       child: Stack(
         children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/main_background.png',
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.none,
-            ),
-          ),
+          // 방 배경 + 가구 합성. listMyFurnitures() 결과를 zIndex 순서로 쌓아
+          // 그리고, 응답 전/실패 시 정적 자산으로 폴백.
+          const Positioned.fill(child: RoomLayer()),
 
           // 진화/부화/독립 같은 주요 액션 중의 작은 스피너. copyWithPrevious 덕에
           // 이전 캐릭터 데이터는 그대로 남아 있고, 이 작은 스피너만 카드 좌측
@@ -86,42 +84,35 @@ class CharacterCard extends StatelessWidget {
               ),
             ),
 
-          // 중앙 하단: 말풍선 + 캐릭터. 카드 안쪽 바닥에 StatusPill 이 떠있으므로
-          // 캐릭터는 그보다 위에 서게 bottom 여백을 충분히 잡는다.
+          // 중앙 하단: 말풍선 + 캐릭터. RoomLayer 가 들어올린 바닥선 위에
+          // 캐릭터 발이 정확히 닿도록 같은 inset 을 공유한다 (RoomLayer.characterBottomInset).
           Positioned(
             left: 0,
             right: 0,
-            top: topSafePadding,
-            bottom: 64.h,
+            top: topSafePadding+60,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 if (_speechText != null) ...[
                   _SpeechBubble(text: _speechText!),
-                  SizedBox(height: 8.h),
                 ],
                 _buildCharacterSlot(),
               ],
             ),
           ),
 
-          // 우측 상단 아이콘 (상점 / 도감) — 캐릭터 수령 이후에만 노출
+          // 우측 상단 메뉴 — 캐릭터 수령 이후에만 노출.
+          // PixelIconBox 두 개가 늘 떠있어서 뒤에 놓인 가구(TV 등)가 가려지던
+          // 문제를 해결하기 위해, 평상시엔 햄버거 1개만 두고 탭 시에만 shop/book
+          // 두 글래스 박스가 아래로 펼쳐진다. 톤은 StatusPill 의 글래스 스타일을
+          // 그대로 따름.
           if (!hideChrome)
             Positioned(
-              top: topSafePadding + 8.h,
+              top: topSafePadding - 12,
               right: 16.w,
-              child: Column(
-                children: [
-                  _RoundIconButton(
-                    icon: Icons.shopping_basket_outlined,
-                    onTap: onTapShop,
-                  ),
-                  SizedBox(height: 8.h),
-                  _RoundIconButton(
-                    icon: Icons.menu_book_outlined,
-                    onTap: onTapCollection,
-                  ),
-                ],
+              child: _RoomMenuButton(
+                onTapShop: onTapShop,
+                onTapCollection: onTapCollection,
               ),
             ),
         ],
@@ -167,33 +158,8 @@ class CharacterCard extends StatelessWidget {
       key: ValueKey('grown-$imageUrl-${c.characterId}-${state.actionTick}'),
       thumbnailUrl: imageUrl,
       eyeGifCharacterId: isAction ? null : c.characterId,
-      imageHeight: 100.h,
+      imageHeight: 112.h,
       onTap: onCharacterTap,
-    );
-  }
-}
-
-class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({required this.icon, this.onTap});
-
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10.r),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10.r),
-        child: Padding(
-          padding: EdgeInsets.all(8.w),
-          child: Icon(icon, size: 20.sp, color: Colors.black87),
-        ),
-      ),
     );
   }
 }
@@ -392,6 +358,10 @@ class _GrownCharacterState extends State<_GrownCharacter> {
   static const _blinkMin = Duration(milliseconds: 500);
   static const _blinkMax = Duration(milliseconds: 1000);
 
+  // [DEV-TEMP] 평상시 png ↔ blink gif 토글을 끄고 base eye gif 만 항상 노출한다.
+  // 정식 캐릭터 png/webp 에셋이 들어오면 false 로 돌려 원래 깜빡임 흐름 복구.
+  static const bool _alwaysShowBaseGif = true;
+
   Timer? _scheduleTimer;
   Timer? _blinkTimer;
 
@@ -425,6 +395,7 @@ class _GrownCharacterState extends State<_GrownCharacter> {
   }
 
   void _scheduleNextBlink() {
+    if (_alwaysShowBaseGif) return;
     if (widget.eyeGifCharacterId == null) return;
     final delay = _randomDuration(_intervalMin, _intervalMax);
     _scheduleTimer = Timer(delay, _startBlink);
@@ -469,7 +440,16 @@ class _GrownCharacterState extends State<_GrownCharacter> {
 
     final blinkAsset = _blinkAsset;
     Widget image;
-    if (blinkAsset != null && id != null) {
+    if (_alwaysShowBaseGif && id != null) {
+      // [DEV-TEMP] 토글 없이 base eye gif 만. 로드 실패 시 png 폴백.
+      image = Image.asset(
+        'assets/animations/eye/$id.gif',
+        height: widget.imageHeight,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.medium,
+        errorBuilder: (_, _, _) => fallback,
+      );
+    } else if (blinkAsset != null && id != null) {
       final base = 'assets/animations/eye/$id.gif';
       image = Image.asset(
         blinkAsset,
@@ -499,6 +479,146 @@ class _GrownCharacterState extends State<_GrownCharacter> {
       onTap: widget.onTap,
       behavior: HitTestBehavior.opaque,
       child: slot,
+    );
+  }
+}
+
+/// 우상단 햄버거 메뉴. 평상시엔 햄버거 한 칸만 노출되어 방 가구를 가리는 면적을
+/// 최소화하고, 탭하면 그 아래로 [상점] / [도감] 글래스 박스가 펼쳐진다.
+///
+/// 메뉴 아이템을 탭하면 자동으로 collapse 되며 콜백을 발화 — 페이지 이동 후
+/// 돌아왔을 때 펼친 상태가 남아있지 않도록.
+class _RoomMenuButton extends StatefulWidget {
+  const _RoomMenuButton({this.onTapShop, this.onTapCollection});
+
+  final VoidCallback? onTapShop;
+  final VoidCallback? onTapCollection;
+
+  @override
+  State<_RoomMenuButton> createState() => _RoomMenuButtonState();
+}
+
+class _RoomMenuButtonState extends State<_RoomMenuButton> {
+  bool _expanded = false;
+
+  void _toggle() => setState(() => _expanded = !_expanded);
+
+  void _onItemTap(VoidCallback? cb) {
+    setState(() => _expanded = false);
+    cb?.call();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final iconColor = context.colors.textPrimary;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        _GlassIconBox(
+          onTap: _toggle,
+          // 햄버거 ↔ X 회전 전환은 90° 만 — 닫힘/열림 상태가 자연스럽게 읽힘.
+          child: AnimatedRotation(
+            turns: _expanded ? 0.25 : 0,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            child: Icon(Icons.menu_rounded, size: 20.sp, color: iconColor),
+          ),
+        ),
+        // ClipRect + AnimatedAlign(heightFactor) 로 펼침/접힘을 위에서 아래로
+        // 슬라이드. AnimatedOpacity 로 페이드를 함께 줘 collapse 도중 컨텐츠가
+        // 잘려보이는 인상이 덜하게.
+        ClipRect(
+          child: AnimatedAlign(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            heightFactor: _expanded ? 1.0 : 0.0,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 200),
+              opacity: _expanded ? 1.0 : 0.0,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(height: 8.h),
+                  _GlassIconBox(
+                    onTap: () => _onItemTap(widget.onTapShop),
+                    child: Image.asset(
+                      'assets/images/shop.png',
+                      width: 24.w,
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  _GlassIconBox(
+                    onTap: () => _onItemTap(widget.onTapCollection),
+                    child: Image.asset(
+                      'assets/images/book.png',
+                      width: 24.w,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// StatusPill 과 같은 글래스 톤(BackdropFilter blur + 반투명 bg + 흰 보더 +
+/// 두 단 그림자)의 정사각 아이콘 박스. 픽셀 톤이 무거워서 뒤에 놓인 방 가구를
+/// 가리는 게 부담스러울 때 PixelIconBox 대신 사용.
+class _GlassIconBox extends StatelessWidget {
+  const _GlassIconBox({required this.child, this.onTap});
+
+  final Widget child;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final box = Container(
+      width: 36.w,
+      height: 36.w,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12.r),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Container(
+            decoration: BoxDecoration(
+              color: colors.streakCardBg.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.6),
+                width: 1,
+              ),
+            ),
+            child: Center(child: child),
+          ),
+        ),
+      ),
+    );
+    if (onTap == null) return box;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: box,
     );
   }
 }

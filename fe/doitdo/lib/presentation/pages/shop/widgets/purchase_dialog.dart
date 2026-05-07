@@ -130,6 +130,7 @@ class _Preview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = shopCategoryAccent(item.category);
+    final fallback = Icon(item.category.icon, size: 64.sp, color: accent);
     return Container(
       height: 150.h,
       decoration: BoxDecoration(
@@ -138,7 +139,15 @@ class _Preview extends StatelessWidget {
         border: Border.all(color: accent.withValues(alpha: 0.25)),
       ),
       alignment: Alignment.center,
-      child: Icon(item.category.icon, size: 64.sp, color: accent),
+      padding: EdgeInsets.all(16.w),
+      child: item.imageUrl.isEmpty
+          ? fallback
+          : Image.network(
+              item.imageUrl,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.medium,
+              errorBuilder: (_, _, _) => fallback,
+            ),
     );
   }
 }
