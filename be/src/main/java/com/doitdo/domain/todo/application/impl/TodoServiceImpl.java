@@ -60,6 +60,8 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class TodoServiceImpl implements TodoService {
 
+	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+
 	private final TodoRepository todoRepository;
 	private final TodoListQueryRepository todoListQueryRepository;
 	private final CategoryRepository categoryRepository;
@@ -81,8 +83,8 @@ public class TodoServiceImpl implements TodoService {
 	)
 	public TodoListResp list(Long userId, TodoListReq req) {
 		// 기준일: date 파라미터가 있으면 그 날짜, 없으면 오늘
-		LocalDate baseDate = req.date() != null ? req.date() : LocalDate.now(ZoneId.of("Asia/Seoul"));
-		LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+		LocalDate baseDate = req.date() != null ? req.date() : LocalDate.now(SEOUL);
+		LocalDate today = LocalDate.now(SEOUL);
 
 		List<TodoListRow> rows = todoListQueryRepository.findListRows(
 				userId,
@@ -294,6 +296,7 @@ public class TodoServiceImpl implements TodoService {
 		// - exp: 리스너가 AFTER_COMMIT + REQUIRES_NEW 로 처리 (멱등성은 Todo.expGranted 로 보장).
 		// - 가산 실패해도 Todo DONE 은 커밋 유지 (사용자 UX 우선)
 		if (beforeStatus != TodoStatus.DONE && req.status() == TodoStatus.DONE) {
+			todo.markFirstCompletedIfAbsent(LocalDate.now(SEOUL));
 			userStreakService.recordActivity(userId);
 			eventPublisher.publishEvent(new TodoCompletedEvent(userId, todo.getTodoId()));
 			log.info("event=TODO_COMPLETED userId={} todoId={}", userId, todo.getTodoId());
