@@ -164,7 +164,7 @@ class _StatusPillState extends State<StatusPill> {
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
             decoration: BoxDecoration(
-              color: colors.streakCardBg.withValues(alpha: 0.75),
+              color: colors.streakCardBg.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(16.r),
               border: Border.all(
                 color: Colors.white.withValues(alpha: 0.6),
@@ -556,9 +556,8 @@ class _StreakInfoContent extends StatelessWidget {
         children: [
           Text(
             '🔥 $streakDays일째 함께하고 있어요',
-            style: AppTextStyles.bodyMedium.copyWith(
+            style: AppTextStyles.bodySmall.copyWith(
               color: Colors.black,
-              fontWeight: FontWeight.w700,
             ),
           ),
           SizedBox(height: 12.h),
@@ -603,8 +602,8 @@ class _StreakDot extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Container(
-      width: 24,
-      height: 24,
+      width: 20,
+      height: 20,
       decoration: BoxDecoration(
         color:
         achieved ? colors.streakDotActive : colors.streakDotInactive.withValues(alpha: 0.5),

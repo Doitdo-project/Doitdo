@@ -171,7 +171,7 @@ class CharacterCard extends StatelessWidget {
       key: ValueKey('grown-$imageUrl-${c.characterId}-${state.actionTick}'),
       thumbnailUrl: imageUrl,
       eyeGifCharacterId: isAction ? null : c.characterId,
-      imageHeight: 120.h,
+      imageHeight: 112.h,
       onTap: onCharacterTap,
     );
   }

@@ -376,10 +376,10 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                       .length;
                                   ref
                                       .read(tamagochiViewModelProvider
-                                          .notifier)
+                                      .notifier)
                                       .onCharacterTap(
-                                        remainingTodayTodos: remaining,
-                                      );
+                                    remainingTodayTodos: remaining,
+                                  );
                                 },
                               ),
                               if (character != null && !character.isEgg)
@@ -392,7 +392,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                     streakDays: streak.currentCount,
                                     streakSlots: streakWindow.slots,
                                     isRewardClaimable:
-                                        streak.hasCompletedBlock,
+                                    streak.hasCompletedBlock,
                                     isClaimingReward: _claimingReward,
                                     onClaimReward: _handleClaimReward,
                                   ),
