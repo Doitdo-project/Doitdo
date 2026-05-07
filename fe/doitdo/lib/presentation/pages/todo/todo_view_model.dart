@@ -39,7 +39,6 @@ class TodoViewModel extends StateNotifier<TodoState> {
     // 상태는 sync 하지 않고, fetchTodos 가 채워준 직후부터 위젯이 갱신됨.
     addListener(_syncWidget, fireImmediately: false);
     fetchTodos();
-    fetchCalendarData();
   }
 
   final TodoRepository _repository;
@@ -199,6 +198,7 @@ class TodoViewModel extends StateNotifier<TodoState> {
         id: dto.todoId.toString(),
         title: dto.title,
         isDone: dto.status == 'DONE',
+        memo: dto.content,
         category: TodoCategory(
           name: dto.category ?? '기타',
           colorKey: _colorKey(dto.category),
@@ -317,27 +317,11 @@ class TodoViewModel extends StateNotifier<TodoState> {
   }
 
   Future<void> fetchCalendarData() async {
-    final focusedDay = state.focusedDay;
-
-    // ✅ focusedDay 기준 앞 2달 ~ 뒤 2달 범위로 조회
-    // 예: 4월 포커스 → 2월 1일 ~ 6월 30일 조회
-    final from = DateTime(focusedDay.year, focusedDay.month - 2, 1);
-    final to   = DateTime(focusedDay.year, focusedDay.month + 3, 0); // 뒤 2달의 말일
-
-    await AsyncValue.guard(
-          () => _repository.getCalendarTodos(
-        from: from.toIso8601String().split('T')[0],
-        to:   to.toIso8601String().split('T')[0],
-      ),
-    );
-
-    // fetchTodos 와 동일한 사유 — autoDispose microtask 가 먼저 돌게 한 frame yield.
-    // Riverpod autoDispose 는 vsync 기반 (frame 단위) — microtask yield 만으론
-    // 늦게 돈다. endOfFrame 까지 기다려서 dispose 가 먼저 처리되게.
+    // fetchTodos(view: 'all') 가 전체 투두를 이미 보유하므로 별도 API 호출 불필요.
+    // 달 이동 시 focusedDay 가 바뀌어 calendarEnd 범위가 달라지므로
+    // state.allTodos 기반 재계산만 수행한다.
     await SchedulerBinding.instance.endOfFrame;
     if (!mounted) return;
-
-    // ✅ 서버 조회 후 로컬 캘린더 이벤트 재계산
     _updateCalendarEvents(state.allTodos);
   }
 
@@ -798,31 +782,47 @@ class TodoViewModel extends StateNotifier<TodoState> {
             () => _repository.updateTodoPriority(id, insertAt + 1));
   }
 
-  /// ✅ 언젠가 할 일 → 오늘의 할 일로 이동 (targetIndex: 오늘 섹션 내 삽입 위치)
-  Future<void> moveToToday(String id, {int targetIndex = -1}) async {
+  /// 언젠가 할 일 → 오늘의 할 일로 이동 (targetIndex: 오늘 섹션 내 삽입 위치)
+  /// targetDate: 캘린더에서 선택된 날짜 — null 이면 오늘로 폴백.
+  Future<void> moveToToday(String id, {int targetIndex = -1, DateTime? targetDate}) async {
     final idx = state.allSomedayTodos.indexWhere((t) => t.id == id);
     if (idx == -1) return;
 
-    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final now = DateTime.now();
+    final today = targetDate ?? DateTime(now.year, now.month, now.day);
     final item = state.allSomedayTodos[idx].copyWith(
       dateType: TodoDateType.normal,
       date: today,
     );
 
-    // 로컬 상태 업데이트 — 지정 위치에 삽입
-    final newTodos = List<Todo>.from(state.allTodos);
-    final insertAt = (targetIndex < 0 || targetIndex > newTodos.length)
-        ? newTodos.length
-        : targetIndex;
-    newTodos.insert(insertAt, item);
+    // ── 표시 목록(todos)에 먼저 삽입 — reorderTodo 와 동일한 앵커 방식 ──
+    // allTodos 는 여러 날짜 항목이 섞여 있어 targetIndex 를 직접 절대 인덱스로
+    // 쓰면 위치가 틀린다. 삽입 후 targetIndex 자리에 있어야 할 기존 항목(anchorId)을
+    // 기준으로 allTodos 내 삽입 지점을 결정한다.
+    final displayList = List<Todo>.from(state.todos);
+    final insertInDisplay = targetIndex.clamp(0, displayList.length);
+    final String? anchorId = insertInDisplay < displayList.length
+        ? displayList[insertInDisplay].id
+        : null;
+    displayList.insert(insertInDisplay, item);
+
+    final allList = List<Todo>.from(state.allTodos);
+    final int allInsertIdx = anchorId == null
+        ? allList.length
+        : () {
+            final i = allList.indexWhere((t) => t.id == anchorId);
+            return i == -1 ? allList.length : i;
+          }();
+    allList.insert(allInsertIdx, item);
 
     final newAllSomeday = state.allSomedayTodos.where((t) => t.id != id).toList();
     state = state.copyWith(
       allSomedayTodos: newAllSomeday,
-      allTodos: newTodos,
+      somedayTodos:    state.somedayTodos.where((t) => t.id != id).toList(),
+      allTodos: allList,
+      todos:    displayList,
     );
-    _updateCalendarEvents(newTodos);
-    _updateDisplayedTodos();
+    _updateCalendarEvents(allList);
 
     // ✅ 완료된 항목은 서버가 type 변경 422 반환 → updateTodo 건너뜀
     if (!item.isDone) {
@@ -841,9 +841,10 @@ class TodoViewModel extends StateNotifier<TodoState> {
       ));
     }
 
-    // 우선순위 설정 (완료 여부 무관하게 항상 적용)
+    // 우선순위: allTodos 기준 실제 위치 (reorderTodo 와 동일한 계산)
+    final newPriority = allList.indexWhere((t) => t.id == id) + 1;
     await AsyncValue.guard(
-            () => _repository.updateTodoPriority(id, insertAt + 1));
+            () => _repository.updateTodoPriority(id, newPriority));
   }
 
   Future<void> snoozeTodo(String id) async {
