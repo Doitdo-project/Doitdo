@@ -80,7 +80,7 @@ public class AuthServiceImpl implements AuthService {
 				encodedPassword,
 				req.username()));
 
-		userWalletRepository.save(UserWallet.createWithInitialCredit(user.getUserId()));
+		userWalletRepository.save(UserWallet.create(user.getUserId()));
 		userSettingRepository.save(UserSetting.create(user.getUserId()));
 		userStreakRepository.save(UserStreak.create(user.getUserId()));
 		defaultCategoryRegistrar.registerFor(user.getUserId());

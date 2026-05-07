@@ -40,13 +40,6 @@ public class UserWallet extends BaseTimeEntity {
 	public static UserWallet create(Long userId) {
 		return UserWallet.builder()
 				.userId(userId)
-				.balance(0)
-				.build();
-	}
-
-	public static UserWallet createWithInitialCredit(Long userId) {
-		return UserWallet.builder()
-				.userId(userId)
 				.balance(INITIAL_SIGNUP_CREDIT)
 				.build();
 	}
