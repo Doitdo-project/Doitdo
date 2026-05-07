@@ -76,6 +76,9 @@ public class Todo extends BaseTimeEntity {
 	@Column(name = "done_date")
 	private LocalDate doneDate;
 
+	@Column(name = "first_completed_date", nullable = true)
+	private LocalDate firstCompletedDate;
+
 	@Column(nullable = false)
 	private Integer priority;
 
@@ -121,6 +124,13 @@ public class Todo extends BaseTimeEntity {
 	/** 경험치 지급 완료 마킹. 멱등 (이미 true 면 no-op). */
 	public void markExpGranted() {
 		this.expGranted = true;
+	}
+
+	/** 최초 완료일 마킹. 멱등 (이미 값이 있으면 no-op). */
+	public void markFirstCompletedIfAbsent(LocalDate today) {
+		if (this.firstCompletedDate == null) {
+			this.firstCompletedDate = today;
+		}
 	}
 
 	public void changePriority(Integer priority) {

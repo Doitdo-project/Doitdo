@@ -40,6 +40,18 @@ domain/{domain}/
 
 도메인 ↔ 테이블 매핑은 [`erd.md`](erd.md) 참고.
 
+## user 도메인 추가 파일 (뚜레딧 적립 이력)
+
+| 종류 | 경로 | 비고 |
+|---|---|---|
+| Entity enum | `domain/user/entity/WalletEarnSource.java` | 적립 출처 (`SIGNUP_BONUS`, `STREAK_7DAY`, `PET_TOUCH`, `TODO_COMPLETION`) |
+| Entity | `domain/user/entity/WalletEarnLog.java` | `wallet_earn_logs` 테이블 매핑 |
+| Repository | `domain/user/repository/WalletEarnLogRepository.java` | 출처별/합산 일일 적립액 조회. `sumAmountByUserIdAndSourceAndDate` 는 `CreditEarnServiceImpl.exceedsDailyCap()` 의 cap 합산과 `TodoCompletionCreditListener` 의 오늘 적립 횟수 역산에 모두 재사용됨 |
+| Application interface | `domain/user/application/CreditEarnService.java` | 뚜레딧 적립 단일 진입점 |
+| Application impl | `domain/user/application/impl/CreditEarnServiceImpl.java` | 지갑 락, 일일 cap, 잔액 가산, 적립 로그 저장 |
+| Listener | `domain/user/application/listener/TodoCompletionCreditListener.java` | `TodoCompletedEvent` 구독, AFTER_COMMIT + REQUIRES_NEW 로 TODO 완료 3개당 10 뚜레딧 적립 |
+| Migration SQL | `docs/ops/migrations/2026-05-07-wallet-earn-log.sql` | 수동 실행 필요 |
+
 ## global 패키지
 
 공통 인프라. 모든 도메인이 의존할 수 있다.

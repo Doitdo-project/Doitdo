@@ -44,6 +44,13 @@ public class UserWallet extends BaseTimeEntity {
 				.build();
 	}
 
+	public static UserWallet createEmpty(Long userId) {
+		return UserWallet.builder()
+				.userId(userId)
+				.balance(0)
+				.build();
+	}
+
 	public void addBalance(Integer amount) {
 		this.balance += amount;
 	}

@@ -20,9 +20,11 @@ import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.todo.application.DefaultCategoryRegistrar;
+import com.doitdo.domain.user.application.CreditEarnService;
 import com.doitdo.domain.user.api.dto.resp.UserInfoResp;
 import com.doitdo.domain.user.entity.User;
 import com.doitdo.domain.user.entity.UserWallet;
+import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.domain.user.repository.UserWalletRepository;
 import com.doitdo.global.exception.AuthErrorCode;
@@ -60,6 +62,7 @@ public class AuthServiceImpl implements AuthService {
 	private final DefaultFurnitureRegistrar defaultFurnitureRegistrar;
 	private final CharacterRepository characterRepository;
 	private final UserCharacterRepository userCharacterRepository;
+	private final CreditEarnService creditEarnService;
 
 	@Value("${jwt.refresh-token-expiration}")
 	private long refreshTokenExpiration;
@@ -80,7 +83,8 @@ public class AuthServiceImpl implements AuthService {
 				encodedPassword,
 				req.username()));
 
-		userWalletRepository.save(UserWallet.create(user.getUserId()));
+		userWalletRepository.save(UserWallet.createEmpty(user.getUserId()));
+		creditEarnService.tryEarn(user.getUserId(), WalletEarnSource.SIGNUP_BONUS, 100, null, true);
 		userSettingRepository.save(UserSetting.create(user.getUserId()));
 		userStreakRepository.save(UserStreak.create(user.getUserId()));
 		defaultCategoryRegistrar.registerFor(user.getUserId());

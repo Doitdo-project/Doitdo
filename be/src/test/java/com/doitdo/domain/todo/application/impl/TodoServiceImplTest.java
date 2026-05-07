@@ -6,12 +6,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.doitdo.domain.streak.application.UserStreakService;
 import com.doitdo.domain.todo.api.dto.req.TodoCreateReq;
 import com.doitdo.domain.todo.api.dto.req.TodoListReq;
 import com.doitdo.domain.todo.api.dto.req.TodoPriorityChangeReq;
+import com.doitdo.domain.todo.api.dto.req.TodoStatusChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoListResp;
@@ -19,6 +21,7 @@ import com.doitdo.domain.todo.application.RecurrenceService;
 import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.entity.Todo.TodoStatus;
 import com.doitdo.domain.todo.entity.Todo.TodoType;
+import com.doitdo.domain.todo.event.TodoCompletedEvent;
 import com.doitdo.domain.todo.repository.CategoryRepository;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository;
 import com.doitdo.domain.todo.repository.TodoListQueryRepository;
@@ -283,6 +286,22 @@ class TodoServiceImplTest {
 		assertThat(y.getPriority()).isEqualTo(1);
 		assertThat(x.getPriority()).isEqualTo(2);
 		assertThat(a.getPriority()).isEqualTo(1);
+	}
+
+	@Test
+	void changeStatusToDoneMarksFirstCompletedDateBeforePublishingEvent() {
+		Todo todo = normalTodo("09:00");
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+		given(snoozeHistoryRepository.countByTodoId(1L)).willReturn(0L);
+
+		LocalDate before = LocalDate.now(java.time.ZoneId.of("Asia/Seoul"));
+		service.changeStatus(1L, 1L, new TodoStatusChangeReq(TodoStatus.DONE));
+		LocalDate after = LocalDate.now(java.time.ZoneId.of("Asia/Seoul"));
+
+		assertThat(todo.getStatus()).isEqualTo(TodoStatus.DONE);
+		assertThat(todo.getFirstCompletedDate()).isIn(before, after);
+		verify(userStreakService).recordActivity(1L);
+		verify(eventPublisher).publishEvent(any(TodoCompletedEvent.class));
 	}
 
 	private Todo normalTodo(String alertTime) {
