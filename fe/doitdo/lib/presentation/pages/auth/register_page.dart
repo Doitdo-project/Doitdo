@@ -191,7 +191,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           if (user == null) return;
           if (!mounted) return;
           // 회원가입 직후엔 birthDate/agreements 가 false 인 신규 계정 → 온보딩으로.
-          context.go(resolvePostAuthDestination(ref, user));
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            context.go(resolvePostAuthDestination(ref, user));
+          });
         },
         error: (error, _) {
           if (!mounted) return;

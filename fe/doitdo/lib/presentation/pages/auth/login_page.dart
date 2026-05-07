@@ -73,7 +73,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           if (user == null) return;
           if (!mounted) return;
           // 온보딩(생년월일/약관) 미완료 사용자는 메인 탭이 아니라 온보딩 단계로 보낸다.
-          context.go(resolvePostAuthDestination(ref, user));
+          // addPostFrameCallback: GoRouter 가 Navigator 를 잠근 상태에서 중복 push
+          // 가 발생하지 않도록 현재 프레임 처리 완료 후 이동.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            context.go(resolvePostAuthDestination(ref, user));
+          });
         },
         error: (error, _) {
           if (!mounted) return;
