@@ -43,7 +43,7 @@ public enum UserErrorCode implements ErrorCode {
 	U04_005("U04-005", HttpStatus.CONFLICT, "이미 탈퇴한 계정입니다."),
 
 	// U05 - 내 잔액 조회
-	U05_002("U05-002", HttpStatus.NOT_FOUND, "지갑 데이터를 찾을 수 없습니다."),
+	U05_001("U05-001", HttpStatus.NOT_FOUND, "지갑 데이터를 찾을 수 없습니다."),
 
 	// U06 - 스트릭 조회
 	U06_001("U06-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),

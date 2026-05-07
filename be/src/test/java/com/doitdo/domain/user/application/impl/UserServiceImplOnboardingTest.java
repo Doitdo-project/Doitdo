@@ -228,7 +228,7 @@ class UserServiceImplOnboardingTest {
     }
 
     @Test
-    void getMyBalance_walletMissing_throws_U05_002() {
+    void getMyBalance_walletMissing_throws_U05_001() {
         User saved = userRepository.save(
                 User.create(
                         "balance-missing-" + System.currentTimeMillis() + "@test.local",
@@ -242,7 +242,7 @@ class UserServiceImplOnboardingTest {
                 .isInstanceOf(CustomException.class)
                 .satisfies(ex -> {
                     CustomException ce = (CustomException) ex;
-                    assertThat(ce.getErrorCode()).isEqualTo(UserErrorCode.U05_002);
+                    assertThat(ce.getErrorCode()).isEqualTo(UserErrorCode.U05_001);
                 });
 
         userRepository.deleteById(userId);

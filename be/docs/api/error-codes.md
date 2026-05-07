@@ -150,7 +150,7 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 
 | 상수 | code | HTTP | 의미 |
 |---|---|---|---|
-| `U05_002` | `U05-002` | 404 | 지갑 데이터를 찾을 수 없음 |
+| `U05_001` | `U05-001` | 404 | 지갑 데이터를 찾을 수 없음 |
 
 ### `TodoErrorCode` 추가 코드 (alert/recurrence redesign, 2026-04)
 

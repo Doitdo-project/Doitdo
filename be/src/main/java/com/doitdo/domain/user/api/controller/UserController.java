@@ -54,7 +54,7 @@ public class UserController {
 	}
 
 	@Operation(summary = "내 잔액 조회", description = "로그인한 사용자 본인의 월렛 잔액을 조회")
-	@ApiErrorCodes({"U05-002"})
+	@ApiErrorCodes({"U05-001"})
 	@GetMapping("/me/balance")
 	public GlobalApiResponse<WalletBalanceResp> getMyBalance(
 			@AuthenticationPrincipal CustomUserDetails userDetails) {

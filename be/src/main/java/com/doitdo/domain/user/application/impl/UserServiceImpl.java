@@ -94,7 +94,7 @@ public class UserServiceImpl implements UserService {
 	public WalletBalanceResp getMyBalance(Long userId) {
 		return userWalletRepository.findByUserId(userId)
 				.map(wallet -> new WalletBalanceResp(wallet.getBalance()))
-				.orElseThrow(() -> new CustomException(UserErrorCode.U05_002));
+				.orElseThrow(() -> new CustomException(UserErrorCode.U05_001));
 	}
 
 	@Override
