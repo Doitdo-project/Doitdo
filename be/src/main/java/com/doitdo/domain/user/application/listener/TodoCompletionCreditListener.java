@@ -1,5 +1,6 @@
 package com.doitdo.domain.user.application.listener;
 
+import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.event.TodoCompletedEvent;
 import com.doitdo.domain.todo.repository.TodoRepository;
 import com.doitdo.domain.user.application.CreditEarnService;
@@ -36,7 +37,21 @@ public class TodoCompletionCreditListener {
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void onTodoCompleted(TodoCompletedEvent event) {
 		LocalDate today = LocalDate.now(SEOUL);
-		long todayDistinctFirstCompleted = todoRepository.countByUserIdAndFirstCompletedDate(event.userId(), today);
+		Todo todo = todoRepository.findByTodoIdAndIsDeletedFalse(event.todoId())
+				.orElse(null);
+		if (todo == null) {
+			log.debug("[credit] todo not found; skipped todoId={}", event.todoId());
+			return;
+		}
+		if (!isRewardEligible(todo, today)) {
+			log.debug("[credit] past todo; skipped todoId={}", event.todoId());
+			return;
+		}
+
+		long todayDistinctFirstCompleted = todoRepository.countRewardEligibleByUserIdAndFirstCompletedDate(
+				event.userId(),
+				today
+		);
 		int todayEarnCount = todayTodoCompletionEarnAmount(event.userId(), today) / TODO_COMPLETION_CREDIT;
 
 		if ((long) (todayEarnCount + 1) * REQUIRED_COMPLETION_COUNT > todayDistinctFirstCompleted) {
@@ -54,6 +69,15 @@ public class TodoCompletionCreditListener {
 		);
 		log.debug("[credit] todo completion evaluated; user={} todo={} earnedAmount={}",
 				event.userId(), event.todoId(), earnedAmount);
+	}
+
+	private boolean isRewardEligible(Todo todo, LocalDate today) {
+		LocalDate criteriaDate = switch (todo.getType()) {
+			case SOMEDAY -> null;
+			case PERIOD -> todo.getEndDate() != null ? todo.getEndDate() : todo.getStartDate();
+			default -> todo.getStartDate();
+		};
+		return criteriaDate == null || !criteriaDate.isBefore(today);
 	}
 
 	private int todayTodoCompletionEarnAmount(Long userId, LocalDate today) {
