@@ -25,8 +25,10 @@
 
 - `Todo` 엔티티에 `firstCompletedDate DATE NULL` 컬럼 추가. 처음 DONE 으로 전이될 때 단 1회 세팅, 이후 보존 (취소·재완료 영향 없음).
 - 그날 적립 가능 횟수: `today_distinct_first_completed = COUNT(Todo WHERE userId=? AND firstCompletedDate=today)`.
-- 그날 이미 지급한 적립 횟수: `today_earn_count = COUNT(WalletEarnLog WHERE userId=? AND source=TODO_COMPLETION AND DATE(earnedAt)=today)`.
-- 적립 조건: `today_earn_count * 3 < today_distinct_first_completed` 일 때 +10 (cap 30 안에서). 이렇게 하면 (a) 같은 todo 의 undo→redo 가 카운트에 영향 없음, (b) 이미 지급된 적립은 그대로 보존 (회수 없음).
+- 그날 이미 지급한 적립 횟수: `today_earn_count = SUM(WalletEarnLog.amount WHERE userId=? AND source=TODO_COMPLETION AND DATE(earnedAt)=today) / 10` (= `WalletEarnLogRepository.sumAmountByUserIdAndSourceAndDate(...)` 재사용 후 10으로 나눔. 이 쿼리는 `tryEarn` 내 cap 합산에도 동일하게 사용됨).
+- 적립 조건: `(today_earn_count + 1) * 3 <= today_distinct_first_completed` 일 때 +10 (cap 30 안에서). 즉, N번째 마일스톤(N=earn_count+1)에 도달했을 때만 적립한다. 이렇게 하면 (a) 같은 todo 의 undo→redo 가 카운트에 영향 없음, (b) 이미 지급된 적립은 그대로 보존 (회수 없음).
+  - 예: distinct=3, earn_count=0 → (0+1)*3=3 <= 3 → 적립. distinct=5, earn_count=1 → (1+1)*3=6 > 5 → 스킵. distinct=6, earn_count=1 → (1+1)*3=6 <= 6 → 적립.
+  - 주의: 구현(`TodoCompletionCreditListener.java`)의 조기 종료 조건은 `(todayEarnCount + 1) * 3 > todayDistinctFirstCompleted` 이면 skip이므로 동등하다.
 
 ### 한도 enforcement 구조
 
@@ -71,7 +73,7 @@
 - 마이그레이션 SQL: `docs/ops/migrations/2026-05-07-todo-first-completed-date.sql`.
 - `TodoServiceImpl.changeStatus(...)` 또는 도메인 이벤트 리스너에서 DONE 전이 시:
   - `firstCompletedDate` 가 NULL 이면 today 로 세팅 (이후 보존).
-  - `today_earn_count * 3 < today_distinct_first_completed` 면 `creditEarnService.tryEarn(userId, TODO_COMPLETION, 10, todoId, false)` 호출.
+  - `(today_earn_count + 1) * 3 <= today_distinct_first_completed` 면 `creditEarnService.tryEarn(userId, TODO_COMPLETION, 10, todoId, false)` 호출.
 - 취소/되돌리기 시 `firstCompletedDate` 변경 없음. 이미 지급된 뚜레딧·경험치 회수 없음.
 - 단위 테스트: undo→redo 5회 토글 후 카운트가 1 그대로인지 검증.
 
@@ -104,7 +106,7 @@
   - TODO 9개 완료 → +30, 10개째 적립 0.
   - **TODO undo→redo 토글 5회 → 카운트 1, 적립 1회 그대로** (정밀 정의 검증).
   - 다마 30 + TODO 30 합산 후 추가 적립 0.
-  - 가구 구매 → `wallet.spend()` 정상, 잔액 부족 시 `S03-001 INSUFFICIENT_BALANCE`.
+  - 가구 구매 → `wallet.spend()` 정상, 잔액 부족 시 `S00-003 INSUFFICIENT_BALANCE`.
   - 동시성: 같은 사용자에게서 IDLE 호출 5개 동시 발사 → 적립 정확히 3회.
 - 최종 docs 동기화 점검 (위 단계에서 누락 영역).
 - 노션 SSOT 영향 영역 확인 (있으면 노션도 같이 갱신).

@@ -130,7 +130,21 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `updatedAt` | `LocalDateTime` | 가상 인스턴스는 마스터 `updatedAt` |
 | `snoozedDays` | `int` | 가상 인스턴스는 `0` |
 
-## 8. 관련 문서
+## 8. `CharacterActionUrlResp` 필드 (뚜레딧 적립 Stage 3+)
+
+`GET /api/characters/me/actions/{actionType}` 응답:
+
+| 필드 | 타입 | 비고 |
+|---|---|---|
+| `actionUrl` | `String` | 재생할 캐릭터 애니메이션 URL. 쿨다운/cap 관계없이 항상 정상 반환 |
+| `earnedAmount` | `int` | 이번 호출에서 지급된 뚜레딧 (적립 불가 시 0) |
+| `balanceAfter` | `int` | 호출 직후 지갑 잔액 |
+| `dailyTouchCount` | `int` | 오늘 적립된 터치 횟수 (최대 3) |
+| `nextAvailableAt` | `LocalDateTime` | 다음 적립 가능 시각. 오늘 cap 소진 시 내일 자정, 쿨다운 중이면 `lastTouchedAt + 1h` |
+
+`actionType = EYE` 인 경우 적립 평가 없이 `earnedAmount=0`, `dailyTouchCount` 는 현재 카운트, `nextAvailableAt` 은 정상 계산.
+
+## 9. 관련 문서
 
 - 에러 코드 정의/네이밍: [`error-codes.md`](error-codes.md)
 - Swagger 문서화: [`swagger.md`](swagger.md)
