@@ -63,6 +63,14 @@
 - `PET_TOUCH`
 - `TODO_COMPLETION`
 
+## tamagotchi 도메인 변경 컬럼 (다마고치 터치 적립)
+
+| 테이블 | 컬럼 | 타입 | 비고 |
+|---|---|---|---|
+| `user_character` | `last_touched_at` | `TIMESTAMP NULL` | 마지막 터치 적립 성공 시각 |
+| `user_character` | `daily_touch_count` | `INT NOT NULL DEFAULT 0` | 해당 일자 터치 적립 성공 횟수 |
+| `user_character` | `daily_touch_date` | `DATE NULL` | `daily_touch_count` 기준 일자 |
+
 ## DDL 정책
 
 - 개발(`dev`/`local`): `spring.jpa.hibernate.ddl-auto=update` — 자동 컬럼 추가/변경.
