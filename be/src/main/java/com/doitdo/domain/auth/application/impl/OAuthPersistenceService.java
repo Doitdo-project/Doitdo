@@ -148,7 +148,7 @@ public class OAuthPersistenceService {
 		String username = resolveUniqueUsername(kakaoUser.nickname());
 
 		User user = userRepository.save(User.createOAuthUser(email, username));
-		userWalletRepository.save(UserWallet.create(user.getUserId()));
+		userWalletRepository.save(UserWallet.createWithInitialCredit(user.getUserId()));
 		userSettingRepository.save(UserSetting.create(user.getUserId()));
 		userStreakRepository.save(UserStreak.create(user.getUserId()));
 		autoProviderRepository.save(AutoProvider.create(user.getUserId(), providerName, providerUid));
@@ -176,7 +176,7 @@ public class OAuthPersistenceService {
 		String username = resolveUniqueUsername(googleUser.name());
 
 		User user = userRepository.save(User.createOAuthUser(email, username));
-		userWalletRepository.save(UserWallet.create(user.getUserId()));
+		userWalletRepository.save(UserWallet.createWithInitialCredit(user.getUserId()));
 		userSettingRepository.save(UserSetting.create(user.getUserId()));
 		userStreakRepository.save(UserStreak.create(user.getUserId()));
 		autoProviderRepository.save(AutoProvider.create(user.getUserId(), providerName, providerUid));
@@ -222,7 +222,7 @@ public class OAuthPersistenceService {
 		String username = resolveUniqueUsername(baseNickname);
 
 		User user = userRepository.save(User.createOAuthUser(email, username));
-		userWalletRepository.save(UserWallet.create(user.getUserId()));
+		userWalletRepository.save(UserWallet.createWithInitialCredit(user.getUserId()));
 		userSettingRepository.save(UserSetting.create(user.getUserId()));
 		userStreakRepository.save(UserStreak.create(user.getUserId()));
 		autoProviderRepository.save(AutoProvider.createWithRefreshToken(
