@@ -143,7 +143,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       useRootNavigator: true,
-      builder: (_) => TodoDetailSheet(todoId: todo.id, isSomeday: isSomeday),
+      builder: (_) => TodoDetailSheet(todo: todo, isSomeday: isSomeday),
     );
   }
 
