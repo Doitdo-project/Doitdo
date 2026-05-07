@@ -26,13 +26,14 @@
 | user_settings | [tables/user_settings.png](../imgs/tables/user_settings.png) |
 | user_wallets | [tables/user_wallets.png](../imgs/tables/user_wallets.png) |
 | users | [tables/users.png](../imgs/tables/users.png) |
+| wallet_earn_logs | 신규 테이블 (2026-05-07) |
 
 ## 도메인 ↔ 테이블 매핑
 
 | 도메인 | 테이블 |
 |---|---|
 | `auth` | refresh_tokens, auto_providers |
-| `user` | users, user_wallets |
+| `user` | users, user_wallets, wallet_earn_logs |
 | `todo` | todos, categories, palettes, palette_colors, snooze_history |
 | `tamagotchi` | characters, character_actions, character_unlocks, user_character |
 | `inventory` | items, user_items |
@@ -42,6 +43,19 @@
 | `bugreport` | bug_reports |
 
 신규 테이블/도메인이 생기면 이 표를 갱신한다.
+
+## user 도메인 추가 테이블 (뚜레딧 적립 이력)
+
+| 테이블 | 주요 컬럼 | 비고 |
+|---|---|---|
+| `wallet_earn_logs` | `log_id`, `user_id`, `source`, `amount`, `ref_id`, `earned_at`, `created_at`, `updated_at` | 뚜레딧 적립 출처별 감사 로그 및 일일 cap 합산 기준 |
+
+`wallet_earn_logs.source` enum 값:
+
+- `SIGNUP_BONUS`
+- `STREAK_7DAY`
+- `PET_TOUCH`
+- `TODO_COMPLETION`
 
 ## DDL 정책
 
