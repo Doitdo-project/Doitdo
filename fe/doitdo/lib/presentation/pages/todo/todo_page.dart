@@ -202,7 +202,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
     showModalBottomSheet(
       context: context, isScrollControlled: true,
       backgroundColor: Colors.transparent, useRootNavigator: true,
-      builder: (_) => TodoDetailSheet(todoId: todo.id, isSomeday: isSomeday),
+      builder: (_) => TodoDetailSheet(todo: todo, isSomeday: isSomeday),
     );
   }
 
@@ -548,7 +548,11 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                     onReorderToday: vm.reorderTodo,
                     onReorderSomeday: vm.reorderSomedayTodo,
                     onMoveToSomeday: vm.moveToSomeday,
-                    onMoveToToday: vm.moveToToday,
+                    onMoveToToday: (id, {targetIndex = -1}) => vm.moveToToday(
+                      id,
+                      targetIndex: targetIndex,
+                      targetDate: state.selectedDay,
+                    ),
                     onSnooze: vm.snoozeTodo,
                     onAddToday: () => _openAddSheet(context, state.selectedDay ?? DateTime.now()),
                     onAddSomeday: () => _openAddSheet(context, null),
