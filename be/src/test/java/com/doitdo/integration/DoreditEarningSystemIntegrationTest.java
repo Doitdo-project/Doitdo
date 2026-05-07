@@ -253,6 +253,37 @@ class DoreditEarningSystemIntegrationTest {
         assertThat(balanceAfter - balanceBefore).isZero();
     }
 
+    @Test
+    @DisplayName("Case 6-1: 과거 TODO 완료는 뚜레딧 적립 및 3개 임계값 카운트에서 제외")
+    void case06_1_pastTodosDoNotEarnOrContributeToThreshold() throws InterruptedException {
+        Long userId = createUserWithWallet("user6-1@test.com", "user6-1");
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+
+        for (int i = 0; i < 2; i++) {
+            Long todoId = saveTodo(userId, "past-todo-" + i, yesterday);
+            todoService.changeStatus(userId, todoId, new TodoStatusChangeReq(TodoStatus.DONE));
+            Thread.sleep(100);
+        }
+
+        Long firstTodayTodo = saveTodo(userId, "today-todo-0");
+        todoService.changeStatus(userId, firstTodayTodo, new TodoStatusChangeReq(TodoStatus.DONE));
+        Thread.sleep(100);
+
+        int earnedAfterTwoPastAndOneToday = walletEarnLogsBySource(userId, WalletEarnSource.TODO_COMPLETION).stream()
+                .mapToInt(WalletEarnLog::getAmount).sum();
+        assertThat(earnedAfterTwoPastAndOneToday).isZero();
+
+        for (int i = 1; i < 3; i++) {
+            Long todoId = saveTodo(userId, "today-todo-" + i);
+            todoService.changeStatus(userId, todoId, new TodoStatusChangeReq(TodoStatus.DONE));
+            Thread.sleep(100);
+        }
+
+        int earnedAfterThreeTodayTodos = walletEarnLogsBySource(userId, WalletEarnSource.TODO_COMPLETION).stream()
+                .mapToInt(WalletEarnLog::getAmount).sum();
+        assertThat(earnedAfterThreeTodayTodos).isEqualTo(10);
+    }
+
     // ══════════════════════════════════════════════════════════════════════
     // Case 7: TODO undo→redo 5회 토글 → firstCompletedDate 1회만 기록, distinct=1, earn=0
     // ══════════════════════════════════════════════════════════════════════
@@ -504,9 +535,13 @@ class DoreditEarningSystemIntegrationTest {
     }
 
     private Long saveTodo(Long userId, String title) {
+        return saveTodo(userId, title, LocalDate.now());
+    }
+
+    private Long saveTodo(Long userId, String title, LocalDate startDate) {
         return todoRepository.saveAndFlush(Todo.create(
                 userId, null, title, null, TodoType.NORMAL, 1, null,
-                LocalDate.now(), null, null
+                startDate, null, null
         )).getTodoId();
     }
 

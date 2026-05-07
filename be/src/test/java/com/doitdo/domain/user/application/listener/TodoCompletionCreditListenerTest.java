@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.event.TodoCompletedEvent;
 import com.doitdo.domain.todo.repository.TodoRepository;
 import com.doitdo.domain.user.application.CreditEarnService;
@@ -15,6 +16,8 @@ import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.repository.WalletEarnLogRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +28,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class TodoCompletionCreditListenerTest {
+
+	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
 	@Mock
 	private TodoRepository todoRepository;
@@ -44,7 +49,10 @@ class TodoCompletionCreditListenerTest {
 
 	@Test
 	void skipsSameTodoUndoRedoWhenOnlyOneDistinctTodoWasFirstCompletedToday() {
-		given(todoRepository.countByUserIdAndFirstCompletedDate(eq(1L), any(LocalDate.class))).willReturn(1L);
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L))
+				.willReturn(Optional.of(normalTodo(LocalDate.now(SEOUL))));
+		given(todoRepository.countRewardEligibleByUserIdAndFirstCompletedDate(eq(1L), any(LocalDate.class)))
+				.willReturn(1L);
 		given(walletEarnLogRepository.sumAmountByUserIdAndSourceAndDate(
 				eq(1L),
 				eq(WalletEarnSource.TODO_COMPLETION),
@@ -69,7 +77,9 @@ class TodoCompletionCreditListenerTest {
 	void earnsThreeTimesForNineDistinctTodosAndDoesNotEarnOnTenthTodo() {
 		AtomicLong todayDistinctFirstCompleted = new AtomicLong();
 		AtomicInteger todayEarnCount = new AtomicInteger();
-		given(todoRepository.countByUserIdAndFirstCompletedDate(eq(1L), any(LocalDate.class)))
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(any(Long.class)))
+				.willReturn(Optional.of(normalTodo(LocalDate.now(SEOUL))));
+		given(todoRepository.countRewardEligibleByUserIdAndFirstCompletedDate(eq(1L), any(LocalDate.class)))
 				.willAnswer(invocation -> todayDistinctFirstCompleted.get());
 		given(walletEarnLogRepository.sumAmountByUserIdAndSourceAndDate(
 				eq(1L),
@@ -105,7 +115,10 @@ class TodoCompletionCreditListenerTest {
 
 	@Test
 	void earnsWhenThirdDistinctTodoPassesThresholdWithDailyCapEnabled() {
-		given(todoRepository.countByUserIdAndFirstCompletedDate(eq(1L), any(LocalDate.class))).willReturn(3L);
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(3L))
+				.willReturn(Optional.of(normalTodo(LocalDate.now(SEOUL))));
+		given(todoRepository.countRewardEligibleByUserIdAndFirstCompletedDate(eq(1L), any(LocalDate.class)))
+				.willReturn(3L);
 		given(walletEarnLogRepository.sumAmountByUserIdAndSourceAndDate(
 				eq(1L),
 				eq(WalletEarnSource.TODO_COMPLETION),
@@ -118,5 +131,39 @@ class TodoCompletionCreditListenerTest {
 		listener.onTodoCompleted(new TodoCompletedEvent(1L, 3L));
 
 		verify(creditEarnService).tryEarn(1L, WalletEarnSource.TODO_COMPLETION, 10, 3L, false);
+	}
+
+	@Test
+	void skipsWhenPastTodosAreExcludedFromEligibleCompletionCount() {
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L))
+				.willReturn(Optional.of(normalTodo(LocalDate.now(SEOUL).minusDays(1))));
+
+		listener.onTodoCompleted(new TodoCompletedEvent(1L, 10L));
+
+		verify(todoRepository, never())
+				.countRewardEligibleByUserIdAndFirstCompletedDate(eq(1L), any(LocalDate.class));
+		verify(creditEarnService, never()).tryEarn(
+				eq(1L),
+				eq(WalletEarnSource.TODO_COMPLETION),
+				eq(10),
+				eq(10L),
+				eq(false)
+		);
+	}
+
+	private Todo normalTodo(LocalDate startDate) {
+		return Todo.builder()
+				.userId(1L)
+				.categoryId(null)
+				.title("test")
+				.content(null)
+				.type(Todo.TodoType.NORMAL)
+				.status(Todo.TodoStatus.DONE)
+				.priority(1)
+				.startDate(startDate)
+				.endDate(null)
+				.isDeleted(false)
+				.expGranted(false)
+				.build();
 	}
 }

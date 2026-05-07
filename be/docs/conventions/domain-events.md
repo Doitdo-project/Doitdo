@@ -110,9 +110,10 @@ public class XxxServiceImpl {
 
 ---
 
-## 8. 과거 Todo 경험치 제외 정책 (S14P31D107-475)
+## 8. 과거 Todo 보상 제외 정책 (S14P31D107-475)
 
 `TodoCompletionExpListener` 는 `expGranted` 멱등성 체크 직후, UC 조회 전에 **과거 기준일 가드**를 수행한다.
+`TodoCompletionCreditListener` 는 같은 기준일 규칙으로 오늘 완료 카운트에서 과거 Todo 를 제외한다.
 
 ### 기준일 결정 규칙
 
@@ -122,11 +123,13 @@ public class XxxServiceImpl {
 | `PERIOD` | `endDate != null` 이면 `endDate`, 아니면 `startDate` |
 | `NORMAL` / 그 외 | `startDate` |
 
-- `criteriaDate.isBefore(today)` 이면 `return` (skip). `expGranted` 마킹 없음.
+- 경험치: `criteriaDate.isBefore(today)` 이면 `return` (skip). `expGranted` 마킹 없음.
+- 뚜레딧: `criteriaDate.isBefore(today)` 인 Todo 는 `firstCompletedDate=today` 여도 3개당 10 뚜레딧 카운트에서 제외.
 - `today` = `LocalDate.now(ZoneId.of("Asia/Seoul"))` (KST 기준)
 
 ### 설계 의도
 
 - 날짜가 지난 Todo 를 뒤늦게 완료해도 경험치를 받을 수 없다.
+- 날짜가 지난 Todo 를 뒤늦게 완료해도 뚜레딧을 받을 수 없고, 오늘 유효 완료 3개 임계값에도 기여하지 않는다.
 - `SOMEDAY` 는 날짜 개념이 없는 타입이므로 언제 완료해도 지급한다.
 - 스킵 시 `expGranted` 를 마킹하지 않는다 — 날짜 오류가 수정되는 경우는 없으므로 재진입 시에도 동일하게 스킵된다.
