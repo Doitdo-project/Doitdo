@@ -72,8 +72,7 @@ class RoomFurniturePlacementServiceImplTest {
 		assertThat(items.get(0).placementId()).isEqualTo(30L);
 		assertThat(items.get(0).userFurnitureId()).isEqualTo(20L);
 		assertThat(items.get(0).furnitureId()).isEqualTo(10L);
-		assertThat(items.get(0).x()).isEqualTo(120);
-		assertThat(items.get(0).y()).isEqualTo(300);
+		assertThat(items.get(0).zIndex()).isEqualTo(5);
 	}
 
 	@Test
@@ -120,8 +119,6 @@ class RoomFurniturePlacementServiceImplTest {
 		RoomFurniturePlacementResp resp = service.placeFurniture(userId, 20L);
 
 		assertThat(resp.placementId()).isEqualTo(30L);
-		assertThat(resp.x()).isEqualTo(120);
-		assertThat(resp.y()).isEqualTo(300);
 		assertThat(resp.zIndex()).isEqualTo(5);
 	}
 
@@ -193,8 +190,8 @@ class RoomFurniturePlacementServiceImplTest {
 			new UpdateRoomFurniturePlacementReq(200, 350, 9, 15)
 		);
 
-		assertThat(resp.x()).isEqualTo(200);
-		assertThat(resp.y()).isEqualTo(350);
+		assertThat(placement.getX()).isEqualTo(200);
+		assertThat(placement.getY()).isEqualTo(350);
 		assertThat(resp.zIndex()).isEqualTo(9);
 		assertThat(resp.rotation()).isEqualTo(15);
 	}
