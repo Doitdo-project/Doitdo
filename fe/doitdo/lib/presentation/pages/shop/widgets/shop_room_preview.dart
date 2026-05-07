@@ -26,8 +26,8 @@ class ShopRoomPreview extends StatelessWidget {
     ShopCategory.bed,
     ShopCategory.desk,
     ShopCategory.plant,
-    ShopCategory.carpet,
-    ShopCategory.closet,
+    ShopCategory.rug,
+    ShopCategory.wardrobe,
     ShopCategory.etc,
   };
 
@@ -218,9 +218,9 @@ Color _categoryAccent(ShopCategory category) {
       return const Color(0xFF5A6470);
     case ShopCategory.plant:
       return const Color(0xFF6FA86F);
-    case ShopCategory.carpet:
+    case ShopCategory.rug:
       return const Color(0xFFD08AA0);
-    case ShopCategory.closet:
+    case ShopCategory.wardrobe:
       return const Color(0xFF8B7E66);
     case ShopCategory.etc:
       return AppColors.shopText;

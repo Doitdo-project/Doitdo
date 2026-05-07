@@ -156,12 +156,12 @@ class ShopViewModel extends StateNotifier<ShopState> {
       (name: '몬스테라',   price: 1200, status: ItemStatus.notOwned, isNew: false),
       (name: '튤립 화분',  price: 900,  status: ItemStatus.notOwned, isNew: true),
     ]);
-    addCategory(ShopCategory.carpet, [
+    addCategory(ShopCategory.rug, [
       (name: '꽃무늬 카펫',  price: 1400, status: ItemStatus.placed,   isNew: false),
       (name: '베이지 카펫',  price: 1100, status: ItemStatus.owned,    isNew: false),
       (name: '러그 카펫',    price: 1700, status: ItemStatus.notOwned, isNew: false),
     ]);
-    addCategory(ShopCategory.closet, [
+    addCategory(ShopCategory.wardrobe, [
       (name: '오크 옷장',  price: 2000, status: ItemStatus.notOwned, isNew: false),
       (name: '화이트 옷장', price: 2400, status: ItemStatus.notOwned, isNew: true),
     ]);

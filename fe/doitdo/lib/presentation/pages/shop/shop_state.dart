@@ -10,8 +10,8 @@ enum ShopCategory {
   clock('시계', Icons.access_time_rounded),
   tv('티비', Icons.tv_outlined),
   plant('화분', Icons.local_florist_outlined),
-  carpet('카펫', Icons.texture_rounded),
-  closet('옷장', Icons.checkroom_rounded),
+  rug('카펫', Icons.texture_rounded),
+  wardrobe('옷장', Icons.checkroom_rounded),
   etc('기타', Icons.more_horiz_rounded);
 
   const ShopCategory(this.label, this.icon);
