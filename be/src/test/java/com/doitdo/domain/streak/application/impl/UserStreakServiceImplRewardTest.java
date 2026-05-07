@@ -10,7 +10,9 @@ import com.doitdo.domain.streak.entity.StreakRewardLog;
 import com.doitdo.domain.streak.entity.UserStreak;
 import com.doitdo.domain.streak.repository.StreakRewardLogRepository;
 import com.doitdo.domain.streak.repository.UserStreakRepository;
+import com.doitdo.domain.user.application.CreditEarnService;
 import com.doitdo.domain.user.entity.UserWallet;
+import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.repository.UserWalletRepository;
 import java.time.LocalDate;
 import java.util.Optional;
@@ -31,12 +33,16 @@ class UserStreakServiceImplRewardTest {
 	@Mock
 	private StreakRewardLogRepository streakRewardLogRepository;
 
+	@Mock
+	private CreditEarnService creditEarnService;
+
 	@Test
 	void claimSevenDayReward_rewardsWalletWhenCurrentStreakIsSevenDays() {
 		UserStreakServiceImpl service = new UserStreakServiceImpl(
 				userStreakRepository,
 				userWalletRepository,
-				streakRewardLogRepository
+				streakRewardLogRepository,
+				creditEarnService
 		);
 		Long userId = 1L;
 		LocalDate startDate = LocalDate.parse("2026-04-01");
@@ -51,12 +57,23 @@ class UserStreakServiceImplRewardTest {
 				.build();
 		UserWallet wallet = UserWallet.builder()
 				.userId(userId)
-				.balance(0)
+				.balance(200)
+				.build();
+		StreakRewardLog savedRewardLog = StreakRewardLog.builder()
+				.streakRewardLogId(50L)
+				.userId(userId)
+				.streakStartDate(startDate)
+				.streakCount(7)
+				.rewardAmount(200)
 				.build();
 
 		given(userStreakRepository.findByUserId(userId)).willReturn(Optional.of(streak));
 		given(streakRewardLogRepository.existsByUserIdAndStreakStartDateAndStreakCount(userId, startDate, 7))
 				.willReturn(false);
+		given(streakRewardLogRepository.save(org.mockito.ArgumentMatchers.any(StreakRewardLog.class)))
+				.willReturn(savedRewardLog);
+		given(creditEarnService.tryEarn(userId, WalletEarnSource.STREAK_7DAY, 200, 50L, true))
+				.willReturn(200);
 		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet));
 
 		StreakRewardResp resp = service.claimSevenDayReward(userId);
@@ -67,6 +84,7 @@ class UserStreakServiceImplRewardTest {
 		assertThat(resp.balance()).isEqualTo(200);
 		assertThat(wallet.getBalance()).isEqualTo(200);
 		verify(streakRewardLogRepository).save(org.mockito.ArgumentMatchers.any(StreakRewardLog.class));
+		verify(creditEarnService).tryEarn(userId, WalletEarnSource.STREAK_7DAY, 200, 50L, true);
 	}
 
 	@Test
@@ -74,7 +92,8 @@ class UserStreakServiceImplRewardTest {
 		UserStreakServiceImpl service = new UserStreakServiceImpl(
 				userStreakRepository,
 				userWalletRepository,
-				streakRewardLogRepository
+				streakRewardLogRepository,
+				creditEarnService
 		);
 		Long userId = 1L;
 		LocalDate startDate = LocalDate.parse("2026-04-01");
@@ -97,6 +116,13 @@ class UserStreakServiceImplRewardTest {
 		assertThat(resp.rewardAmount()).isZero();
 		assertThat(resp.balance()).isNull();
 		verify(userWalletRepository, never()).findByUserId(userId);
+		verify(creditEarnService, never()).tryEarn(
+				org.mockito.ArgumentMatchers.anyLong(),
+				org.mockito.ArgumentMatchers.any(WalletEarnSource.class),
+				org.mockito.ArgumentMatchers.anyInt(),
+				org.mockito.ArgumentMatchers.any(),
+				org.mockito.ArgumentMatchers.anyBoolean()
+		);
 		verify(streakRewardLogRepository, never()).save(org.mockito.ArgumentMatchers.any(StreakRewardLog.class));
 	}
 
@@ -105,7 +131,8 @@ class UserStreakServiceImplRewardTest {
 		UserStreakServiceImpl service = new UserStreakServiceImpl(
 				userStreakRepository,
 				userWalletRepository,
-				streakRewardLogRepository
+				streakRewardLogRepository,
+				creditEarnService
 		);
 		Long userId = 1L;
 		UserStreak streak = UserStreak.builder()
@@ -125,6 +152,13 @@ class UserStreakServiceImplRewardTest {
 		assertThat(resp.rewardAmount()).isZero();
 		assertThat(resp.balance()).isNull();
 		verify(userWalletRepository, never()).findByUserId(userId);
+		verify(creditEarnService, never()).tryEarn(
+				org.mockito.ArgumentMatchers.anyLong(),
+				org.mockito.ArgumentMatchers.any(WalletEarnSource.class),
+				org.mockito.ArgumentMatchers.anyInt(),
+				org.mockito.ArgumentMatchers.any(),
+				org.mockito.ArgumentMatchers.anyBoolean()
+		);
 		verify(streakRewardLogRepository, never()).save(org.mockito.ArgumentMatchers.any(StreakRewardLog.class));
 	}
 }
