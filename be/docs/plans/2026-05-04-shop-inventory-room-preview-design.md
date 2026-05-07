@@ -42,8 +42,6 @@
   "price": 100,
   "imageUrl": "https://...",
   "thumbnailUrl": "https://...",
-  "defaultX": 120,
-  "defaultY": 300,
   "width": 80,
   "height": 80,
   "zIndex": 10,
@@ -114,7 +112,7 @@
 - 내 방에 `CLOCK` 카테고리 벽시계 A가 배치되어 있다.
 - 상점에서 벽시계 B를 미리보기한다.
 - 응답에서는 벽시계 A를 제외한다.
-- 벽시계 B를 기본 좌표로 포함한다.
+- 벽시계 B를 `preview=true` 로 포함한다.
 - 다른 카테고리 가구는 그대로 포함한다.
 
 ## 구현 영향 범위
