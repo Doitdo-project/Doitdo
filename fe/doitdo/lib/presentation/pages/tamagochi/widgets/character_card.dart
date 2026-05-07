@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui';
 
 import 'package:doitdo/core/theme/app_text_styles.dart';
+import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/domain/entities/character.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
-import 'package:doitdo/presentation/pages/tamagochi/widgets/pixel_icon_box.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/room_layer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -88,44 +89,30 @@ class CharacterCard extends StatelessWidget {
           Positioned(
             left: 0,
             right: 0,
-            top: topSafePadding+48,
+            top: topSafePadding+60,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 if (_speechText != null) ...[
                   _SpeechBubble(text: _speechText!),
-                  SizedBox(height: 8.h),
                 ],
                 _buildCharacterSlot(),
               ],
             ),
           ),
 
-          // 우측 상단 아이콘 (상점 / 도감) — 캐릭터 수령 이후에만 노출.
-          // 픽셀 톤 방 일러스트와 결을 맞추기 위해 PixelIconBox 로 감싸고,
-          // 아이콘은 shop / book 으로 교체.
+          // 우측 상단 메뉴 — 캐릭터 수령 이후에만 노출.
+          // PixelIconBox 두 개가 늘 떠있어서 뒤에 놓인 가구(TV 등)가 가려지던
+          // 문제를 해결하기 위해, 평상시엔 햄버거 1개만 두고 탭 시에만 shop/book
+          // 두 글래스 박스가 아래로 펼쳐진다. 톤은 StatusPill 의 글래스 스타일을
+          // 그대로 따름.
           if (!hideChrome)
             Positioned(
-              top: topSafePadding + 8.h,
+              top: topSafePadding - 12,
               right: 16.w,
-              child: Column(
-                children: [
-                  PixelIconBox(
-                    onTap: onTapCollection,
-                    child: Image.asset(
-                      'assets/images/book.png',
-                      width: 24.w,
-                    ),
-                  ),
-                  SizedBox(height: 10.h),
-                  PixelIconBox(
-                    onTap: onTapShop,
-                    child: Image.asset(
-                      'assets/images/shop.png',
-                      width: 24.w,
-                    ),
-                  ),
-                ],
+              child: _RoomMenuButton(
+                onTapShop: onTapShop,
+                onTapCollection: onTapCollection,
               ),
             ),
         ],
@@ -492,6 +479,146 @@ class _GrownCharacterState extends State<_GrownCharacter> {
       onTap: widget.onTap,
       behavior: HitTestBehavior.opaque,
       child: slot,
+    );
+  }
+}
+
+/// 우상단 햄버거 메뉴. 평상시엔 햄버거 한 칸만 노출되어 방 가구를 가리는 면적을
+/// 최소화하고, 탭하면 그 아래로 [상점] / [도감] 글래스 박스가 펼쳐진다.
+///
+/// 메뉴 아이템을 탭하면 자동으로 collapse 되며 콜백을 발화 — 페이지 이동 후
+/// 돌아왔을 때 펼친 상태가 남아있지 않도록.
+class _RoomMenuButton extends StatefulWidget {
+  const _RoomMenuButton({this.onTapShop, this.onTapCollection});
+
+  final VoidCallback? onTapShop;
+  final VoidCallback? onTapCollection;
+
+  @override
+  State<_RoomMenuButton> createState() => _RoomMenuButtonState();
+}
+
+class _RoomMenuButtonState extends State<_RoomMenuButton> {
+  bool _expanded = false;
+
+  void _toggle() => setState(() => _expanded = !_expanded);
+
+  void _onItemTap(VoidCallback? cb) {
+    setState(() => _expanded = false);
+    cb?.call();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final iconColor = context.colors.textPrimary;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        _GlassIconBox(
+          onTap: _toggle,
+          // 햄버거 ↔ X 회전 전환은 90° 만 — 닫힘/열림 상태가 자연스럽게 읽힘.
+          child: AnimatedRotation(
+            turns: _expanded ? 0.25 : 0,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            child: Icon(Icons.menu_rounded, size: 20.sp, color: iconColor),
+          ),
+        ),
+        // ClipRect + AnimatedAlign(heightFactor) 로 펼침/접힘을 위에서 아래로
+        // 슬라이드. AnimatedOpacity 로 페이드를 함께 줘 collapse 도중 컨텐츠가
+        // 잘려보이는 인상이 덜하게.
+        ClipRect(
+          child: AnimatedAlign(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            heightFactor: _expanded ? 1.0 : 0.0,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 200),
+              opacity: _expanded ? 1.0 : 0.0,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(height: 8.h),
+                  _GlassIconBox(
+                    onTap: () => _onItemTap(widget.onTapShop),
+                    child: Image.asset(
+                      'assets/images/shop.png',
+                      width: 24.w,
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  _GlassIconBox(
+                    onTap: () => _onItemTap(widget.onTapCollection),
+                    child: Image.asset(
+                      'assets/images/book.png',
+                      width: 24.w,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// StatusPill 과 같은 글래스 톤(BackdropFilter blur + 반투명 bg + 흰 보더 +
+/// 두 단 그림자)의 정사각 아이콘 박스. 픽셀 톤이 무거워서 뒤에 놓인 방 가구를
+/// 가리는 게 부담스러울 때 PixelIconBox 대신 사용.
+class _GlassIconBox extends StatelessWidget {
+  const _GlassIconBox({required this.child, this.onTap});
+
+  final Widget child;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final box = Container(
+      width: 36.w,
+      height: 36.w,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12.r),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Container(
+            decoration: BoxDecoration(
+              color: colors.streakCardBg.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.6),
+                width: 1,
+              ),
+            ),
+            child: Center(child: child),
+          ),
+        ),
+      ),
+    );
+    if (onTap == null) return box;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: box,
     );
   }
 }
