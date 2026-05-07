@@ -49,7 +49,10 @@ class UserStreakServiceImplRewardTest {
 				.longestStreakStartDate(startDate)
 				.longestStreakEndDate(LocalDate.parse("2026-04-07"))
 				.build();
-		UserWallet wallet = UserWallet.create(userId);
+		UserWallet wallet = UserWallet.builder()
+				.userId(userId)
+				.balance(0)
+				.build();
 
 		given(userStreakRepository.findByUserId(userId)).willReturn(Optional.of(streak));
 		given(streakRewardLogRepository.existsByUserIdAndStreakStartDateAndStreakCount(userId, startDate, 7))

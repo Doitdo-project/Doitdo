@@ -24,6 +24,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserWallet extends BaseTimeEntity {
 
+	private static final int INITIAL_SIGNUP_CREDIT = 100;
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "wallet_id")
@@ -38,7 +40,7 @@ public class UserWallet extends BaseTimeEntity {
 	public static UserWallet create(Long userId) {
 		return UserWallet.builder()
 				.userId(userId)
-				.balance(0)
+				.balance(INITIAL_SIGNUP_CREDIT)
 				.build();
 	}
 

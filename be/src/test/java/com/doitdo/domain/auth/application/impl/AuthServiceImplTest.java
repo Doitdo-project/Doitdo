@@ -28,6 +28,7 @@ import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.todo.application.DefaultCategoryRegistrar;
 import com.doitdo.domain.user.entity.User;
+import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.domain.user.repository.UserWalletRepository;
 import com.doitdo.global.util.JwtUtil;
@@ -119,6 +120,10 @@ class AuthServiceImplTest {
 
 		assertThat(resp.birthDateRegistered()).isFalse();
 		assertThat(resp.agreementsAccepted()).isFalse();
+
+		ArgumentCaptor<UserWallet> walletCaptor = forClass(UserWallet.class);
+		then(userWalletRepository).should().save(walletCaptor.capture());
+		assertThat(walletCaptor.getValue().getBalance()).isEqualTo(100);
 
 		ArgumentCaptor<UserCharacter> captor = forClass(UserCharacter.class);
 		then(userCharacterRepository).should().save(captor.capture());
