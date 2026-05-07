@@ -53,7 +53,7 @@ class ShopControllerTest {
 		FurnitureShopResp furnitures = new FurnitureShopResp(List.of());
 		RoomResp room = new RoomResp(List.of(
 			new RoomFurniturePlacementResp(3L, 10L, 1L, "나무 의자", "CHAIR", "https://cdn.example.com/chair.png",
-				120, 300, 80, 90, 5, 0, false)
+				80, 90, 5, 0, false)
 		));
 		given(shopService.listFurnitures(1L, "CHAIR")).willReturn(furnitures);
 		given(roomFurniturePlacementService.getMyRoom(1L)).willReturn(room);
@@ -69,7 +69,7 @@ class ShopControllerTest {
 	void getMyRoom_returnsPlacedFurnitureList() {
 		RoomResp resp = new RoomResp(List.of(
 			new RoomFurniturePlacementResp(3L, 10L, 1L, "나무 의자", "CHAIR", "https://cdn.example.com/chair.png",
-				120, 300, 80, 90, 5, 0, false)
+				80, 90, 5, 0, false)
 		));
 		given(roomFurniturePlacementService.getMyRoom(1L)).willReturn(resp);
 
@@ -83,7 +83,7 @@ class ShopControllerTest {
 	@Test
 	void placeFurniture_returnsCreatedPlacement() {
 		RoomFurniturePlacementResp resp = new RoomFurniturePlacementResp(
-			3L, 10L, 1L, "나무 의자", "CHAIR", "https://cdn.example.com/chair.png", 120, 300, 80, 90, 5, 0, false
+			3L, 10L, 1L, "나무 의자", "CHAIR", "https://cdn.example.com/chair.png", 80, 90, 5, 0, false
 		);
 		given(roomFurniturePlacementService.placeFurniture(1L, 10L)).willReturn(resp);
 
@@ -98,14 +98,14 @@ class ShopControllerTest {
 	void updatePlacement_returnsUpdatedPlacement() {
 		UpdateRoomFurniturePlacementReq req = new UpdateRoomFurniturePlacementReq(200, 350, 9, 15);
 		RoomFurniturePlacementResp resp = new RoomFurniturePlacementResp(
-			3L, 10L, 1L, "나무 의자", "CHAIR", "https://cdn.example.com/chair.png", 200, 350, 80, 90, 9, 15, false
+			3L, 10L, 1L, "나무 의자", "CHAIR", "https://cdn.example.com/chair.png", 80, 90, 9, 15, false
 		);
 		given(roomFurniturePlacementService.updatePlacement(1L, 3L, req)).willReturn(resp);
 
 		GlobalApiResponse<RoomFurniturePlacementResp> response = controller.updatePlacement(userDetails, 3L, req);
 
 		assertThat(response.getStatus()).isEqualTo(200);
-		assertThat(response.getData().x()).isEqualTo(200);
+		assertThat(response.getData().zIndex()).isEqualTo(9);
 		assertThat(response.getData().rotation()).isEqualTo(15);
 	}
 
@@ -122,7 +122,7 @@ class ShopControllerTest {
 	void previewRoom_returnsPreviewRoom() {
 		RoomResp resp = new RoomResp(List.of(
 			new RoomFurniturePlacementResp(null, null, 2L, "새 시계", "CLOCK",
-				"https://cdn.example.com/clock.png", 120, 300, 80, 90, 5, 0, true)
+				"https://cdn.example.com/clock.png", 80, 90, 5, 0, true)
 		));
 		given(shopService.previewRoom(1L, 2L)).willReturn(resp);
 
