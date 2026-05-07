@@ -534,9 +534,4 @@ class DoreditEarningSystemIntegrationTest {
         );
     }
 
-    private String userEmail(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new AssertionError("유저 없음"))
-                .getEmail();
-    }
 }
