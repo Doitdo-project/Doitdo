@@ -10,17 +10,23 @@ public record UserStreakResp(
 		LocalDate lastActiveDate,
 		Integer longestStreakCount,
 		LocalDate longestStreakStartDate,
-		LocalDate longestStreakEndDate
+		LocalDate longestStreakEndDate,
+		boolean canClaim
 ) {
 
 	public static UserStreakResp from(UserStreak streak) {
+		return from(streak, false);
+	}
+
+	public static UserStreakResp from(UserStreak streak, boolean canClaim) {
 		return new UserStreakResp(
 				streak.getCurrentStreakCount(),
 				streak.getCurrentStreakStartDate(),
 				streak.getLastActiveDate(),
 				streak.getLongestStreakCount(),
 				streak.getLongestStreakStartDate(),
-				streak.getLongestStreakEndDate()
+				streak.getLongestStreakEndDate(),
+				canClaim
 		);
 	}
 }

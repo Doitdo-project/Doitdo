@@ -43,7 +43,7 @@ public class UserStreakServiceImpl implements UserStreakService {
 	public UserStreakResp getMyStreak(Long userId) {
 		UserStreak streak = userStreakRepository.findByUserId(userId)
 				.orElseThrow(() -> new CustomException(UserErrorCode.U06_002));
-		return UserStreakResp.from(streak);
+		return UserStreakResp.from(streak, canClaimReward(userId, streak));
 	}
 
 	@Override
@@ -91,5 +91,16 @@ public class UserStreakServiceImpl implements UserStreakService {
 				&& streakCount != null
 				&& streakCount >= REWARD_INTERVAL_DAYS
 				&& streakCount % REWARD_INTERVAL_DAYS == 0;
+	}
+
+	private boolean canClaimReward(Long userId, UserStreak streak) {
+		if (!isRewardable(streak)) {
+			return false;
+		}
+		return !streakRewardLogRepository.existsByUserIdAndStreakStartDateAndStreakCount(
+				userId,
+				streak.getCurrentStreakStartDate(),
+				streak.getCurrentStreakCount()
+		);
 	}
 }

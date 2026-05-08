@@ -146,7 +146,23 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 
 enum 에는 있지만 해당 캐릭터의 `character_actions` row 가 없는 액션은 404 `M09-002` 를 반환한다.
 
-## 9. 관련 문서
+## 9. `UserStreakResp` 필드
+
+`GET /api/users/me/streak` 응답:
+
+| 필드 | 타입 | 비고 |
+|---|---|---|
+| `currentStreakCount` | `Integer` | 현재 연속 달성 일수 |
+| `currentStreakStartDate` | `LocalDate` | 현재 연속 달성 시작일 |
+| `lastActiveDate` | `LocalDate` | 마지막 활동일 |
+| `longestStreakCount` | `Integer` | 최장 연속 달성 일수 |
+| `longestStreakStartDate` | `LocalDate` | 최장 연속 달성 시작일 |
+| `longestStreakEndDate` | `LocalDate` | 최장 연속 달성 종료일 |
+| `canClaim` | `boolean` | 현재 streak 구간의 7일 단위 보상 수령 가능 여부 |
+
+`canClaim` 은 현재 연속 달성 일수가 7의 배수이고, 같은 `currentStreakStartDate` / `currentStreakCount` 로 보상 수령 기록이 없을 때만 `true` 다.
+
+## 10. 관련 문서
 
 - 에러 코드 정의/네이밍: [`error-codes.md`](error-codes.md)
 - Swagger 문서화: [`swagger.md`](swagger.md)
