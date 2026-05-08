@@ -4,6 +4,7 @@ import 'package:doitdo/domain/entities/shop_entry.dart';
 import 'package:doitdo/domain/entities/shop_furniture.dart';
 import 'package:doitdo/domain/entities/user_furniture.dart';
 import 'package:doitdo/domain/repositories/shop_repository.dart';
+import 'package:doitdo/domain/repositories/user_repository.dart';
 import 'package:doitdo/presentation/pages/shop/shop_state.dart';
 import 'package:doitdo/presentation/pages/tamagochi/my_room_provider.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
@@ -20,17 +21,25 @@ import 'package:doitdo/presentation/providers/app_data_providers.dart';
 /// [build] 의 `Future.wait` 에 끼워 넣어 초기값을 채워준다.
 class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
   late ShopRepository _repo;
+  late UserRepository _userRepo;
 
   @override
   Future<ShopState> build() async {
-    _repo = ref.watch(shopRepositoryProvider);
+    _repo     = ref.watch(shopRepositoryProvider);
+    _userRepo = ref.watch(userRepositoryProvider);
+
+    // 상점 데이터 + 잔액을 병렬로 조회해 첫 진입 레이턴시 최소화.
+    // getBalance 실패(지갑 미생성 등) 시에도 상점은 정상 표시 — 잔액만 0 으로 폴백.
     final results = await Future.wait([
       _repo.getShopEntry(),
       _repo.listMyFurnitures(),
+      _userRepo.getBalance().catchError((_) => 0),
     ]);
-    final entry = results[0] as ShopEntry;
+    final entry        = results[0] as ShopEntry;
     final myFurnitures = results[1] as List<UserFurnitureItem>;
-    return _composeState(entry: entry, myFurnitures: myFurnitures, coins: 0);
+    final coins        = results[2] as int;
+
+    return _composeState(entry: entry, myFurnitures: myFurnitures, coins: coins);
   }
 
   // ─── 동기 액션 (서버 호출 없음) ────────────────────────────────
@@ -59,15 +68,25 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
 
   /// 미보유 아이템을 구매하고 즉시 방에 배치한다(주문서 확인 모달의 단일 액션).
   ///
-  /// 잔액 부족 / 이미 보유 / 판매 중지 등은 BE 가 4xx 로 막고 [false] 로 떨어진다.
-  /// 성공 시 새 잔액으로 [ShopState.coins] 를 갱신하고 카탈로그 / 보유 목록을
-  /// 재조회. 다마고치 홈 방 배경도 [myRoomProvider] 무효화로 즉시 따라온다.
+  /// 낙관적 업데이트: 서버 응답 전에 UI 를 먼저 반영해 체감 속도를 높인다.
+  /// - 탭 즉시: 코인 차감 + 아이템 placed 상태로 전환
+  /// - 백그라운드: 실제 서버 호출
+  /// - 실패 시: 원래 상태(s)로 롤백
   Future<bool> purchaseAndPlace(String itemId) async {
     final s = state.valueOrNull;
     if (s == null) return false;
     final item = _findItem(s, itemId);
     if (item == null || item.status != ItemStatus.notOwned) return false;
 
+    // 1. UI 즉시 반영 — 서버 응답 기다리지 않고 코인 차감 + placed 표시.
+    state = AsyncData(s.copyWith(
+      coins: s.coins - item.price,
+      items: s.items.map((it) =>
+      it.id == itemId ? it.copyWith(status: ItemStatus.placed) : it,
+      ).toList(),
+    ));
+
+    // 2. 서버 호출 (백그라운드)
     try {
       final purchase = await _repo.purchaseFurniture(item.furnitureId);
       await _repo.placeFurniture(purchase.userFurnitureId);
@@ -75,6 +94,8 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
       ref.invalidate(myRoomProvider);
       return true;
     } catch (_) {
+      // 실패 시 낙관적 업데이트 롤백
+      state = AsyncData(s);
       return false;
     }
   }
@@ -220,6 +241,6 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
 }
 
 final shopViewModelProvider =
-    AsyncNotifierProvider.autoDispose<ShopViewModel, ShopState>(
+AsyncNotifierProvider.autoDispose<ShopViewModel, ShopState>(
   ShopViewModel.new,
 );
