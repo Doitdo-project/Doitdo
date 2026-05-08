@@ -29,6 +29,9 @@ class CharacterCard extends StatelessWidget {
     this.onTapCollection,
     this.onEggTap,
     this.onCharacterTap,
+    this.onTapEvolve,
+    this.onTapFarewell,
+    this.actionBusy = false,
     this.topSafePadding = 0,
   });
 
@@ -47,6 +50,15 @@ class CharacterCard extends StatelessWidget {
   /// 부화 이후 캐릭터 본체를 탭했을 때 호출.
   final VoidCallback? onCharacterTap;
 
+  /// canEvolve 일 때 노출되는 "진화" 뱃지 탭 콜백. null 이면 뱃지 자체가 비활성.
+  final VoidCallback? onTapEvolve;
+
+  /// canFarewell 일 때 노출되는 "독립" 뱃지 탭 콜백. null 이면 뱃지 자체가 비활성.
+  final VoidCallback? onTapFarewell;
+
+  /// 진화/독립 API 호출 in-flight. 뱃지를 dim + 탭 무시 처리하기 위해.
+  final bool actionBusy;
+
   /// 카드가 상태바 영역까지 확장될 때 content 가 상태바 아이콘과 겹치지 않도록
   /// 밀어낼 상단 여백. 배경(bg_grass)은 이 영역까지 그대로 이어지고, 내부 content
   /// 좌표만 이 값만큼 내려간다.
@@ -60,7 +72,11 @@ class CharacterCard extends StatelessWidget {
     return SizedBox(
       // 침대/창문 일러스트가 잘리지 않도록 충분한 높이 확보. 캐릭터는 카드 하단
       // (= 바닥 영역) 에 정렬되어 발을 바닥에 두고 있는 것처럼 보이게 한다.
-      height: 250.h + topSafePadding,
+      // width 를 안 잡으면 부모(Column → outer Stack StackFit.loose) 가 loose 로
+      // 흘려보내, 안쪽 Stack 의 자식이 모두 Positioned* 라 width 가 0 으로 collapse
+      // → 카드가 통째로 빈 박스로 보이는 버그가 난다. 부모 max 까지 늘려 박는다.
+      width: double.infinity,
+      height: 300.h + topSafePadding,
       child: Stack(
         children: [
           // 방 배경 + 가구 합성. listMyFurnitures() 결과를 zIndex 순서로 쌓아
@@ -72,7 +88,7 @@ class CharacterCard extends StatelessWidget {
           // 상단에 얹혀 "서버 갱신 중" 만 표현한다.
           if (isCharacterLoading && character != null)
             Positioned(
-              top: topSafePadding + 10.h,
+              top: topSafePadding + 20.h,
               left: 12.w,
               child: SizedBox(
                 width: 16.sp,
@@ -86,15 +102,23 @@ class CharacterCard extends StatelessWidget {
 
           // 중앙 하단: 말풍선 + 캐릭터. RoomLayer 가 들어올린 바닥선 위에
           // 캐릭터 발이 정확히 닿도록 같은 inset 을 공유한다 (RoomLayer.characterBottomInset).
+          //
+          // 말풍선은 Transform.translate 로 layout slot 은 그대로 두고 rendering 만
+          // 아래로 밀어 캐릭터 머리 쪽으로 살짝 겹치게 한다 — 꼬리가 캐릭터를
+          // 가리키는 형태로 자연스럽게 읽힘. 캐릭터 자체는 layout 위치 그대로
+          // 유지해야 RoomLayer 바닥선에 발이 정확히 닿음.
           Positioned(
             left: 0,
             right: 0,
-            top: topSafePadding+60,
+            top: topSafePadding + 100,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 if (_speechText != null) ...[
-                  _SpeechBubble(text: _speechText!),
+                  Transform.translate(
+                    offset: Offset(0, 10.h),
+                    child: _SpeechBubble(text: _speechText!),
+                  ),
                 ],
                 _buildCharacterSlot(),
               ],
@@ -108,13 +132,19 @@ class CharacterCard extends StatelessWidget {
           // 그대로 따름.
           if (!hideChrome)
             Positioned(
-              top: topSafePadding - 12,
+              top: topSafePadding,
               right: 16.w,
               child: _RoomMenuButton(
                 onTapShop: onTapShop,
                 onTapCollection: onTapCollection,
               ),
             ),
+
+          // 진화 / 독립 액션 뱃지. canEvolve / canFarewell 가 켜진 동안만 노출되며
+          // 캐릭터 column 윗쪽 (말풍선 위 약간) 에 떠있는다. 탭 → 부모가 다이얼로그
+          // 띄운 뒤 API 호출. 둘은 스테이지가 달라 동시에 켜질 수 없으니 단일 뱃지로
+          // 색·아이콘만 분기.
+          if (!hideChrome) _buildActionBadge(),
         ],
       ),
     );
@@ -126,6 +156,50 @@ class CharacterCard extends StatelessWidget {
     if (character == null) return null;
     if (character?.isEgg ?? false) return null;
     return state.speechBubble;
+  }
+
+  /// canEvolve / canFarewell 분기. 둘 다 false 면 빈 위젯.
+  /// 뱃지는 캐릭터 column 의 top(=topSafePadding+100) 위쪽 약 40h 에 떠있어
+  /// 말풍선/캐릭터에 살짝 겹쳐 보이지 않게 한다. 텍스트 없이 색·아이콘만으로
+  /// 분기 — 라벨은 다이얼로그에서 명시. "지금 뭔가 가능" 신호만 주는 역할.
+  Widget _buildActionBadge() {
+    final c = character;
+    if (c == null) return const SizedBox.shrink();
+    if (c.canEvolve && onTapEvolve != null) {
+      return Positioned(
+        top: topSafePadding + 60,
+        left: 0,
+        right: 0,
+        child: Center(
+          child: _ActionBadge(
+            icon: Icons.auto_awesome_rounded,
+            fg: const Color(0xFFB8702A),
+            bg: const Color(0xFFFCE3C2),
+            borderColor: const Color(0xFFE9B97A),
+            busy: actionBusy,
+            onTap: onTapEvolve!,
+          ),
+        ),
+      );
+    }
+    if (c.canFarewell && onTapFarewell != null) {
+      return Positioned(
+        top: topSafePadding + 60,
+        left: 0,
+        right: 0,
+        child: Center(
+          child: _ActionBadge(
+            icon: Icons.flight_takeoff_rounded,
+            fg: const Color(0xFF3A6BB4),
+            bg: const Color(0xFFD4E2F8),
+            borderColor: const Color(0xFFA8C2EC),
+            busy: actionBusy,
+            onTap: onTapFarewell!,
+          ),
+        ),
+      );
+    }
+    return const SizedBox.shrink();
   }
 
   Widget _buildCharacterSlot() {
@@ -562,6 +636,99 @@ class _RoomMenuButtonState extends State<_RoomMenuButton> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 캐릭터 위에 떠있는 진화/독립 액션 뱃지. 텍스트 없이 색·아이콘만 — 정확한
+/// 안내는 탭 시 다이얼로그가 담당. 시선 유도용 펄스 애니메이션을 자체 호스팅.
+/// busy 면 dim + 탭 무시 + 펄스 멈춤.
+class _ActionBadge extends StatefulWidget {
+  const _ActionBadge({
+    required this.icon,
+    required this.fg,
+    required this.bg,
+    required this.borderColor,
+    required this.onTap,
+    this.busy = false,
+  });
+
+  final IconData icon;
+  final Color fg;
+  final Color bg;
+  final Color borderColor;
+  final VoidCallback onTap;
+  final bool busy;
+
+  @override
+  State<_ActionBadge> createState() => _ActionBadgeState();
+}
+
+class _ActionBadgeState extends State<_ActionBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    // 1.0 ↔ 1.08 사이를 1.4초 주기로 왕복. easeInOut 으로 자연스러운 호흡감.
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+    _pulse = Tween<double>(begin: 1.0, end: 1.08).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+    if (!widget.busy) _pulseController.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ActionBadge old) {
+    super.didUpdateWidget(old);
+    if (widget.busy && _pulseController.isAnimating) {
+      _pulseController.stop();
+      _pulseController.value = 0;
+    } else if (!widget.busy && !_pulseController.isAnimating) {
+      _pulseController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: widget.busy ? 0.5 : 1.0,
+      child: GestureDetector(
+        onTap: widget.busy ? null : widget.onTap,
+        behavior: HitTestBehavior.opaque,
+        child: ScaleTransition(
+          scale: _pulse,
+          child: Container(
+            width: 36.w,
+            height: 36.w,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: widget.bg,
+              shape: BoxShape.circle,
+              border: Border.all(color: widget.borderColor, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Icon(widget.icon, size: 18.sp, color: widget.fg),
+          ),
+        ),
+      ),
     );
   }
 }
