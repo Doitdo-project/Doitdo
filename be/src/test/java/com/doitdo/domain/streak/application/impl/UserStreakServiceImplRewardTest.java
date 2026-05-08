@@ -6,6 +6,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.doitdo.domain.streak.api.dto.resp.StreakRewardResp;
+import com.doitdo.domain.streak.api.dto.resp.UserStreakResp;
 import com.doitdo.domain.streak.entity.StreakRewardLog;
 import com.doitdo.domain.streak.entity.UserStreak;
 import com.doitdo.domain.streak.repository.StreakRewardLogRepository;
@@ -35,6 +36,91 @@ class UserStreakServiceImplRewardTest {
 
 	@Mock
 	private CreditEarnService creditEarnService;
+
+	@Test
+	void getMyStreak_canClaimWhenCurrentStreakIsUnclaimedMultipleOfSeven() {
+		UserStreakServiceImpl service = new UserStreakServiceImpl(
+				userStreakRepository,
+				userWalletRepository,
+				streakRewardLogRepository,
+				creditEarnService
+		);
+		Long userId = 1L;
+		LocalDate startDate = LocalDate.parse("2026-04-01");
+		UserStreak streak = UserStreak.builder()
+				.userId(userId)
+				.currentStreakCount(7)
+				.currentStreakStartDate(startDate)
+				.lastActiveDate(LocalDate.parse("2026-04-07"))
+				.longestStreakCount(7)
+				.longestStreakStartDate(startDate)
+				.longestStreakEndDate(LocalDate.parse("2026-04-07"))
+				.build();
+
+		given(userStreakRepository.findByUserId(userId)).willReturn(Optional.of(streak));
+		given(streakRewardLogRepository.existsByUserIdAndStreakStartDateAndStreakCount(userId, startDate, 7))
+				.willReturn(false);
+
+		UserStreakResp resp = service.getMyStreak(userId);
+
+		assertThat(resp.canClaim()).isTrue();
+	}
+
+	@Test
+	void getMyStreak_cannotClaimWhenCurrentStreakSegmentAlreadyRewarded() {
+		UserStreakServiceImpl service = new UserStreakServiceImpl(
+				userStreakRepository,
+				userWalletRepository,
+				streakRewardLogRepository,
+				creditEarnService
+		);
+		Long userId = 1L;
+		LocalDate startDate = LocalDate.parse("2026-04-01");
+		UserStreak streak = UserStreak.builder()
+				.userId(userId)
+				.currentStreakCount(7)
+				.currentStreakStartDate(startDate)
+				.lastActiveDate(LocalDate.parse("2026-04-07"))
+				.longestStreakCount(7)
+				.build();
+
+		given(userStreakRepository.findByUserId(userId)).willReturn(Optional.of(streak));
+		given(streakRewardLogRepository.existsByUserIdAndStreakStartDateAndStreakCount(userId, startDate, 7))
+				.willReturn(true);
+
+		UserStreakResp resp = service.getMyStreak(userId);
+
+		assertThat(resp.canClaim()).isFalse();
+	}
+
+	@Test
+	void getMyStreak_cannotClaimWhenCurrentStreakIsNotMultipleOfSeven() {
+		UserStreakServiceImpl service = new UserStreakServiceImpl(
+				userStreakRepository,
+				userWalletRepository,
+				streakRewardLogRepository,
+				creditEarnService
+		);
+		Long userId = 1L;
+		UserStreak streak = UserStreak.builder()
+				.userId(userId)
+				.currentStreakCount(6)
+				.currentStreakStartDate(LocalDate.parse("2026-04-01"))
+				.lastActiveDate(LocalDate.parse("2026-04-06"))
+				.longestStreakCount(6)
+				.build();
+
+		given(userStreakRepository.findByUserId(userId)).willReturn(Optional.of(streak));
+
+		UserStreakResp resp = service.getMyStreak(userId);
+
+		assertThat(resp.canClaim()).isFalse();
+		verify(streakRewardLogRepository, never()).existsByUserIdAndStreakStartDateAndStreakCount(
+				org.mockito.ArgumentMatchers.anyLong(),
+				org.mockito.ArgumentMatchers.any(),
+				org.mockito.ArgumentMatchers.anyInt()
+		);
+	}
 
 	@Test
 	void claimSevenDayReward_rewardsWalletWhenCurrentStreakIsSevenDays() {
