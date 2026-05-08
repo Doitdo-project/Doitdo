@@ -60,7 +60,11 @@ class CharacterCard extends StatelessWidget {
     return SizedBox(
       // 침대/창문 일러스트가 잘리지 않도록 충분한 높이 확보. 캐릭터는 카드 하단
       // (= 바닥 영역) 에 정렬되어 발을 바닥에 두고 있는 것처럼 보이게 한다.
-      height: 250.h + topSafePadding,
+      // width 를 안 잡으면 부모(Column → outer Stack StackFit.loose) 가 loose 로
+      // 흘려보내, 안쪽 Stack 의 자식이 모두 Positioned* 라 width 가 0 으로 collapse
+      // → 카드가 통째로 빈 박스로 보이는 버그가 난다. 부모 max 까지 늘려 박는다.
+      width: double.infinity,
+      height: 300.h + topSafePadding,
       child: Stack(
         children: [
           // 방 배경 + 가구 합성. listMyFurnitures() 결과를 zIndex 순서로 쌓아
@@ -72,7 +76,7 @@ class CharacterCard extends StatelessWidget {
           // 상단에 얹혀 "서버 갱신 중" 만 표현한다.
           if (isCharacterLoading && character != null)
             Positioned(
-              top: topSafePadding + 10.h,
+              top: topSafePadding + 20.h,
               left: 12.w,
               child: SizedBox(
                 width: 16.sp,
@@ -86,15 +90,23 @@ class CharacterCard extends StatelessWidget {
 
           // 중앙 하단: 말풍선 + 캐릭터. RoomLayer 가 들어올린 바닥선 위에
           // 캐릭터 발이 정확히 닿도록 같은 inset 을 공유한다 (RoomLayer.characterBottomInset).
+          //
+          // 말풍선은 Transform.translate 로 layout slot 은 그대로 두고 rendering 만
+          // 아래로 밀어 캐릭터 머리 쪽으로 살짝 겹치게 한다 — 꼬리가 캐릭터를
+          // 가리키는 형태로 자연스럽게 읽힘. 캐릭터 자체는 layout 위치 그대로
+          // 유지해야 RoomLayer 바닥선에 발이 정확히 닿음.
           Positioned(
             left: 0,
             right: 0,
-            top: topSafePadding+60,
+            top: topSafePadding + 100,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 if (_speechText != null) ...[
-                  _SpeechBubble(text: _speechText!),
+                  Transform.translate(
+                    offset: Offset(0, 10.h),
+                    child: _SpeechBubble(text: _speechText!),
+                  ),
                 ],
                 _buildCharacterSlot(),
               ],
@@ -108,7 +120,7 @@ class CharacterCard extends StatelessWidget {
           // 그대로 따름.
           if (!hideChrome)
             Positioned(
-              top: topSafePadding - 12,
+              top: topSafePadding,
               right: 16.w,
               child: _RoomMenuButton(
                 onTapShop: onTapShop,
@@ -261,6 +273,10 @@ class _UnreceivedSlot extends StatelessWidget {
 
 /// 알 상태. 탭하면 [onTap] 으로 전달만 하고, 실제 부화 카운팅/애니메이션은
 /// 전용 페이지([CharacterHatchPage])에서 처리된다.
+///
+/// 슬롯 높이는 [_GrownCharacter] 와 동일한 112.h. 알 이미지는 슬롯 하단에
+/// 붙여 캐릭터 부화 후의 발 위치와 같은 row 에 닿게 하고, "톡톡 두드려보세요"
+/// 힌트는 알 머리 위로 살짝 띄워 말풍선 톤으로 보이게 한다.
 class _EggSlot extends StatelessWidget {
   const _EggSlot({required this.imageUrl, this.onTap});
 
@@ -272,26 +288,45 @@ class _EggSlot extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _EggImage(imageUrl: imageUrl, size: 100.h),
-          SizedBox(height: 4.h),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 3.h),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.45),
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-            child: Text(
-              '알을 톡톡 두드려보세요',
-              style: AppTextStyles.labelSmall.copyWith(
-                color: Colors.white,
-                letterSpacing: 0.5,
+      child: SizedBox(
+        height: 140.h,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Center(
+                child: _EggImage(imageUrl: imageUrl, size: 100.h),
               ),
             ),
-          ),
-        ],
+            Positioned(
+              top: 140.h,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 10.w,
+                    vertical: 3.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                  child: Text(
+                    '알을 톡톡 두드려보세요',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

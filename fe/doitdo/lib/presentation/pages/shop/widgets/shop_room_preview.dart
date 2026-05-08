@@ -34,7 +34,7 @@ class ShopRoomPreview extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20.r),
       child: Container(
-        height: 200.h,
+        height: 180.h,
         decoration: BoxDecoration(
           color: colors.streakCardBg,
           border: Border.all(color: colors.border),

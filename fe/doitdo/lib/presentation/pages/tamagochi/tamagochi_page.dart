@@ -10,7 +10,6 @@ import 'package:doitdo/presentation/pages/tamagochi/streak_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/character_card.dart';
-import 'package:doitdo/presentation/pages/tamagochi/widgets/farewell_banner.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/status_pill.dart';
 import 'package:doitdo/presentation/pages/todo/todo_state.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
@@ -51,8 +50,11 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
 
   late final ScrollController _scrollController;
 
-  /// farewell API 호출 in-flight 여부. 버튼 중복 탭 방지용.
+  /// farewell API 호출 in-flight 여부. 뱃지 중복 탭 방지용.
   bool _farewelling = false;
+
+  /// evolve API 호출 in-flight 여부. 뱃지 중복 탭 방지용.
+  bool _evolving = false;
 
   /// 스트릭 보상 수령 API in-flight 여부. 버튼 중복 탭 방지 + 버튼 스피너용.
   bool _claimingReward = false;
@@ -159,16 +161,20 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     ref.read(characterViewModelProvider.notifier).load();
   }
 
-  /// 독립 시키기 버튼 탭. 확인 다이얼로그로 한 번 감싼 뒤 farewell API 호출.
+  /// 독립 뱃지 탭. 확인 다이얼로그로 한 번 감싼 뒤 farewell API 호출.
   /// 성공 시 서버가 다음 알을 자동 배정하므로 ViewModel 이 load() 로 갱신.
   Future<void> _handleFarewellTap() async {
     if (_farewelling) return;
+    final character =
+        ref.read(characterViewModelProvider).valueOrNull;
+    final name =
+        (character == null || character.name.isEmpty) ? '다마고치' : character.name;
     final confirmed = await showDoitdoDialog(
       context: context,
       title: '독립 시키기',
-      message: '지금까지 함께한 다마고치를 배웅할게요.\n'
-          '독립하면 되돌릴 수 없고 바로 새 알이 도착해요.',
-      confirmLabel: '독립 시키기',
+      message: '$name가 떠날 준비가 됐어요.\n'
+          '배웅하면 되돌릴 수 없고 바로 새 알이 도착해요.',
+      confirmLabel: '배웅하기',
       cancelLabel: '취소',
     );
     if (!mounted || confirmed != true) return;
@@ -185,6 +191,44 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       ..showSnackBar(
         SnackBar(
           content: Text(ok ? '독립 완료! 새 알이 도착했어요.' : '독립 처리 중 문제가 생겼어요. 다시 시도해주세요.'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+  }
+
+  /// 진화 뱃지 탭. 확인 다이얼로그 → evolve API. 자동 진화 흐름은 제거되어
+  /// 사용자가 직접 트리거 해야 BABY→TEEN / TEEN→ADULT 가 진행된다.
+  Future<void> _handleEvolveTap() async {
+    if (_evolving) return;
+    final character =
+        ref.read(characterViewModelProvider).valueOrNull;
+    if (character == null) return;
+
+    final name = character.name.isEmpty ? '다마고치' : character.name;
+    final confirmed = await showDoitdoDialog(
+      context: context,
+      title: '진화 시키기',
+      message: '$name가 다음 단계로 진화할 준비가 됐어요.\n'
+          '진화하면 모습이 바뀌고 다시 처음부터 자라요.',
+      confirmLabel: '진화시키기',
+      cancelLabel: '취소',
+    );
+    if (!mounted || confirmed != true) return;
+
+    setState(() => _evolving = true);
+    final ok = await ref
+        .read(characterViewModelProvider.notifier)
+        .evolve(character.userCharacterId);
+    if (!mounted) return;
+    setState(() => _evolving = false);
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(ok ? '진화 완료!' : '진화 처리 중 문제가 생겼어요. 다시 시도해주세요.'),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
         ),
@@ -250,10 +294,8 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
         .toList(growable: false);
     final somedayTodos = todoState.allSomedayTodos;
 
-    // 에러 스낵바 + canEvolve 에지 자동 진화 트리거. 두 작업 모두 character 상태
-    // 변화에 반응하므로 같은 ref.listen 에 묶는다. canEvolve 는 BABY/TEEN 에서만
-    // true 가 되고 ADULT 는 canFarewell 로 전환되므로 stage 검사는 생략. 재렌더
-    // 시 중복 호출되지 않도록 "false→true" 순간에만 호출한다.
+    // 캐릭터 fetch 에러 스낵바. 진화 트리거는 더 이상 자동이 아님 — 캐릭터
+    // 카드의 액션 뱃지(canEvolve/canFarewell) 탭 → 다이얼로그 흐름으로 대체됨.
     ref.listen<AsyncValue<Character?>>(characterViewModelProvider,
             (prev, next) {
           // 첫 로드(loading→error) 는 dio 의 토큰 refresh / 자동 재시도가 끼어들면서
@@ -266,15 +308,6 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
           if (next.hasError && wasShowingData && mounted) {
             _showComingSoon(context, '캐릭터 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
           }
-
-          final prevChar = prev?.valueOrNull;
-          final nextChar = next.valueOrNull;
-          if (nextChar == null || !nextChar.canEvolve) return;
-          final wasAlreadyEvolvable = prevChar != null && prevChar.canEvolve;
-          if (wasAlreadyEvolvable) return;
-          ref
-              .read(characterViewModelProvider.notifier)
-              .evolve(nextChar.userCharacterId);
         });
 
     // 타마고치 탭 진입 시 스트릭 silent refresh.
@@ -386,7 +419,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                 Positioned(
                                   left: 0,
                                   right: 0,
-                                  bottom: 16.h,
+                                  bottom: 8.h,
                                   child: StatusPill(
                                     character: character,
                                     streakDays: streak.currentCount,
@@ -395,21 +428,13 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                     streak.hasCompletedBlock,
                                     isClaimingReward: _claimingReward,
                                     onClaimReward: _handleClaimReward,
+                                    onTapEvolve: _handleEvolveTap,
+                                    onTapFarewell: _handleFarewellTap,
+                                    actionBusy: _evolving || _farewelling,
                                   ),
                                 ),
                             ],
                           ),
-                          if (character?.canFarewell ?? false) ...[
-                            SizedBox(height: 12.h),
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 16.w),
-                              child: FarewellBanner(
-                                characterName: character!.name,
-                                busy: _farewelling,
-                                onTap: _handleFarewellTap,
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                     ),
@@ -421,11 +446,10 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                               minHeight: constraints.viewportMainAxisExtent,
                             ),
                             child: Padding(
-                              padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+                              padding: const EdgeInsets.fromLTRB(24, 18, 24, 16),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  // ✅ 오늘/언젠가 할 일 섹션 간 드래그앤드롭
                                   _CrossSectionTodoList(
                                     scrollController: _scrollController,
                                     todayTitle: '오늘의 할 일',
@@ -821,7 +845,7 @@ class _SectionHeader extends StatelessWidget {
     // ✅ 상단 패딩을 크게 해서 오늘 섹션 마지막 아이템과 헤더 사이
     // 드롭 감지 영역을 충분히 확보 (off-by-one 방지)
     return Padding(
-      padding: const EdgeInsets.only(top: 28, bottom: 8),
+      padding: const EdgeInsets.only(top: 16, bottom: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

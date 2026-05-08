@@ -50,7 +50,9 @@ class RoomLayer extends ConsumerWidget {
                 child: Image.network(
                   background.imageUrl,
                   fit: BoxFit.cover,
-                  alignment: Alignment.center,
+                  // cover 가 박스 비율과 안 맞는 쪽을 잘라낼 때, 이미지 윗부분이
+                  // 더 보이도록 anchor 를 위로 이동 (-1 = top, 0 = center).
+                  alignment: const Alignment(0, -0.5),
                   errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 ),
               ),
