@@ -192,7 +192,7 @@ class _StatusPillState extends State<StatusPill> {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+            padding: EdgeInsets.fromLTRB(28.w, 4.h, 14.w, 4.h),
             decoration: BoxDecoration(
               color: colors.streakCardBg.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(16.r),
@@ -214,7 +214,7 @@ class _StatusPillState extends State<StatusPill> {
                     compact: true,
                   ),
                 ),
-                SizedBox(width: 10.w),
+                SizedBox(width: 6.w),
                 Flexible(
                   child: Text(
                     c.name,
@@ -227,9 +227,9 @@ class _StatusPillState extends State<StatusPill> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                SizedBox(width: 14.w),
+                SizedBox(width: 12.w),
                 Expanded(flex: 3, child: _ExpBar(progress: progress)),
-                SizedBox(width: 14.w),
+                SizedBox(width: 24.w),
                 GestureDetector(
                   key: _streakKey,
                   onTap: _onStreakTap,
@@ -504,9 +504,8 @@ class _StageInfoContent extends StatelessWidget {
         children: [
           Text(
             '${character.name}는 자라고 있어요',
-            style: AppTextStyles.bodyMedium.copyWith(
+            style: AppTextStyles.labelMedium.copyWith(
               color: Colors.black,
-              fontWeight: FontWeight.w700,
             ),
           ),
           SizedBox(height: 10.h),
