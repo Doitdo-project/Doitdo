@@ -89,12 +89,12 @@ pipeline {
                         ssh -i "$PROD_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PROD_SSH_USER}@${PROD_HOST}" '
                             set -eu
                             for i in $(seq 1 20); do
-                                if curl -fsS http://127.0.0.1:8080/hello > /dev/null; then
+                                if curl -fsS http://127.0.0.1/hello > /dev/null; then
                                     exit 0
                                 fi
                                 sleep 2
                             done
-                            echo "Local health check failed"
+                            echo "Nginx local health check failed"
                             exit 1
                         '
 
@@ -119,8 +119,8 @@ pipeline {
                         ssh -i "$PROD_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PROD_SSH_USER}@${PROD_HOST}" '
                             set -eu
                             cd /home/ubuntu/doitdo-git/S14P31D107
-                            git pull --ff-only origin main
-                            git status --short
+                            git pull --ff-only origin main || true
+                            git status --short || true
                         '
                     '''
                 }
