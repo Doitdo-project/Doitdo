@@ -125,8 +125,8 @@ pipeline {
                         ssh -i "$PROD_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PROD_SSH_USER}@${PROD_HOST}" '
                             set -eu
                             cd /home/ubuntu/doitdo-git/S14P31D107
-                            git pull --ff-only origin main || true
-                            git status --short || true
+                            git pull --ff-only origin main || echo "git pull skipped: source sync failed"
+                            git status --short || echo "git status skipped: source status check failed"
                         '
                     '''
                 }
