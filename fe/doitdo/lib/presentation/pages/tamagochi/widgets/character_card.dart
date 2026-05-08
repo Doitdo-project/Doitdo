@@ -25,6 +25,7 @@ class CharacterCard extends StatelessWidget {
     required this.state,
     this.character,
     this.isCharacterLoading = false,
+    this.hideCharacter = false,
     this.onTapShop,
     this.onTapCollection,
     this.onEggTap,
@@ -37,6 +38,11 @@ class CharacterCard extends StatelessWidget {
 
   /// 최초 캐릭터 조회 중일 때 true. 캐릭터 영역만 살짝 가리는 용도.
   final bool isCharacterLoading;
+
+  /// 진화 연출 진행 중 캐릭터 + 말풍선을 페이드아웃시켜 빈 방으로 보이게 한다.
+  /// overlay 가 가린다 해도 dim/blur 사이로 옛(또는 갱신 중인 새) 캐릭터가
+  /// 비치는 걸 원천 차단 — overlay 닫힘과 함께 새 캐릭터가 페이드인 된다.
+  final bool hideCharacter;
 
   final VoidCallback? onTapShop;
   final VoidCallback? onTapCollection;
@@ -99,17 +105,24 @@ class CharacterCard extends StatelessWidget {
             left: 0,
             right: 0,
             top: topSafePadding + 100,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (_speechText != null) ...[
-                  Transform.translate(
-                    offset: Offset(0, 10.h),
-                    child: _SpeechBubble(text: _speechText!),
-                  ),
-                ],
-                _buildCharacterSlot(),
-              ],
+            child: IgnorePointer(
+              ignoring: hideCharacter,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 220),
+                opacity: hideCharacter ? 0.0 : 1.0,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (_speechText != null) ...[
+                      Transform.translate(
+                        offset: Offset(0, 10.h),
+                        child: _SpeechBubble(text: _speechText!),
+                      ),
+                    ],
+                    _buildCharacterSlot(),
+                  ],
+                ),
+              ),
             ),
           ),
 

@@ -10,6 +10,7 @@ import 'package:doitdo/presentation/pages/tamagochi/streak_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/character_card.dart';
+import 'package:doitdo/presentation/pages/tamagochi/widgets/evolution_overlay.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/status_pill.dart';
 import 'package:doitdo/presentation/pages/todo/todo_state.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
@@ -53,7 +54,8 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   /// farewell API 호출 in-flight 여부. 뱃지 중복 탭 방지용.
   bool _farewelling = false;
 
-  /// evolve API 호출 in-flight 여부. 뱃지 중복 탭 방지용.
+  /// 진화 플로우 진행 중 여부. evolve API 호출 시작부터 진화 연출 overlay 종료까지
+  /// true 로 유지된다. 뱃지 중복 탭 방지 + CharacterCard 의 hideCharacter 트리거 겸용.
   bool _evolving = false;
 
   /// 스트릭 보상 수령 API in-flight 여부. 버튼 중복 탭 방지 + 버튼 스피너용.
@@ -197,8 +199,14 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       );
   }
 
-  /// 진화 뱃지 탭. 확인 다이얼로그 → evolve API. 자동 진화 흐름은 제거되어
-  /// 사용자가 직접 트리거 해야 BABY→TEEN / TEEN→ADULT 가 진행된다.
+  /// 진화 뱃지 탭. 확인 다이얼로그 → evolve API → 성공 시 풀스크린 진화 연출
+  /// overlay. 자동 진화 흐름은 제거되어 사용자가 직접 트리거 해야 BABY→TEEN /
+  /// TEEN→ADULT 가 진행된다.
+  ///
+  /// overlay 의 silhouette 단계에서 사용할 진화 직전 thumbnailUrl 은 evolve
+  /// 호출 직전에 캡처해둔다 — evolve 안에서 백그라운드 refresh 가 트리거되어
+  /// state 가 새 캐릭터로 갱신되면 character.thumbnailUrl 이 이미 새 url 로
+  /// 바뀌어 있을 수 있기 때문.
   Future<void> _handleEvolveTap() async {
     if (_evolving) return;
     final character =
@@ -216,23 +224,48 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     );
     if (!mounted || confirmed != true) return;
 
+    final beforeImageUrl = character.thumbnailUrl;
+    final beforeStage = character.rawStage;
+
+    // _evolving=true → CharacterCard 가 캐릭터+말풍선을 페이드아웃 시켜
+    // 빈 방으로 만든다. 이 상태에서 API 호출 → refresh → overlay 까지 진행하므로
+    // dim 사이로 옛/새 캐릭터가 비치는 일이 없고, overlay 닫힘과 동시에 새
+    // 캐릭터로 페이드인 된다.
     setState(() => _evolving = true);
-    final ok = await ref
+    final evolution = await ref
         .read(characterViewModelProvider.notifier)
         .evolve(character.userCharacterId);
     if (!mounted) return;
-    setState(() => _evolving = false);
 
-    final messenger = ScaffoldMessenger.of(context);
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(ok ? '진화 완료!' : '진화 처리 중 문제가 생겼어요. 다시 시도해주세요.'),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+    if (evolution == null) {
+      setState(() => _evolving = false);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('진화 처리 중 문제가 생겼어요. 다시 시도해주세요.'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      return;
+    }
+
+    // home 이 가려진 동안 새 캐릭터로 silent refresh — overlay 진행 ~5초 안에
+    // 갱신이 끝나, overlay 닫힘 후 페이드인 시점엔 이미 새 캐릭터로 그려진다.
+    ref.read(characterViewModelProvider.notifier).refresh();
+
+    await EvolutionOverlay.show(
+      context,
+      beforeImageUrl: beforeImageUrl,
+      animationUrl: evolution.animationUrl,
+      afterImageUrl: evolution.characterImageUrl,
+      beforeStage: beforeStage,
+      afterStage: evolution.afterStage,
+    );
+
+    if (!mounted) return;
+    setState(() => _evolving = false);
   }
 
   /// 7일 블록 완성 시 노출되는 "🎁 보상 받기" 탭 핸들러.
@@ -397,6 +430,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                 state: state,
                                 character: character,
                                 isCharacterLoading: isCharacterLoading,
+                                hideCharacter: _evolving,
                                 topSafePadding: topInset,
                                 onTapShop: () =>
                                     context.push(AppRoutes.tamagochiShop),
