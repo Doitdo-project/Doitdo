@@ -1,5 +1,7 @@
 # 뚜레딧 적립 시스템 설계
 
+> 변경 이력: 2026-05-08 `AnimationAction` enum 전환 설계에 맞춰 다마고치 액션 적립 정책을 `EYE` 제외 블랙리스트에서 "모든 enum 액션 호출 적립" 화이트리스트로 갱신.
+
 ## 배경
 
 뚜레딧(`user_wallets.balance`, Integer 단위)은 인프라가 갖춰져 있다. 신규 가입 100, 잔액 조회 API, 상점 구매 차감, 스트릭 7일 보상 지급은 구현 완료다. 그러나 **다마고치 터치 적립**, **TODO 완료 적립**, **일일 한도(60) enforcement**, **출처별 적립 이력 통합 감사**가 없다. 이번 작업은 이 네 갭을 메운다.
@@ -18,7 +20,7 @@
 
 - FE 는 다마고치 캐릭터 탭 시 `GET /api/characters/me/actions/{actionType}` 를 호출한다.
 - 현재 FE 구현상 탭으로 호출되는 actionType 은 `IDLE` 만. `EYE` 는 로컬 에셋(자동 깜빡임)이라 BE 도달 안 함.
-- 적립 트리거: **`actionType ≠ EYE` 인 호출** (블랙리스트 방식). 향후 FE 가 `EAT`, `HAPPY` 등을 추가해도 자연스럽게 적립 대상.
+- 적립 트리거: **`AnimationAction` enum 에 포함되고 `character_actions` row 가 등록된 모든 액션 호출**. `EYE` 제외 블랙리스트는 폐기한다.
 - 응답에서 actionUrl 은 **무조건** 정상 반환 (애니메이션은 보여줘야 함). 쿨다운/일일 한도 미충족 시 적립만 silent skip — `earnedAmount: 0` + `nextAvailableAt` 으로 신호.
 
 ### TODO 적립 트리거 정밀 정의
@@ -84,15 +86,16 @@
 - 마이그레이션 SQL: `docs/ops/migrations/2026-05-07-user-character-touch-fields.sql`.
 - `getMyCharacterActionUrl(userId, actionType)` 흐름:
   1. 활성 캐릭터 actionUrl 조회 (그대로).
-  2. `actionType.equalsIgnoreCase("EYE")` 면 적립 평가 스킵, actionUrl 만 응답.
-  3. 그 외에는:
-     - `userCharacterRepository.findByUserIdForUpdate(userId)` 로 `UserCharacter` 락.
-     - `dailyTouchDate != today` 면 `dailyTouchCount = 0`, `dailyTouchDate = today` 갱신.
-     - `now - lastTouchedAt < 1h` 또는 `dailyTouchCount >= 3` 이면 적립 skip.
-     - 통과 시 `creditEarnService.tryEarn(userId, PET_TOUCH, 10, characterId, false)` 호출. 성공하면 `lastTouchedAt = now`, `dailyTouchCount += 1`.
-     - 모든 mutation 은 같은 트랜잭션 안에서 마무리.
-  4. 응답 DTO `CharacterActionUrlResp` 확장: `(actionUrl, earnedAmount, balanceAfter, dailyTouchCount, nextAvailableAt)`. 적립 skip 시 `earnedAmount: 0`, `nextAvailableAt` 으로 다음 가능 시각 신호.
+  2. `actionType` 은 `AnimationAction` enum 으로 바인딩한다. enum 에 없는 값은 400, enum 에 있지만 row 가 없으면 404 `M09-002`.
+  3. `EYE` 포함 모든 enum 액션은 동일하게 적립 평가에 진입한다.
+  4. `userCharacterRepository.findByUserIdForUpdate(userId)` 로 `UserCharacter` 락.
+  5. `dailyTouchDate != today` 면 `dailyTouchCount = 0`, `dailyTouchDate = today` 갱신.
+  6. `now - lastTouchedAt < 1h` 또는 `dailyTouchCount >= 3` 이면 적립 skip.
+  7. 통과 시 `creditEarnService.tryEarn(userId, PET_TOUCH, 10, characterId, false)` 호출. 성공하면 `lastTouchedAt = now`, `dailyTouchCount += 1`.
+  8. 모든 mutation 은 같은 트랜잭션 안에서 마무리.
+  9. 응답 DTO `CharacterActionUrlResp` 확장: `(actionUrl, earnedAmount, balanceAfter, dailyTouchCount, nextAvailableAt)`. 적립 skip 시 `earnedAmount: 0`, `nextAvailableAt` 으로 다음 가능 시각 신호.
 - Swagger `@ApiErrorCodes`, `docs/api/error-codes.md` 갱신 (필요 시 신규 코드).
+- 액션 enum 전환 상세 설계: `docs/plans/2026-05-08-animation-action-enum-design.md`.
 - **FE 영향 사전 확인**: Flutter `CharacterActionUrlResp` Dart DTO 가 unknown 필드를 무시하는지 (`@JsonSerializable` 의 `disallowUnrecognizedKeys` 설정 점검). strict 면 BE 변경과 같은 시점에 FE DTO 도 확장 필요(별도 FE PR).
 
 ### Stage 5 — 통합 검증 + 문서
@@ -100,14 +103,14 @@
 - `@SpringBootTest` 통합 테스트:
   - 신규가입 직후 잔액 100, `wallet_earn_logs` 에 SIGNUP_BONUS 1행.
   - 스트릭 7일 보상 → +200, cap 영향 없음, `STREAK_7DAY` 로그.
-  - 다마고치 IDLE 호출 3회 → +30, 4회째 actionUrl 정상 + earnedAmount=0.
+  - 다마고치 등록 액션 호출 3회 → +30, 4회째 actionUrl 정상 + earnedAmount=0.
   - 1시간 쿨다운: 1회차 직후 즉시 호출 → 적립 0.
   - 24시간 경과 후 다시 적립 가능.
   - TODO 9개 완료 → +30, 10개째 적립 0.
   - **TODO undo→redo 토글 5회 → 카운트 1, 적립 1회 그대로** (정밀 정의 검증).
   - 다마 30 + TODO 30 합산 후 추가 적립 0.
   - 가구 구매 → `wallet.spend()` 정상, 잔액 부족 시 `S00-003 INSUFFICIENT_BALANCE`.
-  - 동시성: 같은 사용자에게서 IDLE 호출 5개 동시 발사 → race 없이 일관된 결과, 총 적립 ≤ 30 (1시간 cooldown 정책상 첫 호출만 통과되는 게 정합 — race condition 없음 검증이 핵심).
+  - 동시성: 같은 사용자에게서 등록 액션 호출 5개 동시 발사 → race 없이 일관된 결과, 총 적립 ≤ 30 (1시간 cooldown 정책상 첫 호출만 통과되는 게 정합 — race condition 없음 검증이 핵심).
 - 최종 docs 동기화 점검 (위 단계에서 누락 영역).
 - 노션 SSOT 영향 영역 확인 (있으면 노션도 같이 갱신).
 

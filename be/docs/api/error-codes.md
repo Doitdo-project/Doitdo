@@ -167,6 +167,8 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 | `M09_002` | `M09-002` | 404 | 해당 캐릭터의 요청 액션을 찾을 수 없음 |
 | `M09_003` | `M09-003` | 500 | 서버 내부 오류 |
 
+`AnimationAction` enum 전환 후에도 enum 에는 있지만 `character_actions` row 가 등록되지 않은 액션 호출은 `M09_002` 를 재사용한다. enum 자체에 없는 `actionType` 은 컨트롤러 바인딩 단계의 400 으로 처리한다.
+
 ### `ShopErrorCode` 추가 코드 (가구 상점/방 배치, 2026-05)
 
 | 상수 | code | HTTP | 의미 |
