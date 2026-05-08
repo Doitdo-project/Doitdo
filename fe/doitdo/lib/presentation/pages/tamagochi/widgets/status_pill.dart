@@ -170,7 +170,7 @@ class _StatusPillState extends State<StatusPill> {
   void _showToast({
     required GlobalKey anchorKey,
     required Widget child,
-    Duration duration = const Duration(milliseconds: 1500),
+    Duration duration = const Duration(milliseconds: 600),
   }) {
     if (!mounted) return;
     _hidePopover();
