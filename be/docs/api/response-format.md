@@ -142,7 +142,9 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `dailyTouchCount` | `int` | 오늘 적립된 터치 횟수 (최대 3) |
 | `nextAvailableAt` | `LocalDateTime` | 다음 적립 가능 시각. 오늘 cap 소진 시 내일 자정, 쿨다운 중이면 `lastTouchedAt + 1h` |
 
-`actionType = EYE` 인 경우 적립 평가 없이 `earnedAmount=0`, `dailyTouchCount` 는 현재 카운트, `nextAvailableAt` 은 정상 계산.
+`actionType` 이 `AnimationAction` enum 에 포함되고 활성 캐릭터의 `character_actions` row 가 등록되어 있으면 모든 액션이 동일한 적립 흐름에 진입한다. 쿨다운/cap 으로 적립되지 않는 경우에도 `actionUrl` 은 반환하고 `earnedAmount=0` 으로 응답한다.
+
+enum 에는 있지만 해당 캐릭터의 `character_actions` row 가 없는 액션은 404 `M09-002` 를 반환한다.
 
 ## 9. 관련 문서
 
