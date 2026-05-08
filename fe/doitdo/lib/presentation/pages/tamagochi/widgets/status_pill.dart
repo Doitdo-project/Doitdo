@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:doitdo/core/theme/app_text_styles.dart';
@@ -6,15 +7,9 @@ import 'package:doitdo/domain/entities/character.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-/// 캐릭터 카드 하단에 떠있는 가로형 상태 알약(카드).
-///
-/// `[단계 배지][이름][경험치 바][🔥 스트릭]` 한 줄 구성.
-/// 단계 배지와 `🔥` 는 둘 다 탭 가능하며, 각각 단계 안내 / 스트릭 안내 팝오버
-/// 를 [Overlay] 에 띄운다 — 부모 Stack 의 clip 경계와 무관하게 화면 어디든
-/// 표시 가능.
-///
-/// 알 단계 / 미수령 상태에서는 호출측이 위젯 자체를 숨겨야 한다 (이 위젯은
-/// 부화 이후 정상 캐릭터에만 의미가 있다).
+/// 캐릭터 카드 하단의 가로형 상태 알약: `[단계][이름][EXP][🔥]`.
+/// 단계 / 🔥 는 탭 시 [Overlay] 팝오버로 안내를 띄운다.
+/// 알 단계에서는 호출측에서 위젯 자체를 숨긴다.
 class StatusPill extends StatefulWidget {
   const StatusPill({
     super.key,
@@ -24,6 +19,9 @@ class StatusPill extends StatefulWidget {
     required this.isRewardClaimable,
     required this.isClaimingReward,
     this.onClaimReward,
+    this.onTapEvolve,
+    this.onTapFarewell,
+    this.actionBusy = false,
   }) : assert(streakSlots.length == 7, 'streakSlots 는 7칸이어야 합니다.');
 
   final Character character;
@@ -32,16 +30,29 @@ class StatusPill extends StatefulWidget {
   final bool isRewardClaimable;
   final bool isClaimingReward;
   final VoidCallback? onClaimReward;
+  final VoidCallback? onTapEvolve;
+  final VoidCallback? onTapFarewell;
+  final bool actionBusy;
 
   @override
   State<StatusPill> createState() => _StatusPillState();
 }
 
+enum _BarMode { progress, evolve, farewell }
+
 class _StatusPillState extends State<StatusPill> {
+  static const double _outerHorizontalMargin = 24;
+  static const double _innerHorizontalPadding = 14;
+  static const double _innerVerticalPadding = 4;
+  static const double _itemGap = 8;
+  static const double _nameMaxWidth = 120;
+
   final GlobalKey _stageKey = GlobalKey();
+  final GlobalKey _expKey = GlobalKey();
   final GlobalKey _streakKey = GlobalKey();
 
   OverlayEntry? _entry;
+  Timer? _percentTimer;
 
   @override
   void dispose() {
@@ -52,12 +63,12 @@ class _StatusPillState extends State<StatusPill> {
   @override
   void didUpdateWidget(covariant StatusPill old) {
     super.didUpdateWidget(old);
-    // 보상 수령 등으로 자식 데이터가 바뀐 동안 팝오버가 떠있으면 그대로 두지
-    // 않고 마크업을 다시 빌드해 최신 슬롯/스트릭 수치가 반영되게 한다.
     if (_entry != null) _entry!.markNeedsBuild();
   }
 
   void _hidePopover() {
+    _percentTimer?.cancel();
+    _percentTimer = null;
     _entry?.remove();
     _entry = null;
   }
@@ -67,10 +78,8 @@ class _StatusPillState extends State<StatusPill> {
     required Widget Function(BuildContext) builder,
     double? maxWidth,
   }) {
-    // 탭 콜백이 발화하는 시점에 부모가 rebuild 되면서 이 State 가 deactivate
-    // 직전인 경우가 있다 (예: 슬라이더 드래그 중 setState 폭격). 그 상태에서
-    // `Overlay.of(context)` 를 호출하면 "deactivated widget's ancestor is unsafe"
-    // 가 던져지므로 mounted 로 한 번 더 가드.
+    // 탭 콜백 발화 시 부모 rebuild 로 이 State 가 deactivate 직전일 수 있다.
+    // 그 상태에서 Overlay.of(context) 호출 시 ancestor unsafe 가 던져지므로 가드.
     if (!mounted) return;
     _hidePopover();
 
@@ -84,8 +93,6 @@ class _StatusPillState extends State<StatusPill> {
     final horizontalPadding = 16.w;
     final anchorCenterX = pos.dx + anchorSize.width / 2;
 
-    // [maxWidth] 가 주어지면 카드를 그 너비로 잡고 anchor 중앙을 따라가도록
-    // 좌우 패딩 안에서 클램프. 없으면 기존처럼 화면 좌우 패딩까지 꽉 채운다.
     final double? cardLeft;
     final double? cardRight;
     final double? cardWidth;
@@ -112,7 +119,6 @@ class _StatusPillState extends State<StatusPill> {
       builder: (ctx) {
         return Stack(
           children: [
-            // 바깥 탭 → 닫기 (배경 흐림 없이 투명).
             Positioned.fill(
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
@@ -123,7 +129,6 @@ class _StatusPillState extends State<StatusPill> {
               left: cardLeft,
               right: cardRight,
               width: cardWidth,
-              // 팝오버 하단이 anchor 윗변 바로 위(8.h gap)에 닿도록.
               bottom: screen.height - pos.dy + 8.h,
               child: _PopoverCard(tailLeft: tailRelX, child: builder(ctx)),
             ),
@@ -135,12 +140,69 @@ class _StatusPillState extends State<StatusPill> {
   }
 
   void _onStageTap() {
-    // 단계 안내는 헤더 + breadcrumb 3 뱃지 + 한 줄 footer 뿐이라 좁게.
     _showPopover(
       anchorKey: _stageKey,
       maxWidth: 260.w,
       builder: (_) => _StageInfoContent(character: widget.character),
     );
+  }
+
+  void _onExpTap() {
+    final pct = widget.character.growthPercent.clamp(0, 100).toStringAsFixed(0);
+    _showToast(
+      anchorKey: _expKey,
+      child: _ToastBubble(text: '$pct%'),
+    );
+  }
+
+  /// stage/streak 의 흰 카드 popover 와 달리, anchor 위에 1.5초만 떠있다 사라지는
+  /// 검은 토스트. intrinsic 폭으로 자기 텍스트만큼만 차지하고 꼬리도 없다.
+  void _showToast({
+    required GlobalKey anchorKey,
+    required Widget child,
+    Duration duration = const Duration(milliseconds: 1500),
+  }) {
+    if (!mounted) return;
+    _hidePopover();
+
+    final box = anchorKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final overlayState = Overlay.of(context, rootOverlay: true);
+    final overlayBox = overlayState.context.findRenderObject() as RenderBox;
+    final pos = box.localToGlobal(Offset.zero, ancestor: overlayBox);
+    final screen = overlayBox.size;
+    final anchorCenterX = pos.dx + box.size.width / 2;
+
+    _entry = OverlayEntry(
+      builder: (ctx) {
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _hidePopover,
+              ),
+            ),
+            // anchor 중앙 좌표에 배치 후 FractionalTranslation 으로 -50% 이동 →
+            // 토스트가 자기 폭만큼만 잡고 가운데 정렬됨 (Positioned 단독으론
+            // intrinsic 가운데 불가능).
+            Positioned(
+              left: anchorCenterX,
+              bottom: screen.height - pos.dy + 8.h,
+              child: FractionalTranslation(
+                translation: const Offset(-0.5, 0),
+                child: child,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    overlayState.insert(_entry!);
+
+    _percentTimer = Timer(duration, () {
+      if (mounted) _hidePopover();
+    });
   }
 
   void _onStreakTap() {
@@ -170,10 +232,9 @@ class _StatusPillState extends State<StatusPill> {
     final progress = (c.growthPercent.clamp(0, 100)) / 100;
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 24.w),
+      margin: EdgeInsets.symmetric(horizontal: _outerHorizontalMargin.w),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12.r),
-        // 두 단 그림자 — 가까운 sharper + 멀리 더 넓고 흐릿한 톤. 카드와 카드
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -192,7 +253,10 @@ class _StatusPillState extends State<StatusPill> {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
-            padding: EdgeInsets.fromLTRB(28.w, 4.h, 14.w, 4.h),
+            padding: EdgeInsets.symmetric(
+              horizontal: _innerHorizontalPadding.w,
+              vertical: _innerVerticalPadding.h,
+            ),
             decoration: BoxDecoration(
               color: colors.streakCardBg.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(16.r),
@@ -214,8 +278,9 @@ class _StatusPillState extends State<StatusPill> {
                     compact: true,
                   ),
                 ),
-                SizedBox(width: 6.w),
-                Flexible(
+                SizedBox(width: _itemGap.w),
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: _nameMaxWidth.w),
                   child: Text(
                     c.name,
                     style: AppTextStyles.bodyMedium.copyWith(
@@ -225,52 +290,36 @@ class _StatusPillState extends State<StatusPill> {
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    softWrap: false,
                   ),
                 ),
-                SizedBox(width: 12.w),
-                Expanded(flex: 3, child: _ExpBar(progress: progress)),
-                SizedBox(width: 24.w),
+                SizedBox(width: _itemGap.w),
+                Expanded(
+                  child: KeyedSubtree(
+                    key: _expKey,
+                    child: _ExpBar(
+                      progress: progress,
+                      mode: c.canFarewell
+                          ? _BarMode.farewell
+                          : c.canEvolve
+                              ? _BarMode.evolve
+                              : _BarMode.progress,
+                      onTap: widget.actionBusy
+                          ? null
+                          : c.canFarewell
+                              ? widget.onTapFarewell
+                              : c.canEvolve
+                                  ? widget.onTapEvolve
+                                  : _onExpTap,
+                    ),
+                  ),
+                ),
+                SizedBox(width: _itemGap.w),
                 GestureDetector(
                   key: _streakKey,
                   onTap: _onStreakTap,
                   behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    // 좌측 stage compact 뱃지와 동일한 고정 높이(20.h)로 강제.
-                    // streak 쪽은 border 1px + 화염 아이콘 12.sp 때문에 자연 높이가
-                    // 더 컸어서, 양쪽 모두 height 로 잠그고 alignment.center 로 컨텐츠
-                    // 수직 중앙 정렬. shape(border/색)은 각자 그대로 유지.
-                    height: 20.h,
-                    alignment: Alignment.center,
-                    padding: EdgeInsets.symmetric(horizontal: 8.w),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF1DC),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(
-                        color: const Color(0xFFFFD9A8),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Image.asset(
-                          'assets/images/fire.png',
-                          width: 12.sp,
-                          height: 12.sp,
-                          filterQuality: FilterQuality.medium,
-                        ),
-                        SizedBox(width: 3.w),
-                        Text(
-                          widget.streakDays.toString(),
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: const Color(0xFFD86A1F),
-                            fontWeight: FontWeight.w800,
-                            height: 1.1,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  child: _StreakBadge(days: widget.streakDays),
                 ),
               ],
             ),
@@ -281,26 +330,48 @@ class _StatusPillState extends State<StatusPill> {
   }
 }
 
-/// EXP 진행 바.
-///
-/// - 트랙: 살짝 옴폭한 라이트 그레이 (안쪽 그림자 효과로 깊이감).
-/// - 채움: 위→아래로 연한→진한 초록 세로 그라데이션 + 미세 하이라이트.
-/// - 둥근 endcap (radius = 높이의 절반) — 가는 캡슐 형태.
-/// - 진척 변화 시 600ms easeOutCubic 으로 자연스럽게 늘어난다.
+/// EXP 진행 바. evolve / farewell 모드면 막대 자리에 캡슐 CTA 로 갈아낀다.
 class _ExpBar extends StatelessWidget {
-  const _ExpBar({required this.progress});
+  const _ExpBar({
+    required this.progress,
+    this.mode = _BarMode.progress,
+    this.onTap,
+  });
 
   final double progress;
+  final _BarMode mode;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    switch (mode) {
+      case _BarMode.farewell:
+        return _CallToAction(
+          label: '독립하기',
+          gradient: const [Color(0xFFB69CFF), Color(0xFFFF8FBA)],
+          borderColor: const Color(0xFFE5D6FF),
+          glowColor: const Color(0xFFC4A8FF),
+          onTap: onTap,
+        );
+      case _BarMode.evolve:
+        return _CallToAction(
+          label: '진화하기',
+          gradient: const [Color(0xFFFFD27A), Color(0xFFE9A23B)],
+          borderColor: const Color(0xFFFFE9B6),
+          glowColor: const Color(0xFFE9A23B),
+          onTap: onTap,
+        );
+      case _BarMode.progress:
+        break;
+    }
+
     final radius = BorderRadius.circular(999);
-    return Container(
+    final bar = Container(
       height: 9.h,
+      width: double.infinity,
       decoration: BoxDecoration(
         color: const Color(0xFFE9E4D6),
         borderRadius: radius,
-        // 트랙 안쪽 살짝 어두운 inner-shadow 효과 (위쪽이 진한 톤).
         gradient: const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -333,14 +404,159 @@ class _ExpBar extends StatelessWidget {
         },
       ),
     );
+    if (onTap == null) return bar;
+    // 9.h 막대 자체는 너무 얇아 탭이 어려움 → streak/stage 와 같은 20.h hit 영역
+    // 안에 막대를 vertical center 로 배치.
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        height: 20.h,
+        child: Center(child: bar),
+      ),
+    );
   }
 }
 
-/// `[유년기]` 같은 단계 라벨을 둥근 알약으로. 라이트/다크 무관 고정 색.
-///
-/// [compact] true 면 padding / 폰트가 한 단계 작아진다 — StatusPill 본체 행
-/// 안에서는 좁은 공간이라 compact 로 쓰고, 단계 안내 popover 의 breadcrumb
-/// 에서는 기본(=non-compact) 으로 써서 시각적 무게감을 살린다.
+/// 진화 / 독립 등 EXP 바 자리를 차지하는 펄스형 CTA 캡슐.
+/// 색만 다르고 펄스/사이즈/타이포는 공통.
+class _CallToAction extends StatefulWidget {
+  const _CallToAction({
+    required this.label,
+    required this.gradient,
+    required this.borderColor,
+    required this.glowColor,
+    this.onTap,
+  });
+
+  final String label;
+  final List<Color> gradient;
+  final Color borderColor;
+  final Color glowColor;
+  final VoidCallback? onTap;
+
+  @override
+  State<_CallToAction> createState() => _CallToActionState();
+}
+
+class _CallToActionState extends State<_CallToAction>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+    _scale = Tween<double>(begin: 1.0, end: 1.03).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+    _ctrl.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cap = Container(
+      height: 20.h,
+      alignment: Alignment.center,
+      padding: EdgeInsets.symmetric(horizontal: 8.w),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: widget.gradient,
+        ),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: widget.borderColor, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: widget.glowColor.withValues(alpha: 0.55),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              widget.label,
+              style: AppTextStyles.labelSmall.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                height: 1.1,
+                letterSpacing: -0.2,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final pulsing = ScaleTransition(scale: _scale, child: cap);
+    if (widget.onTap == null) return pulsing;
+    return GestureDetector(
+      onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: pulsing,
+    );
+  }
+}
+
+/// 🔥 + 일수. 폰트 / 보더 색은 단계 뱃지와 무관한 고정 따뜻한 톤.
+class _StreakBadge extends StatelessWidget {
+  const _StreakBadge({required this.days});
+
+  final int days;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 20.h,
+      alignment: Alignment.center,
+      padding: EdgeInsets.symmetric(horizontal: 8.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF1DC),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFFFD9A8), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(
+            'assets/images/fire.png',
+            width: 12.sp,
+            height: 12.sp,
+            filterQuality: FilterQuality.medium,
+          ),
+          SizedBox(width: 3.w),
+          Text(
+            '$days',
+            style: AppTextStyles.labelSmall.copyWith(
+              color: const Color(0xFFD86A1F),
+              fontWeight: FontWeight.w800,
+              height: 1.1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// `[유년기]` 같은 단계 라벨. compact 면 streak 뱃지와 같은 20.h 캡슐로.
 class _StageBadge extends StatelessWidget {
   const _StageBadge({
     required this.stage,
@@ -382,12 +598,8 @@ class _StageBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // compact 는 StatusPill 본체에서 우측 streak pill 과 높이를 맞춰야 한다.
-    // streak 쪽이 border 1px + 화염 아이콘 12.sp 때문에 자연 높이가 ~20.h 라
-    // compact 도 동일하게 고정 height + 수직 center 정렬. shape(pill/각진 라운드)은
-    // 그대로. non-compact 는 popover breadcrumb 용이라 자연 높이 유지.
     final hPad = compact ? 8.w : 10.w;
-    final vPad = compact ? 3.h : 6.h;
+    final vPad = compact ? 0.0 : 6.h;
     final radius = compact ? 999.0 : 8.r;
     final textStyle = compact
         ? AppTextStyles.labelSmall
@@ -395,10 +607,7 @@ class _StageBadge extends StatelessWidget {
     return Container(
       height: compact ? 20.h : null,
       alignment: compact ? Alignment.center : null,
-      padding: EdgeInsets.symmetric(
-        horizontal: hPad,
-        vertical: compact ? 0 : vPad,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
       decoration: BoxDecoration(
         color: _bg,
         borderRadius: BorderRadius.circular(radius),
@@ -417,8 +626,6 @@ class _StageBadge extends StatelessWidget {
 
 // ─── 팝오버 카드 + 꼬리 ──────────────────────────────────────────
 
-/// 흰색 라운드 카드 + 하단 가운데 부근에 아래로 향하는 작은 삼각형 꼬리.
-/// [tailLeft] 는 카드 좌측 가장자리 기준 꼬리 중앙 X (px).
 class _PopoverCard extends StatelessWidget {
   const _PopoverCard({required this.tailLeft, required this.child});
 
@@ -435,7 +642,7 @@ class _PopoverCard extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16.r), // 메인 카드와 통일감 있게 수정
+              borderRadius: BorderRadius.circular(16.r),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.08),
@@ -480,6 +687,39 @@ class _DownTailPainter extends CustomPainter {
   bool shouldRepaint(covariant _DownTailPainter old) => old.color != color;
 }
 
+// ─── EXP 토스트 ──────────────────────────────────────────────────
+
+class _ToastBubble extends StatelessWidget {
+  const _ToastBubble({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.72),
+          borderRadius: BorderRadius.circular(8.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Text(
+          text,
+          style: AppTextStyles.bodySmall.copyWith(color: Colors.white),
+        ),
+      ),
+    );
+  }
+}
+
 // ─── 단계 안내 팝오버 컨텐츠 ──────────────────────────────────────
 
 class _StageInfoContent extends StatelessWidget {
@@ -487,7 +727,6 @@ class _StageInfoContent extends StatelessWidget {
 
   final Character character;
 
-  /// 표시 순서. 현재 단계는 [_StageBreadcrumb] 가 강조.
   static const List<(CharacterStage, String)> _stages = [
     (CharacterStage.infant, '유년기'),
     (CharacterStage.juvenile, '성장기'),
@@ -504,9 +743,7 @@ class _StageInfoContent extends StatelessWidget {
         children: [
           Text(
             '${character.name}는 자라고 있어요',
-            style: AppTextStyles.labelMedium.copyWith(
-              color: Colors.black,
-            ),
+            style: AppTextStyles.labelMedium.copyWith(color: Colors.black),
           ),
           SizedBox(height: 10.h),
           _StageBreadcrumb(current: character.stage, stages: _stages),
@@ -526,9 +763,6 @@ class _StageInfoContent extends StatelessWidget {
   }
 }
 
-/// `[유년기] → [성장기] → [성숙기]` 한 줄. 카드 본체에서 쓰는 [_StageBadge] 와
-/// 같은 색감을 그대로 사용해 캐릭터 옆에 떠있던 뱃지와 시각적으로 이어지게 한다.
-/// 현재 단계는 풀 컬러, 나머지는 페이드 + 작은 화살표 구분자.
 class _StageBreadcrumb extends StatelessWidget {
   const _StageBreadcrumb({required this.current, required this.stages});
 
@@ -604,7 +838,6 @@ class _StreakInfoContent extends StatelessWidget {
           SizedBox(height: 12.h),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 4.w),
-            // 이 수치를 키울수록 더 좁아집니다
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -669,7 +902,7 @@ class _RewardButton extends StatelessWidget {
     final colors = context.colors;
     return Material(
       color: colors.streakDotActive,
-      borderRadius: BorderRadius.circular(12.r), // 버튼도 각지게 조정
+      borderRadius: BorderRadius.circular(12.r),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: isLoading ? null : onTap,

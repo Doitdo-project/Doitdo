@@ -29,9 +29,6 @@ class CharacterCard extends StatelessWidget {
     this.onTapCollection,
     this.onEggTap,
     this.onCharacterTap,
-    this.onTapEvolve,
-    this.onTapFarewell,
-    this.actionBusy = false,
     this.topSafePadding = 0,
   });
 
@@ -49,15 +46,6 @@ class CharacterCard extends StatelessWidget {
 
   /// 부화 이후 캐릭터 본체를 탭했을 때 호출.
   final VoidCallback? onCharacterTap;
-
-  /// canEvolve 일 때 노출되는 "진화" 뱃지 탭 콜백. null 이면 뱃지 자체가 비활성.
-  final VoidCallback? onTapEvolve;
-
-  /// canFarewell 일 때 노출되는 "독립" 뱃지 탭 콜백. null 이면 뱃지 자체가 비활성.
-  final VoidCallback? onTapFarewell;
-
-  /// 진화/독립 API 호출 in-flight. 뱃지를 dim + 탭 무시 처리하기 위해.
-  final bool actionBusy;
 
   /// 카드가 상태바 영역까지 확장될 때 content 가 상태바 아이콘과 겹치지 않도록
   /// 밀어낼 상단 여백. 배경(bg_grass)은 이 영역까지 그대로 이어지고, 내부 content
@@ -139,12 +127,6 @@ class CharacterCard extends StatelessWidget {
                 onTapCollection: onTapCollection,
               ),
             ),
-
-          // 진화 / 독립 액션 뱃지. canEvolve / canFarewell 가 켜진 동안만 노출되며
-          // 캐릭터 column 윗쪽 (말풍선 위 약간) 에 떠있는다. 탭 → 부모가 다이얼로그
-          // 띄운 뒤 API 호출. 둘은 스테이지가 달라 동시에 켜질 수 없으니 단일 뱃지로
-          // 색·아이콘만 분기.
-          if (!hideChrome) _buildActionBadge(),
         ],
       ),
     );
@@ -156,50 +138,6 @@ class CharacterCard extends StatelessWidget {
     if (character == null) return null;
     if (character?.isEgg ?? false) return null;
     return state.speechBubble;
-  }
-
-  /// canEvolve / canFarewell 분기. 둘 다 false 면 빈 위젯.
-  /// 뱃지는 캐릭터 column 의 top(=topSafePadding+100) 위쪽 약 40h 에 떠있어
-  /// 말풍선/캐릭터에 살짝 겹쳐 보이지 않게 한다. 텍스트 없이 색·아이콘만으로
-  /// 분기 — 라벨은 다이얼로그에서 명시. "지금 뭔가 가능" 신호만 주는 역할.
-  Widget _buildActionBadge() {
-    final c = character;
-    if (c == null) return const SizedBox.shrink();
-    if (c.canEvolve && onTapEvolve != null) {
-      return Positioned(
-        top: topSafePadding + 60,
-        left: 0,
-        right: 0,
-        child: Center(
-          child: _ActionBadge(
-            icon: Icons.auto_awesome_rounded,
-            fg: const Color(0xFFB8702A),
-            bg: const Color(0xFFFCE3C2),
-            borderColor: const Color(0xFFE9B97A),
-            busy: actionBusy,
-            onTap: onTapEvolve!,
-          ),
-        ),
-      );
-    }
-    if (c.canFarewell && onTapFarewell != null) {
-      return Positioned(
-        top: topSafePadding + 60,
-        left: 0,
-        right: 0,
-        child: Center(
-          child: _ActionBadge(
-            icon: Icons.flight_takeoff_rounded,
-            fg: const Color(0xFF3A6BB4),
-            bg: const Color(0xFFD4E2F8),
-            borderColor: const Color(0xFFA8C2EC),
-            busy: actionBusy,
-            onTap: onTapFarewell!,
-          ),
-        ),
-      );
-    }
-    return const SizedBox.shrink();
   }
 
   Widget _buildCharacterSlot() {
@@ -335,6 +273,10 @@ class _UnreceivedSlot extends StatelessWidget {
 
 /// 알 상태. 탭하면 [onTap] 으로 전달만 하고, 실제 부화 카운팅/애니메이션은
 /// 전용 페이지([CharacterHatchPage])에서 처리된다.
+///
+/// 슬롯 높이는 [_GrownCharacter] 와 동일한 112.h. 알 이미지는 슬롯 하단에
+/// 붙여 캐릭터 부화 후의 발 위치와 같은 row 에 닿게 하고, "톡톡 두드려보세요"
+/// 힌트는 알 머리 위로 살짝 띄워 말풍선 톤으로 보이게 한다.
 class _EggSlot extends StatelessWidget {
   const _EggSlot({required this.imageUrl, this.onTap});
 
@@ -346,26 +288,45 @@ class _EggSlot extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _EggImage(imageUrl: imageUrl, size: 100.h),
-          SizedBox(height: 4.h),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 3.h),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.45),
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-            child: Text(
-              '알을 톡톡 두드려보세요',
-              style: AppTextStyles.labelSmall.copyWith(
-                color: Colors.white,
-                letterSpacing: 0.5,
+      child: SizedBox(
+        height: 140.h,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Center(
+                child: _EggImage(imageUrl: imageUrl, size: 100.h),
               ),
             ),
-          ),
-        ],
+            Positioned(
+              top: 140.h,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 10.w,
+                    vertical: 3.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                  child: Text(
+                    '알을 톡톡 두드려보세요',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -636,99 +597,6 @@ class _RoomMenuButtonState extends State<_RoomMenuButton> {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// 캐릭터 위에 떠있는 진화/독립 액션 뱃지. 텍스트 없이 색·아이콘만 — 정확한
-/// 안내는 탭 시 다이얼로그가 담당. 시선 유도용 펄스 애니메이션을 자체 호스팅.
-/// busy 면 dim + 탭 무시 + 펄스 멈춤.
-class _ActionBadge extends StatefulWidget {
-  const _ActionBadge({
-    required this.icon,
-    required this.fg,
-    required this.bg,
-    required this.borderColor,
-    required this.onTap,
-    this.busy = false,
-  });
-
-  final IconData icon;
-  final Color fg;
-  final Color bg;
-  final Color borderColor;
-  final VoidCallback onTap;
-  final bool busy;
-
-  @override
-  State<_ActionBadge> createState() => _ActionBadgeState();
-}
-
-class _ActionBadgeState extends State<_ActionBadge>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseController;
-  late final Animation<double> _pulse;
-
-  @override
-  void initState() {
-    super.initState();
-    // 1.0 ↔ 1.08 사이를 1.4초 주기로 왕복. easeInOut 으로 자연스러운 호흡감.
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    );
-    _pulse = Tween<double>(begin: 1.0, end: 1.08).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-    if (!widget.busy) _pulseController.repeat(reverse: true);
-  }
-
-  @override
-  void didUpdateWidget(covariant _ActionBadge old) {
-    super.didUpdateWidget(old);
-    if (widget.busy && _pulseController.isAnimating) {
-      _pulseController.stop();
-      _pulseController.value = 0;
-    } else if (!widget.busy && !_pulseController.isAnimating) {
-      _pulseController.repeat(reverse: true);
-    }
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Opacity(
-      opacity: widget.busy ? 0.5 : 1.0,
-      child: GestureDetector(
-        onTap: widget.busy ? null : widget.onTap,
-        behavior: HitTestBehavior.opaque,
-        child: ScaleTransition(
-          scale: _pulse,
-          child: Container(
-            width: 36.w,
-            height: 36.w,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: widget.bg,
-              shape: BoxShape.circle,
-              border: Border.all(color: widget.borderColor, width: 1),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Icon(widget.icon, size: 18.sp, color: widget.fg),
-          ),
-        ),
-      ),
     );
   }
 }

@@ -403,9 +403,6 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                 onTapCollection: () => context
                                     .push(AppRoutes.tamagochiCollection),
                                 onEggTap: _handleEggTap,
-                                onTapEvolve: _handleEvolveTap,
-                                onTapFarewell: _handleFarewellTap,
-                                actionBusy: _evolving || _farewelling,
                                 onCharacterTap: () {
                                   final remaining = todayTodos
                                       .where((t) => !t.isDone)
@@ -431,6 +428,9 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                     streak.hasCompletedBlock,
                                     isClaimingReward: _claimingReward,
                                     onClaimReward: _handleClaimReward,
+                                    onTapEvolve: _handleEvolveTap,
+                                    onTapFarewell: _handleFarewellTap,
+                                    actionBusy: _evolving || _farewelling,
                                   ),
                                 ),
                             ],
@@ -446,11 +446,10 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                               minHeight: constraints.viewportMainAxisExtent,
                             ),
                             child: Padding(
-                              padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+                              padding: const EdgeInsets.fromLTRB(24, 18, 24, 16),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  // ✅ 오늘/언젠가 할 일 섹션 간 드래그앤드롭
                                   _CrossSectionTodoList(
                                     scrollController: _scrollController,
                                     todayTitle: '오늘의 할 일',
