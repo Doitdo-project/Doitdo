@@ -55,6 +55,11 @@ import org.springframework.cache.annotation.Cacheable;
 @Slf4j
 public class TamagotchiServiceImpl implements TamagotchiService {
 
+	private static final String EVOLUTION_ANIMATION_URL =
+		"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/evolution/evolution.gif";
+	private static final String INDEPENDENCE_ANIMATION_URL =
+		"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/independence/independence.gif";
+
 	private final CharacterActionRepository characterActionRepository;
 	private final CharacterRepository characterRepository;
 	private final CharacterUnlockRepository characterUnlockRepository;
@@ -353,7 +358,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			afterStage.name(),
 			userCharacter.getCurrentExp(),
 			nextCharacter.getRequiredExp(),
-			buildAnimationUrl(beforeStage, afterStage),
+			EVOLUTION_ANIMATION_URL,
 			nextCharacter.getThumbnailUrl(),
 			Instant.now().toString()
 		);
@@ -376,16 +381,6 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		if (!unlocksToSave.isEmpty()) {
 			characterUnlockRepository.saveAll(unlocksToSave);
 		}
-	}
-
-	private String buildAnimationUrl(
-		com.doitdo.domain.tamagotchi.entity.Character.Stage beforeStage,
-		com.doitdo.domain.tamagotchi.entity.Character.Stage afterStage
-	) {
-		return "https://cdn.example.com/tamagotchi/animations/"
-			+ beforeStage.name().toLowerCase()
-			+ "-to-"
-			+ afterStage.name().toLowerCase();
 	}
 
 	@Override
@@ -444,10 +439,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			adultUserCharacter.getUserCharacterId(),
 			true,
 			eggCharacter.getStage().name(),
-			buildAnimationUrl(
-				com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT,
-				com.doitdo.domain.tamagotchi.entity.Character.Stage.EGG
-			)
+			INDEPENDENCE_ANIMATION_URL
 		);
 	}
 
