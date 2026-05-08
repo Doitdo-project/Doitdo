@@ -88,13 +88,19 @@ pipeline {
                         set -eu
                         ssh -i "$PROD_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PROD_SSH_USER}@${PROD_HOST}" '
                             set -eu
+                            ACTIVE_PORT="$(grep -oE '"'"'127\\.0\\.0\\.1:808[02]'"'"' /etc/nginx/sites-available/default | head -n 1 | awk -F: '"'"'{print $NF}'"'"')"
+                            if [ -z "$ACTIVE_PORT" ]; then
+                                echo "Active app port not found"
+                                exit 1
+                            fi
+
                             for i in $(seq 1 20); do
-                                if curl -fsS http://127.0.0.1/hello > /dev/null; then
+                                if curl -fsS "http://127.0.0.1:${ACTIVE_PORT}/hello" > /dev/null; then
                                     exit 0
                                 fi
                                 sleep 2
                             done
-                            echo "Nginx local health check failed"
+                            echo "Local active app health check failed"
                             exit 1
                         '
 
