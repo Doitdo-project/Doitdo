@@ -21,13 +21,6 @@ class DoitdoShell extends ConsumerWidget {
   static const int _calendarIndex = 0;
   static const int _homeIndex = 1;
 
-  // 탭 순서와 동일한 인덱스로 트래커를 배열.
-  static final _trackers = [
-    todoBranchTracker,
-    tamagochiBranchTracker,
-    settingBranchTracker,
-  ];
-
   void _onTap(WidgetRef ref, int index) {
     final prevIndex = navigationShell.currentIndex;
 
@@ -36,22 +29,21 @@ class DoitdoShell extends ConsumerWidget {
       ref.read(calendarTodayTriggerProvider.notifier).update((v) => v + 1);
     }
 
-    // 탭 전환 전 이전 탭에 열린 바텀시트·다이얼로그를 애니메이션 없이 즉시 제거.
-    // removeRoute() 는 역방향 애니메이션을 재생하지 않으므로 시각적으로 깔끔하다.
-    if (index != prevIndex) {
-      _trackers[prevIndex].removeAllSilently();
-    }
+    // goBranch 는 GoRouter 내부에서 Navigator 잠금을 유발할 수 있어
+    // 다음 프레임으로 미룬다. initialLocation: true 가 서브 라우트를
+    // 자동 정리하므로 별도 removeAllSilently() 호출은 불필요하다.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      navigationShell.goBranch(index, initialLocation: true);
 
-    navigationShell.goBranch(index, initialLocation: true);
-
-    // 홈(다마고치): 어느 탭에서 오든 항상 상단으로 즉시 이동 + 스트릭 갱신 트리거
-    if (index == _homeIndex) {
-      final controller = ref.read(homeScrollControllerProvider);
-      if (controller != null && controller.hasClients) {
-        controller.jumpTo(0);
+      // 홈(다마고치): 어느 탭에서 오든 항상 상단으로 즉시 이동 + 스트릭 갱신 트리거
+      if (index == _homeIndex) {
+        final controller = ref.read(homeScrollControllerProvider);
+        if (controller != null && controller.hasClients) {
+          controller.jumpTo(0);
+        }
+        ref.read(tamagochiEnterTriggerProvider.notifier).update((v) => v + 1);
       }
-      ref.read(tamagochiEnterTriggerProvider.notifier).update((v) => v + 1);
-    }
+    });
   }
 
   @override

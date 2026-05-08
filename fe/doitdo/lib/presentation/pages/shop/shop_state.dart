@@ -1,23 +1,51 @@
 import 'package:flutter/material.dart';
 
 /// 상점 카테고리. 노출 순서대로 정의 — UI 의 카테고리 탭이 그대로 따라간다.
+///
+/// 서버는 벽지/타일을 따로 두지 않고 [background] 한 카테고리로 방 일러스트
+/// 전체를 다룬다. 사용자도 배경을 다른 일러스트로 바꿔치울 수 있다.
 enum ShopCategory {
-  wallpaper('벽지', Icons.wallpaper_outlined),
-  tile('타일', Icons.grid_4x4_rounded),
+  background('배경', Icons.image_outlined),
   bed('침대', Icons.bed_outlined),
   desk('책상', Icons.desk_outlined),
   window('창문', Icons.window_outlined),
   clock('시계', Icons.access_time_rounded),
   tv('티비', Icons.tv_outlined),
   plant('화분', Icons.local_florist_outlined),
-  carpet('카펫', Icons.texture_rounded),
-  closet('옷장', Icons.checkroom_rounded),
+  rug('카펫', Icons.texture_rounded),
   etc('기타', Icons.more_horiz_rounded);
 
   const ShopCategory(this.label, this.icon);
 
   final String label;
   final IconData icon;
+
+  /// 서버 응답의 대문자 카테고리 문자열을 enum 으로 변환.
+  ///
+  /// 미정의 / 빈 값은 [etc] 로 흡수해 분류만 분리하고 노출은 시킨다 — UI 가
+  /// 깨지지 않도록.
+  static ShopCategory fromServer(String? raw) {
+    switch (raw?.toUpperCase()) {
+      case 'BACKGROUND':
+        return ShopCategory.background;
+      case 'BED':
+        return ShopCategory.bed;
+      case 'DESK':
+        return ShopCategory.desk;
+      case 'WINDOW':
+        return ShopCategory.window;
+      case 'CLOCK':
+        return ShopCategory.clock;
+      case 'TV':
+        return ShopCategory.tv;
+      case 'PLANT':
+        return ShopCategory.plant;
+      case 'RUG':
+        return ShopCategory.rug;
+      default:
+        return ShopCategory.etc;
+    }
+  }
 }
 
 /// 상품 보유 상태.
@@ -30,27 +58,47 @@ enum ItemStatus { notOwned, owned, placed }
 class ShopItem {
   const ShopItem({
     required this.id,
+    required this.furnitureId,
     required this.name,
     required this.category,
     required this.price,
     required this.status,
-    this.isNew = false,
+    required this.imageUrl,
+    this.userFurnitureId,
+    this.placementId,
   });
 
+  /// 화면 비교용 안정 ID. 보통 `'shop_$furnitureId'` 형식.
   final String id;
+
+  /// 가구 마스터 ID (= `Furniture.furnitureId`). 구매 시 path param 으로 들어간다.
+  final int furnitureId;
+
+  /// 보유 시 채워지는 사용자별 가구 인스턴스 ID. 배치/해제 API path 에 필요.
+  final int? userFurnitureId;
+
+  /// 배치 시 채워지는 placement ID. 해제 API path 에 필요.
+  final int? placementId;
+
   final String name;
   final ShopCategory category;
   final int price;
   final ItemStatus status;
-  final bool isNew;
+
+  /// 카드 / 미리보기에 띄울 이미지. 비어있으면 카테고리 아이콘으로 폴백.
+  /// shop entry 응답의 thumbnailUrl 우선, 없으면 imageUrl.
+  final String imageUrl;
 
   ShopItem copyWith({ItemStatus? status}) => ShopItem(
         id: id,
+        furnitureId: furnitureId,
+        userFurnitureId: userFurnitureId,
+        placementId: placementId,
         name: name,
         category: category,
         price: price,
         status: status ?? this.status,
-        isNew: isNew,
+        imageUrl: imageUrl,
       );
 }
 

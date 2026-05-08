@@ -9,6 +9,7 @@ import 'package:doitdo/core/theme/app_theme.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/domain/entities/user.dart';
+import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/navigation/post_auth_destination.dart';
 import 'package:doitdo/presentation/pages/auth/widgets/auth_pill_button.dart';
 import 'package:doitdo/presentation/pages/onboarding/onboarding_view_model.dart';
@@ -46,7 +47,13 @@ class OnboardingAgreementsPage extends ConsumerWidget {
         data: (user) {
           if (user == null) return;
           HapticFeedback.lightImpact();
-          context.go(resolvePostAuthDestination(ref, user));
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!context.mounted) return;
+            final dest = resolvePostAuthDestination(ref, user);
+            context.go(
+              '${AppRoutes.tutorial}?next=${Uri.encodeComponent(dest)}',
+            );
+          });
         },
         error: (error, _) {
           ScaffoldMessenger.of(context).showSnackBar(

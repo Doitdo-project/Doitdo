@@ -202,7 +202,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
     showModalBottomSheet(
       context: context, isScrollControlled: true,
       backgroundColor: Colors.transparent, useRootNavigator: true,
-      builder: (_) => TodoDetailSheet(todoId: todo.id, isSomeday: isSomeday),
+      builder: (_) => TodoDetailSheet(todo: todo, isSomeday: isSomeday),
     );
   }
 
@@ -548,7 +548,11 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                     onReorderToday: vm.reorderTodo,
                     onReorderSomeday: vm.reorderSomedayTodo,
                     onMoveToSomeday: vm.moveToSomeday,
-                    onMoveToToday: vm.moveToToday,
+                    onMoveToToday: (id, {targetIndex = -1}) => vm.moveToToday(
+                      id,
+                      targetIndex: targetIndex,
+                      targetDate: state.selectedDay,
+                    ),
                     onSnooze: vm.snoozeTodo,
                     onAddToday: () => _openAddSheet(context, state.selectedDay ?? DateTime.now()),
                     onAddSomeday: () => _openAddSheet(context, null),
@@ -830,7 +834,7 @@ class _SectionHeader extends StatelessWidget {
     // ✅ 상단 패딩을 크게 해서 오늘 섹션 마지막 아이템과 헤더 사이
     // 드롭 감지 영역을 충분히 확보 (off-by-one 방지)
     return Padding(
-      padding: const EdgeInsets.only(top: 28, bottom: 8),
+      padding: const EdgeInsets.only(top: 16, bottom: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

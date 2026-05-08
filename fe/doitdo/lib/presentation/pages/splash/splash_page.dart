@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:doitdo/core/errors/exceptions.dart';
 import 'package:doitdo/core/utils/app_env.dart';
+import 'package:doitdo/domain/entities/auth_tokens.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/navigation/post_auth_destination.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
@@ -29,7 +30,10 @@ import 'package:doitdo/presentation/providers/default_screen_provider.dart';
 /// 토큰이 있을 땐 `GET /api/users/me` 로 최신 프로필을 가져온 뒤 온보딩 플래그
 /// (`birthDateRegistered`, `agreementsAccepted`) 에 따라 다음 라우트를 결정한다.
 class SplashPage extends ConsumerStatefulWidget {
-  const SplashPage({super.key});
+  const SplashPage({super.key, this.fromWidget = false});
+
+  /// 홈스크린 위젯에서 진입할 때 true — 스플래시 애니메이션을 건너뛰고 즉시 라우팅.
+  final bool fromWidget;
 
   @override
   ConsumerState<SplashPage> createState() => _SplashPageState();
@@ -101,6 +105,16 @@ class _SplashPageState extends ConsumerState<SplashPage>
   }
 
   Future<void> _bootstrap() async {
+    final tokenFuture = ref.read(authLocalDataSourceProvider).read();
+
+    if (widget.fromWidget) {
+      // 위젯 진입: 애니메이션 생략 — 토큰 확인 후 즉시 라우팅.
+      final tokens = await tokenFuture;
+      if (!mounted) return;
+      await _navigateFromTokens(tokens);
+      return;
+    }
+
     // 애니메이션 스케줄링 — fire-and-forget.
     Future<void>.delayed(_wordmarkDelay, () {
       if (mounted) _wordmarkController.forward();
@@ -116,8 +130,6 @@ class _SplashPageState extends ConsumerState<SplashPage>
     });
 
     // 토큰 I/O 는 병렬 — 1.8s 마무리 직전에 결과 확인.
-    final tokenFuture = ref.read(authLocalDataSourceProvider).read();
-
     await Future<void>.delayed(_exitDelay);
     if (!mounted) return;
 
@@ -127,6 +139,10 @@ class _SplashPageState extends ConsumerState<SplashPage>
     await fadeFuture;
     if (!mounted) return;
 
+    await _navigateFromTokens(tokens);
+  }
+
+  Future<void> _navigateFromTokens(AuthTokens? tokens) async {
     if (tokens != null) {
       // 홈스크린 위젯이 별도 프로세스라 secure storage 에 직접 접근 못 함.
       // 앱 부팅 시마다 App Group UserDefaults 를 갱신해줘야 위젯 백그라운드 PATCH 동작.

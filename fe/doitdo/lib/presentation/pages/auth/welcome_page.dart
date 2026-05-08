@@ -407,7 +407,10 @@ class WelcomePage extends ConsumerWidget {
               // 한 곳에서만 돌린다. 여기서 unawaited 로 또 띄우면 home 의 load 와 레이스가
               // 나서 "GET 실패 → POST" 판정이 덮어써질 수 있음.
               // 첫 소셜 로그인 사용자(birthDate/agreements 미등록) 는 메인 탭 대신 온보딩으로.
-              context.go(resolvePostAuthDestination(ref, success.user));
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!context.mounted) return;
+                context.go(resolvePostAuthDestination(ref, success.user));
+              });
             },
             error: (error, _) {
               if (error is AuthCanceledException) return;
@@ -432,6 +435,8 @@ class WelcomePage extends ConsumerWidget {
       if (success == null) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;
+        // ref.listen 이 이미 네비게이션 했으면 /welcome 에서 벗어난 상태 → 중복 방지.
+        if (GoRouterState.of(context).matchedLocation != AppRoutes.welcome) return;
         context.go(resolvePostAuthDestination(ref, success.user));
       });
     });
