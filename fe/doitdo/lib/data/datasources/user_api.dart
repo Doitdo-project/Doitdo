@@ -11,6 +11,8 @@ import 'package:doitdo/data/models/register_birth_date_request_dto.dart';
 import 'package:doitdo/data/models/user_dto.dart';
 import 'package:doitdo/data/models/withdraw_request_dto.dart';
 
+import 'package:doitdo/data/models/wallet_balance_dto.dart';
+
 part 'user_api.g.dart';
 
 /// `/api/users/*` 엔드포인트 그룹.
@@ -34,36 +36,36 @@ abstract class UserApi {
   /// 실패(현재 비밀번호 불일치 등) 는 `ServerException(message)` 으로 떨어진다.
   @POST('/api/users/me/password')
   Future<ApiResponse<EmptyDataDto>> changePassword(
-    @Body() ChangePasswordRequestDto body,
-  );
+      @Body() ChangePasswordRequestDto body,
+      );
 
   /// 온보딩 1단계 — 생년월일 등록.
   /// 만 14세 미만이면 서버가 계정 hard delete 후 403 (G00-003) 반환 → 토큰 무효화 처리.
   /// 성공 시 갱신된 [UserDto] 가 내려온다 (birthDateRegistered=true).
   @POST('/api/users/me/birth-date')
   Future<ApiResponse<UserDto>> registerBirthDate(
-    @Body() RegisterBirthDateRequestDto body,
-  );
+      @Body() RegisterBirthDateRequestDto body,
+      );
 
   /// 온보딩 2단계 — 약관 동의 등록.
   /// 이용약관/개인정보처리방침 동의는 필수(true), 마케팅은 선택. 서버에서 한 번 더 검증.
   /// 성공 시 갱신된 [UserDto] 가 내려온다 (agreementsAccepted=true).
   @POST('/api/users/me/agreements')
   Future<ApiResponse<UserDto>> registerAgreements(
-    @Body() RegisterAgreementsRequestDto body,
-  );
+      @Body() RegisterAgreementsRequestDto body,
+      );
 
   /// 이메일 중복 확인. `data.available == true` 면 가입 가능.
   @GET('/api/users/check-email')
   Future<ApiResponse<CheckEmailResponseDto>> checkEmail(
-    @Query('email') String email,
-  );
+      @Query('email') String email,
+      );
 
   /// 닉네임(username) 중복 확인. `data.available == true` 면 가입 가능.
   @GET('/api/users/check-username')
   Future<ApiResponse<CheckUsernameResponseDto>> checkUsername(
-    @Query('username') String username,
-  );
+      @Query('username') String username,
+      );
 
   /// 회원탈퇴 (소프트 삭제 + email/username 익명화 + 연관 리소스 정리).
   /// 일반 계정은 [WithdrawRequestDto.currentPassword] 필수, OAuth 계정은 null 가능.
@@ -73,6 +75,11 @@ abstract class UserApi {
   /// 빈 본문에 대해 null check 에서 터진다 (deleteCategory 와 동일 패턴).
   @DELETE('/api/users/me')
   Future<void> withdraw(
-    @Body() WithdrawRequestDto body,
-  );
+      @Body() WithdrawRequestDto body,
+      );
+
+  /// 내 뚜레딧(코인) 잔액 조회.
+  /// `data.balance` 에 현재 잔액이 담겨 온다.
+  @GET('/api/users/me/balance')
+  Future<ApiResponse<WalletBalanceDto>> getBalance();
 }
