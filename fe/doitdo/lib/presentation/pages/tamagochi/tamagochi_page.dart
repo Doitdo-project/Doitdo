@@ -9,8 +9,8 @@ import 'package:doitdo/presentation/pages/tamagochi/character_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/streak_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_view_model.dart';
+import 'package:doitdo/domain/entities/evolution.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/character_card.dart';
-import 'package:doitdo/presentation/pages/tamagochi/widgets/evolution_overlay.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/status_pill.dart';
 import 'package:doitdo/presentation/pages/todo/todo_state.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
@@ -54,9 +54,27 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   /// farewell API 호출 in-flight 여부. 뱃지 중복 탭 방지용.
   bool _farewelling = false;
 
-  /// 진화 플로우 진행 중 여부. evolve API 호출 시작부터 진화 연출 overlay 종료까지
-  /// true 로 유지된다. 뱃지 중복 탭 방지 + CharacterCard 의 hideCharacter 트리거 겸용.
+  /// 진화 플로우 진행 중 여부. evolve API 호출 시작부터 진화 연출 종료까지
+  /// true 로 유지 — 진화 뱃지/메뉴/상태 알약의 입력을 잠그는 용도.
   bool _evolving = false;
+
+  /// 진화 연출 active 데이터. non-null 이면 CharacterCard 가 캐릭터 슬롯 자리에서
+  /// 진화 애니메이션을 재생한다. 연출 종료 콜백에서 null 로 되돌려 일반 캐릭터로 복귀.
+  Evolution? _activeEvolution;
+
+  /// 진화 직전 캐릭터 썸네일. silhouette 단계에서 사용. evolve 응답 후 home state 가
+  /// 새 캐릭터로 갱신되더라도 이 변수가 옛 thumbnailUrl 을 들고 있어 silhouette 이
+  /// 옛 모습 그대로 유지된다.
+  String? _beforeEvolutionImageUrl;
+
+  /// 진화 직전 캐릭터 species ID. silhouette 의 eye gif 에셋 경로 (`assets/animations/
+  /// eye/{id}.gif`) 를 만드는 데 쓰여, 홈에서 그리던 캐릭터와 위치/크기가 일치한다.
+  int? _beforeEvolutionCharacterId;
+
+  /// 진화 후 캐릭터 species ID. animation 단계에서 트리거한 refresh 응답으로
+  /// 채워지며, reveal 단계에서 새 캐릭터를 eye gif 로 그리는 데 사용된다.
+  /// 채워지지 못한 경우(refresh 늦음/실패) 는 응답의 characterImageUrl 로 fallback.
+  int? _afterEvolutionCharacterId;
 
   /// 스트릭 보상 수령 API in-flight 여부. 버튼 중복 탭 방지 + 버튼 스피너용.
   bool _claimingReward = false;
@@ -199,14 +217,11 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       );
   }
 
-  /// 진화 뱃지 탭. 확인 다이얼로그 → evolve API → 성공 시 풀스크린 진화 연출
-  /// overlay. 자동 진화 흐름은 제거되어 사용자가 직접 트리거 해야 BABY→TEEN /
-  /// TEEN→ADULT 가 진행된다.
+  /// 진화 뱃지 탭. 확인 다이얼로그 → evolve API → 성공 시 캐릭터 슬롯 자리에서
+  /// 진화 애니메이션을 재생한다. 자동 진화 흐름은 제거되어 사용자가 직접 트리거 해야
+  /// BABY→TEEN / TEEN→ADULT 가 진행된다.
   ///
-  /// overlay 의 silhouette 단계에서 사용할 진화 직전 thumbnailUrl 은 evolve
-  /// 호출 직전에 캡처해둔다 — evolve 안에서 백그라운드 refresh 가 트리거되어
-  /// state 가 새 캐릭터로 갱신되면 character.thumbnailUrl 이 이미 새 url 로
-  /// 바뀌어 있을 수 있기 때문.
+  /// silhouette 단계에서 쓸 진화 직전 thumbnailUrl 은 evolve 호출 직전에 캡처해둔다.
   Future<void> _handleEvolveTap() async {
     if (_evolving) return;
     final character =
@@ -225,12 +240,8 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     if (!mounted || confirmed != true) return;
 
     final beforeImageUrl = character.thumbnailUrl;
-    final beforeStage = character.rawStage;
+    final beforeCharacterId = character.characterId;
 
-    // _evolving=true → CharacterCard 가 캐릭터+말풍선을 페이드아웃 시켜
-    // 빈 방으로 만든다. 이 상태에서 API 호출 → refresh → overlay 까지 진행하므로
-    // dim 사이로 옛/새 캐릭터가 비치는 일이 없고, overlay 닫힘과 동시에 새
-    // 캐릭터로 페이드인 된다.
     setState(() => _evolving = true);
     final evolution = await ref
         .read(characterViewModelProvider.notifier)
@@ -251,21 +262,41 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       return;
     }
 
-    // home 이 가려진 동안 새 캐릭터로 silent refresh — overlay 진행 ~5초 안에
-    // 갱신이 끝나, overlay 닫힘 후 페이드인 시점엔 이미 새 캐릭터로 그려진다.
-    ref.read(characterViewModelProvider.notifier).refresh();
+    // CharacterCard 의 캐릭터 슬롯 자리에서 진화 애니메이션 재생.
+    // _evolving 은 reveal/complete 콜백 흐름까지 true 로 유지되어 메뉴/상태 알약
+    // 입력을 막는다. 일반 캐릭터로의 복귀는 _onEvolutionComplete 에서 처리.
+    setState(() {
+      _beforeEvolutionImageUrl = beforeImageUrl;
+      _beforeEvolutionCharacterId = beforeCharacterId;
+      _activeEvolution = evolution;
+    });
+  }
 
-    await EvolutionOverlay.show(
-      context,
-      beforeImageUrl: beforeImageUrl,
-      animationUrl: evolution.animationUrl,
-      afterImageUrl: evolution.characterImageUrl,
-      beforeStage: beforeStage,
-      afterStage: evolution.afterStage,
-    );
-
+  /// 진화 silhouette → animation 전환 시 콜백. 이 시점부터 reveal 까지 약
+  /// 2.4s 의 시간이 있으니, 그 안에 home state 를 새 캐릭터로 refresh 하고
+  /// 받은 새 characterId 를 [_afterEvolutionCharacterId] 로 채워 넣는다 —
+  /// reveal 단계에서 새 캐릭터를 응답 PNG 가 아닌 eye gif 로 그릴 수 있어
+  /// 연출 종료 후 home 으로 복귀할 때 크기/비율 점프가 사라진다.
+  Future<void> _onEvolutionAnimationStart() async {
     if (!mounted) return;
-    setState(() => _evolving = false);
+    await ref.read(characterViewModelProvider.notifier).refresh();
+    if (!mounted) return;
+    final newCharacter =
+        ref.read(characterViewModelProvider).valueOrNull;
+    if (newCharacter == null) return;
+    setState(() => _afterEvolutionCharacterId = newCharacter.characterId);
+  }
+
+  /// 진화 hold 종료 콜백. 일반 캐릭터 슬롯으로 복귀 + 입력 잠금 해제.
+  void _onEvolutionComplete() {
+    if (!mounted) return;
+    setState(() {
+      _activeEvolution = null;
+      _beforeEvolutionImageUrl = null;
+      _beforeEvolutionCharacterId = null;
+      _afterEvolutionCharacterId = null;
+      _evolving = false;
+    });
   }
 
   /// 7일 블록 완성 시 노출되는 "🎁 보상 받기" 탭 핸들러.
@@ -430,7 +461,16 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                 state: state,
                                 character: character,
                                 isCharacterLoading: isCharacterLoading,
-                                hideCharacter: _evolving,
+                                evolution: _activeEvolution,
+                                beforeEvolutionImageUrl:
+                                    _beforeEvolutionImageUrl,
+                                beforeEvolutionCharacterId:
+                                    _beforeEvolutionCharacterId,
+                                afterEvolutionCharacterId:
+                                    _afterEvolutionCharacterId,
+                                onEvolutionAnimationStart:
+                                    _onEvolutionAnimationStart,
+                                onEvolutionComplete: _onEvolutionComplete,
                                 topSafePadding: topInset,
                                 onTapShop: () =>
                                     context.push(AppRoutes.tamagochiShop),
