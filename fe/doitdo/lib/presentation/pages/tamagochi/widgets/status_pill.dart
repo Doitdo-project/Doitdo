@@ -63,7 +63,17 @@ class _StatusPillState extends State<StatusPill> {
   @override
   void didUpdateWidget(covariant StatusPill old) {
     super.didUpdateWidget(old);
-    if (_entry != null) _entry!.markNeedsBuild();
+    // didUpdateWidget 은 부모 build 페이즈 안에서 실행되는데, OverlayEntry 는
+    // 별도 Overlay 트리(sibling) 에 살아서 그 시점에 동기 markNeedsBuild 를
+    // 호출하면 "marked dirty during build" 가 던져진다 (스트릭 팝오버 떠있는
+    // 상태에서 ref.watch refresh 가 일어나면 간헐적으로 재현). 다음 프레임으로
+    // 미뤄 안전한 시점에 dirty 마킹.
+    if (_entry != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _entry?.markNeedsBuild();
+      });
+    }
   }
 
   void _hidePopover() {
