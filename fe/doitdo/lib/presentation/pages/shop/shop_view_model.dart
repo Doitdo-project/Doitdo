@@ -161,7 +161,7 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
           ? msg
           : '서버 오류가 발생했어요. 잠시 후 다시 시도해주세요.';
     } else {
-      return '구매에 실패했어요. 잠시 후 다시 시도해주세요.';
+      return '구매에 실패했어요. 코인 잔액이나 네트워크를 확인해주세요.';
     }
   }
 
