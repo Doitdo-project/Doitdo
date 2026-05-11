@@ -12,8 +12,9 @@ import 'package:doitdo/presentation/widgets/common/room_furniture_slots.dart';
 /// - `BACKGROUND` 카테고리는 카드를 꽉 채우는 베이스(`BoxFit.cover`).
 /// - 그 외 가구는 서버가 내려준 `(x, y, width, height)` 를 무시하고
 ///   [kRoomFurnitureSlots] (상점 미리보기와 공유) 의 비율 슬롯에 배치한다.
-///   픽셀 절댓값이 아니라 카드 width/height 의 비율이라 어떤 디바이스에서도
-///   같은 구도가 나온다.
+///   슬롯 비율은 **카드 전체가 아니라 [kRoomCanvasAspect] 로 잠긴 가구 캔버스** 기준
+///   — 디바이스 / 상태바 인셋이 달라져 카드 AR 이 변해도 가구 간 배치는 동일.
+///   캔버스는 하단 anchor 라 캐릭터 발 위치(카드 하단)와 가구 바닥선이 정렬된다.
 ///
 /// z-order: RoomLayer 가 가장 뒤다 (카드 상위 Stack 에서 캐릭터/말풍선/
 /// 상점·도감 아이콘 → 그 바깥의 StatusPill 순으로 가구 위에 그려진다).
@@ -41,8 +42,11 @@ class RoomLayer extends ConsumerWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final w = constraints.maxWidth;
-        final h = constraints.maxHeight;
+        final canvas = computeRoomCanvasLayout(
+          parentWidth: constraints.maxWidth,
+          parentHeight: constraints.maxHeight,
+          aspect: kRoomCanvasAspect,
+        );
         return Stack(
           children: [
             if (background != null)
@@ -56,7 +60,20 @@ class RoomLayer extends ConsumerWidget {
                   errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 ),
               ),
-            for (final item in furniture) _buildItem(item, w, h),
+            // 가구 캔버스 — 고정 AR 로 잠가 디바이스 무관하게 동일 구도 유지.
+            Positioned(
+              left: canvas.offsetX,
+              top: canvas.offsetY,
+              width: canvas.width,
+              height: canvas.height,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  for (final item in furniture)
+                    _buildItem(item, canvas.width, canvas.height),
+                ],
+              ),
+            ),
           ],
         );
       },

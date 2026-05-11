@@ -9,6 +9,7 @@ import 'package:doitdo/domain/entities/evolution.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/character_evolution_view.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/room_layer.dart';
+import 'package:doitdo/presentation/widgets/common/room_furniture_slots.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -101,69 +102,86 @@ class CharacterCard extends StatelessWidget {
       // → 카드가 통째로 빈 박스로 보이는 버그가 난다. 부모 max 까지 늘려 박는다.
       width: double.infinity,
       height: 300.h + topSafePadding,
-      child: Stack(
-        children: [
-          // 방 배경 + 가구 합성. listMyFurnitures() 결과를 zIndex 순서로 쌓아
-          // 그리고, 응답 전/실패 시 정적 자산으로 폴백.
-          const Positioned.fill(child: RoomLayer()),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // 가구 캔버스와 동일한 AR 로 잠가, 캐릭터 발 위치도 가구 바닥선과 함께
+          // 디바이스에 무관하게 정렬되도록 한다.
+          final canvas = computeRoomCanvasLayout(
+            parentWidth: constraints.maxWidth,
+            parentHeight: constraints.maxHeight,
+            aspect: kRoomCanvasAspect,
+          );
+          // 바닥선(러그 슬롯 bottom 비율) 위에 발이 닿도록 동일 비율을 공유.
+          // 슬롯 정의(`kRoomFurnitureSlots[rug].bottom = 0.14`) 와 1:1.
+          const floorInsetRatio = 0.14;
+          final floorInset = canvas.height * floorInsetRatio;
 
-          // 진화/부화/독립 같은 주요 액션 중의 작은 스피너. copyWithPrevious 덕에
-          // 이전 캐릭터 데이터는 그대로 남아 있고, 이 작은 스피너만 카드 좌측
-          // 상단에 얹혀 "서버 갱신 중" 만 표현한다.
-          if (isCharacterLoading && character != null)
-            Positioned(
-              top: topSafePadding + 20.h,
-              left: 12.w,
-              child: SizedBox(
-                width: 16.sp,
-                height: 16.sp,
-                child: const CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          return Stack(
+            children: [
+              // 방 배경 + 가구 합성. listMyFurnitures() 결과를 zIndex 순서로 쌓아
+              // 그리고, 응답 전/실패 시 정적 자산으로 폴백.
+              const Positioned.fill(child: RoomLayer()),
+
+              // 진화/부화/독립 같은 주요 액션 중의 작은 스피너. copyWithPrevious 덕에
+              // 이전 캐릭터 데이터는 그대로 남아 있고, 이 작은 스피너만 카드 좌측
+              // 상단에 얹혀 "서버 갱신 중" 만 표현한다.
+              if (isCharacterLoading && character != null)
+                Positioned(
+                  top: topSafePadding + 20.h,
+                  left: 12.w,
+                  child: SizedBox(
+                    width: 16.sp,
+                    height: 16.sp,
+                    child: const CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                ),
+
+              // 중앙 하단: 말풍선 + 캐릭터. 캔버스 하단에 발이 닿도록 bottom anchor
+              // 로 잡고, 캔버스 높이 비율(`floorInsetRatio`)만큼 띄워 러그 위에
+              // 정확히 서있는 것처럼 보이게 한다. 디바이스가 달라져 카드 / 캔버스
+              // 높이가 바뀌어도 캐릭터-바닥 관계는 동일하게 유지된다.
+              //
+              // 말풍선은 Transform.translate 로 layout slot 은 그대로 두고 rendering 만
+              // 아래로 밀어 캐릭터 머리 쪽으로 살짝 겹치게 한다 — 꼬리가 캐릭터를
+              // 가리키는 형태로 자연스럽게 읽힘.
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: floorInset,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_speechText != null) ...[
+                      Transform.translate(
+                        offset: Offset(0, 10.h),
+                        child: _SpeechBubble(text: _speechText!),
+                      ),
+                    ],
+                    _buildCharacterSlot(),
+                  ],
                 ),
               ),
-            ),
 
-          // 중앙 하단: 말풍선 + 캐릭터. RoomLayer 가 들어올린 바닥선 위에
-          // 캐릭터 발이 정확히 닿도록 같은 inset 을 공유한다 (RoomLayer.characterBottomInset).
-          //
-          // 말풍선은 Transform.translate 로 layout slot 은 그대로 두고 rendering 만
-          // 아래로 밀어 캐릭터 머리 쪽으로 살짝 겹치게 한다 — 꼬리가 캐릭터를
-          // 가리키는 형태로 자연스럽게 읽힘. 캐릭터 자체는 layout 위치 그대로
-          // 유지해야 RoomLayer 바닥선에 발이 정확히 닿음.
-          Positioned(
-            left: 0,
-            right: 0,
-            top: topSafePadding + 100,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (_speechText != null) ...[
-                  Transform.translate(
-                    offset: Offset(0, 10.h),
-                    child: _SpeechBubble(text: _speechText!),
+              // 우측 상단 메뉴 — 캐릭터 수령 이후에만 노출.
+              // PixelIconBox 두 개가 늘 떠있어서 뒤에 놓인 가구(TV 등)가 가려지던
+              // 문제를 해결하기 위해, 평상시엔 햄버거 1개만 두고 탭 시에만 shop/book
+              // 두 글래스 박스가 아래로 펼쳐진다. 톤은 StatusPill 의 글래스 스타일을
+              // 그대로 따름.
+              if (!hideChrome)
+                Positioned(
+                  top: topSafePadding,
+                  right: 16.w,
+                  child: _RoomMenuButton(
+                    onTapShop: onTapShop,
+                    onTapCollection: onTapCollection,
                   ),
-                ],
-                _buildCharacterSlot(),
-              ],
-            ),
-          ),
-
-          // 우측 상단 메뉴 — 캐릭터 수령 이후에만 노출.
-          // PixelIconBox 두 개가 늘 떠있어서 뒤에 놓인 가구(TV 등)가 가려지던
-          // 문제를 해결하기 위해, 평상시엔 햄버거 1개만 두고 탭 시에만 shop/book
-          // 두 글래스 박스가 아래로 펼쳐진다. 톤은 StatusPill 의 글래스 스타일을
-          // 그대로 따름.
-          if (!hideChrome)
-            Positioned(
-              top: topSafePadding,
-              right: 16.w,
-              child: _RoomMenuButton(
-                onTapShop: onTapShop,
-                onTapCollection: onTapCollection,
-              ),
-            ),
-        ],
+                ),
+            ],
+          );
+        },
       ),
     );
   }

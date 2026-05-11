@@ -42,8 +42,13 @@ class ShopRoomPreview extends StatelessWidget {
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final w = constraints.maxWidth;
-            final h = constraints.maxHeight;
+            // 가구 캔버스를 디자인 기준 AR 로 잠가 디바이스 무관하게 동일 구도 유지
+            // (룸 카드와 같은 정책, AR 만 다름). 배경은 카드 풀블리드.
+            final canvas = computeRoomCanvasLayout(
+              parentWidth: constraints.maxWidth,
+              parentHeight: constraints.maxHeight,
+              aspect: kShopPreviewCanvasAspect,
+            );
             return Stack(
               children: [
                 if (background != null)
@@ -61,7 +66,19 @@ class ShopRoomPreview extends StatelessWidget {
                       errorBuilder: (_, _, _) => const SizedBox.shrink(),
                     ),
                   ),
-                for (final item in furniture) _buildItem(item, w, h),
+                Positioned(
+                  left: canvas.offsetX,
+                  top: canvas.offsetY,
+                  width: canvas.width,
+                  height: canvas.height,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      for (final item in furniture)
+                        _buildItem(item, canvas.width, canvas.height),
+                    ],
+                  ),
+                ),
               ],
             );
           },
