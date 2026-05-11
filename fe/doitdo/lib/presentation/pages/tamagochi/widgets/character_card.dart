@@ -451,6 +451,10 @@ class _GrownCharacterState extends State<_GrownCharacter> {
   Timer? _blinkTimer;
 
   String? _blinkAsset;
+  // 매 blink 마다 GIF 위젯이 frame 0 부터 재생되도록 부여하는 키.
+  int _blinkTick = 0;
+
+  bool _assetsPrecached = false;
 
   @override
   void initState() {
@@ -459,24 +463,52 @@ class _GrownCharacterState extends State<_GrownCharacter> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // GIF/PNG 모두 미리 디코드해 두면 첫 표시·swap 모두 디코드 지연 없이 즉시 그려진다.
+    // Stack 으로 동시에 띄워도 깜빡임이 보이지 않으려면 이 단계가 필수.
+    if (!_assetsPrecached) {
+      _assetsPrecached = true;
+      _precacheAll();
+    }
+  }
+
+  @override
   void didUpdateWidget(covariant _GrownCharacter old) {
     super.didUpdateWidget(old);
-    if (widget.eyeGifCharacterId != old.eyeGifCharacterId) {
+    if (widget.eyeGifCharacterId != old.eyeGifCharacterId ||
+        widget.thumbnailUrl != old.thumbnailUrl) {
       _cancelTimers();
       _blinkAsset = null;
+      _assetsPrecached = false;
+      _precacheAll();
+      _assetsPrecached = true;
       _scheduleNextBlink();
     }
   }
 
   @override
   void dispose() {
-    // _cancelTimers();
+    _cancelTimers();
     super.dispose();
   }
 
   void _cancelTimers() {
     _scheduleTimer?.cancel();
     _blinkTimer?.cancel();
+  }
+
+  void _precacheAll() {
+    final id = widget.eyeGifCharacterId;
+    if (id != null) {
+      precacheImage(AssetImage('assets/animations/eye/$id.gif'), context);
+      precacheImage(AssetImage('assets/animations/eye/${id}_2.gif'), context)
+          .catchError((_) {}); // 변형이 없을 수 있어 실패는 무시.
+    }
+    if (widget.thumbnailUrl.isNotEmpty) {
+      precacheImage(NetworkImage(widget.thumbnailUrl), context)
+          .catchError((_) {});
+    }
   }
 
   void _scheduleNextBlink() {
@@ -493,7 +525,10 @@ class _GrownCharacterState extends State<_GrownCharacter> {
     final path = useVariant
         ? 'assets/animations/eye/${id}_2.gif'
         : 'assets/animations/eye/$id.gif';
-    setState(() => _blinkAsset = path);
+    setState(() {
+      _blinkAsset = path;
+      _blinkTick++;
+    });
     final duration = _randomDuration(_blinkMin, _blinkMax);
     _blinkTimer = Timer(duration, () {
       if (!mounted) return;
@@ -511,43 +546,59 @@ class _GrownCharacterState extends State<_GrownCharacter> {
   @override
   Widget build(BuildContext context) {
     final id = widget.eyeGifCharacterId;
+    final blinkAsset = _blinkAsset;
 
-    final fallback = widget.thumbnailUrl.isEmpty
+    // 베이스 PNG 는 항상 트리에 살려둔다. blink GIF 는 Stack 위에 겹쳐서
+    // Opacity 만 0/1 로 토글 — 위젯이 unmount/mount 되는 순간이 없어 디코드
+    // 지연으로 인한 깜빡임이 발생하지 않는다. gaplessPlayback 으로 어떤 이유든
+    // provider 가 한 프레임 비더라도 직전 프레임이 유지되게 한다.
+    final base = widget.thumbnailUrl.isEmpty
         ? const _CharacterPlaceholder()
         : Image.network(
             widget.thumbnailUrl,
             height: widget.imageHeight,
             fit: BoxFit.contain,
             filterQuality: FilterQuality.medium,
+            gaplessPlayback: true,
             errorBuilder: (_, _, _) => const _CharacterPlaceholder(),
           );
 
-    final blinkAsset = _blinkAsset;
-    Widget image;
-    if (blinkAsset != null && id != null) {
-      final base = 'assets/animations/eye/$id.gif';
-      image = Image.asset(
+    Widget? blinkOverlay;
+    if (id != null && blinkAsset != null) {
+      final basePath = 'assets/animations/eye/$id.gif';
+      // ValueKey 로 매 blink 마다 GIF 위젯을 새로 mount → frame 0 부터 재생.
+      blinkOverlay = Image.asset(
         blinkAsset,
+        key: ValueKey('blink-$blinkAsset-$_blinkTick'),
         height: widget.imageHeight,
         fit: BoxFit.contain,
         filterQuality: FilterQuality.medium,
-        errorBuilder: (_, _, _) => blinkAsset == base
-            ? fallback
+        gaplessPlayback: true,
+        errorBuilder: (_, _, _) => blinkAsset == basePath
+            ? const SizedBox.shrink()
             : Image.asset(
-                base,
+                basePath,
+                key: ValueKey('blink-fallback-$_blinkTick'),
                 height: widget.imageHeight,
                 fit: BoxFit.contain,
                 filterQuality: FilterQuality.medium,
-                errorBuilder: (_, _, _) => fallback,
+                gaplessPlayback: true,
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
               ),
       );
-    } else {
-      image = fallback;
     }
 
     final slot = SizedBox(
       height: widget.imageHeight,
-      child: Center(child: image),
+      child: Center(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            base,
+            ?blinkOverlay,
+          ],
+        ),
+      ),
     );
     if (widget.onTap == null) return slot;
     return GestureDetector(
