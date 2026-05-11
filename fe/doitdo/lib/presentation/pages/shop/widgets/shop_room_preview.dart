@@ -48,10 +48,16 @@ class ShopRoomPreview extends StatelessWidget {
               children: [
                 if (background != null)
                   Positioned.fill(
+                    // 같은 카테고리(BG) 안에서 imageUrl 만 바뀔 때 Image 위젯이 새로
+                    // 만들어지지 않도록 안정 key 지정. gaplessPlayback 으로 새 이미지
+                    // 디코드 전까지 직전 프레임 유지 → 빈 박스 노출 방지.
                     child: Image.network(
                       background.imageUrl,
+                      key: const ValueKey('shop-preview-bg'),
                       fit: BoxFit.cover,
                       alignment: Alignment.center,
+                      gaplessPlayback: true,
+                      filterQuality: FilterQuality.medium,
                       errorBuilder: (_, _, _) => const SizedBox.shrink(),
                     ),
                   ),
@@ -67,7 +73,12 @@ class ShopRoomPreview extends StatelessWidget {
   Widget _buildItem(ShopItem item, double w, double h) {
     final slot = kRoomFurnitureSlots[item.category] ?? kRoomFurnitureFallbackSlot;
     final accent = _categoryAccent(item.category);
+    // 카테고리별로 안정된 key — 같은 카테고리 슬롯 안에서 가구만 교체될 때
+    // Image 위젯이 remount 되어 디코드를 다시 하는 일이 없도록 한다.
+    // gaplessPlayback 으로 새 imageUrl 디코드가 끝나기 전까지 직전 프레임을 유지해
+    // 빈 자리를 보이지 않게 한다.
     return Positioned(
+      key: ValueKey('shop-preview-slot-${item.category.name}'),
       left: slot.left == null ? null : slot.left! * w,
       right: slot.right == null ? null : slot.right! * w,
       top: slot.top == null ? null : slot.top! * h,
@@ -78,6 +89,7 @@ class ShopRoomPreview extends StatelessWidget {
         item.imageUrl,
         fit: BoxFit.contain,
         filterQuality: FilterQuality.medium,
+        gaplessPlayback: true,
         errorBuilder: (_, _, _) =>
             Icon(item.category.icon, color: accent, size: 24.sp),
       ),

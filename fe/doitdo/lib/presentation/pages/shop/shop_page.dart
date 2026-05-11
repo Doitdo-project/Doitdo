@@ -26,16 +26,19 @@ class ShopPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncState = ref.watch(shopViewModelProvider);
 
+    // 초기 로딩 중에는 coins 가 아직 없어 0 으로 깜빡 보이는 게 어색 →
+    // 잔액 뱃지 자체를 숨기고 데이터가 들어오면 그때 노출한다 (refresh 동안엔
+    // valueOrNull 이 직전 값을 유지하므로 사라지지 않는다).
+    final coins = asyncState.valueOrNull?.coins;
     return DoitdoScaffold(
       topBar: DoitdoTopBar(
         title: '상점',
         actions: [
-          Padding(
-            padding: EdgeInsets.only(right: 16.w),
-            child: Center(
-              child: _CoinBadge(coins: asyncState.valueOrNull?.coins ?? 0),
+          if (coins != null)
+            Padding(
+              padding: EdgeInsets.only(right: 16.w),
+              child: Center(child: _CoinBadge(coins: coins)),
             ),
-          ),
         ],
       ),
       body: asyncState.when(

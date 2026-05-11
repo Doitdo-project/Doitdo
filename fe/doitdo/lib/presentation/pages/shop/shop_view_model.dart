@@ -79,11 +79,18 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
     if (item == null || item.status != ItemStatus.notOwned) return false;
 
     // 1. UI 즉시 반영 — 서버 응답 기다리지 않고 코인 차감 + placed 표시.
+    //    같은 카테고리에 이미 배치된 아이템이 있다면 BE 가 자동 교체하므로
+    //    낙관 업데이트에서도 함께 owned 로 강등 — 안 그러면 _refresh 가 돌아올 때까지
+    //    "배치중" 뱃지가 두 카드에 동시에 떠 보인다.
     state = AsyncData(s.copyWith(
       coins: s.coins - item.price,
-      items: s.items.map((it) =>
-      it.id == itemId ? it.copyWith(status: ItemStatus.placed) : it,
-      ).toList(),
+      items: s.items.map((it) {
+        if (it.id == itemId) return it.copyWith(status: ItemStatus.placed);
+        if (it.category == item.category && it.status == ItemStatus.placed) {
+          return it.copyWith(status: ItemStatus.owned);
+        }
+        return it;
+      }).toList(),
     ));
 
     // 2. 서버 호출 (백그라운드)
