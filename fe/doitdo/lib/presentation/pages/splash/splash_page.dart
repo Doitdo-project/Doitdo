@@ -6,8 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:doitdo/core/config/app_config.dart';
 import 'package:doitdo/core/errors/exceptions.dart';
-import 'package:doitdo/core/utils/app_env.dart';
 import 'package:doitdo/domain/entities/auth_tokens.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/navigation/post_auth_destination.dart';
@@ -108,7 +108,23 @@ class _SplashPageState extends ConsumerState<SplashPage>
     final tokenFuture = ref.read(authLocalDataSourceProvider).read();
 
     if (widget.fromWidget) {
-      // 위젯 진입: 애니메이션 생략 — 토큰 확인 후 즉시 라우팅.
+      // 위젯 진입: 애니메이션 생략.
+      //
+      // 앱이 살아있는 경우(background→foreground): currentUserProvider 에 이미 유저가
+      // 로드되어 있다. 이때 getMe() 를 다시 호출하면 불필요한 네트워크 왕복(300-500ms)
+      // 이 발생하고, SplashPage 가 표시되는 동안 StatefulShellRoute(shell) 이 unmount 되어
+      // todoViewModelProvider(autoDispose) 가 소멸 → fetchTodos abandoned → 위젯에서
+      // 완료한 항목이 앱에 반영되지 않는 버그로 이어진다.
+      //
+      // currentUser 가 이미 있으면 getMe() 없이 즉시 라우팅 — AppLifecycleState.resumed
+      // 에서 호출된 fetchTodos 가 shell 이 살아있는 상태에서 정상 동작한다.
+      final existingUser = ref.read(currentUserProvider).valueOrNull;
+      if (existingUser != null) {
+        if (!mounted) return;
+        context.go(resolvePostAuthDestination(ref, existingUser));
+        return;
+      }
+      // 콜드스타트 또는 미로그인 — 토큰 확인 후 인증 플로우.
       final tokens = await tokenFuture;
       if (!mounted) return;
       await _navigateFromTokens(tokens);
@@ -149,7 +165,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
       unawaited(ref.read(widgetSyncServiceProvider).syncAuthTokens(
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
-            apiBaseUrl: AppEnv.optional('API_BASE_URL'),
+            apiBaseUrl: AppConfig.apiBaseUrl,
           ));
 
       // 토큰이 있어도 온보딩(생년월일/약관) 미완료면 메인 탭이 아니라 온보딩으로 보낸다.

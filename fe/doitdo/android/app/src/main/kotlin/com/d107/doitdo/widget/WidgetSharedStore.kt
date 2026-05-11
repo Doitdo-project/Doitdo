@@ -24,10 +24,9 @@ object WidgetSharedStore {
     const val KEY_REFRESH_TOKEN = "doitdo.widget.refreshToken"
     const val KEY_API_BASE_URL = "doitdo.widget.apiBaseUrl"
 
-    // 위젯에서 todo 를 체크한 직후, 사라지기 전에 잠깐 "체크된 모습" 을 노출하기
-    // 위한 transient 상태. todoId 와 토글 시각을 기록해두면 renderColumn 이 done 이어도
-    // 이 항목만 예외적으로 보여준다. 약 600ms 후 ToggleTodoReceiver 가 직접 clear.
-    private const val KEY_FADING_TODO_ID = "doitdo.widget.fadingTodoId"
+    // 각 컬럼의 현재 페이지 (0-based). PageTurnReceiver 가 read/write.
+    private const val KEY_TODAY_PAGE = "doitdo.widget.todayPage"
+    private const val KEY_SOMEDAY_PAGE = "doitdo.widget.somedayPage"
 
     private fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -61,16 +60,21 @@ object WidgetSharedStore {
         prefs(context).edit().putString(KEY_REFRESH_TOKEN, token).apply()
     }
 
-    fun fadingTodoId(context: Context): Int? {
-        val v = prefs(context).getInt(KEY_FADING_TODO_ID, -1)
-        return if (v == -1) null else v
+    fun clearTokens(context: Context) {
+        prefs(context).edit()
+            .remove(KEY_ACCESS_TOKEN)
+            .remove(KEY_REFRESH_TOKEN)
+            .apply()
     }
 
-    fun markFadingTodo(context: Context, todoId: Int) {
-        prefs(context).edit().putInt(KEY_FADING_TODO_ID, todoId).apply()
+    fun todayPage(context: Context): Int = prefs(context).getInt(KEY_TODAY_PAGE, 0)
+    fun somedayPage(context: Context): Int = prefs(context).getInt(KEY_SOMEDAY_PAGE, 0)
+
+    fun saveTodayPage(context: Context, page: Int) {
+        prefs(context).edit().putInt(KEY_TODAY_PAGE, page).apply()
     }
 
-    fun clearFadingTodo(context: Context) {
-        prefs(context).edit().remove(KEY_FADING_TODO_ID).apply()
+    fun saveSomedayPage(context: Context, page: Int) {
+        prefs(context).edit().putInt(KEY_SOMEDAY_PAGE, page).apply()
     }
 }

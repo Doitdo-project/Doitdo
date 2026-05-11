@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   doitdo 홈 위젯 (4x2 셀).
-  좌우 2단: 왼쪽 "오늘의 할 일" / 오른쪽 "언젠간 할 일".
-  컬럼당 최대 4행 + 초과분 "+N개 더" 푸터.
-  완료된 todo 는 표시하지 않으므로(provider 단계 필터) 취소선 처리 없음.
-
-  RemoteViews 한계로 ListView 대신 고정 행 + visibility 토글.
-  체크 아이콘 28dp — 기존 20dp 대비 약 2배 면적.
-  실제 위젯 높이가 작은 런처에서는 하단 행/푸터가 자연스럽게 가려진다(clip).
+  행은 wrap_content 로 컴팩트 배치. 아래 spacer 가 남은 높이를 흡수해
+  nav 를 항상 하단에 고정한다.
+  행 visibility: VISIBLE/INVISIBLE(빈 슬롯)/GONE(항목 0개 컬럼).
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
@@ -17,19 +13,20 @@
     android:padding="14dp"
     android:background="@drawable/widget_background">
 
-    <!-- ─── 빈 상태 / 로그인 필요 안내 ─── -->
+    <!-- ─── 빈 상태 ─── -->
     <LinearLayout
         android:id="@+id/empty_state"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:gravity="center_vertical"
+        android:gravity="center"
         android:visibility="gone">
 
         <TextView
             android:id="@+id/empty_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center"
             android:textSize="14sp"
             android:textStyle="bold"
             android:textColor="@color/widget_text_primary" />
@@ -38,8 +35,9 @@
             android:id="@+id/empty_subtitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:textSize="12sp"
+            android:layout_marginTop="4dp"
+            android:gravity="center"
+            android:textSize="11sp"
             android:textColor="@color/widget_text_secondary" />
     </LinearLayout>
 
@@ -48,7 +46,8 @@
         android:id="@+id/content_state"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:visibility="gone">
 
         <!-- ═══ LEFT: 오늘의 할 일 ═══ -->
         <LinearLayout
@@ -59,161 +58,55 @@
             android:orientation="vertical"
             android:paddingEnd="6dp">
 
-            <!-- 헤더: ● 오늘의 할 일 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="●"
-                    android:textSize="9sp"
-                    android:textColor="@color/widget_accent" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="5dp"
-                    android:text="오늘의 할 일"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/widget_text_primary" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="●" android:textSize="9sp" android:textColor="@color/widget_accent" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="5dp" android:text="오늘의 할 일" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/widget_text_primary" />
             </LinearLayout>
 
-            <!-- 오늘 행 0~1 -->
+            <!-- 행 4개: wrap_content 로 컴팩트하게 -->
+            <LinearLayout android:id="@+id/row_today_0" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
+                <ImageView android:id="@+id/check_today_0" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="todo check" />
+                <TextView android:id="@+id/title_today_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="6dp" android:textSize="12sp" android:textColor="@color/widget_text_primary" android:singleLine="true" android:ellipsize="end" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/row_today_1" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
+                <ImageView android:id="@+id/check_today_1" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="todo check" />
+                <TextView android:id="@+id/title_today_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="6dp" android:textSize="12sp" android:textColor="@color/widget_text_primary" android:singleLine="true" android:ellipsize="end" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/row_today_2" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
+                <ImageView android:id="@+id/check_today_2" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="todo check" />
+                <TextView android:id="@+id/title_today_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="6dp" android:textSize="12sp" android:textColor="@color/widget_text_primary" android:singleLine="true" android:ellipsize="end" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/row_today_3" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
+                <ImageView android:id="@+id/check_today_3" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="todo check" />
+                <TextView android:id="@+id/title_today_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="6dp" android:textSize="12sp" android:textColor="@color/widget_text_primary" android:singleLine="true" android:ellipsize="end" />
+            </LinearLayout>
+
+            <!-- 항목 0개일 때 표시 -->
+            <TextView android:id="@+id/today_empty_hint" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="할 일이 없어요" android:textSize="11sp" android:textColor="@color/widget_text_secondary" android:visibility="gone" />
+
+            <!-- 남은 공간 흡수 → nav 를 하단 고정 -->
+            <TextView android:id="@+id/today_spacer" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:visibility="invisible" />
+
+            <!-- 페이지 네비게이션 (2페이지 이상일 때만) -->
             <LinearLayout
-                android:id="@+id/row_today_0"
+                android:id="@+id/today_nav"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:visibility="gone">
-                <ImageView
-                    android:id="@+id/check_today_0"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:contentDescription="todo check" />
-                <TextView
-                    android:id="@+id/title_today_0"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="6dp"
-                    android:textSize="12sp"
-                    android:textColor="@color/widget_text_primary"
-                    android:singleLine="true"
-                    android:ellipsize="end" />
+                <TextView android:id="@+id/today_prev" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="◀" android:textSize="11sp" android:textColor="@color/widget_text_secondary" android:paddingEnd="4dp" />
+                <TextView android:id="@+id/today_page_label" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:textSize="10sp" android:textColor="@color/widget_text_secondary" />
+                <TextView android:id="@+id/today_next" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="▶" android:textSize="11sp" android:textColor="@color/widget_text_secondary" android:paddingStart="4dp" />
             </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/row_today_1"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:visibility="gone">
-                <ImageView
-                    android:id="@+id/check_today_1"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:contentDescription="todo check" />
-                <TextView
-                    android:id="@+id/title_today_1"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="6dp"
-                    android:textSize="12sp"
-                    android:textColor="@color/widget_text_primary"
-                    android:singleLine="true"
-                    android:ellipsize="end" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/row_today_2"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:visibility="gone">
-                <ImageView
-                    android:id="@+id/check_today_2"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:contentDescription="todo check" />
-                <TextView
-                    android:id="@+id/title_today_2"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="6dp"
-                    android:textSize="12sp"
-                    android:textColor="@color/widget_text_primary"
-                    android:singleLine="true"
-                    android:ellipsize="end" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/row_today_3"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:visibility="gone">
-                <ImageView
-                    android:id="@+id/check_today_3"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:contentDescription="todo check" />
-                <TextView
-                    android:id="@+id/title_today_3"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="6dp"
-                    android:textSize="12sp"
-                    android:textColor="@color/widget_text_primary"
-                    android:singleLine="true"
-                    android:ellipsize="end" />
-            </LinearLayout>
-
-            <!-- 빈 컬럼 안내 -->
-            <TextView
-                android:id="@+id/today_empty_hint"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="할 일이 없어요"
-                android:textSize="11sp"
-                android:textColor="@color/widget_text_secondary"
-                android:visibility="gone" />
-
-            <!-- "+N개 더" 푸터 -->
-            <TextView
-                android:id="@+id/today_more"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:textSize="10sp"
-                android:textColor="@color/widget_text_secondary"
-                android:visibility="gone" />
         </LinearLayout>
 
-        <!-- ═══ DIVIDER ═══
-             RemoteViews 는 base View 클래스를 inflate 하지 못함(허용 클래스 화이트리스트).
-             FrameLayout 으로 동일한 1dp 세로선 효과 구현. -->
-        <FrameLayout
-            android:id="@+id/column_divider"
-            android:layout_width="1dp"
-            android:layout_height="match_parent"
-            android:background="@color/widget_divider" />
+        <!-- ═══ DIVIDER ═══ -->
+        <FrameLayout android:layout_width="1dp" android:layout_height="match_parent" android:background="@color/widget_divider" />
 
         <!-- ═══ RIGHT: 언젠간 할 일 ═══ -->
         <LinearLayout
@@ -224,151 +117,47 @@
             android:orientation="vertical"
             android:paddingStart="8dp">
 
-            <!-- 헤더: ● 언젠간 할 일 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="●"
-                    android:textSize="9sp"
-                    android:textColor="@color/widget_text_secondary" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="5dp"
-                    android:text="언젠간 할 일"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/widget_text_primary" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="●" android:textSize="9sp" android:textColor="@color/widget_text_secondary" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="5dp" android:text="언젠간 할 일" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/widget_text_primary" />
             </LinearLayout>
 
-            <!-- 언젠간 행 0~1 -->
+            <LinearLayout android:id="@+id/row_someday_0" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
+                <ImageView android:id="@+id/check_someday_0" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="todo check" />
+                <TextView android:id="@+id/title_someday_0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="6dp" android:textSize="12sp" android:textColor="@color/widget_text_primary" android:singleLine="true" android:ellipsize="end" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/row_someday_1" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
+                <ImageView android:id="@+id/check_someday_1" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="todo check" />
+                <TextView android:id="@+id/title_someday_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="6dp" android:textSize="12sp" android:textColor="@color/widget_text_primary" android:singleLine="true" android:ellipsize="end" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/row_someday_2" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
+                <ImageView android:id="@+id/check_someday_2" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="todo check" />
+                <TextView android:id="@+id/title_someday_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="6dp" android:textSize="12sp" android:textColor="@color/widget_text_primary" android:singleLine="true" android:ellipsize="end" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/row_someday_3" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone">
+                <ImageView android:id="@+id/check_someday_3" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="todo check" />
+                <TextView android:id="@+id/title_someday_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="6dp" android:textSize="12sp" android:textColor="@color/widget_text_primary" android:singleLine="true" android:ellipsize="end" />
+            </LinearLayout>
+
+            <TextView android:id="@+id/someday_empty_hint" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="할 일이 없어요" android:textSize="11sp" android:textColor="@color/widget_text_secondary" android:visibility="gone" />
+
+            <TextView android:id="@+id/someday_spacer" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:visibility="invisible" />
+
             <LinearLayout
-                android:id="@+id/row_someday_0"
+                android:id="@+id/someday_nav"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:visibility="gone">
-                <ImageView
-                    android:id="@+id/check_someday_0"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:contentDescription="todo check" />
-                <TextView
-                    android:id="@+id/title_someday_0"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="6dp"
-                    android:textSize="12sp"
-                    android:textColor="@color/widget_text_primary"
-                    android:singleLine="true"
-                    android:ellipsize="end" />
+                <TextView android:id="@+id/someday_prev" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="◀" android:textSize="11sp" android:textColor="@color/widget_text_secondary" android:paddingEnd="4dp" />
+                <TextView android:id="@+id/someday_page_label" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:textSize="10sp" android:textColor="@color/widget_text_secondary" />
+                <TextView android:id="@+id/someday_next" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="▶" android:textSize="11sp" android:textColor="@color/widget_text_secondary" android:paddingStart="4dp" />
             </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/row_someday_1"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:visibility="gone">
-                <ImageView
-                    android:id="@+id/check_someday_1"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:contentDescription="todo check" />
-                <TextView
-                    android:id="@+id/title_someday_1"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="6dp"
-                    android:textSize="12sp"
-                    android:textColor="@color/widget_text_primary"
-                    android:singleLine="true"
-                    android:ellipsize="end" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/row_someday_2"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:visibility="gone">
-                <ImageView
-                    android:id="@+id/check_someday_2"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:contentDescription="todo check" />
-                <TextView
-                    android:id="@+id/title_someday_2"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="6dp"
-                    android:textSize="12sp"
-                    android:textColor="@color/widget_text_primary"
-                    android:singleLine="true"
-                    android:ellipsize="end" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/row_someday_3"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:visibility="gone">
-                <ImageView
-                    android:id="@+id/check_someday_3"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:contentDescription="todo check" />
-                <TextView
-                    android:id="@+id/title_someday_3"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="6dp"
-                    android:textSize="12sp"
-                    android:textColor="@color/widget_text_primary"
-                    android:singleLine="true"
-                    android:ellipsize="end" />
-            </LinearLayout>
-
-            <!-- 빈 컬럼 안내 -->
-            <TextView
-                android:id="@+id/someday_empty_hint"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="할 일이 없어요"
-                android:textSize="11sp"
-                android:textColor="@color/widget_text_secondary"
-                android:visibility="gone" />
-
-            <!-- "+N개 더" 푸터 -->
-            <TextView
-                android:id="@+id/someday_more"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:textSize="10sp"
-                android:textColor="@color/widget_text_secondary"
-                android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>
