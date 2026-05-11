@@ -107,6 +107,34 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
     }
   }
 
+  /// 미보유 아이템을 **배치 없이** 구매만 한다(주문서 확인 모달의 "구매만 하기").
+  /// 같은 카테고리에 이미 배치된 아이템을 교체하지 않고 인벤토리에만 추가하고 싶을 때.
+  ///
+  /// 낙관 업데이트는 구매 직후 owned 상태로 표시하고 코인을 차감한다.
+  /// 실패 시 원래 상태로 롤백.
+  Future<bool> purchaseOnly(String itemId) async {
+    final s = state.valueOrNull;
+    if (s == null) return false;
+    final item = _findItem(s, itemId);
+    if (item == null || item.status != ItemStatus.notOwned) return false;
+
+    state = AsyncData(s.copyWith(
+      coins: s.coins - item.price,
+      items: s.items.map((it) =>
+        it.id == itemId ? it.copyWith(status: ItemStatus.owned) : it,
+      ).toList(),
+    ));
+
+    try {
+      final purchase = await _repo.purchaseFurniture(item.furnitureId);
+      await _refresh(preserveUi: s, coinsOverride: purchase.balance);
+      return true;
+    } catch (_) {
+      state = AsyncData(s);
+      return false;
+    }
+  }
+
   /// 보유 중 아이템을 방에 배치. 같은 카테고리의 기존 배치는 BE 가 자동 교체한다.
   Future<bool> place(String itemId) async {
     final s = state.valueOrNull;

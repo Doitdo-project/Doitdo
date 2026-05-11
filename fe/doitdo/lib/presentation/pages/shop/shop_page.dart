@@ -104,23 +104,47 @@ class _ShopBody extends ConsumerWidget {
     ShopItem item,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
-    final coins = ref.read(shopViewModelProvider).valueOrNull?.coins ?? 0;
+    final shopState = ref.read(shopViewModelProvider).valueOrNull;
+    final coins = shopState?.coins ?? 0;
+    // 같은 카테고리에 이미 배치된 다른 아이템이 있을 때만 "구매만 하기" 옵션을
+    // dialog 에 추가로 보여준다 — 평소 단일 액션 모달의 흐름은 그대로 유지하고,
+    // 정작 교체가 일어나는 케이스에서만 사용자가 결정권을 갖게 한다.
+    final hasPlacedInCategory = shopState != null &&
+        shopState.items.any(
+          (it) => it.category == item.category && it.status == ItemStatus.placed,
+        );
 
-    final confirmed = await showDialog<bool>(
+    final choice = await showDialog<PurchaseChoice>(
       context: context,
       barrierDismissible: true,
-      builder: (_) => PurchaseDialog(item: item, currentCoins: coins),
+      builder: (_) => PurchaseDialog(
+        item: item,
+        currentCoins: coins,
+        hasPlacedInSameCategory: hasPlacedInCategory,
+      ),
     );
-    if (confirmed != true) return;
+    if (choice == null || choice == PurchaseChoice.cancel) return;
 
-    final ok =
-        await ref.read(shopViewModelProvider.notifier).purchaseAndPlace(item.id);
+    final vm = ref.read(shopViewModelProvider.notifier);
+    final bool ok;
+    final String successMsg;
+    switch (choice) {
+      case PurchaseChoice.purchaseAndPlace:
+        ok = await vm.purchaseAndPlace(item.id);
+        successMsg = '"${item.name}"을(를) 방에 배치했어요!';
+      case PurchaseChoice.purchaseOnly:
+        ok = await vm.purchaseOnly(item.id);
+        successMsg = '"${item.name}"을(를) 인벤토리에 담았어요.';
+      case PurchaseChoice.cancel:
+        return;
+    }
+
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
         content: Text(
           ok
-              ? '"${item.name}"을(를) 방에 배치했어요!'
+              ? successMsg
               : '구매에 실패했어요. 코인 잔액이나 네트워크를 확인해주세요.',
         ),
         behavior: SnackBarBehavior.floating,
