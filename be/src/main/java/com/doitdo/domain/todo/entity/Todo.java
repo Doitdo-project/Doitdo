@@ -1,7 +1,8 @@
 package com.doitdo.domain.todo.entity;
 
-import java.time.LocalDate;
 import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Locale;
@@ -17,6 +18,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import lombok.AccessLevel;
@@ -27,7 +29,16 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Table(name = "todos")
+@Table(
+		name = "todos",
+		indexes = {
+				@Index(name = "idx_todos_list_default", columnList = "user_id, is_deleted, start_date, todo_id"),
+				@Index(name = "idx_todos_list_type", columnList = "user_id, is_deleted, type, start_date, todo_id"),
+				@Index(name = "idx_todos_list_status", columnList = "user_id, is_deleted, status, start_date, todo_id"),
+				@Index(name = "idx_todos_list_category", columnList = "user_id, is_deleted, category_id, start_date, todo_id"),
+				@Index(name = "idx_todos_list_priority", columnList = "user_id, is_deleted, priority, start_date, todo_id")
+		}
+)
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -48,10 +59,10 @@ public class Todo extends BaseTimeEntity {
 	@Column(name = "category_id")
 	private Long categoryId;
 
-	@Column(nullable = false, length = 255)
+	@Column(nullable = false, length = 20)
 	private String title;
 
-	@Column(columnDefinition = "TEXT")
+	@Column(length = 100)
 	private String content;
 
 	@Enumerated(EnumType.STRING)
@@ -61,6 +72,12 @@ public class Todo extends BaseTimeEntity {
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 20)
 	private TodoStatus status;
+
+	@Column(name = "done_date")
+	private LocalDate doneDate;
+
+	@Column(name = "first_completed_date", nullable = true)
+	private LocalDate firstCompletedDate;
 
 	@Column(nullable = false)
 	private Integer priority;
@@ -94,13 +111,26 @@ public class Todo extends BaseTimeEntity {
 		this.isDeleted = true;
 	}
 
-	public void changeStatus(TodoStatus status) {
-		this.status = status;
+	public void changeStatus(TodoStatus next) {
+		if (next == TodoStatus.DONE && this.status != TodoStatus.DONE) {
+			this.doneDate = LocalDate.now(ZoneId.of("Asia/Seoul"));
+		}
+		if (next != TodoStatus.DONE && this.status == TodoStatus.DONE) {
+			this.doneDate = null;
+		}
+		this.status = next;
 	}
 
 	/** 경험치 지급 완료 마킹. 멱등 (이미 true 면 no-op). */
 	public void markExpGranted() {
 		this.expGranted = true;
+	}
+
+	/** 최초 완료일 마킹. 멱등 (이미 값이 있으면 no-op). */
+	public void markFirstCompletedIfAbsent(LocalDate today) {
+		if (this.firstCompletedDate == null) {
+			this.firstCompletedDate = today;
+		}
 	}
 
 	public void changePriority(Integer priority) {

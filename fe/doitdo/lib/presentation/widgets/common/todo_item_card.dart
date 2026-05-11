@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
@@ -28,13 +29,13 @@ class SlidableTodoItemCard extends ConsumerStatefulWidget {
 }
 
 class _SlidableTodoItemCardState extends ConsumerState<SlidableTodoItemCard> {
+  static const double _snoozeWidth = 80;
+
   bool _isOpen = false;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-
-    // ✅ 서버 카테고리 목록에서 실제 색상 조회 (상세 시트와 동일한 방식)
     final categoryList = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
     Color getBadgeColor(String categoryName) {
       try {
@@ -44,7 +45,6 @@ class _SlidableTodoItemCardState extends ConsumerState<SlidableTodoItemCard> {
       }
     }
 
-    // ✅ 다른 날짜 클릭 불가 문제 해결: onSnooze가 없을 때도 onTap 이벤트를 감싸줍니다.
     if (widget.onSnooze == null) {
       return GestureDetector(
         onTap: widget.onTap,
@@ -55,13 +55,12 @@ class _SlidableTodoItemCardState extends ConsumerState<SlidableTodoItemCard> {
 
     return Stack(
       children: [
-        // 1. 배경 레이어 (오른쪽에 고정된 미루기 버튼)
         Positioned.fill(
           child: Container(
             alignment: Alignment.centerRight,
             decoration: BoxDecoration(
               color: colors.calendarRangeHighlight,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(12.r),
             ),
             child: GestureDetector(
               onTap: () {
@@ -70,8 +69,7 @@ class _SlidableTodoItemCardState extends ConsumerState<SlidableTodoItemCard> {
               },
               behavior: HitTestBehavior.opaque,
               child: SizedBox(
-                width: 80,
-                // ✅ 화살표 제거하고 텍스트만 깔끔하게 중앙 정렬
+                width: _snoozeWidth.w,
                 child: Center(
                   child: Text(
                     '미루기',
@@ -82,12 +80,10 @@ class _SlidableTodoItemCardState extends ConsumerState<SlidableTodoItemCard> {
             ),
           ),
         ),
-
-        // 2. 전경 레이어 (흰색 Todo 카드)
         AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeOutQuart,
-          transform: Matrix4.translationValues(_isOpen ? -80.0 : 0.0, 0.0, 0.0),
+          transform: Matrix4.translationValues(_isOpen ? -_snoozeWidth.w : 0.0, 0.0, 0.0),
           child: GestureDetector(
             onHorizontalDragUpdate: (details) {
               if (details.primaryDelta! < -5 && !_isOpen) {
@@ -111,19 +107,18 @@ class _SlidableTodoItemCardState extends ConsumerState<SlidableTodoItemCard> {
     );
   }
 
-  // 흰색 카드 UI 구성
   Widget _buildCard(DoitdoColors colors, Color Function(String) getBadgeColor) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r),
         border: Border.all(color: colors.border),
       ),
       child: Row(
         children: [
           _CheckDot(isDone: widget.todo.isDone, onTap: widget.onToggle),
-          const SizedBox(width: 12),
+          SizedBox(width: 12.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,12 +128,11 @@ class _SlidableTodoItemCardState extends ConsumerState<SlidableTodoItemCard> {
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: colors.textPrimary,
                     decoration:
-                    widget.todo.isDone ? TextDecoration.lineThrough : null,
+                        widget.todo.isDone ? TextDecoration.lineThrough : null,
                     decorationColor: colors.textSecondary,
                   ),
                 ),
-                const SizedBox(height: 6),
-                // ✅ 서버에서 가져온 실제 색상 전달 (상세 시트와 동일)
+                SizedBox(height: 4.h),
                 _CategoryBadge(
                   category: widget.todo.category,
                   bgColor: getBadgeColor(widget.todo.category.name),
@@ -146,8 +140,6 @@ class _SlidableTodoItemCardState extends ConsumerState<SlidableTodoItemCard> {
               ],
             ),
           ),
-          // 드래그 핸들(삼단 햄버거) 제거 — 모바일 ReorderableListView 기본
-          // long-press 제스처로 재정렬. 첫 진입 시 안내 툴팁으로 discoverability 보완.
         ],
       ),
     );
@@ -166,12 +158,12 @@ class _CheckDot extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
+      // 동그라미 시각 크기는 22x22 유지, 주변 padding 으로 hit 영역만 키움.
       child: Padding(
-        // ✅ 동그라미 크기(22x22)는 그대로, 터치 영역만 넉넉하게 확대
-        padding: const EdgeInsets.all(14),
+        padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 4.w),
         child: Container(
-          width: 22,
-          height: 22,
+          width: 22.w,
+          height: 22.w,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: isDone ? colors.primary : Colors.transparent,
@@ -181,7 +173,7 @@ class _CheckDot extends StatelessWidget {
             ),
           ),
           child: isDone
-              ? Icon(Icons.check, size: 14, color: colors.onPrimary)
+              ? Icon(Icons.check, size: 14.sp, color: colors.onPrimary)
               : null,
         ),
       ),
@@ -193,19 +185,19 @@ class _CategoryBadge extends StatelessWidget {
   const _CategoryBadge({required this.category, required this.bgColor});
 
   final TodoCategory category;
-  final Color bgColor; // ✅ 서버 카테고리 색상 주입
+  final Color bgColor;
 
   @override
   Widget build(BuildContext context) {
-    // ✅ 배경색 밝기에 따라 글자색 자동 결정 (상세 시트와 동일한 방식)
+    // 배경 luminance 로 글자색 자동 (상세 시트와 동일).
     final fg = bgColor.computeLuminance() > 0.4
         ? AppColors.calendarDateText
         : Colors.white;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(4.r),
       ),
       child: Text(
         category.name,

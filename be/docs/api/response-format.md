@@ -130,7 +130,39 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `updatedAt` | `LocalDateTime` | 가상 인스턴스는 마스터 `updatedAt` |
 | `snoozedDays` | `int` | 가상 인스턴스는 `0` |
 
-## 8. 관련 문서
+## 8. `CharacterActionUrlResp` 필드 (뚜레딧 적립 Stage 3+)
+
+`GET /api/characters/me/actions/{actionType}` 응답:
+
+| 필드 | 타입 | 비고 |
+|---|---|---|
+| `actionUrl` | `String` | 재생할 캐릭터 애니메이션 URL. 쿨다운/cap 관계없이 항상 정상 반환 |
+| `earnedAmount` | `int` | 이번 호출에서 지급된 뚜레딧 (적립 불가 시 0) |
+| `balanceAfter` | `int` | 호출 직후 지갑 잔액 |
+| `dailyTouchCount` | `int` | 오늘 적립된 터치 횟수 (최대 3) |
+| `nextAvailableAt` | `LocalDateTime` | 다음 적립 가능 시각. 오늘 cap 소진 시 내일 자정, 쿨다운 중이면 `lastTouchedAt + 1h` |
+
+`actionType` 이 `AnimationAction` enum 에 포함되고 활성 캐릭터의 `character_actions` row 가 등록되어 있으면 모든 액션이 동일한 적립 흐름에 진입한다. 쿨다운/cap 으로 적립되지 않는 경우에도 `actionUrl` 은 반환하고 `earnedAmount=0` 으로 응답한다.
+
+enum 에는 있지만 해당 캐릭터의 `character_actions` row 가 없는 액션은 404 `M09-002` 를 반환한다.
+
+## 9. `UserStreakResp` 필드
+
+`GET /api/users/me/streak` 응답:
+
+| 필드 | 타입 | 비고 |
+|---|---|---|
+| `currentStreakCount` | `Integer` | 현재 연속 달성 일수 |
+| `currentStreakStartDate` | `LocalDate` | 현재 연속 달성 시작일 |
+| `lastActiveDate` | `LocalDate` | 마지막 활동일 |
+| `longestStreakCount` | `Integer` | 최장 연속 달성 일수 |
+| `longestStreakStartDate` | `LocalDate` | 최장 연속 달성 시작일 |
+| `longestStreakEndDate` | `LocalDate` | 최장 연속 달성 종료일 |
+| `canClaim` | `boolean` | 현재 streak 구간의 7일 단위 보상 수령 가능 여부 |
+
+`canClaim` 은 현재 연속 달성 일수가 7의 배수이고, 같은 `currentStreakStartDate` / `currentStreakCount` 로 보상 수령 기록이 없을 때만 `true` 다.
+
+## 10. 관련 문서
 
 - 에러 코드 정의/네이밍: [`error-codes.md`](error-codes.md)
 - Swagger 문서화: [`swagger.md`](swagger.md)

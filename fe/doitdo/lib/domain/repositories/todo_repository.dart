@@ -6,7 +6,7 @@ import 'package:doitdo/data/models/todo_list_response_dto.dart';
 import 'package:doitdo/data/models/todo_detail_response_dto.dart';
 
 abstract class TodoRepository {
-  Future<void> createTodo(Todo todo);
+  Future<TodoDetailResponseDto> createTodo(Todo todo);
 
   // 상태 변경 기능 추가
   Future<void> updateTodoStatus(String todoId, String status);

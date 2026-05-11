@@ -17,15 +17,15 @@
 DB 접속정보는 git에 올리지 않는다. 템플릿을 복사해 채워 사용한다.
 
 ```bash
-cp be/env/dev.env.example be/env/.env.dev
+cp be/env/.env.dev.example be/env/.env.dev
 # 편집기로 열어서 DB 호스트/유저/비밀번호 입력
 ```
 
 | 파일 | 용도 | git 추적 |
 |---|---|---|
-| `env/dev.env.example` | 템플릿 (키만, 값 비움) | O |
+| `env/.env.dev.example` | 템플릿 (키만, 값 비움) | O |
 | `env/.env.dev` | 로컬 dev 프로파일 실제 값 | X (gitignore) |
-| `env/prod.env.example` | 운영용 템플릿 | O |
+| `env/.env.prod.example` | 운영용 템플릿 | O |
 
 로딩 위치: `src/main/resources/application-dev.yml` 의 `spring.config.import` 가 `env/.env.dev` 를 읽는다.
 
@@ -35,7 +35,49 @@ cp be/env/dev.env.example be/env/.env.dev
 |---|---|---|---|
 | `jpa.ddl.auto` | `update` | `validate` / `update` / `create` / `create-drop` / `none` | Hibernate 스키마 전략. 공용 dev DB 에 영향 가므로 개인 환경에선 `validate` 권장. `env/.env.dev` 에 지정. |
 
-## 2-2. Firebase (FCM push) 설정
+## 2-1-1. SQL 로깅 토글
+
+운영 기본값은 `false` (로그 없음). 디버깅 필요 시 `env/.env.dev` 에 아래 변수를 추가한다.
+
+| 변수 | 기본값 | 용도 |
+|---|---|---|
+| `JPA_SHOW_SQL` | `false` | `spring.jpa.show-sql` 토글 |
+| `JPA_FORMAT_SQL` | `false` | Hibernate `format_sql` 토글 |
+| `LOG_HIBERNATE_SQL` | `INFO` | `org.hibernate.SQL` 로거 레벨 |
+| `LOG_HIBERNATE_BIND` | `WARN` | 바인딩 파라미터 로거 레벨 |
+
+SQL 전체 활성화 예시:
+
+```properties
+JPA_SHOW_SQL=true
+JPA_FORMAT_SQL=true
+LOG_HIBERNATE_SQL=DEBUG
+LOG_HIBERNATE_BIND=TRACE
+```
+
+상세 설명: [`../architecture/observability.md`](../architecture/observability.md)
+
+## 2-2. Redis 설정
+
+Spring Cache는 Redis를 사용한다. Docker 내부 dev/prod 환경은 `redis`, 호스트에서 직접 실행하는 local 환경은 `localhost`를 쓴다.
+
+```properties
+REDIS_HOST=redis
+REDIS_PORT=6379
+SPRING_DATA_REDIS_HOST=redis
+SPRING_DATA_REDIS_PORT=6379
+```
+
+`env/.env.local` 예시:
+
+```properties
+REDIS_HOST=localhost
+REDIS_PORT=6379
+SPRING_DATA_REDIS_HOST=localhost
+SPRING_DATA_REDIS_PORT=6379
+```
+
+## 2-3. Firebase (FCM push) 설정
 
 알림 송신(저녁 리마인더, TODO 잠금해제 등)은 Firebase Admin SDK 로 FCM 을 호출한다. `firebase.enabled=false` 면 `NoopFcmService` 가 주입되어 로그만 찍고 실제 발송은 스킵된다.
 
@@ -80,7 +122,7 @@ c.d.d.n.a.impl.FirebaseFcmService  : [fcm] FirebaseFcmService is active.
 
 비활성(Noop) 상태라면 `NoopFcmService` 초기화 로그가 대신 나온다.
 
-## 2-3. Apple Sign-In 설정
+## 2-4. Apple Sign-In 설정
 
 Apple 로그인은 `authorizationCode` 교환과 회원탈퇴 revoke 호출을 위해 Apple `.p8` 개인키가 필요하다.
 `AppleClientSecretGenerator`는 부팅 시 설정과 키 파일 존재 여부를 검사하므로, 서버와 Jenkins 테스트 환경에 모두 맞춰 둔다.

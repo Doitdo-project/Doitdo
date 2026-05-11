@@ -77,14 +77,19 @@ class CategoryPage extends ConsumerWidget {
     int newPaletteId,
     PaletteListResp palettes,
   ) async {
+    final prevPaletteId = ref.read(activePaletteProvider);
+    // 낙관적: 팔레트 이름 즉시 변경
+    await ref.read(activePaletteProvider.notifier).set(newPaletteId);
     try {
       await ref.read(categoryViewModelProvider.notifier).applyPaletteToAll(
             newPaletteId: newPaletteId,
             paletteList: palettes,
           );
-      await ref.read(activePaletteProvider.notifier).set(newPaletteId);
     } catch (e) {
-      // 서버 진실 상태로 다시 동기화 — partial 적용 잔존 방지.
+      // 실패: 팔레트 이름·카테고리 모두 서버 진실 상태로 복구
+      if (prevPaletteId != null) {
+        await ref.read(activePaletteProvider.notifier).set(prevPaletteId);
+      }
       ref.invalidate(categoryViewModelProvider);
       if (context.mounted) _showError(context, e);
     }
@@ -151,7 +156,7 @@ class CategoryPage extends ConsumerWidget {
                     _handlePaletteChange(context, ref, newPaletteId, palettes),
               ),
               const SizedBox(height: 24),
-              const _SectionLabel('내 카테고리'),
+              const _SectionLabel('내 카테고리 (최대 6개)'),
               const SizedBox(height: 8),
               _CategoryCard(
                 categories: categories,
@@ -222,7 +227,8 @@ class _CategoryCard extends StatelessWidget {
                   onEdit: () => onEdit(c),
                   onDelete: () => onDelete(c),
                 ),
-              _AddCategoryRow(onTap: onAddTap),
+              if (categories.length < 6)
+                _AddCategoryRow(onTap: onAddTap),
             ],
           ),
         ),
@@ -413,15 +419,33 @@ class _PaletteSelector extends ConsumerWidget {
 
         var currentIndex = palettes.indexWhere((p) => p.paletteId == activeId);
         if (currentIndex < 0) currentIndex = 0;
-        final current = palettes[currentIndex];
 
-        // 첫 진입 시 활성 팔레트 미설정이면 첫 팔레트로 자동 set (post-frame).
+        // activePaletteProvider 가 null 이면(= 로그아웃 후 첫 진입 등)
+        // 서버 카테고리의 colorId 로 실제 팔레트를 역추론해 설정한다.
+        // 단순히 첫 팔레트(기본)로 고정하면 서버 색상과 선택된 팔레트 이름이
+        // 어긋나는 현상이 발생하기 때문.
         if (activeId == null) {
+          final cats = ref.read(categoryViewModelProvider).valueOrNull ?? [];
+          if (cats.isNotEmpty) {
+            final firstColorId = cats.first.colorId;
+            int base = 1;
+            for (int i = 0; i < palettes.length; i++) {
+              final p = palettes[i];
+              if (firstColorId >= base && firstColorId < base + p.colors.length) {
+                currentIndex = i;
+                break;
+              }
+              base += p.colors.length;
+            }
+          }
+          final detectedId = palettes[currentIndex].paletteId;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!context.mounted) return;
-            ref.read(activePaletteProvider.notifier).set(current.paletteId);
+            ref.read(activePaletteProvider.notifier).set(detectedId);
           });
         }
+
+        final current = palettes[currentIndex];
 
         return Container(
           decoration: BoxDecoration(

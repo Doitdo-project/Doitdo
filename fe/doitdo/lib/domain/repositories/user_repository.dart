@@ -11,6 +11,10 @@ abstract class UserRepository {
   /// `UnauthorizedException` 이 떨어진다.
   Future<User> getMe();
 
+  /// 뚜레딧(코인) 잔액 조회.
+  /// 지갑 데이터가 없으면 `ServerException(statusCode: 404)` 가 throw 된다.
+  Future<int> getBalance();
+
   /// 비밀번호 변경.
   /// - 현재 비밀번호가 틀리면 `ServerException` (BE 메시지 포함) 발생.
   /// - 새 비밀번호 길이/복잡도 정책 위반도 서버에서 검증 후 `ServerException`.

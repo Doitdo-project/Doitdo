@@ -20,7 +20,10 @@ import com.doitdo.domain.tamagotchi.repository.CharacterSpeciesBackgroundReposit
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterHistoryRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
+import com.doitdo.domain.user.application.CreditEarnService;
 import com.doitdo.domain.user.repository.UserRepository;
+import com.doitdo.domain.user.repository.UserWalletRepository;
+import com.doitdo.global.cache.CacheEvictHelper;
 
 @ExtendWith(MockitoExtension.class)
 class TamagotchiCurrentCharacterServiceImplTest {
@@ -49,6 +52,15 @@ class TamagotchiCurrentCharacterServiceImplTest {
 	@Mock
 	private ApplicationEventPublisher eventPublisher;
 
+	@Mock
+	private CacheEvictHelper cacheEvictHelper;
+
+	@Mock
+	private CreditEarnService creditEarnService;
+
+	@Mock
+	private UserWalletRepository userWalletRepository;
+
 	@Test
 	void getCurrentCharacterReturnsActiveCharacterState() {
 		TamagotchiServiceImpl service = new TamagotchiServiceImpl(
@@ -59,7 +71,10 @@ class TamagotchiCurrentCharacterServiceImplTest {
 			userCharacterHistoryRepository,
 			characterSpeciesBackgroundRepository,
 			userRepository,
-			eventPublisher
+			eventPublisher,
+			cacheEvictHelper,
+			creditEarnService,
+			userWalletRepository
 		);
 
 		Long userId = 1L;

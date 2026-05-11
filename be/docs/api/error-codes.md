@@ -26,7 +26,7 @@ public interface ErrorCode {
 
 예: `A00-001` (auth / 로그인 카테고리 / 1번)
 
-## 3. 도메인 enum (9개)
+## 3. 도메인 enum (10개)
 
 | Enum | 접두 letter | 도메인 |
 |---|---|---|
@@ -39,6 +39,7 @@ public interface ErrorCode {
 | `ShopErrorCode` | `S` | shop |
 | `NotificationErrorCode` | `N` | notification |
 | `SettingErrorCode` | `C` | setting |
+| `BugReportErrorCode` | `B` | bugreport |
 
 각 enum 의 실제 값 (코드/status/메시지) 은 enum 파일 자체가 SSOT.
 
@@ -145,6 +146,12 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 |---|---|---|---|
 | `U00_009` | `U00-009` | 403 | 온보딩 미완료 사용자가 보호 API 호출 시 차단 |
 
+### `UserErrorCode` 추가 코드 (내 잔액 조회, 2026-05)
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `U05_001` | `U05-001` | 404 | 지갑 데이터를 찾을 수 없음 |
+
 ### `TodoErrorCode` 추가 코드 (alert/recurrence redesign, 2026-04)
 
 | 상수 | code | HTTP | 의미 |
@@ -159,6 +166,30 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 | `M09_001` | `M09-001` | 401 | 인증 토큰이 없거나 유효하지 않음 |
 | `M09_002` | `M09-002` | 404 | 해당 캐릭터의 요청 액션을 찾을 수 없음 |
 | `M09_003` | `M09-003` | 500 | 서버 내부 오류 |
+
+`AnimationAction` enum 전환 후에도 enum 에는 있지만 `character_actions` row 가 등록되지 않은 액션 호출은 `M09_002` 를 재사용한다. enum 자체에 없는 `actionType` 은 컨트롤러 바인딩 단계의 400 으로 처리한다.
+
+### `ShopErrorCode` 추가 코드 (가구 상점/방 배치, 2026-05)
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `FURNITURE_NOT_FOUND` | `S00-001` | 404 | 가구를 찾을 수 없음 |
+| `FURNITURE_ALREADY_OWNED` | `S00-002` | 409 | 이미 보유한 가구 |
+| `INSUFFICIENT_BALANCE` | `S00-003` | 409 | 잔액 부족 |
+| `FURNITURE_NOT_ON_SALE` | `S00-004` | 409 | 판매 중이 아닌 가구 |
+| `WALLET_NOT_FOUND` | `S00-005` | 404 | 월렛을 찾을 수 없음 |
+| `USER_FURNITURE_NOT_FOUND` | `S01-001` | 404 | 보유 가구를 찾을 수 없음 |
+| `PLACEMENT_NOT_FOUND` | `S02-001` | 404 | 배치 정보를 찾을 수 없음 |
+
+### `BugReportErrorCode` 신규 enum (bugreport, 2026-04, JIRA S14P31D107-442)
+
+접두 letter `B`. `ErrorCodeRegistry.SOURCES` 에 등록됨.
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `B00_001` | `B00-001` | 500 | 버그 신고 처리 중 서버 오류 |
+
+> MVP 단계에서 비즈니스 검증 에러(`G00-006` 자동 부착)로 충분. Rate Limit(`B00-003` 429) 등은 후속 이슈에서 추가.
 
 ## 5. 새 코드 추가 절차
 

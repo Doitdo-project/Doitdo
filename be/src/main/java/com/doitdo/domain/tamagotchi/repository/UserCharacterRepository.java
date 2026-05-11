@@ -4,7 +4,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,6 +16,15 @@ import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 public interface UserCharacterRepository extends JpaRepository<UserCharacter, Long> {
 
 	Optional<UserCharacter> findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(Long userId);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("""
+		select uc from UserCharacter uc
+		where uc.userId = :userId
+			and uc.isActive = true
+			and uc.isDeleted = false
+	""")
+	Optional<UserCharacter> findActiveByUserIdForUpdate(@Param("userId") Long userId);
 
 	@Query("""
 		select uc from UserCharacter uc

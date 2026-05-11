@@ -13,7 +13,8 @@ import 'package:doitdo/presentation/providers/default_screen_provider.dart';
 /// 3. 둘 다 true → 사용자가 설정한 [DefaultScreen] 에 따라
 ///    [AppRoutes.tamagochi] 또는 [AppRoutes.todo]
 ///
-/// 흩어져 있던 분기를 한 곳에 모아 두면 추후 온보딩 단계가 늘어나도 한 함수만 손보면 된다.
+/// 튜토리얼은 온보딩 완료(약관 동의) 직후 agreements 페이지에서 직접 라우팅하므로
+/// 여기서는 판단하지 않는다.
 String resolvePostAuthDestination(WidgetRef ref, User user) {
   if (!user.birthDateRegistered) return AppRoutes.onboardingBirthDate;
   if (!user.agreementsAccepted) return AppRoutes.onboardingAgreements;

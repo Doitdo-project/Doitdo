@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:doitdo/core/errors/exceptions.dart';
 import 'package:doitdo/core/utils/app_logger.dart';
 import 'package:doitdo/domain/entities/character.dart';
+import 'package:doitdo/domain/entities/evolution.dart';
 import 'package:doitdo/domain/repositories/character_repository.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
 
@@ -113,19 +114,24 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
   }
 
   /// 성장률 100% 도달 시 호출. 동시에 여러 번 호출되는 걸 방지하기 위해
-  /// in-flight 플래그로 재진입을 막는다. 진화 후에는 [load] 로 최신 캐릭터
-  /// 정보를 다시 당긴다.
+  /// in-flight 플래그로 재진입을 막는다.
+  ///
+  /// 응답으로 받은 [Evolution] 을 그대로 반환만 하고 home state(=현재 캐릭터)
+  /// 갱신은 일부러 하지 않는다. 호출자가 진화 연출 overlay 를 띄우는 동안
+  /// home 뒤편으로 옛 캐릭터가 비쳐야 자연스럽기 때문(여기서 [refresh] 를
+  /// 돌리면 overlay 가 dim 으로 덮어도 새 캐릭터가 슬쩍 비친다).
+  /// overlay 가 닫힌 뒤 호출자가 [refresh] 를 직접 돌려 home 을 새 캐릭터로 동기화한다.
+  ///
+  /// 실패 시 null 을 반환하고 이전 캐릭터 상태를 유지한다.
   bool _evolving = false;
-  Future<bool> evolve(int userCharacterId) async {
-    if (_evolving) return false;
+  Future<Evolution?> evolve(int userCharacterId) async {
+    if (_evolving) return null;
     _evolving = true;
     try {
-      await _repository.evolveCharacter(userCharacterId);
-      await load();
-      return true;
+      return await _repository.evolveCharacter(userCharacterId);
     } catch (e, st) {
       appLogger.e('evolve failed', error: e, stackTrace: st);
-      return false;
+      return null;
     } finally {
       _evolving = false;
     }

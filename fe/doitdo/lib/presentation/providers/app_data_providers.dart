@@ -12,10 +12,13 @@ import 'package:doitdo/core/utils/app_env.dart';
 import 'package:doitdo/core/widget_sync/widget_sync_service.dart';
 import 'package:doitdo/data/datasources/auth_api.dart';
 import 'package:doitdo/data/datasources/auth_local_data_source.dart';
+import 'package:doitdo/data/datasources/bug_report_api.dart';
 import 'package:doitdo/data/datasources/user_api.dart';
 import 'package:doitdo/data/repositories/auth_repository_impl.dart';
+import 'package:doitdo/data/repositories/bug_report_repository_impl.dart';
 import 'package:doitdo/data/repositories/user_repository_impl.dart';
 import 'package:doitdo/domain/repositories/auth_repository.dart';
+import 'package:doitdo/domain/repositories/bug_report_repository.dart';
 import 'package:doitdo/domain/repositories/user_repository.dart';
 import 'package:doitdo/data/datasources/todo_api.dart';
 import 'package:doitdo/data/repositories/todo_repository_impl.dart';
@@ -24,16 +27,19 @@ import 'package:doitdo/data/datasources/category_api.dart';
 import 'package:doitdo/data/datasources/character_api.dart';
 import 'package:doitdo/data/datasources/notification_api.dart';
 import 'package:doitdo/data/datasources/setting_api.dart';
+import 'package:doitdo/data/datasources/shop_api.dart';
 import 'package:doitdo/data/datasources/streak_api.dart';
 import 'package:doitdo/data/repositories/category_repository_impl.dart';
 import 'package:doitdo/data/repositories/character_repository_impl.dart';
 import 'package:doitdo/data/repositories/notification_repository_impl.dart';
 import 'package:doitdo/data/repositories/setting_repository_impl.dart';
+import 'package:doitdo/data/repositories/shop_repository_impl.dart';
 import 'package:doitdo/data/repositories/streak_repository_impl.dart';
 import 'package:doitdo/domain/repositories/category_repository.dart';
 import 'package:doitdo/domain/repositories/character_repository.dart';
 import 'package:doitdo/domain/repositories/notification_repository.dart';
 import 'package:doitdo/domain/repositories/setting_repository.dart';
+import 'package:doitdo/domain/repositories/shop_repository.dart';
 import 'package:doitdo/domain/repositories/streak_repository.dart';
 
 // 중앙 집중식 DI 선언 파일 (MOA 컨벤션)
@@ -44,9 +50,21 @@ import 'package:doitdo/domain/repositories/streak_repository.dart';
 final dioProvider = Provider<Dio>((ref) {
   final dio = ApiClient.create();
   final storage = ref.watch(secureStorageProvider);
+  final widgetSync = ref.watch(widgetSyncServiceProvider);
   // Bearer 토큰 주입 + 401 자동 refresh 재시도는 AuthInterceptor 에 일임.
-  // 인증 규칙(skip 경로 목록 등) 도 인터셉터 내부로 모아 한 파일에서 관리.
-  dio.interceptors.add(AuthInterceptor(dio: dio, storage: storage));
+  // refresh 성공 시 위젯 SharedPreferences 도 동기화 — 인터셉터가 갱신한 토큰이
+  // 위젯에 전달되지 않으면 위젯이 만료된 refresh token 으로 재시도해 로그인 필요 상태가 됨.
+  dio.interceptors.add(AuthInterceptor(
+    dio: dio,
+    storage: storage,
+    onTokenRefreshed: (access, refresh) {
+      widgetSync.syncAuthTokens(
+        accessToken: access,
+        refreshToken: refresh,
+        apiBaseUrl: AppConfig.apiBaseUrl,
+      );
+    },
+  ));
   return dio;
 });
 
@@ -160,6 +178,25 @@ final streakApiProvider = Provider<StreakApi>(
 
 final streakRepositoryProvider = Provider<StreakRepository>(
   (ref) => StreakRepositoryImpl(ref.watch(streakApiProvider)),
+);
+
+// ─── Shop: retrofit API → Repository ───────────────────────────
+// 상점 / 보유 가구 / 방 배치 통합 도메인.
+final shopApiProvider = Provider<ShopApi>(
+  (ref) => ShopApi(ref.watch(dioProvider)),
+);
+
+final shopRepositoryProvider = Provider<ShopRepository>(
+  (ref) => ShopRepositoryImpl(ref.watch(shopApiProvider)),
+);
+
+// ─── BugReport: retrofit API → Repository ──────────────────────
+final bugReportApiProvider = Provider<BugReportApi>(
+  (ref) => BugReportApi(ref.watch(dioProvider)),
+);
+
+final bugReportRepositoryProvider = Provider<BugReportRepository>(
+  (ref) => BugReportRepositoryImpl(ref.watch(bugReportApiProvider)),
 );
 
 // ─── FCM: 디바이스 토큰 등록 헬퍼 ───────────────────────────────

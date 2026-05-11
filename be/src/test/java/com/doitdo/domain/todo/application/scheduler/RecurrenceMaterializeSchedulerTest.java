@@ -10,6 +10,7 @@ import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.entity.Todo.TodoStatus;
 import com.doitdo.domain.todo.entity.Todo.TodoType;
 import com.doitdo.domain.todo.repository.TodoRepository;
+import com.doitdo.global.cache.CacheEvictHelper;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -25,9 +26,12 @@ class RecurrenceMaterializeSchedulerTest {
 	@Mock
 	private TodoRepository todoRepository;
 
+	@Mock
+	private CacheEvictHelper cacheEvictHelper;
+
 	@Test
 	void materializeCreatesTodayInstanceForDueRecurringMaster() {
-		RecurrenceMaterializeScheduler scheduler = new RecurrenceMaterializeScheduler(todoRepository);
+		RecurrenceMaterializeScheduler scheduler = new RecurrenceMaterializeScheduler(todoRepository, cacheEvictHelper);
 		Todo master = recurringMaster("SAT");
 		LocalDate today = LocalDate.parse("2026-04-25");
 		given(todoRepository.findAllByTypeAndIsDeletedFalse(TodoType.RECURRING)).willReturn(List.of(master));
@@ -48,7 +52,7 @@ class RecurrenceMaterializeSchedulerTest {
 
 	@Test
 	void materializeSkipsExistingTodayInstance() {
-		RecurrenceMaterializeScheduler scheduler = new RecurrenceMaterializeScheduler(todoRepository);
+		RecurrenceMaterializeScheduler scheduler = new RecurrenceMaterializeScheduler(todoRepository, cacheEvictHelper);
 		Todo master = recurringMaster("SAT");
 		Todo existing = Todo.createRecurringInstance(master, LocalDate.parse("2026-04-25"));
 		LocalDate today = LocalDate.parse("2026-04-25");

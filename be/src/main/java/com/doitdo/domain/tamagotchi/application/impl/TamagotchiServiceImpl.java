@@ -1,6 +1,8 @@
 package com.doitdo.domain.tamagotchi.application.impl;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.EnumMap;
 import java.util.List;
@@ -35,17 +37,28 @@ import com.doitdo.domain.tamagotchi.repository.CharacterSpeciesBackgroundReposit
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterHistoryRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
+import com.doitdo.domain.user.application.CreditEarnService;
+import com.doitdo.domain.user.entity.UserWallet;
+import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.repository.UserRepository;
+import com.doitdo.domain.user.repository.UserWalletRepository;
+import com.doitdo.global.cache.CacheEvictHelper;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TamagotchiErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class TamagotchiServiceImpl implements TamagotchiService {
+
+	private static final String EVOLUTION_ANIMATION_URL =
+		"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/evolution/evolution.gif";
+	private static final String INDEPENDENCE_ANIMATION_URL =
+		"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/independence/independence.gif";
 
 	private final CharacterActionRepository characterActionRepository;
 	private final CharacterRepository characterRepository;
@@ -55,6 +68,14 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 	private final CharacterSpeciesBackgroundRepository characterSpeciesBackgroundRepository;
 	private final UserRepository userRepository;
 	private final ApplicationEventPublisher eventPublisher;
+	private final CacheEvictHelper cacheEvictHelper;
+	private final CreditEarnService creditEarnService;
+	private final UserWalletRepository userWalletRepository;
+	private Clock clock = Clock.systemDefaultZone();
+
+	void setClock(Clock clock) {
+		this.clock = clock;
+	}
 
 	@Override
 	@Transactional
@@ -181,6 +202,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			UserCharacterHistory.ActorType.USER, userId, "name updated");
 		log.info("event=CHARACTER_NAME_UPDATED userId={} userCharacterId={}",
 			userId, userCharacter.getUserCharacterId());
+		cacheEvictHelper.evictTamagotchiCurrentAfterCommit(userId);
 
 		return new UpdateCharacterNameResp(
 			userCharacter.getCharacterId(),
@@ -190,6 +212,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 
 	@Override
 	@Transactional(readOnly = true)
+	@Cacheable(value = "tamagotchi:current", key = "#userId", unless = "#result == null")
 	public CurrentCharacterResp getCurrentCharacter(Long userId) {
 		UserCharacter userCharacter = userCharacterRepository
 			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
@@ -267,6 +290,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			userId, userCharacter.getUserCharacterId(), "EGG", "BABY", userCharacter.getName()));
 		log.info("event=CHARACTER_HATCHED userId={} userCharacterId={} beforeStage=EGG afterStage=BABY",
 			userId, userCharacter.getUserCharacterId());
+		cacheEvictHelper.evictTamagotchiCurrentAfterCommit(userId);
 
 		return new HatchCharacterResp(
 			babyCharacter.getCharacterId(),
@@ -326,6 +350,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			userId, userCharacter.getUserCharacterId(), beforeStage.name(), afterStage.name(), userCharacter.getName()));
 		log.info("event=CHARACTER_EVOLVED userId={} userCharacterId={} beforeStage={} afterStage={}",
 			userId, userCharacter.getUserCharacterId(), beforeStage.name(), afterStage.name());
+		cacheEvictHelper.evictTamagotchiCurrentAfterCommit(userId);
 
 		return new EvolutionResp(
 			userCharacter.getUserCharacterId(),
@@ -333,7 +358,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			afterStage.name(),
 			userCharacter.getCurrentExp(),
 			nextCharacter.getRequiredExp(),
-			buildAnimationUrl(beforeStage, afterStage),
+			EVOLUTION_ANIMATION_URL,
 			nextCharacter.getThumbnailUrl(),
 			Instant.now().toString()
 		);
@@ -356,16 +381,6 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		if (!unlocksToSave.isEmpty()) {
 			characterUnlockRepository.saveAll(unlocksToSave);
 		}
-	}
-
-	private String buildAnimationUrl(
-		com.doitdo.domain.tamagotchi.entity.Character.Stage beforeStage,
-		com.doitdo.domain.tamagotchi.entity.Character.Stage afterStage
-	) {
-		return "https://cdn.example.com/tamagotchi/animations/"
-			+ beforeStage.name().toLowerCase()
-			+ "-to-"
-			+ afterStage.name().toLowerCase();
 	}
 
 	@Override
@@ -418,20 +433,18 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			savedNextEggCharacter.getUserCharacterId(), adultUserCharacter.getName()));
 		log.info("event=CHARACTER_FAREWELL userId={} userCharacterId={} nextUserCharacterId={}",
 			userId, adultUserCharacter.getUserCharacterId(), savedNextEggCharacter.getUserCharacterId());
+		cacheEvictHelper.evictTamagotchiCurrentAfterCommit(userId);
 
 		return new FarewellResp(
 			adultUserCharacter.getUserCharacterId(),
 			true,
 			eggCharacter.getStage().name(),
-			buildAnimationUrl(
-				com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT,
-				com.doitdo.domain.tamagotchi.entity.Character.Stage.EGG
-			)
+			INDEPENDENCE_ANIMATION_URL
 		);
 	}
 
 	@Override
-	@Transactional(readOnly = true)
+	@Transactional
 	public CharacterActionUrlResp getMyCharacterActionUrl(Long userId, String actionType) {
 		UserCharacter userCharacter = userCharacterRepository
 			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
@@ -445,7 +458,82 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		com.doitdo.domain.tamagotchi.entity.CharacterAction action =
 			actions.get(ThreadLocalRandom.current().nextInt(actions.size()));
 
-		return new CharacterActionUrlResp(action.getActionUrl());
+		LocalDateTime now = LocalDateTime.now(clock);
+		LocalDate today = LocalDate.now(clock);
+		if ("EYE".equalsIgnoreCase(actionType)) {
+			int dailyTouchCount = dailyTouchCountForToday(userCharacter, today);
+			return new CharacterActionUrlResp(
+				action.getActionUrl(),
+				0,
+				findCurrentBalance(userId),
+				dailyTouchCount,
+				nextAvailableAt(userCharacter.getLastTouchedAt(), dailyTouchCount, now, today)
+			);
+		}
+
+		UserCharacter lockedUserCharacter = userCharacterRepository.findActiveByUserIdForUpdate(userId)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
+		lockedUserCharacter.resetDailyTouchIfNewDate(today);
+
+		int earnedAmount = 0;
+		if (canEarnTouchCredit(lockedUserCharacter, now)) {
+			earnedAmount = creditEarnService.tryEarn(
+				userId,
+				WalletEarnSource.PET_TOUCH,
+				10,
+				lockedUserCharacter.getCharacterId(),
+				false
+			);
+			if (earnedAmount > 0) {
+				lockedUserCharacter.recordTouch(now, today);
+			}
+		}
+
+		int dailyTouchCount = lockedUserCharacter.getDailyTouchCount();
+		return new CharacterActionUrlResp(
+			action.getActionUrl(),
+			earnedAmount,
+			findCurrentBalance(userId),
+			dailyTouchCount,
+			nextAvailableAt(lockedUserCharacter.getLastTouchedAt(), dailyTouchCount, now, today)
+		);
+	}
+
+	private boolean canEarnTouchCredit(UserCharacter userCharacter, LocalDateTime now) {
+		return userCharacter.getDailyTouchCount() < 3
+			&& (userCharacter.getLastTouchedAt() == null
+				|| !now.isBefore(userCharacter.getLastTouchedAt().plusHours(1)));
+	}
+
+	private int dailyTouchCountForToday(UserCharacter userCharacter, LocalDate today) {
+		if (!today.equals(userCharacter.getDailyTouchDate())) {
+			return 0;
+		}
+		return userCharacter.getDailyTouchCount();
+	}
+
+	private LocalDateTime nextAvailableAt(
+		LocalDateTime lastTouchedAt,
+		int dailyTouchCount,
+		LocalDateTime now,
+		LocalDate today
+	) {
+		if (dailyTouchCount >= 3) {
+			return today.plusDays(1).atStartOfDay();
+		}
+		if (lastTouchedAt != null) {
+			LocalDateTime cooldownEndsAt = lastTouchedAt.plusHours(1);
+			if (now.isBefore(cooldownEndsAt)) {
+				return cooldownEndsAt;
+			}
+		}
+		return null;
+	}
+
+	private int findCurrentBalance(Long userId) {
+		return userWalletRepository.findByUserId(userId)
+			.map(UserWallet::getBalance)
+			.orElse(0);
 	}
 
 	private com.doitdo.domain.tamagotchi.entity.Character randomEggCharacter(TamagotchiErrorCode errorCode) {

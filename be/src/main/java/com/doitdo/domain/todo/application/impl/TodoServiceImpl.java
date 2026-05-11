@@ -8,8 +8,6 @@ import com.doitdo.domain.todo.api.dto.req.TodoSearchReq;
 import com.doitdo.domain.todo.api.dto.req.TodoSnoozeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoStatusChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
-import com.doitdo.domain.todo.event.TodoCompletedEvent;
-import com.doitdo.domain.todo.event.TodoSnoozedEvent;
 import com.doitdo.domain.todo.api.dto.resp.TodoCalendarResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoListResp;
@@ -21,25 +19,32 @@ import com.doitdo.domain.todo.entity.SnoozeHistory;
 import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.entity.Todo.TodoStatus;
 import com.doitdo.domain.todo.entity.Todo.TodoType;
+import com.doitdo.domain.todo.event.TodoCompletedEvent;
+import com.doitdo.domain.todo.event.TodoSnoozedEvent;
 import com.doitdo.domain.todo.repository.CategoryRepository;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository.SnoozeCountProjection;
-import com.doitdo.domain.streak.application.UserStreakService;
 import com.doitdo.domain.todo.repository.TodoRepository;
+import com.doitdo.domain.todo.repository.TodoListQueryRepository;
 import com.doitdo.domain.todo.repository.TodoSpecifications;
+import com.doitdo.domain.todo.repository.projection.TodoListRow;
+import com.doitdo.domain.streak.application.UserStreakService;
+import com.doitdo.global.cache.CacheEvictHelper;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TodoErrorCode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -55,68 +60,46 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class TodoServiceImpl implements TodoService {
 
+	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+
 	private final TodoRepository todoRepository;
+	private final TodoListQueryRepository todoListQueryRepository;
 	private final CategoryRepository categoryRepository;
 	private final SnoozeHistoryRepository snoozeHistoryRepository;
 	private final RecurrenceService recurrenceService;
 	private final UserStreakService userStreakService;
 	private final ApplicationEventPublisher eventPublisher;
+	private final CacheEvictHelper cacheEvictHelper;
 
 	@Override
 	@Transactional(readOnly = true)
+	@Cacheable(
+			value = "todos:list",
+			key = "#userId + ':' + (#req.view ?: 'all') + ':' + (#req.type ?: 'X') + ':' "
+					+ "+ (#req.status ?: 'X') + ':' + (#req.category ?: 'X') + ':' "
+					+ "+ (#req.sort ?: 'X') + ':' + (#req.q != null ? #req.q.hashCode() : 'X') + ':' "
+					+ "+ (#req.date != null ? #req.date : T(java.time.LocalDate).now(T(java.time.ZoneId).of('Asia/Seoul')))",
+			unless = "#result == null"
+	)
 	public TodoListResp list(Long userId, TodoListReq req) {
-		// 카테고리 이름 필터: 이름으로 Category 조회, 없으면 빈 결과 반환
-		Long categoryId = null;
-		if (StringUtils.hasText(req.category())) {
-			Optional<Category> categoryOpt =
-					categoryRepository.findByCategoryNameAndUserId(req.category(), userId);
-			if (categoryOpt.isEmpty()) {
-				return new TodoListResp(List.of());
-			}
-			categoryId = categoryOpt.get().getCategoryId();
-		}
-
 		// 기준일: date 파라미터가 있으면 그 날짜, 없으면 오늘
-		LocalDate baseDate = req.date() != null ? req.date() : LocalDate.now();
+		LocalDate baseDate = req.date() != null ? req.date() : LocalDate.now(SEOUL);
+		LocalDate today = LocalDate.now(SEOUL);
 
-		// Specification 조합
-		Specification<Todo> spec = TodoSpecifications.ownerAndActive(userId)
-				.and(TodoSpecifications.byView(req.view(), baseDate))
-				.and(TodoSpecifications.byStatus(req.status()))
-				.and(TodoSpecifications.byCategoryId(categoryId))
-				.and(TodoSpecifications.byType(req.type()))
-				.and(TodoSpecifications.byKeyword(req.q()));
+		List<TodoListRow> rows = todoListQueryRepository.findListRows(
+				userId,
+				req.view(),
+				req.status(),
+				req.category(),
+				req.type(),
+				baseDate,
+				today,
+				req.q(),
+				req.sort());
 
-		// Sort 결정
-		Sort sort = resolveSort(req.sort());
-
-		List<Todo> todos = todoRepository.findAll(spec, sort);
-
-		// 카테고리 벌크 조회 (N+1 방지)
-		Set<Long> categoryIds = todos.stream()
-				.map(Todo::getCategoryId)
-				.filter(id -> id != null)
-				.collect(Collectors.toSet());
-
-		Map<Long, String> categoryNameById = categoryIds.isEmpty()
-				? Map.of()
-				: categoryRepository.findAllById(categoryIds).stream()
-						.collect(Collectors.toMap(Category::getCategoryId, Category::getCategoryName));
-
-		// snooze 횟수 벌크 조회
-		Set<Long> todoIds = todos.stream()
-				.map(Todo::getTodoId)
-				.collect(Collectors.toSet());
-
-		Map<Long, Integer> snoozeCountByTodoId = todoIds.isEmpty()
-				? Map.of()
-				: snoozeHistoryRepository.countByTodoIdIn(todoIds).stream()
-						.collect(Collectors.toMap(
-								SnoozeCountProjection::getTodoId,
-								p -> p.getCnt().intValue()
-						));
-
-		return TodoListResp.of(todos, categoryNameById, snoozeCountByTodoId);
+		return new TodoListResp(rows.stream()
+				.map(TodoServiceImpl::toTodoDetailResp)
+				.toList());
 	}
 
 	@Override
@@ -125,19 +108,40 @@ public class TodoServiceImpl implements TodoService {
 		return recurrenceService.calendar(userId, req);
 	}
 
-	private Sort resolveSort(String sortParam) {
-		if (sortParam == null) {
-			return Sort.by(Order.asc("startDate"), Order.asc("todoId"));
+	private static TodoDetailResp toTodoDetailResp(TodoListRow row) {
+		return new TodoDetailResp(
+				row.todoId(),
+				row.title(),
+				row.content(),
+				row.categoryName(),
+				row.type(),
+				row.priority(),
+				row.alertTime(),
+				row.startDate(),
+				row.endDate(),
+				toDaysOfWeekCodes(row.daysOfWeekRaw()),
+				row.status(),
+				row.updatedAt(),
+				(int) row.snoozeCount()
+		);
+	}
+
+	private static List<String> toDaysOfWeekCodes(String daysOfWeekRaw) {
+		if (!StringUtils.hasText(daysOfWeekRaw)) {
+			return List.of();
 		}
-		return switch (sortParam.toLowerCase()) {
-			case "category" -> Sort.by(Order.asc("categoryId"), Order.asc("startDate"), Order.asc("todoId"));
-			case "priority" -> Sort.by(Order.desc("priority"), Order.asc("startDate"), Order.asc("todoId"));
-			default -> Sort.by(Order.asc("startDate"), Order.asc("todoId"));
-		};
+		return Arrays.stream(daysOfWeekRaw.split(","))
+				.map(String::trim)
+				.filter(token -> !token.isEmpty())
+				.map(Todo::toDayOfWeek)
+				.sorted()
+				.map(Todo::toDayOfWeekCode)
+				.toList();
 	}
 
 	@Override
 	@Transactional(readOnly = true)
+	@Cacheable(value = "todos:item", key = "#userId + ':' + #todoId", unless = "#result == null")
 	public TodoDetailResp detail(Long userId, Long todoId) {
 		Todo todo = todoRepository.findByTodoIdAndIsDeletedFalse(todoId)
 				.orElseThrow(() -> new CustomException(TodoErrorCode.T00_001));
@@ -186,6 +190,7 @@ public class TodoServiceImpl implements TodoService {
 		);
 
 		log.info("event=TODO_CREATED userId={} todoId={}", userId, todo.getTodoId());
+		cacheEvictHelper.evictUserTodosAfterCommit(userId);
 
 		// 새 TODO 이므로 snooze 이력 없음 — count=0 하드코딩 (DB 조회 불필요)
 		return TodoDetailResp.from(todo, categoryName, 0);
@@ -207,6 +212,8 @@ public class TodoServiceImpl implements TodoService {
 					.forEach(Todo::softDelete);
 		}
 		log.info("event=TODO_DELETED userId={} todoId={} scope={}", userId, todo.getTodoId(), scope);
+		cacheEvictHelper.evictUserTodosAfterCommit(userId);
+		cacheEvictHelper.evictTodoItemAfterCommit(userId, todoId);
 	}
 
 	@Override
@@ -260,6 +267,8 @@ public class TodoServiceImpl implements TodoService {
 		}
 
 		log.info("event=TODO_UPDATED userId={} todoId={}", userId, todo.getTodoId());
+		cacheEvictHelper.evictUserTodosAfterCommit(userId);
+		cacheEvictHelper.evictTodoItemAfterCommit(userId, todoId);
 
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
 		return TodoDetailResp.from(todo, categoryName, count);
@@ -287,12 +296,16 @@ public class TodoServiceImpl implements TodoService {
 		// - exp: 리스너가 AFTER_COMMIT + REQUIRES_NEW 로 처리 (멱등성은 Todo.expGranted 로 보장).
 		// - 가산 실패해도 Todo DONE 은 커밋 유지 (사용자 UX 우선)
 		if (beforeStatus != TodoStatus.DONE && req.status() == TodoStatus.DONE) {
+			todo.markFirstCompletedIfAbsent(LocalDate.now(SEOUL));
 			userStreakService.recordActivity(userId);
 			eventPublisher.publishEvent(new TodoCompletedEvent(userId, todo.getTodoId()));
 			log.info("event=TODO_COMPLETED userId={} todoId={}", userId, todo.getTodoId());
 		}
 		log.info("event=TODO_STATUS_CHANGED userId={} todoId={} status={}",
 				userId, todo.getTodoId(), req.status());
+		cacheEvictHelper.evictUserTodosAfterCommit(userId);
+		cacheEvictHelper.evictTodoItemAfterCommit(userId, todoId);
+		cacheEvictHelper.evictTamagotchiCurrentAfterCommit(userId);
 
 		String categoryName = null;
 		if (todo.getCategoryId() != null) {
@@ -327,6 +340,8 @@ public class TodoServiceImpl implements TodoService {
 		for (int i = 0; i < reorderTargets.size(); i++) {
 			reorderTargets.get(i).changePriority(i + 1);
 		}
+		cacheEvictHelper.evictUserTodosAfterCommit(userId);
+		cacheEvictHelper.evictTodoItemAfterCommit(userId, todoId);
 
 		String categoryName = null;
 		if (todo.getCategoryId() != null) {
@@ -412,6 +427,11 @@ public class TodoServiceImpl implements TodoService {
 		eventPublisher.publishEvent(new TodoSnoozedEvent(userId, todo.getTodoId(), fromDate, todo.getStartDate()));
 		log.info("event=TODO_SNOOZED userId={} todoId={} fromDate={} toDate={}",
 				userId, todo.getTodoId(), fromDate, todo.getStartDate());
+		cacheEvictHelper.evictUserTodosAfterCommit(userId);
+		cacheEvictHelper.evictTodoItemAfterCommit(userId, todoId);
+		if (!todoId.equals(todo.getTodoId())) {
+			cacheEvictHelper.evictTodoItemAfterCommit(userId, todo.getTodoId());
+		}
 
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
 		String categoryName = null;

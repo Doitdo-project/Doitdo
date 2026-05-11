@@ -407,7 +407,10 @@ class WelcomePage extends ConsumerWidget {
               // 한 곳에서만 돌린다. 여기서 unawaited 로 또 띄우면 home 의 load 와 레이스가
               // 나서 "GET 실패 → POST" 판정이 덮어써질 수 있음.
               // 첫 소셜 로그인 사용자(birthDate/agreements 미등록) 는 메인 탭 대신 온보딩으로.
-              context.go(resolvePostAuthDestination(ref, success.user));
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!context.mounted) return;
+                context.go(resolvePostAuthDestination(ref, success.user));
+              });
             },
             error: (error, _) {
               if (error is AuthCanceledException) return;
@@ -432,6 +435,8 @@ class WelcomePage extends ConsumerWidget {
       if (success == null) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;
+        // ref.listen 이 이미 네비게이션 했으면 /welcome 에서 벗어난 상태 → 중복 방지.
+        if (GoRouterState.of(context).matchedLocation != AppRoutes.welcome) return;
         context.go(resolvePostAuthDestination(ref, success.user));
       });
     });
@@ -612,7 +617,7 @@ class _SocialButtons extends StatelessWidget {
                 ref.read(welcomeViewModelProvider.notifier).signInWithApple(),
             style: SignInWithAppleButtonStyle.black,
             text: 'Apple로 로그인',
-            height: 48.h,
+            height: 48.w,
             borderRadius: BorderRadius.circular(12.r),
           ),
           SizedBox(height: 12.h),
@@ -620,8 +625,9 @@ class _SocialButtons extends StatelessWidget {
         // 카카오 — 공식 와이드 버튼 이미지(에셋) 사용.
         // Ink.image 로 이미지를 Material 의 ink surface 로 등록해야 InkWell 의 탭
         // 리플이 이미지 위에 그려져서 "버튼 눌리는 느낌" 이 난다.
+        // height 를 .w 스케일로 맞춰 기기 가로세로 비율과 무관하게 이미지 비율 유지.
         SizedBox(
-          height: 48.h,
+          height: 48.w,
           child: Material(
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(12.r),
@@ -645,7 +651,7 @@ class _SocialButtons extends StatelessWidget {
         SizedBox(height: 12.h),
         // Google — 이미지 에셋 사용 (카카오와 동일한 방식).
         SizedBox(
-          height: 48.h,
+          height: 48.w,
           child: Material(
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(12.r),
@@ -667,7 +673,7 @@ class _SocialButtons extends StatelessWidget {
         SizedBox(height: 12.h),
         // 이메일 — 이미지 에셋 사용 (카카오와 동일한 방식).
         SizedBox(
-          height: 48.h,
+          height: 48.w,
           child: Material(
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(12.r),

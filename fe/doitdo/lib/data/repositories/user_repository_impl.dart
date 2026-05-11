@@ -26,12 +26,16 @@ class UserRepositoryImpl extends BaseRepository implements UserRepository {
       safeApiCall(() => _api.getMe()).then((dto) => dto.toEntity());
 
   @override
+  Future<int> getBalance() =>
+      safeApiCall(() => _api.getBalance()).then((dto) => dto.balance);
+
+  @override
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
   }) =>
       safeApiCallNoData(
-        () => _api.changePassword(
+            () => _api.changePassword(
           ChangePasswordRequestDto(
             currentPassword: currentPassword,
             newPassword: newPassword,
@@ -50,7 +54,7 @@ class UserRepositoryImpl extends BaseRepository implements UserRepository {
   @override
   Future<void> withdraw({String? currentPassword}) =>
       safeApiCallVoid(
-        () => _api.withdraw(
+            () => _api.withdraw(
           WithdrawRequestDto(currentPassword: currentPassword),
         ),
       );
@@ -65,7 +69,7 @@ class UserRepositoryImpl extends BaseRepository implements UserRepository {
     final iso =
         '${birthDate.year.toString().padLeft(4, '0')}-${birthDate.month.toString().padLeft(2, '0')}-${birthDate.day.toString().padLeft(2, '0')}';
     return safeApiCall(
-      () => _api.registerBirthDate(
+          () => _api.registerBirthDate(
         RegisterBirthDateRequestDto(birthDate: iso),
       ),
     ).then((dto) => dto.toEntity());
@@ -78,7 +82,7 @@ class UserRepositoryImpl extends BaseRepository implements UserRepository {
     required bool marketingAgreed,
   }) =>
       safeApiCall(
-        () => _api.registerAgreements(
+            () => _api.registerAgreements(
           RegisterAgreementsRequestDto(
             termsAgreed: termsAgreed,
             privacyAgreed: privacyAgreed,

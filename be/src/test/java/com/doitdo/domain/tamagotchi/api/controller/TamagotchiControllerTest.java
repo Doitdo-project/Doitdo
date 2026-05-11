@@ -3,6 +3,7 @@ package com.doitdo.domain.tamagotchi.api.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.tamagotchi.api.dto.req.ApproveIndependenceReq;
 import com.doitdo.domain.tamagotchi.api.dto.req.UpdateCharacterNameReq;
+import com.doitdo.domain.tamagotchi.api.dto.resp.CharacterActionUrlResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaDetailCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaDetailResp;
@@ -180,7 +182,7 @@ class TamagotchiControllerTest {
 			"TEEN",
 			120,
 			100,
-			"https://cdn.example.com/tamagotchi/animations/baby-to-teen",
+			"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/evolution/evolution.gif",
 			"https://cdn.example.com/slime-teen.png",
 			"2026-04-22T10:30:00Z"
 		);
@@ -208,12 +210,39 @@ class TamagotchiControllerTest {
 			30L,
 			true,
 			"EGG",
-			"https://cdn.example.com/tamagotchi/animations/adult-to-egg"
+			"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/independence/independence.gif"
 		);
 
 		given(tamagotchiService.approveIndependence(1L, true)).willReturn(serviceResp);
 
 		GlobalApiResponse<FarewellResp> resp = controller.approveIndependence(userDetails, new ApproveIndependenceReq(true));
+
+		assertThat(resp.getStatus()).isEqualTo(200);
+		assertThat(resp.getMessage()).isEqualTo("OK");
+		assertThat(resp.getData()).isEqualTo(serviceResp);
+	}
+
+	@Test
+	void getMyCharacterActionUrlReturnsGlobalApiResponse() {
+		TamagotchiController controller = new TamagotchiController(tamagotchiService);
+		CustomUserDetails userDetails = new CustomUserDetails(User.builder()
+			.userId(1L)
+			.email("user@example.com")
+			.username("user")
+			.password("password")
+			.isDeleted(false)
+			.build());
+		CharacterActionUrlResp serviceResp = new CharacterActionUrlResp(
+			"https://cdn.example.com/idle.gif",
+			10,
+			110,
+			1,
+			LocalDateTime.of(2026, 5, 7, 10, 0)
+		);
+
+		given(tamagotchiService.getMyCharacterActionUrl(1L, "IDLE")).willReturn(serviceResp);
+
+		GlobalApiResponse<CharacterActionUrlResp> resp = controller.getMyCharacterActionUrl("IDLE", userDetails);
 
 		assertThat(resp.getStatus()).isEqualTo(200);
 		assertThat(resp.getMessage()).isEqualTo("OK");

@@ -1,3 +1,5 @@
+import 'package:doitdo/domain/entities/evolution.dart';
+
 /// `POST /api/characters/{userCharacterId}/evolution` 응답 envelope 내부 `data`.
 ///
 /// ```json
@@ -48,4 +50,12 @@ class EvolutionDto {
       evolvedAt: (json['evolvedAt'] as String?) ?? '',
     );
   }
+
+  Evolution toEntity() => Evolution(
+        tamagotchiId: tamagotchiId,
+        beforeStage: beforeStage,
+        afterStage: afterStage,
+        animationUrl: animationUrl,
+        characterImageUrl: characterImageUrl,
+      );
 }
