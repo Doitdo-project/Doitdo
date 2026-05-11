@@ -96,10 +96,10 @@ class _ShopBody extends ConsumerWidget {
   }
 
   Future<void> _openPurchaseDialog(
-    BuildContext context,
-    WidgetRef ref,
-    ShopItem item,
-  ) async {
+      BuildContext context,
+      WidgetRef ref,
+      ShopItem item,
+      ) async {
     final messenger = ScaffoldMessenger.of(context);
     final coins = ref.read(shopViewModelProvider).valueOrNull?.coins ?? 0;
 
@@ -110,19 +110,32 @@ class _ShopBody extends ConsumerWidget {
     );
     if (confirmed != true) return;
 
-    final ok =
-        await ref.read(shopViewModelProvider.notifier).purchaseAndPlace(item.id);
+    // 다이얼로그 닫히는 즉시 스낵바 + UI 반영 (낙관적 업데이트).
+    // 서버 호출은 백그라운드에서 처리 — 사용자가 다른 작업 계속 가능.
+    // 실패 시 ViewModel 이 조용히 롤백 (PurchaseDialog 에서 잔액 체크로 실패 가능성 최소화).
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
-        content: Text(
-          ok
-              ? '"${item.name}"을(를) 방에 배치했어요!'
-              : '구매에 실패했어요. 코인 잔액이나 네트워크를 확인해주세요.',
-        ),
+        content: Text('"${item.name}"을(를) 방에 배치했어요!'),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
+    );
+
+    // unawaited — 백그라운드 실행, 결과를 기다리지 않음
+    // 실패 시 onFailure 콜백으로 에러 스낵바 표시
+    ref.read(shopViewModelProvider.notifier).purchaseAndPlace(
+      item.id,
+      onFailure: (message) {
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(message),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
     );
   }
 
