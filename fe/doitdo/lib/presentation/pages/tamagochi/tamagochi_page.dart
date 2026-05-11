@@ -76,8 +76,15 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   /// 채워지지 못한 경우(refresh 늦음/실패) 는 응답의 characterImageUrl 로 fallback.
   int? _afterEvolutionCharacterId;
 
-  /// 스트릭 보상 수령 API in-flight 여부. 버튼 중복 탭 방지 + 버튼 스피너용.
+  /// 스트릭 보상 수령 API in-flight 여부. 버튼 중복 탭 방지 + 7번째 슬롯의
+  /// 흐려진 gift(loading) 표시용. StatusPill 에 [isClaimingReward] 로 흘러간다.
   bool _claimingReward = false;
+
+  /// 보상 수령 성공 직후 ~1.2s 동안 true. StatusPill 의 7번째 슬롯이 초록 체크로
+  /// 잠깐 표시되고, false 로 떨어지는 시점에 popover 가 자동으로 닫힌다.
+  /// 실패 시에는 켜지지 않으므로 popover 가 즉시 닫힘 (page 가 에러 스낵바 안내).
+  bool _claimSuccessFlash = false;
+  Timer? _claimSuccessTimer;
 
   @override
   void initState() {
@@ -109,6 +116,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     // 검사한 후 폴백한다 (다음 TamagochiPage 가 mount 될 때 새 controller 로 덮어쓴다).
     _scrollController.dispose();
     _headerVisible.dispose();
+    _claimSuccessTimer?.cancel();
     super.dispose();
   }
 
@@ -301,6 +309,10 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
 
   /// 7일 블록 완성 시 노출되는 "🎁 보상 받기" 탭 핸들러.
   /// BE 가 이미 수령된 케이스를 `rewarded=false` 로 회신하므로 분기해서 안내.
+  ///
+  /// 성공 시 [_claimSuccessFlash] 를 켜 popover 의 7번째 슬롯이 초록 체크로
+  /// 잠깐 보이고, 1.2s 뒤 flash 를 끄면 popover 가 자동으로 닫힌다 (StatusPill).
+  /// 실패 시엔 flash 를 켜지 않아 popover 가 즉시 닫히고 에러 스낵바만 안내.
   Future<void> _handleClaimReward() async {
     if (_claimingReward) return;
     setState(() => _claimingReward = true);
@@ -308,11 +320,12 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
         .read(streakViewModelProvider.notifier)
         .claimReward();
     if (!mounted) return;
-    setState(() => _claimingReward = false);
 
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
+
     if (reward == null) {
+      setState(() => _claimingReward = false);
       messenger.showSnackBar(
         const SnackBar(
           content: Text('보상 수령 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.'),
@@ -322,10 +335,16 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       );
       return;
     }
+
+    final isFreshClaim = reward.rewarded;
+    setState(() {
+      _claimingReward = false;
+      _claimSuccessFlash = isFreshClaim;
+    });
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          reward.rewarded
+          isFreshClaim
               ? '🎉 ${reward.streakCount}일 연속 달성! +${reward.rewardAmount}코인'
               : '이미 보상을 받았어요.',
         ),
@@ -333,6 +352,13 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
         duration: const Duration(seconds: 2),
       ),
     );
+
+    if (!isFreshClaim) return;
+    _claimSuccessTimer?.cancel();
+    _claimSuccessTimer = Timer(const Duration(milliseconds: 1200), () {
+      if (!mounted) return;
+      setState(() => _claimSuccessFlash = false);
+    });
   }
 
   @override
@@ -498,9 +524,18 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                     character: character,
                                     streakDays: streak.currentCount,
                                     streakSlots: streakWindow.slots,
-                                    isRewardClaimable:
-                                    streak.hasCompletedBlock,
+                                    // BE 가 직접 판정한 canClaim 그대로 사용.
+                                    // 일수 % 7 == 0 만 보던 이전 로직은 수령 직후
+                                    // 에도 true 로 남아 버튼이 안 꺼졌음.
+                                    isRewardClaimable: streak.canClaim,
+                                    // 7일 블록 끝(슬롯 7개 다 찬 상태) 인데 이미
+                                    // 받았다면 placeholder 대신 "수령됨" 표시를
+                                    // 하기 위한 신호. canClaim=false + 블록 종료
+                                    // 시점에만 true.
+                                    isRewardClaimed:
+                                        !streak.canClaim && streak.isAtBlockEnd,
                                     isClaimingReward: _claimingReward,
+                                    claimSuccessFlash: _claimSuccessFlash,
                                     onClaimReward: _handleClaimReward,
                                     onTapEvolve: _handleEvolveTap,
                                     onTapFarewell: _handleFarewellTap,
