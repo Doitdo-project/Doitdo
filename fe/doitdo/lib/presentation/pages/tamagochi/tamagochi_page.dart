@@ -9,6 +9,7 @@ import 'package:doitdo/presentation/pages/tamagochi/character_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/streak_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_view_model.dart';
+import 'package:doitdo/domain/entities/evolution.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/character_card.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/status_pill.dart';
 import 'package:doitdo/presentation/pages/todo/todo_state.dart';
@@ -53,11 +54,37 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   /// farewell API 호출 in-flight 여부. 뱃지 중복 탭 방지용.
   bool _farewelling = false;
 
-  /// evolve API 호출 in-flight 여부. 뱃지 중복 탭 방지용.
+  /// 진화 플로우 진행 중 여부. evolve API 호출 시작부터 진화 연출 종료까지
+  /// true 로 유지 — 진화 뱃지/메뉴/상태 알약의 입력을 잠그는 용도.
   bool _evolving = false;
 
-  /// 스트릭 보상 수령 API in-flight 여부. 버튼 중복 탭 방지 + 버튼 스피너용.
+  /// 진화 연출 active 데이터. non-null 이면 CharacterCard 가 캐릭터 슬롯 자리에서
+  /// 진화 애니메이션을 재생한다. 연출 종료 콜백에서 null 로 되돌려 일반 캐릭터로 복귀.
+  Evolution? _activeEvolution;
+
+  /// 진화 직전 캐릭터 썸네일. silhouette 단계에서 사용. evolve 응답 후 home state 가
+  /// 새 캐릭터로 갱신되더라도 이 변수가 옛 thumbnailUrl 을 들고 있어 silhouette 이
+  /// 옛 모습 그대로 유지된다.
+  String? _beforeEvolutionImageUrl;
+
+  /// 진화 직전 캐릭터 species ID. silhouette 의 eye gif 에셋 경로 (`assets/animations/
+  /// eye/{id}.gif`) 를 만드는 데 쓰여, 홈에서 그리던 캐릭터와 위치/크기가 일치한다.
+  int? _beforeEvolutionCharacterId;
+
+  /// 진화 후 캐릭터 species ID. animation 단계에서 트리거한 refresh 응답으로
+  /// 채워지며, reveal 단계에서 새 캐릭터를 eye gif 로 그리는 데 사용된다.
+  /// 채워지지 못한 경우(refresh 늦음/실패) 는 응답의 characterImageUrl 로 fallback.
+  int? _afterEvolutionCharacterId;
+
+  /// 스트릭 보상 수령 API in-flight 여부. 버튼 중복 탭 방지 + 7번째 슬롯의
+  /// 흐려진 gift(loading) 표시용. StatusPill 에 [isClaimingReward] 로 흘러간다.
   bool _claimingReward = false;
+
+  /// 보상 수령 성공 직후 ~1.2s 동안 true. StatusPill 의 7번째 슬롯이 초록 체크로
+  /// 잠깐 표시되고, false 로 떨어지는 시점에 popover 가 자동으로 닫힌다.
+  /// 실패 시에는 켜지지 않으므로 popover 가 즉시 닫힘 (page 가 에러 스낵바 안내).
+  bool _claimSuccessFlash = false;
+  Timer? _claimSuccessTimer;
 
   @override
   void initState() {
@@ -89,6 +116,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     // 검사한 후 폴백한다 (다음 TamagochiPage 가 mount 될 때 새 controller 로 덮어쓴다).
     _scrollController.dispose();
     _headerVisible.dispose();
+    _claimSuccessTimer?.cancel();
     super.dispose();
   }
 
@@ -197,8 +225,11 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       );
   }
 
-  /// 진화 뱃지 탭. 확인 다이얼로그 → evolve API. 자동 진화 흐름은 제거되어
-  /// 사용자가 직접 트리거 해야 BABY→TEEN / TEEN→ADULT 가 진행된다.
+  /// 진화 뱃지 탭. 확인 다이얼로그 → evolve API → 성공 시 캐릭터 슬롯 자리에서
+  /// 진화 애니메이션을 재생한다. 자동 진화 흐름은 제거되어 사용자가 직접 트리거 해야
+  /// BABY→TEEN / TEEN→ADULT 가 진행된다.
+  ///
+  /// silhouette 단계에서 쓸 진화 직전 thumbnailUrl 은 evolve 호출 직전에 캡처해둔다.
   Future<void> _handleEvolveTap() async {
     if (_evolving) return;
     final character =
@@ -216,27 +247,72 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     );
     if (!mounted || confirmed != true) return;
 
+    final beforeImageUrl = character.thumbnailUrl;
+    final beforeCharacterId = character.characterId;
+
     setState(() => _evolving = true);
-    final ok = await ref
+    final evolution = await ref
         .read(characterViewModelProvider.notifier)
         .evolve(character.userCharacterId);
     if (!mounted) return;
-    setState(() => _evolving = false);
 
-    final messenger = ScaffoldMessenger.of(context);
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(ok ? '진화 완료!' : '진화 처리 중 문제가 생겼어요. 다시 시도해주세요.'),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+    if (evolution == null) {
+      setState(() => _evolving = false);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('진화 처리 중 문제가 생겼어요. 다시 시도해주세요.'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      return;
+    }
+
+    // CharacterCard 의 캐릭터 슬롯 자리에서 진화 애니메이션 재생.
+    // _evolving 은 reveal/complete 콜백 흐름까지 true 로 유지되어 메뉴/상태 알약
+    // 입력을 막는다. 일반 캐릭터로의 복귀는 _onEvolutionComplete 에서 처리.
+    setState(() {
+      _beforeEvolutionImageUrl = beforeImageUrl;
+      _beforeEvolutionCharacterId = beforeCharacterId;
+      _activeEvolution = evolution;
+    });
+  }
+
+  /// 진화 silhouette → animation 전환 시 콜백. 이 시점부터 reveal 까지 약
+  /// 2.4s 의 시간이 있으니, 그 안에 home state 를 새 캐릭터로 refresh 하고
+  /// 받은 새 characterId 를 [_afterEvolutionCharacterId] 로 채워 넣는다 —
+  /// reveal 단계에서 새 캐릭터를 응답 PNG 가 아닌 eye gif 로 그릴 수 있어
+  /// 연출 종료 후 home 으로 복귀할 때 크기/비율 점프가 사라진다.
+  Future<void> _onEvolutionAnimationStart() async {
+    if (!mounted) return;
+    await ref.read(characterViewModelProvider.notifier).refresh();
+    if (!mounted) return;
+    final newCharacter =
+        ref.read(characterViewModelProvider).valueOrNull;
+    if (newCharacter == null) return;
+    setState(() => _afterEvolutionCharacterId = newCharacter.characterId);
+  }
+
+  /// 진화 hold 종료 콜백. 일반 캐릭터 슬롯으로 복귀 + 입력 잠금 해제.
+  void _onEvolutionComplete() {
+    if (!mounted) return;
+    setState(() {
+      _activeEvolution = null;
+      _beforeEvolutionImageUrl = null;
+      _beforeEvolutionCharacterId = null;
+      _afterEvolutionCharacterId = null;
+      _evolving = false;
+    });
   }
 
   /// 7일 블록 완성 시 노출되는 "🎁 보상 받기" 탭 핸들러.
   /// BE 가 이미 수령된 케이스를 `rewarded=false` 로 회신하므로 분기해서 안내.
+  ///
+  /// 성공 시 [_claimSuccessFlash] 를 켜 popover 의 7번째 슬롯이 초록 체크로
+  /// 잠깐 보이고, 1.2s 뒤 flash 를 끄면 popover 가 자동으로 닫힌다 (StatusPill).
+  /// 실패 시엔 flash 를 켜지 않아 popover 가 즉시 닫히고 에러 스낵바만 안내.
   Future<void> _handleClaimReward() async {
     if (_claimingReward) return;
     setState(() => _claimingReward = true);
@@ -244,11 +320,12 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
         .read(streakViewModelProvider.notifier)
         .claimReward();
     if (!mounted) return;
-    setState(() => _claimingReward = false);
 
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
+
     if (reward == null) {
+      setState(() => _claimingReward = false);
       messenger.showSnackBar(
         const SnackBar(
           content: Text('보상 수령 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.'),
@@ -258,10 +335,16 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       );
       return;
     }
+
+    final isFreshClaim = reward.rewarded;
+    setState(() {
+      _claimingReward = false;
+      _claimSuccessFlash = isFreshClaim;
+    });
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          reward.rewarded
+          isFreshClaim
               ? '🎉 ${reward.streakCount}일 연속 달성! +${reward.rewardAmount}코인'
               : '이미 보상을 받았어요.',
         ),
@@ -269,6 +352,13 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
         duration: const Duration(seconds: 2),
       ),
     );
+
+    if (!isFreshClaim) return;
+    _claimSuccessTimer?.cancel();
+    _claimSuccessTimer = Timer(const Duration(milliseconds: 1200), () {
+      if (!mounted) return;
+      setState(() => _claimSuccessFlash = false);
+    });
   }
 
   @override
@@ -397,6 +487,16 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                 state: state,
                                 character: character,
                                 isCharacterLoading: isCharacterLoading,
+                                evolution: _activeEvolution,
+                                beforeEvolutionImageUrl:
+                                    _beforeEvolutionImageUrl,
+                                beforeEvolutionCharacterId:
+                                    _beforeEvolutionCharacterId,
+                                afterEvolutionCharacterId:
+                                    _afterEvolutionCharacterId,
+                                onEvolutionAnimationStart:
+                                    _onEvolutionAnimationStart,
+                                onEvolutionComplete: _onEvolutionComplete,
                                 topSafePadding: topInset,
                                 onTapShop: () =>
                                     context.push(AppRoutes.tamagochiShop),
@@ -424,9 +524,18 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                     character: character,
                                     streakDays: streak.currentCount,
                                     streakSlots: streakWindow.slots,
-                                    isRewardClaimable:
-                                    streak.hasCompletedBlock,
+                                    // BE 가 직접 판정한 canClaim 그대로 사용.
+                                    // 일수 % 7 == 0 만 보던 이전 로직은 수령 직후
+                                    // 에도 true 로 남아 버튼이 안 꺼졌음.
+                                    isRewardClaimable: streak.canClaim,
+                                    // 7일 블록 끝(슬롯 7개 다 찬 상태) 인데 이미
+                                    // 받았다면 placeholder 대신 "수령됨" 표시를
+                                    // 하기 위한 신호. canClaim=false + 블록 종료
+                                    // 시점에만 true.
+                                    isRewardClaimed:
+                                        !streak.canClaim && streak.isAtBlockEnd,
                                     isClaimingReward: _claimingReward,
+                                    claimSuccessFlash: _claimSuccessFlash,
                                     onClaimReward: _handleClaimReward,
                                     onTapEvolve: _handleEvolveTap,
                                     onTapFarewell: _handleFarewellTap,

@@ -18,6 +18,8 @@ class StatusPill extends StatefulWidget {
     required this.streakSlots,
     required this.isRewardClaimable,
     required this.isClaimingReward,
+    this.isRewardClaimed = false,
+    this.claimSuccessFlash = false,
     this.onClaimReward,
     this.onTapEvolve,
     this.onTapFarewell,
@@ -29,6 +31,19 @@ class StatusPill extends StatefulWidget {
   final List<bool> streakSlots;
   final bool isRewardClaimable;
   final bool isClaimingReward;
+
+  /// "이번 7일 블록을 다 채웠고 이미 보상까지 받은 상태" 여부. true 면 7번째 슬롯이
+  /// claim CTA 도, dim placeholder 도 아닌 "수령 완료" 시각(체크) 으로 표시된다.
+  /// [claimSuccessFlash] 는 수령 직후의 단발성 신호고, 이건 다음 refresh 이후에도
+  /// 블록이 그대로면 계속 유지되는 정적 상태 (다음 블록으로 넘어가면 자동 해제).
+  final bool isRewardClaimed;
+
+  /// 보상 수령 성공 직후 잠깐 true 로 유지되는 플래시 신호. 호출자(page) 가
+  /// 성공 응답 시 setState 로 true 로 바꾸고 ~1.2s 뒤 false 로 되돌린다.
+  /// true 동안 7번째 슬롯이 [_StreakRewardSuccess] (초록 체크) 로 표시되고,
+  /// 이게 false 로 떨어지는 시점에 popover 가 자동으로 닫힌다 — 사용자가
+  /// "받았다" 를 충분히 인지한 후 화면이 정리된다.
+  final bool claimSuccessFlash;
   final VoidCallback? onClaimReward;
   final VoidCallback? onTapEvolve;
   final VoidCallback? onTapFarewell;
@@ -63,6 +78,23 @@ class _StatusPillState extends State<StatusPill> {
   @override
   void didUpdateWidget(covariant StatusPill old) {
     super.didUpdateWidget(old);
+    // 보상 수령 흐름의 popover 자동 닫기 타이밍:
+    //   - 실패: isClaimingReward true→false, 그 즉시 success flash 도 false →
+    //     바로 닫힘 (page 가 에러 스낵바 안내).
+    //   - 성공: isClaimingReward true→false 와 함께 claimSuccessFlash 가 true 가
+    //     올라와 닫지 않고 [_StreakRewardSuccess] 체크를 보여준다. 이후 page 가
+    //     ~1.2s 뒤 flash 를 false 로 되돌리는 그 전환 시점에 닫힘.
+    final claimingDone = old.isClaimingReward && !widget.isClaimingReward;
+    final flashCleared =
+        old.claimSuccessFlash && !widget.claimSuccessFlash;
+    final shouldClose =
+        (claimingDone && !widget.claimSuccessFlash) || flashCleared;
+    if (shouldClose && _entry != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _hidePopover();
+      });
+    }
     // didUpdateWidget 은 부모 build 페이즈 안에서 실행되는데, OverlayEntry 는
     // 별도 Overlay 트리(sibling) 에 살아서 그 시점에 동기 markNeedsBuild 를
     // 호출하면 "marked dirty during build" 가 던져진다 (스트릭 팝오버 떠있는
@@ -109,8 +141,10 @@ class _StatusPillState extends State<StatusPill> {
     final double tailRelX;
     if (maxWidth != null) {
       final w = maxWidth;
-      final left = (anchorCenterX - w / 2)
-          .clamp(horizontalPadding, screen.width - horizontalPadding - w);
+      final left = (anchorCenterX - w / 2).clamp(
+        horizontalPadding,
+        screen.width - horizontalPadding - w,
+      );
       cardLeft = left;
       cardRight = null;
       cardWidth = w;
@@ -170,7 +204,7 @@ class _StatusPillState extends State<StatusPill> {
   void _showToast({
     required GlobalKey anchorKey,
     required Widget child,
-    Duration duration = const Duration(milliseconds: 1500),
+    Duration duration = const Duration(milliseconds: 600),
   }) {
     if (!mounted) return;
     _hidePopover();
@@ -223,13 +257,14 @@ class _StatusPillState extends State<StatusPill> {
         streakDays: widget.streakDays,
         slots: widget.streakSlots,
         isRewardClaimable: widget.isRewardClaimable,
+        isRewardClaimed: widget.isRewardClaimed,
         isClaimingReward: widget.isClaimingReward,
-        onClaimReward: widget.onClaimReward == null
-            ? null
-            : () {
-                _hidePopover();
-                widget.onClaimReward!();
-              },
+        claimSuccessFlash: widget.claimSuccessFlash,
+        // 즉시 닫지 않고 그대로 두면 7번째 슬롯이 흐려진 gift 로 전환되어
+        // 응답을 기다린다. 응답 후 page 가 success flash 를 켜면
+        // 초록 체크가 잠깐 떴다, flash 가 꺼지는 시점에 popover 가 닫힌다
+        // (실패 시엔 flash 없이 즉시 닫힘) — didUpdateWidget 가 처리.
+        onClaimReward: widget.onClaimReward,
       ),
     );
   }
@@ -312,15 +347,15 @@ class _StatusPillState extends State<StatusPill> {
                       mode: c.canFarewell
                           ? _BarMode.farewell
                           : c.canEvolve
-                              ? _BarMode.evolve
-                              : _BarMode.progress,
+                          ? _BarMode.evolve
+                          : _BarMode.progress,
                       onTap: widget.actionBusy
                           ? null
                           : c.canFarewell
-                              ? widget.onTapFarewell
-                              : c.canEvolve
-                                  ? widget.onTapEvolve
-                                  : _onExpTap,
+                          ? widget.onTapFarewell
+                          : c.canEvolve
+                          ? widget.onTapEvolve
+                          : _onExpTap,
                     ),
                   ),
                 ),
@@ -461,9 +496,10 @@ class _CallToActionState extends State<_CallToAction>
       vsync: this,
       duration: const Duration(milliseconds: 1100),
     );
-    _scale = Tween<double>(begin: 1.0, end: 1.03).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
-    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 1.03,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
     _ctrl.repeat(reverse: true);
   }
 
@@ -761,7 +797,7 @@ class _StageInfoContent extends StatelessWidget {
           Container(height: 1, color: const Color(0xFFF0F0F0)),
           SizedBox(height: 10.h),
           Text(
-            '할 일을 완료할 때마다 경험치가 쌓이고,\n성숙기를 모두 채우면 ${character.name}는 독립해요.',
+            '할 일을 완료할 때마다 경험치가 쌓이고\n성숙기를 모두 채우면 ${character.name}는 독립할 수 있어요',
             style: AppTextStyles.labelSmall.copyWith(
               color: Colors.black54,
               height: 1.5,
@@ -811,19 +847,60 @@ class _StreakInfoContent extends StatelessWidget {
     required this.streakDays,
     required this.slots,
     required this.isRewardClaimable,
+    required this.isRewardClaimed,
     required this.isClaimingReward,
+    required this.claimSuccessFlash,
     required this.onClaimReward,
   });
 
   final int streakDays;
   final List<bool> slots;
   final bool isRewardClaimable;
+
+  /// 7일 블록 채움 + 이미 수령된 상태. true 면 placeholder 대신 정적 success 체크.
+  final bool isRewardClaimed;
   final bool isClaimingReward;
+
+  /// 보상 수령 성공 직후 ~1.2s 동안 true. true 일 때 7번째 슬롯이 초록 체크
+  /// ([_StreakRewardSuccess]) 로 표시되어 사용자에게 "받았다" 를 인지시킨다.
+  final bool claimSuccessFlash;
   final VoidCallback? onClaimReward;
 
   @override
   Widget build(BuildContext context) {
     final showReward = isRewardClaimable && onClaimReward != null;
+
+    // 우선순위: success flash > claimable CTA > already claimed > placeholder.
+    // - flash: 수령 직후 단발성 (1.2s)
+    // - showReward: 지금 받을 수 있음 → 펄스 CTA
+    // - isRewardClaimed: 이번 블록 이미 수령 완료 → 정적 체크 (다음 블록 시작
+    //   되면 자동 해제)
+    // - placeholder: 미달성 (블록 진행 중) → 흐린 선물
+    Widget rewardSpot;
+    if (claimSuccessFlash) {
+      rewardSpot = const _StreakRewardSuccess();
+    } else if (showReward) {
+      rewardSpot = _StreakRewardSpot(
+        isLoading: isClaimingReward,
+        onTap: onClaimReward!,
+      );
+    } else if (isRewardClaimed) {
+      rewardSpot = const _StreakRewardSuccess();
+    } else {
+      rewardSpot = const _StreakRewardPlaceholder();
+    }
+
+    // success flash 동안엔 라인이 풀컬러로 reward 까지 이어지도록 슬롯을 전부
+    // 달성으로 오버라이드 — refresh 로 streak 데이터가 다음 블록(예: [T,F,F,...])
+    // 으로 바뀌어도 1.2s 동안은 "방금 7일 채웠다" 라는 시각이 깨지지 않는다.
+    final renderedSlots =
+        claimSuccessFlash ? List<bool>.filled(7, true) : slots;
+
+    final iconWidgets = <Widget>[
+      for (var i = 0; i < 6; i++) _StreakFireSpot(achieved: renderedSlots[i]),
+      rewardSpot,
+    ];
+
     return Padding(
       padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 14.h),
       child: Column(
@@ -832,13 +909,6 @@ class _StreakInfoContent extends StatelessWidget {
         children: [
           Row(
             children: [
-              Image.asset(
-                'assets/images/fire.png',
-                width: 16.sp,
-                height: 16.sp,
-                filterQuality: FilterQuality.medium,
-              ),
-              SizedBox(width: 6.w),
               Text(
                 '$streakDays일째 함께하고 있어요',
                 style: AppTextStyles.bodySmall.copyWith(color: Colors.black),
@@ -846,29 +916,19 @@ class _StreakInfoContent extends StatelessWidget {
             ],
           ),
           SizedBox(height: 12.h),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4.w),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                for (var i = 0; i < 7; i++) _StreakDot(achieved: slots[i]),
-              ],
-            ),
+          // 트레일 라인 없이 7개 아이콘을 균등 분배. 달성 여부는 각 아이콘
+          // 자체의 톤(컬러 vs 그레이스케일) 으로만 표현 — 선이 빠지니 선물의
+          // 펄스/뱃지가 더 또렷하게 시선을 가져간다.
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: iconWidgets,
           ),
           SizedBox(height: 12.h),
-          if (showReward) ...[
-            Center(
-              child: _RewardButton(
-                isLoading: isClaimingReward,
-                onTap: onClaimReward!,
-              ),
-            ),
-            SizedBox(height: 12.h),
-          ],
           Container(height: 1, color: const Color(0xFFF0F0F0)),
           SizedBox(height: 10.h),
           Text(
-            '하루에 할 일을 하나라도 완료하면 스트릭이 1일 적립돼요.\n7일 연속을 모으면 보상이 도착해요.',
+            '매일 할 일을 하나만 완료해도 스트릭이 쌓여요\n7일 연속 달성 시 보상을 받을 수 있어요!',
             style: AppTextStyles.labelSmall.copyWith(
               color: Colors.black54,
               height: 1.5,
@@ -880,60 +940,230 @@ class _StreakInfoContent extends StatelessWidget {
   }
 }
 
-class _StreakDot extends StatelessWidget {
-  const _StreakDot({required this.achieved});
+/// 스트릭 1~6일 자리에 들어가는 불씨 아이콘. 달성 = 풀컬러, 미달성 = 흐리게.
+/// 팝오버 상단의 fire.png 와 같은 에셋을 써 "스트릭 = 불씨 누적" 톤을 일관되게.
+/// 슬롯 자체가 아이콘 사이즈 (22sp) — 부모 Row 가 spaceBetween 으로 균등 분배.
+class _StreakFireSpot extends StatelessWidget {
+  const _StreakFireSpot({required this.achieved});
 
   final bool achieved;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Container(
-      width: 16,
-      height: 16,
-      decoration: BoxDecoration(
-        color: achieved
-            ? colors.streakDotActive
-            : colors.streakDotInactive.withValues(alpha: 0.5),
-        shape: BoxShape.circle,
+    final size = 22.sp;
+    final fire = Image.asset(
+      'assets/images/fire.png',
+      width: size,
+      height: size,
+      filterQuality: FilterQuality.medium,
+    );
+    if (!achieved) {
+      // 미달성: 채도/명도까지 떨어뜨려 "아직 안 채운 칸" 임을 더 명확히.
+      // Opacity 만 낮추면 색이 그대로라 달성과 톤 차이가 약했음.
+      return ColorFiltered(
+        colorFilter: const ColorFilter.matrix(<double>[
+          0.33, 0.33, 0.33, 0, 0,
+          0.33, 0.33, 0.33, 0, 0,
+          0.33, 0.33, 0.33, 0, 0,
+          0,    0,    0,    1, 0,
+        ]),
+        child: Opacity(opacity: 0.45, child: fire),
+      );
+    }
+    return fire;
+  }
+}
+
+/// 스트릭 7번째 자리에 평소(claimable 아님) 들어가는 흐린 보상 아이콘.
+/// 사용자가 1일째부터 "이 자리가 보상" 임을 알 수 있게 미리 미리보기 형태로
+/// 노출 — claimable 되는 순간 [_StreakRewardSpot] 으로 교체되어 컬러+펄스로 살아난다.
+class _StreakRewardPlaceholder extends StatelessWidget {
+  const _StreakRewardPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    // 다른 슬롯(22sp) 보다 살짝 큰 26sp — 여기가 "도착점" 임을 시각적으로 표시.
+    return ColorFiltered(
+      colorFilter: const ColorFilter.matrix(<double>[
+        0.33, 0.33, 0.33, 0, 0,
+        0.33, 0.33, 0.33, 0, 0,
+        0.33, 0.33, 0.33, 0, 0,
+        0,    0,    0,    1, 0,
+      ]),
+      child: Opacity(
+        opacity: 0.45,
+        child: Image.asset(
+          'assets/images/streak_reward.png',
+          width: 26.sp,
+          height: 26.sp,
+          filterQuality: FilterQuality.medium,
+        ),
       ),
     );
   }
 }
 
-class _RewardButton extends StatelessWidget {
-  const _RewardButton({required this.isLoading, required this.onTap});
+/// "이미 보상을 받은" 정적 표시 — 풀컬러 선물 + 우하단 초록 체크 뱃지.
+/// 펄스/할로 없음 ("수령 후엔 반짝이지 않게"). 보상 수령 직후의 성공 flash
+/// 와 다음 refresh 이후의 정적 claimed 상태가 동일 시각이라 전환이 부드럽다.
+class _StreakRewardSuccess extends StatelessWidget {
+  const _StreakRewardSuccess();
+
+  @override
+  Widget build(BuildContext context) {
+    final size = 26.sp;
+    final badge = 11.sp;
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Image.asset(
+            'assets/images/streak_reward.png',
+            width: size,
+            height: size,
+            filterQuality: FilterQuality.medium,
+          ),
+          // 우하단 작은 체크 뱃지. 흰 보더로 선물 위에서도 또렷.
+          Positioned(
+            right: -1,
+            bottom: -1,
+            child: Container(
+              width: badge,
+              height: badge,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF34A853),
+                border: Border.all(color: Colors.white, width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.check,
+                size: badge * 0.7,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 스트릭 7번째 자리에 박히는 🎁 보상 버튼. 일반 dot 사이즈에 가까운 인라인
+/// 액션이며, 가벼운 scale 펄스 + halo glow 로 "탭해도 된다" 는 어포던스를 준다.
+/// 로딩(수령 중) 에는 같은 자리에서 흐려지고, 응답이 도착하면 부모가
+/// success flash → popover close 흐름으로 처리한다 ([_StatusPillState.didUpdateWidget]).
+class _StreakRewardSpot extends StatefulWidget {
+  const _StreakRewardSpot({required this.isLoading, required this.onTap});
 
   final bool isLoading;
   final VoidCallback onTap;
 
   @override
+  State<_StreakRewardSpot> createState() => _StreakRewardSpotState();
+}
+
+class _StreakRewardSpotState extends State<_StreakRewardSpot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseCtrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 1.12,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
+    // 다른 슬롯(22sp) 보다 26sp 로 살짝 큼 — "도착점/보상" 시각적 위계.
+    final size = 26.sp;
     return Material(
-      color: colors.streakDotActive,
-      borderRadius: BorderRadius.circular(12.r),
-      clipBehavior: Clip.antiAlias,
+      color: Colors.transparent,
       child: InkWell(
-        onTap: isLoading ? null : onTap,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-          child: isLoading
-              ? const SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        onTap: widget.isLoading ? null : widget.onTap,
+        customBorder: const CircleBorder(),
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Center(
+            child: widget.isLoading
+                // 응답 대기: 스피너 대신 같은 자리의 gift 를 흐리게 + 펄스/halo
+                // 끔. "탭 받음, 잠깐 기다리는 중" 만 표현.
+                ? Opacity(
+                    opacity: 0.5,
+                    child: Image.asset(
+                      'assets/images/streak_reward.png',
+                      width: size,
+                      height: size,
+                      filterQuality: FilterQuality.medium,
+                    ),
+                  )
+                : AnimatedBuilder(
+                    animation: _pulseCtrl,
+                    builder: (context, child) {
+                      // 부드러운 듀얼 글로우.
+                      // 이전 (spread 0.5+1.5t, blur 8+8t) 은 spread 가 살아 있어
+                      // 가장자리가 단단한 "주황 디스크" 처럼 보였다 → 디자인 부조화.
+                      // spread=0 으로 글로우만 남기고, blur 를 키워 페더링을 길게,
+                      // 바깥 글로우 + 안쪽 부스트 두 겹으로 입체감을 살린다.
+                      final t = _pulseCtrl.value;
+                      final color = context.colors.streakDotActive;
+                      return Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            // 바깥 글로우: 넓고 옅게.
+                            BoxShadow(
+                              color: color.withValues(alpha: 0.18 + 0.12 * t),
+                              blurRadius: 14 + 8 * t,
+                              spreadRadius: 0,
+                            ),
+                            // 안쪽 부스트: 좁고 살짝 진하게 — 아이콘 가장자리에
+                            // 따뜻한 림 라이트가 도는 느낌.
+                            BoxShadow(
+                              color: color.withValues(alpha: 0.22 + 0.10 * t),
+                              blurRadius: 5 + 3 * t,
+                              spreadRadius: 0,
+                            ),
+                          ],
+                        ),
+                        child: child,
+                      );
+                    },
+                    child: ScaleTransition(
+                      scale: _scale,
+                      child: Image.asset(
+                        'assets/images/streak_reward.png',
+                        width: size,
+                        height: size,
+                        filterQuality: FilterQuality.medium,
+                      ),
+                    ),
                   ),
-                )
-              : Text(
-                  '🎁 보상 받기',
-                  style: AppTextStyles.labelMedium.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+          ),
         ),
       ),
     );
