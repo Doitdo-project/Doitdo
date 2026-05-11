@@ -16,8 +16,8 @@ class InlineBackBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return SizedBox(
-      height: kToolbarHeight,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: kToolbarHeight),
       child: Align(
         alignment: Alignment.centerLeft,
         child: Padding(

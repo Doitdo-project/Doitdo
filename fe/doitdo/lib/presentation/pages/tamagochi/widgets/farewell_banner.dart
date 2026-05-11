@@ -42,7 +42,7 @@ class FarewellBanner extends StatelessWidget {
               children: [
                 Text(
                   '$displayName가 독립할 준비가 됐어요',
-                  style: AppTextStyles.labelLarge.copyWith(
+                  style: AppTextStyles.labelMedium.copyWith(
                     color: colors.textPrimary,
                   ),
                 ),

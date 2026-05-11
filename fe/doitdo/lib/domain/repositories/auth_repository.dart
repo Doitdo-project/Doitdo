@@ -50,7 +50,9 @@ abstract class AuthRepository {
 
   /// 로그아웃: 서버 세션 종료(DELETE /api/auth/logout) + 로컬 토큰 삭제 +
   /// 각 소셜 SDK 세션 해제.
-  Future<void> signOut();
+  /// [skipServerLogout] 이 true 면 서버 호출 없이 로컬/SDK 정리만 수행.
+  /// 회원탈퇴처럼 서버가 이미 토큰을 무효화한 경우에 사용한다.
+  Future<void> signOut({bool skipServerLogout = false});
 
   // 이메일/닉네임 중복체크는 `/api/users/*` 경로라 UserRepository 쪽에 둔다
   // (URL prefix 와 일치). AuthRepository 에서 제공하지 않음.

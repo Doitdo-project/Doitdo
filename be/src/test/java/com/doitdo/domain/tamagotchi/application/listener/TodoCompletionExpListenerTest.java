@@ -13,8 +13,10 @@ import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.event.TodoCompletedEvent;
 import com.doitdo.domain.todo.repository.TodoRepository;
+import com.doitdo.global.cache.CacheEvictHelper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +28,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class TodoCompletionExpListenerTest {
+
+	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
 	@Mock
 	private TodoRepository todoRepository;
@@ -39,12 +43,15 @@ class TodoCompletionExpListenerTest {
 	@Mock
 	private ExpCalculator expCalculator;
 
+	@Mock
+	private CacheEvictHelper cacheEvictHelper;
+
 	private TodoCompletionExpListener listener;
 
 	@BeforeEach
 	void setUp() {
 		listener = new TodoCompletionExpListener(
-				todoRepository, userCharacterRepository, characterRepository, expCalculator);
+				todoRepository, userCharacterRepository, characterRepository, expCalculator, cacheEvictHelper);
 	}
 
 	private Todo buildTodo(Long todoId, boolean expGranted) {
@@ -56,7 +63,7 @@ class TodoCompletionExpListenerTest {
 				.type(Todo.TodoType.NORMAL)
 				.status(Todo.TodoStatus.DONE)
 				.priority(1)
-				.startDate(LocalDate.now())
+				.startDate(LocalDate.now(SEOUL))
 				.endDate(null)
 				.isDeleted(false)
 				.expGranted(expGranted)
@@ -241,6 +248,207 @@ class TodoCompletionExpListenerTest {
 
 		assertThat(uc.getCurrentExp()).isEqualTo(100);
 		assertThat(uc.getFarewellAvailableAt()).isNull();
+		assertThat(todo.getExpGranted()).isTrue();
+	}
+
+	// ── 과거 Todo 경험치 제외 정책 테스트 (S14P31D107-475) ───────────────────────
+
+	@Test
+	void normalTodayGrantsExp() {
+		// NORMAL, startDate=오늘 → 정상 지급
+		LocalDate today = LocalDate.now(SEOUL);
+		Todo todo = Todo.builder()
+				.userId(1L).categoryId(null).title("test").content(null)
+				.type(Todo.TodoType.NORMAL).status(Todo.TodoStatus.DONE)
+				.priority(1).startDate(today).endDate(null)
+				.isDeleted(false).expGranted(false).build();
+		UserCharacter uc = buildUc(0);
+		Character character = buildCharacter(100);
+
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L))
+				.willReturn(Optional.of(uc));
+		given(characterRepository.findById(2L)).willReturn(Optional.of(character));
+		given(expCalculator.rollTodoDoneExp()).willReturn(5);
+
+		listener.onTodoCompleted(new TodoCompletedEvent(1L, 1L));
+
+		assertThat(uc.getCurrentExp()).isEqualTo(5);
+		assertThat(todo.getExpGranted()).isTrue();
+	}
+
+	@Test
+	void normalYesterdaySkipsExp() {
+		// NORMAL, startDate=어제 → 스킵
+		LocalDate yesterday = LocalDate.now(SEOUL).minusDays(1);
+		Todo todo = Todo.builder()
+				.userId(1L).categoryId(null).title("test").content(null)
+				.type(Todo.TodoType.NORMAL).status(Todo.TodoStatus.DONE)
+				.priority(1).startDate(yesterday).endDate(null)
+				.isDeleted(false).expGranted(false).build();
+		UserCharacter uc = buildUc(0);
+
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+
+		listener.onTodoCompleted(new TodoCompletedEvent(1L, 1L));
+
+		assertThat(uc.getCurrentExp()).isEqualTo(0);
+		assertThat(todo.getExpGranted()).isFalse();
+		verify(userCharacterRepository, never())
+				.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L);
+	}
+
+	@Test
+	void normalOneWeekAgoSkipsExp() {
+		// NORMAL, startDate=1주일 전 → 스킵
+		LocalDate oneWeekAgo = LocalDate.now(SEOUL).minusDays(7);
+		Todo todo = Todo.builder()
+				.userId(1L).categoryId(null).title("test").content(null)
+				.type(Todo.TodoType.NORMAL).status(Todo.TodoStatus.DONE)
+				.priority(1).startDate(oneWeekAgo).endDate(null)
+				.isDeleted(false).expGranted(false).build();
+		UserCharacter uc = buildUc(0);
+
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+
+		listener.onTodoCompleted(new TodoCompletedEvent(1L, 1L));
+
+		assertThat(uc.getCurrentExp()).isEqualTo(0);
+		assertThat(todo.getExpGranted()).isFalse();
+	}
+
+	@Test
+	void normalTomorrowGrantsExp() {
+		// NORMAL, startDate=내일 (미래) → 정상 지급
+		LocalDate tomorrow = LocalDate.now(SEOUL).plusDays(1);
+		Todo todo = Todo.builder()
+				.userId(1L).categoryId(null).title("test").content(null)
+				.type(Todo.TodoType.NORMAL).status(Todo.TodoStatus.DONE)
+				.priority(1).startDate(tomorrow).endDate(null)
+				.isDeleted(false).expGranted(false).build();
+		UserCharacter uc = buildUc(0);
+		Character character = buildCharacter(100);
+
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L))
+				.willReturn(Optional.of(uc));
+		given(characterRepository.findById(2L)).willReturn(Optional.of(character));
+		given(expCalculator.rollTodoDoneExp()).willReturn(5);
+
+		listener.onTodoCompleted(new TodoCompletedEvent(1L, 1L));
+
+		assertThat(uc.getCurrentExp()).isEqualTo(5);
+		assertThat(todo.getExpGranted()).isTrue();
+	}
+
+	@Test
+	void somedayNullStartDateGrantsExp() {
+		// SOMEDAY, startDate=null → 날짜 무관 정상 지급
+		Todo todo = Todo.builder()
+				.userId(1L).categoryId(null).title("test").content(null)
+				.type(Todo.TodoType.SOMEDAY).status(Todo.TodoStatus.DONE)
+				.priority(1).startDate(null).endDate(null)
+				.isDeleted(false).expGranted(false).build();
+		UserCharacter uc = buildUc(0);
+		Character character = buildCharacter(100);
+
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L))
+				.willReturn(Optional.of(uc));
+		given(characterRepository.findById(2L)).willReturn(Optional.of(character));
+		given(expCalculator.rollTodoDoneExp()).willReturn(5);
+
+		listener.onTodoCompleted(new TodoCompletedEvent(1L, 1L));
+
+		assertThat(uc.getCurrentExp()).isEqualTo(5);
+		assertThat(todo.getExpGranted()).isTrue();
+	}
+
+	@Test
+	void periodEndDateTodayGrantsExp() {
+		// PERIOD, endDate=오늘 → 정상 지급
+		LocalDate today = LocalDate.now(SEOUL);
+		Todo todo = Todo.builder()
+				.userId(1L).categoryId(null).title("test").content(null)
+				.type(Todo.TodoType.PERIOD).status(Todo.TodoStatus.DONE)
+				.priority(1).startDate(today.minusDays(3)).endDate(today)
+				.isDeleted(false).expGranted(false).build();
+		UserCharacter uc = buildUc(0);
+		Character character = buildCharacter(100);
+
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L))
+				.willReturn(Optional.of(uc));
+		given(characterRepository.findById(2L)).willReturn(Optional.of(character));
+		given(expCalculator.rollTodoDoneExp()).willReturn(5);
+
+		listener.onTodoCompleted(new TodoCompletedEvent(1L, 1L));
+
+		assertThat(uc.getCurrentExp()).isEqualTo(5);
+		assertThat(todo.getExpGranted()).isTrue();
+	}
+
+	@Test
+	void periodEndDateYesterdaySkipsExp() {
+		// PERIOD, endDate=어제 → 스킵
+		LocalDate yesterday = LocalDate.now(SEOUL).minusDays(1);
+		Todo todo = Todo.builder()
+				.userId(1L).categoryId(null).title("test").content(null)
+				.type(Todo.TodoType.PERIOD).status(Todo.TodoStatus.DONE)
+				.priority(1).startDate(yesterday.minusDays(2)).endDate(yesterday)
+				.isDeleted(false).expGranted(false).build();
+		UserCharacter uc = buildUc(0);
+
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+
+		listener.onTodoCompleted(new TodoCompletedEvent(1L, 1L));
+
+		assertThat(uc.getCurrentExp()).isEqualTo(0);
+		assertThat(todo.getExpGranted()).isFalse();
+		verify(userCharacterRepository, never())
+				.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L);
+	}
+
+	@Test
+	void periodNoEndDateYesterdayStartSkipsExp() {
+		// PERIOD, endDate=null, startDate=어제 → startDate 기준 스킵
+		LocalDate yesterday = LocalDate.now(SEOUL).minusDays(1);
+		Todo todo = Todo.builder()
+				.userId(1L).categoryId(null).title("test").content(null)
+				.type(Todo.TodoType.PERIOD).status(Todo.TodoStatus.DONE)
+				.priority(1).startDate(yesterday).endDate(null)
+				.isDeleted(false).expGranted(false).build();
+		UserCharacter uc = buildUc(0);
+
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+
+		listener.onTodoCompleted(new TodoCompletedEvent(1L, 1L));
+
+		assertThat(uc.getCurrentExp()).isEqualTo(0);
+		assertThat(todo.getExpGranted()).isFalse();
+	}
+
+	@Test
+	void periodNoEndDateTodayStartGrantsExp() {
+		// PERIOD, endDate=null, startDate=오늘 → startDate 기준 정상 지급
+		LocalDate today = LocalDate.now(SEOUL);
+		Todo todo = Todo.builder()
+				.userId(1L).categoryId(null).title("test").content(null)
+				.type(Todo.TodoType.PERIOD).status(Todo.TodoStatus.DONE)
+				.priority(1).startDate(today).endDate(null)
+				.isDeleted(false).expGranted(false).build();
+		UserCharacter uc = buildUc(0);
+		Character character = buildCharacter(100);
+
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L))
+				.willReturn(Optional.of(uc));
+		given(characterRepository.findById(2L)).willReturn(Optional.of(character));
+		given(expCalculator.rollTodoDoneExp()).willReturn(5);
+
+		listener.onTodoCompleted(new TodoCompletedEvent(1L, 1L));
+
+		assertThat(uc.getCurrentExp()).isEqualTo(5);
 		assertThat(todo.getExpGranted()).isTrue();
 	}
 }

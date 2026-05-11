@@ -2,13 +2,16 @@ package com.doitdo.domain.todo.api.dto.req;
 
 import com.doitdo.domain.todo.entity.Todo.TodoType;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.Set;
 
 public record TodoUpdateReq(
 
+		@Size(max = 20)
 		String title,
 
+		@Size(max = 100)
 		String content,
 
 		String category,

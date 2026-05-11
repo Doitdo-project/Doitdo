@@ -32,6 +32,7 @@ mixin _$TodoUpdateRequestDto {
       throw _privateConstructorUsedError; // ✏️ period → daysOfWeek (서버 변경 반영)
   @JsonKey(name: 'alertTime')
   String? get alarmTime => throw _privateConstructorUsedError;
+  @JsonKey(name: 'clearAlertTime', includeIfNull: false)
   bool? get clearAlertTime => throw _privateConstructorUsedError;
 
   /// Serializes this TodoUpdateRequestDto to a JSON map.
@@ -60,7 +61,7 @@ abstract class $TodoUpdateRequestDtoCopyWith<$Res> {
     String? endDate,
     Set<String>? daysOfWeek,
     @JsonKey(name: 'alertTime') String? alarmTime,
-    bool? clearAlertTime,
+    @JsonKey(name: 'clearAlertTime', includeIfNull: false) bool? clearAlertTime,
   });
 }
 
@@ -154,7 +155,7 @@ abstract class _$$TodoUpdateRequestDtoImplCopyWith<$Res>
     String? endDate,
     Set<String>? daysOfWeek,
     @JsonKey(name: 'alertTime') String? alarmTime,
-    bool? clearAlertTime,
+    @JsonKey(name: 'clearAlertTime', includeIfNull: false) bool? clearAlertTime,
   });
 }
 
@@ -237,7 +238,7 @@ class _$TodoUpdateRequestDtoImpl implements _TodoUpdateRequestDto {
     this.endDate,
     final Set<String>? daysOfWeek,
     @JsonKey(name: 'alertTime') this.alarmTime,
-    this.clearAlertTime,
+    @JsonKey(name: 'clearAlertTime', includeIfNull: false) this.clearAlertTime,
   }) : _daysOfWeek = daysOfWeek;
 
   factory _$TodoUpdateRequestDtoImpl.fromJson(Map<String, dynamic> json) =>
@@ -274,6 +275,7 @@ class _$TodoUpdateRequestDtoImpl implements _TodoUpdateRequestDto {
   @JsonKey(name: 'alertTime')
   final String? alarmTime;
   @override
+  @JsonKey(name: 'clearAlertTime', includeIfNull: false)
   final bool? clearAlertTime;
 
   @override
@@ -347,6 +349,7 @@ abstract class _TodoUpdateRequestDto implements TodoUpdateRequestDto {
     final String? endDate,
     final Set<String>? daysOfWeek,
     @JsonKey(name: 'alertTime') final String? alarmTime,
+    @JsonKey(name: 'clearAlertTime', includeIfNull: false)
     final bool? clearAlertTime,
   }) = _$TodoUpdateRequestDtoImpl;
 
@@ -371,6 +374,7 @@ abstract class _TodoUpdateRequestDto implements TodoUpdateRequestDto {
   @JsonKey(name: 'alertTime')
   String? get alarmTime;
   @override
+  @JsonKey(name: 'clearAlertTime', includeIfNull: false)
   bool? get clearAlertTime;
 
   /// Create a copy of TodoUpdateRequestDto

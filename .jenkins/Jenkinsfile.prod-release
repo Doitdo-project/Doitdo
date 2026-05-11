@@ -112,6 +112,22 @@ pipeline {
                 }
             }
         }
+
+        stage('Pull Source On Production') {
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: env.PROD_SSH_CREDENTIALS, keyFileVariable: 'PROD_SSH_KEY')]) {
+                    sh '''
+                        set -eu
+                        ssh -i "$PROD_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PROD_SSH_USER}@${PROD_HOST}" '
+                            set -eu
+                            cd /home/ubuntu/doitdo-git/S14P31D107
+                            git pull --ff-only origin main
+                            git status --short
+                        '
+                    '''
+                }
+            }
+        }
     }
 
     post {

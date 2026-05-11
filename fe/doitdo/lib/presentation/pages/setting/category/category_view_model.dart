@@ -88,11 +88,9 @@ class CategoryViewModel extends AsyncNotifier<List<CategoryResp>> {
 
     final repo = ref.read(categoryRepositoryProvider);
     final cats = state.requireValue;
-    final updated = <CategoryResp>[];
-    Object? firstError;
 
-    for (final c in cats) {
-      // 현재 colorId 가 어느 팔레트의 몇 번째인지 역추론
+    // 각 카테고리의 새 colorId·colorHex 미리 계산
+    final targets = cats.map((c) {
       int? indexInOld;
       for (final p in palettes) {
         final pBase = baseIdByPaletteId[p.paletteId]!;
@@ -101,31 +99,46 @@ class CategoryViewModel extends AsyncNotifier<List<CategoryResp>> {
           break;
         }
       }
+      final idx     = indexInOld ?? 0;
+      final newIdx  = idx.clamp(0, newPalette.colors.length - 1);
+      return (cat: c, newColorId: newBaseId + newIdx, newHex: newPalette.colors[newIdx]);
+    }).toList();
 
-      final idx = indexInOld ?? 0;
-      final newIdx = idx.clamp(0, newPalette.colors.length - 1);
-      final newColorId = newBaseId + newIdx;
+    // 낙관적 업데이트 — 서버 응답 전에 UI 즉시 반영
+    state = AsyncData(targets.map((t) {
+      if (t.newColorId == t.cat.colorId) return t.cat;
+      return CategoryResp(
+        categoryId:   t.cat.categoryId,
+        categoryName: t.cat.categoryName,
+        colorId:      t.newColorId,
+        colorHex:     t.newHex,
+      );
+    }).toList());
 
-      if (newColorId == c.colorId) {
-        updated.add(c);
-        continue;
-      }
-
-      try {
-        final result = await repo.updateCategory(
-          categoryId: c.categoryId,
-          name: c.categoryName,
-          colorId: newColorId,
-        );
-        updated.add(result);
-      } catch (e) {
-        firstError ??= e;
-        updated.add(c);
-      }
+    // 병렬 PATCH — 개별 실패는 원본 유지, 첫 에러는 rethrow
+    try {
+      final pairs = await Future.wait(
+        targets.map((t) async {
+          if (t.newColorId == t.cat.colorId) return (t.cat, null as Object?);
+          try {
+            final result = await repo.updateCategory(
+              categoryId: t.cat.categoryId,
+              name:       t.cat.categoryName,
+              colorId:    t.newColorId,
+            );
+            return (result, null as Object?);
+          } catch (e) {
+            return (t.cat, e);
+          }
+        }),
+      );
+      state = AsyncData(pairs.map((p) => p.$1).toList());
+      final firstError = pairs.map((p) => p.$2).nonNulls.firstOrNull;
+      if (firstError != null) throw firstError;
+    } catch (e) {
+      state = AsyncData(cats); // 전체 복구
+      rethrow;
     }
-
-    state = AsyncData(updated);
-    if (firstError != null) throw firstError;
   }
 }
 

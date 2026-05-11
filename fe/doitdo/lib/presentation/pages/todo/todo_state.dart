@@ -15,6 +15,7 @@ class TodoState {
   // toggleTodo 가 DONE 으로 토글할 때 여기에 추가하고 ~600ms 뒤 제거 — 그 사이에는
   // _updateDisplayedTodos 가 done 필터에도 불구하고 이 항목들을 list 에 유지한다.
   final Set<String> fadingTodoIds;
+  final bool pageAnimationEnabled;
 
   TodoState({
     this.allTodos = const [],
@@ -27,6 +28,7 @@ class TodoState {
     this.currentFilter = 'all',
     this.kEvents = const {},
     this.fadingTodoIds = const {},
+    this.pageAnimationEnabled = true,
   }) : focusedDay = focusedDay ?? DateTime.now();
 
   TodoState copyWith({
@@ -40,6 +42,7 @@ class TodoState {
     String? currentFilter,
     Map<DateTime, List<Todo>>? kEvents,
     Set<String>? fadingTodoIds,
+    bool? pageAnimationEnabled,
   }) {
     return TodoState(
       allTodos: allTodos ?? this.allTodos,
@@ -52,6 +55,7 @@ class TodoState {
       currentFilter: currentFilter ?? this.currentFilter,
       kEvents: kEvents ?? this.kEvents,
       fadingTodoIds: fadingTodoIds ?? this.fadingTodoIds,
+      pageAnimationEnabled: pageAnimationEnabled ?? this.pageAnimationEnabled,
     );
   }
 }

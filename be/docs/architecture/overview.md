@@ -2,17 +2,18 @@
 
 ## 한 줄 정리
 
-doitdo 백엔드는 **Spring Boot 3.5.x / Java 21 / JPA / MariaDB** 기반의 단일 모놀리스 서버이며, 도메인 단위로 격리된 패키지 구조를 따른다.
+doitdo 백엔드는 **Spring Boot 3.5.x / Java 21 / JPA / MariaDB / Redis** 기반의 단일 모놀리스 서버이며, 도메인 단위로 격리된 패키지 구조를 따른다.
 
 ## 스택
 
 | 영역 | 사양 |
 |---|---|
 | 언어 | Java 21 |
-| 프레임워크 | Spring Boot 3.5.13, Spring Security, Spring Data JPA |
+| 프레임워크 | Spring Boot 3.5.13, Spring Security, Spring Data JPA, Spring Data Redis, Spring Cache |
 | API 문서 | springdoc-openapi 2.7.0 (`dev` / `local` 한정) |
 | 빌드 | Gradle (Wrapper 포함) |
 | DB | MariaDB |
+| Cache | Redis |
 | 인증 | JWT (BearerAuth) |
 
 ## 진입점
@@ -31,7 +32,8 @@ com.doitdo
  │   ├ entity/               # JPA Entity
  │   └ repository/           # Spring Data JPA Repository
  └ global/                   # 공통 인프라
-     ├ config/               # Security / OpenAPI / JpaAuditing
+     ├ config/               # Security / OpenAPI / JpaAuditing / Redis
+     ├ cache/                # Cache evict helpers
      ├ entity/               # BaseTimeEntity
      ├ exception/            # ErrorCode + GlobalExceptionHandler
      ├ swagger/              # @ApiErrorCodes + Customizer (be/feat/swagger 머지 후)
@@ -62,7 +64,7 @@ com.doitdo
 ## 응답/에러 표준
 
 - 모든 응답: `GlobalApiResponse<T>` ([`../api/response-format.md`](../api/response-format.md))
-- 에러 코드: 9개 도메인 enum + `ErrorCodeRegistry` 인덱스 ([`../api/error-codes.md`](../api/error-codes.md))
+- 에러 코드: 10개 도메인 enum + `ErrorCodeRegistry` 인덱스 ([`../api/error-codes.md`](../api/error-codes.md))
 - 컨트롤러 작성: [`../api/swagger.md`](../api/swagger.md)
 
 ## 알림 플로우
@@ -85,6 +87,7 @@ com.doitdo
 ## 데이터 모델
 
 - ERD 원본/도메인 매핑: [`erd.md`](erd.md)
+- Redis 캐싱: [`caching.md`](caching.md)
 
 ## 환경/실행
 

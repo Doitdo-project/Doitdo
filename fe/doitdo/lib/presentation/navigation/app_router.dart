@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:doitdo/presentation/pages/setting/account/account_page.dart';
+import 'package:doitdo/presentation/pages/setting/bug_report/bug_report_page.dart';
 import 'package:doitdo/presentation/pages/auth/find_password_page.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_page.dart';
 import 'package:doitdo/presentation/pages/notification/notification_page.dart';
@@ -14,6 +15,7 @@ import 'package:doitdo/presentation/pages/collection/collection_page.dart';
 import 'package:doitdo/presentation/pages/onboarding/onboarding_agreements_page.dart';
 import 'package:doitdo/presentation/pages/onboarding/onboarding_birth_date_page.dart';
 import 'package:doitdo/presentation/pages/setting/setting_page.dart';
+import 'package:doitdo/presentation/pages/shop/shop_page.dart';
 import 'package:doitdo/presentation/pages/splash/splash_page.dart';
 import 'package:doitdo/presentation/pages/tamagochi/character_hatch_page.dart';
 import 'package:doitdo/presentation/pages/tamagochi/character_naming_page.dart';
@@ -37,12 +39,14 @@ class AppRoutes {
   static const String todo = '/todo';
   static const String tamagochi = '/tamagochi';
   static const String tamagochiCollection = '/tamagochi/collection';
+  static const String tamagochiShop = '/tamagochi/shop';
   static const String tamagochiHatch = '/tamagochi/hatch';
   static const String tamagochiNaming = '/tamagochi/naming';
   static const String setting = '/setting';
   static const String account = '/setting/account';
   static const String category = '/setting/category';
   static const String notification = '/setting/notification';
+  static const String bugReport = '/setting/bug-report';
   static const String notifications = '/todo/notifications';
 }
 
@@ -51,6 +55,44 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _todoNavigatorKey = GlobalKey<NavigatorState>();
 final _tamagochiNavigatorKey = GlobalKey<NavigatorState>();
 final _settingNavigatorKey = GlobalKey<NavigatorState>();
+
+/// 각 브랜치의 모든 라우트(페이지·바텀시트·다이얼로그)를 추적한다.
+/// 탭 전환 시 [removeAllSilently]로 루트(첫 번째) 라우트만 남기고
+/// 나머지를 애니메이션 없이 즉시 제거한다.
+class BranchPopupTracker extends NavigatorObserver {
+  final _routes = <Route>[];
+
+  /// 루트 라우트(index 0)를 제외한 모든 라우트를 역순으로 즉시 제거.
+  /// Navigator.removeRoute 는 역방향 애니메이션을 재생하지 않는다.
+  void removeAllSilently() {
+    if (_routes.length <= 1) return;
+    for (final route in _routes.skip(1).toList().reversed) {
+      navigator?.removeRoute(route);
+    }
+    _routes.removeRange(1, _routes.length);
+  }
+
+  @override
+  void didPush(Route route, Route? previousRoute) => _routes.add(route);
+
+  @override
+  void didPop(Route route, Route? previousRoute) => _routes.remove(route);
+
+  @override
+  void didRemove(Route route, Route? previousRoute) => _routes.remove(route);
+
+  @override
+  void didReplace({Route? newRoute, Route? oldRoute}) {
+    if (oldRoute == null) return;
+    final i = _routes.indexOf(oldRoute);
+    if (i >= 0 && newRoute != null) _routes[i] = newRoute;
+  }
+}
+
+/// 셸에서 참조할 수 있도록 module-level 로 노출.
+final todoBranchTracker     = BranchPopupTracker();
+final tamagochiBranchTracker = BranchPopupTracker();
+final settingBranchTracker  = BranchPopupTracker();
 
 final GoRouter appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
@@ -121,6 +163,7 @@ final GoRouter appRouter = GoRouter(
       branches: [
         StatefulShellBranch(
           navigatorKey: _todoNavigatorKey,
+          observers: [todoBranchTracker],
           routes: [
             GoRoute(
               path: AppRoutes.todo,
@@ -139,6 +182,7 @@ final GoRouter appRouter = GoRouter(
         ),
         StatefulShellBranch(
           navigatorKey: _tamagochiNavigatorKey,
+          observers: [tamagochiBranchTracker],
           routes: [
             GoRoute(
               path: AppRoutes.tamagochi,
@@ -152,6 +196,12 @@ final GoRouter appRouter = GoRouter(
                   path: 'collection',
                   parentNavigatorKey: _rootNavigatorKey,
                   builder: (context, state) => const CollectionPage(),
+                ),
+                // '/tamagochi/shop' — 방 꾸미기 상점 (전체 화면).
+                GoRoute(
+                  path: 'shop',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) => const ShopPage(),
                 ),
                 // '/tamagochi/hatch' — 알을 10회 두드려 부화시키는 전체 화면.
                 GoRoute(
@@ -171,6 +221,7 @@ final GoRouter appRouter = GoRouter(
         ),
         StatefulShellBranch(
           navigatorKey: _settingNavigatorKey,
+          observers: [settingBranchTracker],
           routes: [
             GoRoute(
               path: AppRoutes.setting,
@@ -191,6 +242,11 @@ final GoRouter appRouter = GoRouter(
                   path: 'notification',
                   builder: (context, state) =>
                       const NotificationSettingsPage(),
+                ),
+                // '/setting/bug-report' — 버그 신고.
+                GoRoute(
+                  path: 'bug-report',
+                  builder: (context, state) => const BugReportPage(),
                 ),
               ],
             ),

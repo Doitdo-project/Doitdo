@@ -146,7 +146,7 @@ public class AuthServiceImpl implements AuthService {
 		}
 
 		Long userId = jwtUtil.getUserId(refreshToken);
-		RefreshToken stored = refreshTokenRepository.findByUserId(userId)
+		RefreshToken stored = refreshTokenRepository.findFirstByUserId(userId)
 				.orElseThrow(() -> new CustomException(AuthErrorCode.A01_001));
 
 		if (!stored.getToken().equals(refreshToken)) {
@@ -172,13 +172,12 @@ public class AuthServiceImpl implements AuthService {
 		log.info("event=LOGOUT userId={}", userId);
 	}
 
+	/**
+	 * refresh_tokens 의 user_id UNIQUE 제약과 native upsert 를 사용해 race-free 갱신.
+	 * 자세한 배경은 {@code OAuthServiceImpl#saveOrUpdateRefreshToken} 참조.
+	 */
 	private void saveOrUpdateRefreshToken(Long userId, String refreshToken) {
 		LocalDateTime expiresAt = LocalDateTime.now().plusNanos(refreshTokenExpiration * 1_000_000L);
-		refreshTokenRepository.findByUserId(userId)
-				.ifPresentOrElse(
-						existing -> existing.update(refreshToken, expiresAt),
-						() -> refreshTokenRepository.save(
-								RefreshToken.create(userId, refreshToken, expiresAt))
-				);
+		refreshTokenRepository.upsertByUserId(userId, refreshToken, expiresAt);
 	}
 }
