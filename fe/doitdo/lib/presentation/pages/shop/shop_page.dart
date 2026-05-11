@@ -26,16 +26,19 @@ class ShopPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncState = ref.watch(shopViewModelProvider);
 
+    // 초기 로딩 중에는 coins 가 아직 없어 0 으로 깜빡 보이는 게 어색 →
+    // 잔액 뱃지 자체를 숨기고 데이터가 들어오면 그때 노출한다 (refresh 동안엔
+    // valueOrNull 이 직전 값을 유지하므로 사라지지 않는다).
+    final coins = asyncState.valueOrNull?.coins;
     return DoitdoScaffold(
       topBar: DoitdoTopBar(
         title: '상점',
         actions: [
-          Padding(
-            padding: EdgeInsets.only(right: 16.w),
-            child: Center(
-              child: _CoinBadge(coins: asyncState.valueOrNull?.coins ?? 0),
+          if (coins != null)
+            Padding(
+              padding: EdgeInsets.only(right: 16.w),
+              child: Center(child: _CoinBadge(coins: coins)),
             ),
-          ),
         ],
       ),
       body: asyncState.when(
@@ -101,42 +104,64 @@ class _ShopBody extends ConsumerWidget {
       ShopItem item,
       ) async {
     final messenger = ScaffoldMessenger.of(context);
-    final coins = ref.read(shopViewModelProvider).valueOrNull?.coins ?? 0;
+    final shopState = ref.read(shopViewModelProvider).valueOrNull;
+    final coins = shopState?.coins ?? 0;
+    // 같은 카테고리에 이미 배치된 다른 아이템이 있을 때만 "구매만 하기" 옵션을
+    // dialog 에 추가로 보여준다 — 평소 단일 액션 모달의 흐름은 그대로 유지하고,
+    // 정작 교체가 일어나는 케이스에서만 사용자가 결정권을 갖게 한다.
+    final hasPlacedInCategory = shopState != null &&
+        shopState.items.any(
+          (it) => it.category == item.category && it.status == ItemStatus.placed,
+        );
 
-    final confirmed = await showDialog<bool>(
+    final choice = await showDialog<PurchaseChoice>(
       context: context,
       barrierDismissible: true,
-      builder: (_) => PurchaseDialog(item: item, currentCoins: coins),
+      builder: (_) => PurchaseDialog(
+        item: item,
+        currentCoins: coins,
+        hasPlacedInSameCategory: hasPlacedInCategory,
+      ),
     );
-    if (confirmed != true) return;
+    if (choice == null || choice == PurchaseChoice.cancel) return;
 
-    // 다이얼로그 닫히는 즉시 스낵바 + UI 반영 (낙관적 업데이트).
-    // 서버 호출은 백그라운드에서 처리 — 사용자가 다른 작업 계속 가능.
-    // 실패 시 ViewModel 이 조용히 롤백 (PurchaseDialog 에서 잔액 체크로 실패 가능성 최소화).
+    // 다이얼로그 닫히는 즉시 success 스낵바 + 낙관 업데이트.
+    // 서버 호출은 background, 실패 시 onFailure 콜백에서 에러 스낵바로 덮어씀.
+    final successMsg = switch (choice) {
+      PurchaseChoice.purchaseAndPlace => '"${item.name}"을(를) 방에 배치했어요!',
+      PurchaseChoice.purchaseOnly => '"${item.name}"을(를) 인벤토리에 담았어요.',
+      PurchaseChoice.cancel => '',
+    };
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
-        content: Text('"${item.name}"을(를) 방에 배치했어요!'),
+        content: Text(successMsg),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
     );
 
-    // unawaited — 백그라운드 실행, 결과를 기다리지 않음
-    // 실패 시 onFailure 콜백으로 에러 스낵바 표시
-    ref.read(shopViewModelProvider.notifier).purchaseAndPlace(
-      item.id,
-      onFailure: (message) {
-        messenger.hideCurrentSnackBar();
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(message),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      },
-    );
+    void showFailure(String message) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
+    final vm = ref.read(shopViewModelProvider.notifier);
+    // unawaited — 백그라운드 실행, 결과 대기 안 함. 실패 시 onFailure 콜백.
+    switch (choice) {
+      case PurchaseChoice.purchaseAndPlace:
+        vm.purchaseAndPlace(item.id, onFailure: showFailure);
+      case PurchaseChoice.purchaseOnly:
+        vm.purchaseOnly(item.id, onFailure: showFailure);
+      case PurchaseChoice.cancel:
+        return;
+    }
   }
 
   /// place / unplace 공통 호출 래퍼. ViewModel 이 false 를 돌려주면 실패 스낵바.

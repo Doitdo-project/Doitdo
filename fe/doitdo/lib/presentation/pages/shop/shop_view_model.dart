@@ -84,11 +84,18 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
     if (item == null || item.status != ItemStatus.notOwned) return false;
 
     // 1. UI 즉시 반영 — 서버 응답 기다리지 않고 코인 차감 + placed 표시.
+    //    같은 카테고리에 이미 배치된 아이템이 있다면 BE 가 자동 교체하므로
+    //    낙관 업데이트에서도 함께 owned 로 강등 — 안 그러면 _refresh 가 돌아올 때까지
+    //    "배치중" 뱃지가 두 카드에 동시에 떠 보인다.
     state = AsyncData(s.copyWith(
       coins: s.coins - item.price,
-      items: s.items.map((it) =>
-      it.id == itemId ? it.copyWith(status: ItemStatus.placed) : it,
-      ).toList(),
+      items: s.items.map((it) {
+        if (it.id == itemId) return it.copyWith(status: ItemStatus.placed);
+        if (it.category == item.category && it.status == ItemStatus.placed) {
+          return it.copyWith(status: ItemStatus.owned);
+        }
+        return it;
+      }).toList(),
     ));
 
     // 2. 서버 호출 (백그라운드)
@@ -100,6 +107,38 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
       return true;
     } catch (e) {
       // 실패 시 낙관적 업데이트 롤백 + 에러 종류별 메시지
+      state = AsyncData(s);
+      onFailure?.call(_errorMessage(e));
+      return false;
+    }
+  }
+
+  /// 미보유 아이템을 **배치 없이** 구매만 한다(주문서 확인 모달의 "구매만 하기").
+  /// 같은 카테고리에 이미 배치된 아이템을 교체하지 않고 인벤토리에만 추가하고 싶을 때.
+  ///
+  /// 낙관 업데이트는 구매 직후 owned 상태로 표시하고 코인을 차감한다.
+  /// 실패 시 원래 상태로 롤백 + [onFailure] 콜백 호출 (UX 패턴은 purchaseAndPlace 와 동일).
+  Future<bool> purchaseOnly(
+      String itemId, {
+        void Function(String message)? onFailure,
+      }) async {
+    final s = state.valueOrNull;
+    if (s == null) return false;
+    final item = _findItem(s, itemId);
+    if (item == null || item.status != ItemStatus.notOwned) return false;
+
+    state = AsyncData(s.copyWith(
+      coins: s.coins - item.price,
+      items: s.items.map((it) =>
+        it.id == itemId ? it.copyWith(status: ItemStatus.owned) : it,
+      ).toList(),
+    ));
+
+    try {
+      final purchase = await _repo.purchaseFurniture(item.furnitureId);
+      await _refresh(preserveUi: s, coinsOverride: purchase.balance);
+      return true;
+    } catch (e) {
       state = AsyncData(s);
       onFailure?.call(_errorMessage(e));
       return false;

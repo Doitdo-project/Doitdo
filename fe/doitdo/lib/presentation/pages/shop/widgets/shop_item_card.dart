@@ -16,7 +16,10 @@ import 'package:doitdo/presentation/pages/shop/widgets/shop_room_preview.dart'
 /// - 보유  : [배치]
 /// - 배치중: [해제]
 ///
-/// 미리보기는 별도 버튼 없이 **카드 자체 탭**으로 토글한다 (배치중은 제외 — 이미 방에 있음).
+/// 미리보기는 별도 버튼 없이 **카드 자체 탭**으로 토글한다. 배치중 아이템도 토글
+/// 가능 — 방 미리보기 영역은 동일하게 보이지만 (preview == placed 라 합성 결과
+/// 변화 없음) 카드 highlight + "미리보기" 뱃지로 사용자가 어떤 항목을 보고 있는지
+/// 시각적으로 알 수 있게 한다.
 /// 미리보기 중인 카드는 border 가 카테고리 accent 톤으로 강조되고 좌하단 뱃지가 뜬다.
 class ShopItemCard extends StatelessWidget {
   const ShopItemCard({
@@ -40,7 +43,6 @@ class ShopItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final isPlaced = item.status == ItemStatus.placed;
-    final canPreview = !isPlaced;
     final accent = shopCategoryAccent(item.category);
 
     // 미리보기 활성 = 카테고리 accent / 배치중 = brand orange / 평상시 = 기본 border.
@@ -54,7 +56,7 @@ class ShopItemCard extends StatelessWidget {
     return GestureDetector(
       // 카드 빈 영역 탭 → 미리보기 토글. 내부 액션 버튼은 자체 onPressed 가 이벤트를
       // consume 하므로 여기까지 전파되지 않는다.
-      onTap: canPreview ? onTapPreview : null,
+      onTap: onTapPreview,
       behavior: HitTestBehavior.opaque,
       child: Container(
         decoration: BoxDecoration(

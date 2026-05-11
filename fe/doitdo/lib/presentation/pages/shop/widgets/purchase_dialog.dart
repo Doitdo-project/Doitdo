@@ -8,23 +8,44 @@ import 'package:doitdo/presentation/pages/shop/widgets/coin_icon.dart';
 import 'package:doitdo/presentation/pages/shop/widgets/shop_room_preview.dart'
     show shopCategoryAccent;
 
+/// 주문서 확인 모달의 사용자 선택 결과.
+enum PurchaseChoice {
+  /// 닫기 / 취소 (X 버튼 또는 barrier 탭).
+  cancel,
+  /// 구매하고 바로 방에 배치 (기본 CTA).
+  purchaseAndPlace,
+  /// 구매만 하고 인벤토리에 보관 (같은 카테고리에 이미 배치된 게 있을 때만 노출).
+  purchaseOnly,
+}
+
 /// 상품 카드 → "구매" 버튼 탭 시 띄우는 주문서 확인 모달.
 ///
-/// 구조: 헤더 / 미리보기 / 카테고리 칩 / 상품명 / 가격 카드 / CTA.
+/// 구조: 헤더 / 미리보기 / 카테고리 칩 / 상품명 / 가격 카드 / CTA(들).
 /// 가격 카드는 가격(큰)과 "구매 후 잔액"(부캡션)을 한 박스에 묶어서
 /// 코인 아이콘이 화면에 흩어지지 않도록 한다. 부족 케이스에선 부캡션이
 /// "X코인이 부족해요" 빨간 톤으로 바뀌고 CTA 가 비활성화된다.
 ///
-/// Returns: `Navigator.pop(true)` = 구매 확정 / `pop(false)` = 닫기.
+/// CTA 분기:
+/// - 평소: primary "구매하고 바로 배치하기" 한 개.
+/// - 같은 카테고리에 이미 배치된 아이템이 있는 경우([hasPlacedInSameCategory]=true):
+///   primary 아래에 secondary "구매만 하기" 텍스트 버튼이 추가로 노출 — 사용자가
+///   기존 배치를 유지하고 인벤토리에만 추가하고 싶은 케이스를 보조한다.
+///
+/// Returns: [PurchaseChoice] (null = barrier 탭으로 닫힘, cancel 과 동일 취급).
 class PurchaseDialog extends StatelessWidget {
   const PurchaseDialog({
     super.key,
     required this.item,
     required this.currentCoins,
+    this.hasPlacedInSameCategory = false,
   });
 
   final ShopItem item;
   final int currentCoins;
+
+  /// 같은 카테고리에 이미 배치된 다른 아이템이 있는지. true 면 dialog 에
+  /// "구매만 하기" secondary CTA 가 추가로 노출된다.
+  final bool hasPlacedInSameCategory;
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +70,10 @@ class PurchaseDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _Header(onClose: () => Navigator.of(context).pop(false)),
+              _Header(
+                onClose: () =>
+                    Navigator.of(context).pop(PurchaseChoice.cancel),
+              ),
               SizedBox(height: 12.h),
               _Preview(item: item),
               SizedBox(height: 18.h),
@@ -72,8 +96,17 @@ class PurchaseDialog extends StatelessWidget {
               SizedBox(height: 20.h),
               _ConfirmButton(
                 canAfford: canAfford,
-                onConfirm: () => Navigator.of(context).pop(true),
+                onConfirm: () => Navigator.of(context)
+                    .pop(PurchaseChoice.purchaseAndPlace),
               ),
+              if (hasPlacedInSameCategory) ...[
+                SizedBox(height: 8.h),
+                _PurchaseOnlyButton(
+                  canAfford: canAfford,
+                  onTap: () => Navigator.of(context)
+                      .pop(PurchaseChoice.purchaseOnly),
+                ),
+              ],
             ],
           ),
         ),
@@ -311,6 +344,33 @@ class _ConfirmButton extends StatelessWidget {
           ),
         ),
         child: Text(canAfford ? '구매하고 바로 배치하기' : '코인이 부족해요'),
+      ),
+    );
+  }
+}
+
+/// 같은 카테고리에 이미 배치된 아이템이 있을 때 주문서에 추가로 노출되는 보조 CTA.
+/// primary 와 시각적 위계를 분리하기 위해 텍스트 버튼 톤 + underline 으로 그린다.
+class _PurchaseOnlyButton extends StatelessWidget {
+  const _PurchaseOnlyButton({required this.canAfford, required this.onTap});
+
+  final bool canAfford;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return SizedBox(
+      width: double.infinity,
+      height: 30.h,
+      child: TextButton(
+        onPressed: canAfford ? onTap : null,
+        style: TextButton.styleFrom(
+          foregroundColor: colors.textSecondary,
+          disabledForegroundColor: colors.textHint,
+          textStyle: AppTextStyles.bodySmall
+        ),
+        child: const Text('지금 배치하지 않고 구매만 하기'),
       ),
     );
   }
