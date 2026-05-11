@@ -9,13 +9,15 @@ import 'package:doitdo/domain/entities/streak.dart';
 ///   "lastActiveDate": "2026-04-26",
 ///   "longestStreakCount": 0,
 ///   "longestStreakStartDate": "2026-04-26",
-///   "longestStreakEndDate": "2026-04-26"
+///   "longestStreakEndDate": "2026-04-26",
+///   "canClaim": false
 /// }
 /// ```
 class StreakDto {
   const StreakDto({
     required this.currentStreakCount,
     required this.longestStreakCount,
+    required this.canClaim,
     this.currentStreakStartDate,
     this.lastActiveDate,
     this.longestStreakStartDate,
@@ -29,6 +31,10 @@ class StreakDto {
   final String? longestStreakStartDate;
   final String? longestStreakEndDate;
 
+  /// BE 가 판정한 "지금 보상 수령 가능 여부".
+  /// 필드 누락 케이스(구버전 BE) 는 false 로 간주 — 받지 못 하는 게 잘못 받는 것보다 안전.
+  final bool canClaim;
+
   factory StreakDto.fromJson(Map<String, dynamic> json) {
     return StreakDto(
       currentStreakCount:
@@ -39,12 +45,14 @@ class StreakDto {
       lastActiveDate: json['lastActiveDate'] as String?,
       longestStreakStartDate: json['longestStreakStartDate'] as String?,
       longestStreakEndDate: json['longestStreakEndDate'] as String?,
+      canClaim: (json['canClaim'] as bool?) ?? false,
     );
   }
 
   Streak toEntity() => Streak(
         currentCount: currentStreakCount,
         longestCount: longestStreakCount,
+        canClaim: canClaim,
         currentStartDate: _parseDate(currentStreakStartDate),
         lastActiveDate: _parseDate(lastActiveDate),
         longestStartDate: _parseDate(longestStreakStartDate),

@@ -5,7 +5,9 @@ import 'dart:ui';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/domain/entities/character.dart';
+import 'package:doitdo/domain/entities/evolution.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
+import 'package:doitdo/presentation/pages/tamagochi/widgets/character_evolution_view.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/room_layer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -25,6 +27,12 @@ class CharacterCard extends StatelessWidget {
     required this.state,
     this.character,
     this.isCharacterLoading = false,
+    this.evolution,
+    this.beforeEvolutionImageUrl,
+    this.beforeEvolutionCharacterId,
+    this.afterEvolutionCharacterId,
+    this.onEvolutionAnimationStart,
+    this.onEvolutionComplete,
     this.onTapShop,
     this.onTapCollection,
     this.onEggTap,
@@ -37,6 +45,34 @@ class CharacterCard extends StatelessWidget {
 
   /// 최초 캐릭터 조회 중일 때 true. 캐릭터 영역만 살짝 가리는 용도.
   final bool isCharacterLoading;
+
+  /// 진화 연출 활성화 데이터. non-null 이면 캐릭터 슬롯 자리에 진화 애니메이션
+  /// (silhouette → gif → reveal) 이 재생된다. 말풍선도 자동으로 숨겨진다.
+  /// null 이면 평상시 캐릭터 렌더로 복귀.
+  final Evolution? evolution;
+
+  /// 진화 직전 캐릭터 썸네일. 진화 트리거 시점에 호출자가 캡처해 넘긴다 —
+  /// API 응답 후 home state 가 새 캐릭터로 바뀌어도 silhouette 단계에서
+  /// 옛 캐릭터 모습이 그대로 유지된다.
+  final String? beforeEvolutionImageUrl;
+
+  /// 진화 직전 캐릭터 종(species) ID. 홈에서 그리던 eye gif 와 같은 에셋으로
+  /// silhouette 을 만들어 위치/크기가 픽셀 단위로 일치하게 한다.
+  final int? beforeEvolutionCharacterId;
+
+  /// 진화 후 캐릭터 종(species) ID. reveal 단계에서 새 캐릭터를 eye gif 로
+  /// 그릴 때 사용. 진화 시작 시점엔 알 수 없고, [onEvolutionAnimationStart]
+  /// 에서 트리거된 refresh 가 home state 를 갱신하면 호출자가 이 값을 채워 넣는다.
+  final int? afterEvolutionCharacterId;
+
+  /// 진화 silhouette → animation 전환 콜백. 호출자는 이때 home state refresh 를
+  /// 트리거 — animation 2.4s 동안 새 character 를 받아오면 reveal 부터 eye gif 로
+  /// 그릴 수 있다.
+  final VoidCallback? onEvolutionAnimationStart;
+
+  /// 진화 hold 종료 후 콜백. 호출자는 active evolution 을 해제해 카드가
+  /// 일반 캐릭터 슬롯으로 복귀하게 한다.
+  final VoidCallback? onEvolutionComplete;
 
   final VoidCallback? onTapShop;
   final VoidCallback? onTapCollection;
@@ -137,10 +173,28 @@ class CharacterCard extends StatelessWidget {
   String? get _speechText {
     if (character == null) return null;
     if (character?.isEgg ?? false) return null;
+    // 진화 중에도 layout 안정성 + 시선 분산 방지를 위해 말풍선은 그대로 두되,
+    // 안내 문구로 잠깐 갈음한다 (mainAxisAlignment.end 라 슬롯 위치 자체는 동일).
+    if (evolution != null) return '쑥쑥 자라나!';
     return state.speechBubble;
   }
 
   Widget _buildCharacterSlot() {
+    // 진화 연출 활성화: 일반 캐릭터/알/로딩 분기보다 우선해서 애니메이션 뷰로 대체.
+    final ev = evolution;
+    if (ev != null) {
+      return CharacterEvolutionView(
+        beforeImageUrl: beforeEvolutionImageUrl ?? character?.thumbnailUrl ?? '',
+        beforeCharacterId:
+            beforeEvolutionCharacterId ?? character?.characterId,
+        afterCharacterId: afterEvolutionCharacterId,
+        evolution: ev,
+        size: 112.h,
+        onAnimationStart: onEvolutionAnimationStart,
+        onComplete: onEvolutionComplete,
+      );
+    }
+
     if (isCharacterLoading && character == null) {
       return SizedBox(
         height: 100.h,
@@ -393,10 +447,6 @@ class _GrownCharacterState extends State<_GrownCharacter> {
   static const _blinkMin = Duration(milliseconds: 500);
   static const _blinkMax = Duration(milliseconds: 1000);
 
-  // [DEV-TEMP] 평상시 png ↔ blink gif 토글을 끄고 base eye gif 만 항상 노출한다.
-  // 정식 캐릭터 png/webp 에셋이 들어오면 false 로 돌려 원래 깜빡임 흐름 복구.
-  static const bool _alwaysShowBaseGif = true;
-
   Timer? _scheduleTimer;
   Timer? _blinkTimer;
 
@@ -420,7 +470,7 @@ class _GrownCharacterState extends State<_GrownCharacter> {
 
   @override
   void dispose() {
-    _cancelTimers();
+    // _cancelTimers();
     super.dispose();
   }
 
@@ -430,7 +480,6 @@ class _GrownCharacterState extends State<_GrownCharacter> {
   }
 
   void _scheduleNextBlink() {
-    if (_alwaysShowBaseGif) return;
     if (widget.eyeGifCharacterId == null) return;
     final delay = _randomDuration(_intervalMin, _intervalMax);
     _scheduleTimer = Timer(delay, _startBlink);
@@ -475,16 +524,7 @@ class _GrownCharacterState extends State<_GrownCharacter> {
 
     final blinkAsset = _blinkAsset;
     Widget image;
-    if (_alwaysShowBaseGif && id != null) {
-      // [DEV-TEMP] 토글 없이 base eye gif 만. 로드 실패 시 png 폴백.
-      image = Image.asset(
-        'assets/animations/eye/$id.gif',
-        height: widget.imageHeight,
-        fit: BoxFit.contain,
-        filterQuality: FilterQuality.medium,
-        errorBuilder: (_, _, _) => fallback,
-      );
-    } else if (blinkAsset != null && id != null) {
+    if (blinkAsset != null && id != null) {
       final base = 'assets/animations/eye/$id.gif';
       image = Image.asset(
         blinkAsset,
