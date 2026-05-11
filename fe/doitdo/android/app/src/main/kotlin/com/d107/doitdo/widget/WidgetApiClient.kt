@@ -70,8 +70,16 @@ object WidgetApiClient {
             patchStatus(url, body, access)
         } catch (e: WidgetApiException.Unauthorized) {
             // 401 → refresh 1회 → 재호출.
-            val refreshed = refreshAccessToken(context)
-            patchStatus(url, body, refreshed)
+            try {
+                val refreshed = refreshAccessToken(context)
+                patchStatus(url, body, refreshed)
+            } catch (e2: WidgetApiException.Unauthorized) {
+                // refresh token도 만료 → 토큰 초기화 후 위젯에 로그인 필요 표시.
+                Log.w(TAG, "토큰 전체 만료 → SharedPreferences 토큰 초기화")
+                WidgetSharedStore.clearTokens(context)
+                DoitdoWidgetProvider.updateAllWidgets(context)
+                throw e2
+            }
         }
     }
 
@@ -123,7 +131,10 @@ object WidgetApiClient {
             .build()
         try {
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) throw WidgetApiException.Unauthorized
+                if (!response.isSuccessful) {
+                    Log.w(TAG, "refresh 응답 실패: ${response.code}")
+                    throw WidgetApiException.Unauthorized
+                }
 
                 val raw = response.body?.string() ?: throw WidgetApiException.Decode
                 // envelope.data = { accessToken, refreshToken }
