@@ -4,6 +4,7 @@ import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
+import 'package:doitdo/presentation/widgets/common/character_mascot_image.dart';
 
 // ─────────────────────────────────────────────
 // 알림 시트 반환 모델
@@ -76,7 +77,7 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
     final headerRow = Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Image.asset('assets/images/Dooit.png', width: 30, height: 30, filterQuality: FilterQuality.high),
+        const CharacterMascotImage(size: 36),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -190,34 +191,34 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
       top: false,
       minimum: const EdgeInsets.only(bottom: 8),
       child: Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // 드래그 핸들 — standalone 모드 전용
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: colors.border,
-                borderRadius: BorderRadius.circular(2),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 드래그 핸들 — standalone 모드 전용
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          headerRow,
-          const SizedBox(height: 24),
-          wheelRow,
-          const SizedBox(height: 24),
-          buttonRow,
-        ],
-      ),
+            const SizedBox(height: 16),
+            headerRow,
+            const SizedBox(height: 24),
+            wheelRow,
+            const SizedBox(height: 24),
+            buttonRow,
+          ],
+        ),
       ),
     );
   }
@@ -325,7 +326,7 @@ class _PrevButton extends StatelessWidget {
         elevation: 0,
         shadowColor: Colors.transparent,
         shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(vertical: 12),
       ),
       child: Text(
