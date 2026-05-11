@@ -26,13 +26,14 @@
 | user_settings | [tables/user_settings.png](../imgs/tables/user_settings.png) |
 | user_wallets | [tables/user_wallets.png](../imgs/tables/user_wallets.png) |
 | users | [tables/users.png](../imgs/tables/users.png) |
+| wallet_earn_logs | 신규 테이블 (2026-05-07) |
 
 ## 도메인 ↔ 테이블 매핑
 
 | 도메인 | 테이블 |
 |---|---|
 | `auth` | refresh_tokens, auto_providers |
-| `user` | users, user_wallets |
+| `user` | users, user_wallets, wallet_earn_logs |
 | `todo` | todos, categories, palettes, palette_colors, snooze_history |
 | `tamagotchi` | characters, character_actions, character_unlocks, user_character |
 | `inventory` | items, user_items |
@@ -42,6 +43,33 @@
 | `bugreport` | bug_reports |
 
 신규 테이블/도메인이 생기면 이 표를 갱신한다.
+
+## todo 도메인 변경 컬럼
+
+| 테이블 | 컬럼 | 비고 |
+|---|---|---|
+| `todos` | `first_completed_date DATE NULL` | TODO 완료 3개당 뚜레딧 적립 계산용 최초 완료일. 취소·재완료 시 보존 |
+
+## user 도메인 추가 테이블 (뚜레딧 적립 이력)
+
+| 테이블 | 주요 컬럼 | 비고 |
+|---|---|---|
+| `wallet_earn_logs` | `log_id`, `user_id`, `source`, `amount`, `ref_id`, `earned_at`, `created_at`, `updated_at` | 뚜레딧 적립 출처별 감사 로그 및 일일 cap 합산 기준 |
+
+`wallet_earn_logs.source` enum 값:
+
+- `SIGNUP_BONUS`
+- `STREAK_7DAY`
+- `PET_TOUCH`
+- `TODO_COMPLETION`
+
+## tamagotchi 도메인 변경 컬럼 (다마고치 터치 적립)
+
+| 테이블 | 컬럼 | 타입 | 비고 |
+|---|---|---|---|
+| `user_character` | `last_touched_at` | `TIMESTAMP NULL` | 마지막 터치 적립 성공 시각 |
+| `user_character` | `daily_touch_count` | `INT NOT NULL DEFAULT 0` | 해당 일자 터치 적립 성공 횟수 |
+| `user_character` | `daily_touch_date` | `DATE NULL` | `daily_touch_count` 기준 일자 |
 
 ## DDL 정책
 

@@ -6,8 +6,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.doitdo.domain.user.api.dto.req.RegisterAgreementsReq;
 import com.doitdo.domain.user.api.dto.req.RegisterBirthDateReq;
 import com.doitdo.domain.user.api.dto.resp.UserInfoResp;
+import com.doitdo.domain.user.api.dto.resp.WalletBalanceResp;
 import com.doitdo.domain.user.entity.User;
+import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.repository.UserRepository;
+import com.doitdo.domain.user.repository.UserWalletRepository;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.UserErrorCode;
 import java.time.LocalDate;
@@ -30,6 +33,9 @@ class UserServiceImplOnboardingTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private UserWalletRepository userWalletRepository;
 
     // ── 생년월일 등록 ──────────────────────────────────────────────────
 
@@ -198,6 +204,47 @@ class UserServiceImplOnboardingTest {
                 });
 
         // 정리
+        userRepository.deleteById(userId);
+    }
+
+    @Test
+    void getMyBalance_returnsWalletBalance() {
+        User saved = userRepository.save(
+                User.create(
+                        "balance-" + System.currentTimeMillis() + "@test.local",
+                        "encoded",
+                        "balance_" + System.currentTimeMillis()
+                )
+        );
+        Long userId = saved.getUserId();
+        userWalletRepository.save(UserWallet.create(userId));
+
+        WalletBalanceResp resp = userService.getMyBalance(userId);
+
+        assertThat(resp.balance()).isEqualTo(100);
+
+        userWalletRepository.findByUserId(userId).ifPresent(userWalletRepository::delete);
+        userRepository.deleteById(userId);
+    }
+
+    @Test
+    void getMyBalance_walletMissing_throws_U05_001() {
+        User saved = userRepository.save(
+                User.create(
+                        "balance-missing-" + System.currentTimeMillis() + "@test.local",
+                        "encoded",
+                        "balance_missing_" + System.currentTimeMillis()
+                )
+        );
+        Long userId = saved.getUserId();
+
+        assertThatThrownBy(() -> userService.getMyBalance(userId))
+                .isInstanceOf(CustomException.class)
+                .satisfies(ex -> {
+                    CustomException ce = (CustomException) ex;
+                    assertThat(ce.getErrorCode()).isEqualTo(UserErrorCode.U05_001);
+                });
+
         userRepository.deleteById(userId);
     }
 }

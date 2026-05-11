@@ -1,6 +1,11 @@
 package com.doitdo.domain.shop.application.impl;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -8,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.doitdo.domain.shop.api.dto.req.UpdateRoomFurniturePlacementReq;
 import com.doitdo.domain.shop.api.dto.resp.RoomFurniturePlacementResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomResp;
+import com.doitdo.domain.shop.application.DefaultFurnitureRegistrar;
 import com.doitdo.domain.shop.application.RoomFurniturePlacementService;
 import com.doitdo.domain.shop.entity.Furniture;
 import com.doitdo.domain.shop.entity.RoomFurniturePlacement;
@@ -27,17 +33,50 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 	private final RoomFurniturePlacementRepository roomFurniturePlacementRepository;
 	private final UserFurnitureRepository userFurnitureRepository;
 	private final FurnitureRepository furnitureRepository;
+	private final DefaultFurnitureRegistrar defaultFurnitureRegistrar;
 
 	@Override
-	@Transactional(readOnly = true)
+	@Transactional
 	public RoomResp getMyRoom(Long userId) {
-		List<RoomFurniturePlacementResp> items = roomFurniturePlacementRepository
-			.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId)
-			.stream()
-			.map(this::toResp)
-			.toList();
+		List<RoomFurniturePlacement> placements =
+			roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId);
+		if (missingBackground(placements)) {
+			defaultFurnitureRegistrar.registerFor(userId);
+			placements = roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId);
+		}
+
+		List<RoomFurniturePlacementResp> items = placements.stream()
+				.map(this::toResp)
+				.toList();
 
 		return new RoomResp(items);
+	}
+
+	private boolean missingBackground(List<RoomFurniturePlacement> placements) {
+		List<Long> userFurnitureIds = placements.stream()
+				.map(RoomFurniturePlacement::getUserFurnitureId)
+				.toList();
+		Map<Long, UserFurniture> userFurnitureById = userFurnitureRepository.findAllById(userFurnitureIds)
+				.stream()
+				.collect(Collectors.toMap(UserFurniture::getUserFurnitureId, Function.identity()));
+		List<Long> furnitureIds = userFurnitureById.values()
+				.stream()
+				.map(UserFurniture::getFurnitureId)
+				.toList();
+		Map<Long, Furniture> furnitureById = furnitureRepository.findAllById(furnitureIds)
+				.stream()
+				.collect(Collectors.toMap(Furniture::getFurnitureId, Function.identity()));
+
+		Set<String> categories = placements.stream()
+				.map(RoomFurniturePlacement::getUserFurnitureId)
+				.map(userFurnitureById::get)
+				.filter(Objects::nonNull)
+				.map(UserFurniture::getFurnitureId)
+				.map(furnitureById::get)
+				.filter(Objects::nonNull)
+				.map(Furniture::getCategory)
+				.collect(Collectors.toSet());
+		return !categories.contains("BACKGROUND");
 	}
 
 	@Override

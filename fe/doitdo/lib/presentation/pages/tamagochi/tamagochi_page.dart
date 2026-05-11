@@ -9,9 +9,9 @@ import 'package:doitdo/presentation/pages/tamagochi/character_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/streak_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_view_model.dart';
+import 'package:doitdo/domain/entities/evolution.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/character_card.dart';
-import 'package:doitdo/presentation/pages/tamagochi/widgets/farewell_banner.dart';
-import 'package:doitdo/presentation/pages/tamagochi/widgets/streak_section.dart';
+import 'package:doitdo/presentation/pages/tamagochi/widgets/status_pill.dart';
 import 'package:doitdo/presentation/pages/todo/todo_state.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_add_sheet.dart';
@@ -39,10 +39,11 @@ class TamagochiPage extends ConsumerStatefulWidget {
 }
 
 class _TamagochiPageState extends ConsumerState<TamagochiPage> {
-  // StreakSection 대략 높이 계산에 사용.
-  // 수직 padding 16*2 + 타이틀 ~20 + gap 10 + (dot 22 + gap 4 + 날짜 label ~16) ≈ 104
-  static const double _streakSectionHeight = 104;
-  static const double _streakTopGap = 16;
+  /// 캐릭터 카드 + 상태 알약을 합친 시각적 헤더 높이의 근사치.
+  /// StatusPill 이 카드 하단을 -16.h 만큼 침범하면서 ~50.h 노출되므로
+  /// 카드 본체(260.h) + ~34.h ≈ 294.h. snap / 상태바 토글 임계만 잡으면 되니
+  /// 정확하지 않아도 무방.
+  static const double _headerHeightExclTopInset = 294;
 
   /// 헤더가 보이는 상태인지. 상태바 오버레이 + 아이콘 색 전환에만 쓰인다.
   /// 매 스크롤마다 build 가 다시 돌지 않도록 ValueNotifier 로 분리.
@@ -50,11 +51,40 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
 
   late final ScrollController _scrollController;
 
-  /// farewell API 호출 in-flight 여부. 버튼 중복 탭 방지용.
+  /// farewell API 호출 in-flight 여부. 뱃지 중복 탭 방지용.
   bool _farewelling = false;
 
-  /// 스트릭 보상 수령 API in-flight 여부. 버튼 중복 탭 방지 + 버튼 스피너용.
+  /// 진화 플로우 진행 중 여부. evolve API 호출 시작부터 진화 연출 종료까지
+  /// true 로 유지 — 진화 뱃지/메뉴/상태 알약의 입력을 잠그는 용도.
+  bool _evolving = false;
+
+  /// 진화 연출 active 데이터. non-null 이면 CharacterCard 가 캐릭터 슬롯 자리에서
+  /// 진화 애니메이션을 재생한다. 연출 종료 콜백에서 null 로 되돌려 일반 캐릭터로 복귀.
+  Evolution? _activeEvolution;
+
+  /// 진화 직전 캐릭터 썸네일. silhouette 단계에서 사용. evolve 응답 후 home state 가
+  /// 새 캐릭터로 갱신되더라도 이 변수가 옛 thumbnailUrl 을 들고 있어 silhouette 이
+  /// 옛 모습 그대로 유지된다.
+  String? _beforeEvolutionImageUrl;
+
+  /// 진화 직전 캐릭터 species ID. silhouette 의 eye gif 에셋 경로 (`assets/animations/
+  /// eye/{id}.gif`) 를 만드는 데 쓰여, 홈에서 그리던 캐릭터와 위치/크기가 일치한다.
+  int? _beforeEvolutionCharacterId;
+
+  /// 진화 후 캐릭터 species ID. animation 단계에서 트리거한 refresh 응답으로
+  /// 채워지며, reveal 단계에서 새 캐릭터를 eye gif 로 그리는 데 사용된다.
+  /// 채워지지 못한 경우(refresh 늦음/실패) 는 응답의 characterImageUrl 로 fallback.
+  int? _afterEvolutionCharacterId;
+
+  /// 스트릭 보상 수령 API in-flight 여부. 버튼 중복 탭 방지 + 7번째 슬롯의
+  /// 흐려진 gift(loading) 표시용. StatusPill 에 [isClaimingReward] 로 흘러간다.
   bool _claimingReward = false;
+
+  /// 보상 수령 성공 직후 ~1.2s 동안 true. StatusPill 의 7번째 슬롯이 초록 체크로
+  /// 잠깐 표시되고, false 로 떨어지는 시점에 popover 가 자동으로 닫힌다.
+  /// 실패 시에는 켜지지 않으므로 popover 가 즉시 닫힘 (page 가 에러 스낵바 안내).
+  bool _claimSuccessFlash = false;
+  Timer? _claimSuccessTimer;
 
   @override
   void initState() {
@@ -86,6 +116,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     // 검사한 후 폴백한다 (다음 TamagochiPage 가 mount 될 때 새 controller 로 덮어쓴다).
     _scrollController.dispose();
     _headerVisible.dispose();
+    _claimSuccessTimer?.cancel();
     super.dispose();
   }
 
@@ -143,7 +174,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       useRootNavigator: true,
-      builder: (_) => TodoDetailSheet(todoId: todo.id, isSomeday: isSomeday),
+      builder: (_) => TodoDetailSheet(todo: todo, isSomeday: isSomeday),
     );
   }
 
@@ -158,16 +189,20 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     ref.read(characterViewModelProvider.notifier).load();
   }
 
-  /// 독립 시키기 버튼 탭. 확인 다이얼로그로 한 번 감싼 뒤 farewell API 호출.
+  /// 독립 뱃지 탭. 확인 다이얼로그로 한 번 감싼 뒤 farewell API 호출.
   /// 성공 시 서버가 다음 알을 자동 배정하므로 ViewModel 이 load() 로 갱신.
   Future<void> _handleFarewellTap() async {
     if (_farewelling) return;
+    final character =
+        ref.read(characterViewModelProvider).valueOrNull;
+    final name =
+        (character == null || character.name.isEmpty) ? '다마고치' : character.name;
     final confirmed = await showDoitdoDialog(
       context: context,
       title: '독립 시키기',
-      message: '지금까지 함께한 다마고치를 배웅할게요.\n'
-          '독립하면 되돌릴 수 없고 바로 새 알이 도착해요.',
-      confirmLabel: '독립 시키기',
+      message: '$name가 떠날 준비가 됐어요.\n'
+          '배웅하면 되돌릴 수 없고 바로 새 알이 도착해요.',
+      confirmLabel: '배웅하기',
       cancelLabel: '취소',
     );
     if (!mounted || confirmed != true) return;
@@ -190,8 +225,94 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       );
   }
 
+  /// 진화 뱃지 탭. 확인 다이얼로그 → evolve API → 성공 시 캐릭터 슬롯 자리에서
+  /// 진화 애니메이션을 재생한다. 자동 진화 흐름은 제거되어 사용자가 직접 트리거 해야
+  /// BABY→TEEN / TEEN→ADULT 가 진행된다.
+  ///
+  /// silhouette 단계에서 쓸 진화 직전 thumbnailUrl 은 evolve 호출 직전에 캡처해둔다.
+  Future<void> _handleEvolveTap() async {
+    if (_evolving) return;
+    final character =
+        ref.read(characterViewModelProvider).valueOrNull;
+    if (character == null) return;
+
+    final name = character.name.isEmpty ? '다마고치' : character.name;
+    final confirmed = await showDoitdoDialog(
+      context: context,
+      title: '진화 시키기',
+      message: '$name가 다음 단계로 진화할 준비가 됐어요.\n'
+          '진화하면 모습이 바뀌고 다시 처음부터 자라요.',
+      confirmLabel: '진화시키기',
+      cancelLabel: '취소',
+    );
+    if (!mounted || confirmed != true) return;
+
+    final beforeImageUrl = character.thumbnailUrl;
+    final beforeCharacterId = character.characterId;
+
+    setState(() => _evolving = true);
+    final evolution = await ref
+        .read(characterViewModelProvider.notifier)
+        .evolve(character.userCharacterId);
+    if (!mounted) return;
+
+    if (evolution == null) {
+      setState(() => _evolving = false);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('진화 처리 중 문제가 생겼어요. 다시 시도해주세요.'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      return;
+    }
+
+    // CharacterCard 의 캐릭터 슬롯 자리에서 진화 애니메이션 재생.
+    // _evolving 은 reveal/complete 콜백 흐름까지 true 로 유지되어 메뉴/상태 알약
+    // 입력을 막는다. 일반 캐릭터로의 복귀는 _onEvolutionComplete 에서 처리.
+    setState(() {
+      _beforeEvolutionImageUrl = beforeImageUrl;
+      _beforeEvolutionCharacterId = beforeCharacterId;
+      _activeEvolution = evolution;
+    });
+  }
+
+  /// 진화 silhouette → animation 전환 시 콜백. 이 시점부터 reveal 까지 약
+  /// 2.4s 의 시간이 있으니, 그 안에 home state 를 새 캐릭터로 refresh 하고
+  /// 받은 새 characterId 를 [_afterEvolutionCharacterId] 로 채워 넣는다 —
+  /// reveal 단계에서 새 캐릭터를 응답 PNG 가 아닌 eye gif 로 그릴 수 있어
+  /// 연출 종료 후 home 으로 복귀할 때 크기/비율 점프가 사라진다.
+  Future<void> _onEvolutionAnimationStart() async {
+    if (!mounted) return;
+    await ref.read(characterViewModelProvider.notifier).refresh();
+    if (!mounted) return;
+    final newCharacter =
+        ref.read(characterViewModelProvider).valueOrNull;
+    if (newCharacter == null) return;
+    setState(() => _afterEvolutionCharacterId = newCharacter.characterId);
+  }
+
+  /// 진화 hold 종료 콜백. 일반 캐릭터 슬롯으로 복귀 + 입력 잠금 해제.
+  void _onEvolutionComplete() {
+    if (!mounted) return;
+    setState(() {
+      _activeEvolution = null;
+      _beforeEvolutionImageUrl = null;
+      _beforeEvolutionCharacterId = null;
+      _afterEvolutionCharacterId = null;
+      _evolving = false;
+    });
+  }
+
   /// 7일 블록 완성 시 노출되는 "🎁 보상 받기" 탭 핸들러.
   /// BE 가 이미 수령된 케이스를 `rewarded=false` 로 회신하므로 분기해서 안내.
+  ///
+  /// 성공 시 [_claimSuccessFlash] 를 켜 popover 의 7번째 슬롯이 초록 체크로
+  /// 잠깐 보이고, 1.2s 뒤 flash 를 끄면 popover 가 자동으로 닫힌다 (StatusPill).
+  /// 실패 시엔 flash 를 켜지 않아 popover 가 즉시 닫히고 에러 스낵바만 안내.
   Future<void> _handleClaimReward() async {
     if (_claimingReward) return;
     setState(() => _claimingReward = true);
@@ -199,11 +320,12 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
         .read(streakViewModelProvider.notifier)
         .claimReward();
     if (!mounted) return;
-    setState(() => _claimingReward = false);
 
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
+
     if (reward == null) {
+      setState(() => _claimingReward = false);
       messenger.showSnackBar(
         const SnackBar(
           content: Text('보상 수령 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.'),
@@ -213,10 +335,16 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       );
       return;
     }
+
+    final isFreshClaim = reward.rewarded;
+    setState(() {
+      _claimingReward = false;
+      _claimSuccessFlash = isFreshClaim;
+    });
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          reward.rewarded
+          isFreshClaim
               ? '🎉 ${reward.streakCount}일 연속 달성! +${reward.rewardAmount}코인'
               : '이미 보상을 받았어요.',
         ),
@@ -224,6 +352,13 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
         duration: const Duration(seconds: 2),
       ),
     );
+
+    if (!isFreshClaim) return;
+    _claimSuccessTimer?.cancel();
+    _claimSuccessTimer = Timer(const Duration(milliseconds: 1200), () {
+      if (!mounted) return;
+      setState(() => _claimSuccessFlash = false);
+    });
   }
 
   @override
@@ -249,10 +384,8 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
         .toList(growable: false);
     final somedayTodos = todoState.allSomedayTodos;
 
-    // 에러 스낵바 + canEvolve 에지 자동 진화 트리거. 두 작업 모두 character 상태
-    // 변화에 반응하므로 같은 ref.listen 에 묶는다. canEvolve 는 BABY/TEEN 에서만
-    // true 가 되고 ADULT 는 canFarewell 로 전환되므로 stage 검사는 생략. 재렌더
-    // 시 중복 호출되지 않도록 "false→true" 순간에만 호출한다.
+    // 캐릭터 fetch 에러 스낵바. 진화 트리거는 더 이상 자동이 아님 — 캐릭터
+    // 카드의 액션 뱃지(canEvolve/canFarewell) 탭 → 다이얼로그 흐름으로 대체됨.
     ref.listen<AsyncValue<Character?>>(characterViewModelProvider,
             (prev, next) {
           // 첫 로드(loading→error) 는 dio 의 토큰 refresh / 자동 재시도가 끼어들면서
@@ -265,15 +398,6 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
           if (next.hasError && wasShowingData && mounted) {
             _showComingSoon(context, '캐릭터 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
           }
-
-          final prevChar = prev?.valueOrNull;
-          final nextChar = next.valueOrNull;
-          if (nextChar == null || !nextChar.canEvolve) return;
-          final wasAlreadyEvolvable = prevChar != null && prevChar.canEvolve;
-          if (wasAlreadyEvolvable) return;
-          ref
-              .read(characterViewModelProvider.notifier)
-              .evolve(nextChar.userCharacterId);
         });
 
     // 타마고치 탭 진입 시 스트릭 silent refresh.
@@ -282,13 +406,22 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     });
 
     // Todo 완료 count 가 증가하면 exp 가 올라갔을 가능성이 있으므로 캐릭터 재조회.
+    // 새로 isDone=true 로 전환된 todoId 가 있을 때만 발화 — _doneCount 비교는
+    // TODO 생성(addTodo) 시 state 교체 타이밍에도 발화할 수 있어 done-id 집합
+    // 차분으로 "실제로 완료된 항목이 늘었는지" 를 정확히 판별한다.
     // BE 는 AFTER_COMMIT 리스너로 exp 를 비동기 부여하므로 곧장 GET /me 를 부르면
     // 옛 값을 받을 수 있다. 200ms 먼저 조회해보고 exp 변화가 없으면 500ms 뒤 한 번 더.
     ref.listen<TodoState>(todoViewModelProvider, (prev, next) {
       if (prev == null) return;
-      final prevDone = _doneCount(prev);
-      final nextDone = _doneCount(next);
-      if (nextDone > prevDone) {
+      final prevDoneIds = {
+        ...prev.allTodos.where((t) => t.isDone).map((t) => t.id),
+        ...prev.allSomedayTodos.where((t) => t.isDone).map((t) => t.id),
+      };
+      final nextDoneIds = {
+        ...next.allTodos.where((t) => t.isDone).map((t) => t.id),
+        ...next.allSomedayTodos.where((t) => t.isDone).map((t) => t.id),
+      };
+      if (nextDoneIds.difference(prevDoneIds).isNotEmpty) {
         _refreshCharacterAfterTodoDone();
       }
     });
@@ -297,9 +430,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     final isCharacterLoading = characterAsync.isLoading;
     final topInset = MediaQuery.paddingOf(context).top;
 
-    final double headerHeight = 200.h +
-        _streakTopGap +
-        _streakSectionHeight;
+    final double headerHeight = _headerHeightExclTopInset.h + topInset;
 
     return ValueListenableBuilder<bool>(
       valueListenable: _headerVisible,
@@ -345,45 +476,73 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          CharacterCard(
-                            state: state,
-                            character: character,
-                            isCharacterLoading: isCharacterLoading,
-                            topSafePadding: topInset,
-                            onTapShop: () =>
-                                context.push(AppRoutes.tamagochiShop),
-                            onTapCollection: () =>
-                                context.push(AppRoutes.tamagochiCollection),
-                            onEggTap: _handleEggTap,
-                            onCharacterTap: () {
-                              final remaining = todayTodos
-                                  .where((t) => !t.isDone)
-                                  .length;
-                              ref
-                                  .read(tamagochiViewModelProvider.notifier)
-                                  .onCharacterTap(
-                                remainingTodayTodos: remaining,
-                              );
-                            },
-                          ),
-                          if (character?.canFarewell ?? false) ...[
-                            SizedBox(height: 12.h),
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 16.w),
-                              child: FarewellBanner(
-                                characterName: character!.name,
-                                busy: _farewelling,
-                                onTap: _handleFarewellTap,
+                          // 캐릭터 카드 + 상태 알약을 한 Stack 으로 묶어, 알약이
+                          // 카드 안쪽 바닥 부근에 떠있는 모양으로 배치한다.
+                          // (Transform.translate 로 끌어올리면 layout slot 이 그대로
+                          // 남아 아래에 빈 공간이 생기므로 Stack 으로 처리.)
+                          Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              CharacterCard(
+                                state: state,
+                                character: character,
+                                isCharacterLoading: isCharacterLoading,
+                                evolution: _activeEvolution,
+                                beforeEvolutionImageUrl:
+                                    _beforeEvolutionImageUrl,
+                                beforeEvolutionCharacterId:
+                                    _beforeEvolutionCharacterId,
+                                afterEvolutionCharacterId:
+                                    _afterEvolutionCharacterId,
+                                onEvolutionAnimationStart:
+                                    _onEvolutionAnimationStart,
+                                onEvolutionComplete: _onEvolutionComplete,
+                                topSafePadding: topInset,
+                                onTapShop: () =>
+                                    context.push(AppRoutes.tamagochiShop),
+                                onTapCollection: () => context
+                                    .push(AppRoutes.tamagochiCollection),
+                                onEggTap: _handleEggTap,
+                                onCharacterTap: () {
+                                  final remaining = todayTodos
+                                      .where((t) => !t.isDone)
+                                      .length;
+                                  ref
+                                      .read(tamagochiViewModelProvider
+                                      .notifier)
+                                      .onCharacterTap(
+                                    remainingTodayTodos: remaining,
+                                  );
+                                },
                               ),
-                            ),
-                            SizedBox(height: 12.h),
-                          ],
-                          StreakSection(
-                            streakDays: streak.currentCount,
-                            slots: streakWindow.slots,
-                            isRewardClaimable: streak.hasCompletedBlock,
-                            isClaimingReward: _claimingReward,
-                            onClaimReward: _handleClaimReward,
+                              if (character != null && !character.isEgg)
+                                Positioned(
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 8.h,
+                                  child: StatusPill(
+                                    character: character,
+                                    streakDays: streak.currentCount,
+                                    streakSlots: streakWindow.slots,
+                                    // BE 가 직접 판정한 canClaim 그대로 사용.
+                                    // 일수 % 7 == 0 만 보던 이전 로직은 수령 직후
+                                    // 에도 true 로 남아 버튼이 안 꺼졌음.
+                                    isRewardClaimable: streak.canClaim,
+                                    // 7일 블록 끝(슬롯 7개 다 찬 상태) 인데 이미
+                                    // 받았다면 placeholder 대신 "수령됨" 표시를
+                                    // 하기 위한 신호. canClaim=false + 블록 종료
+                                    // 시점에만 true.
+                                    isRewardClaimed:
+                                        !streak.canClaim && streak.isAtBlockEnd,
+                                    isClaimingReward: _claimingReward,
+                                    claimSuccessFlash: _claimSuccessFlash,
+                                    onClaimReward: _handleClaimReward,
+                                    onTapEvolve: _handleEvolveTap,
+                                    onTapFarewell: _handleFarewellTap,
+                                    actionBusy: _evolving || _farewelling,
+                                  ),
+                                ),
+                            ],
                           ),
                         ],
                       ),
@@ -396,11 +555,10 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                               minHeight: constraints.viewportMainAxisExtent,
                             ),
                             child: Padding(
-                              padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+                              padding: const EdgeInsets.fromLTRB(24, 18, 24, 16),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  // ✅ 오늘/언젠가 할 일 섹션 간 드래그앤드롭
                                   _CrossSectionTodoList(
                                     scrollController: _scrollController,
                                     todayTitle: '오늘의 할 일',
@@ -448,11 +606,6 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     );
   }
 }
-
-/// TodoState 의 완료된 할 일 총 개수 (오늘의 할 일 + 언젠가 할 일).
-int _doneCount(TodoState s) =>
-    s.allTodos.where((t) => t.isDone).length +
-        s.allSomedayTodos.where((t) => t.isDone).length;
 
 /// 해당 Todo 가 "오늘의 할 일" 에 포함되는지. 단일 날짜는 동일 일자, 기간은 오늘이
 /// 시작~종료 사이, 반복은 시작일이 오늘 이전이고 종료일이 없거나 오늘 이후면 포함.
@@ -801,7 +954,7 @@ class _SectionHeader extends StatelessWidget {
     // ✅ 상단 패딩을 크게 해서 오늘 섹션 마지막 아이템과 헤더 사이
     // 드롭 감지 영역을 충분히 확보 (off-by-one 방지)
     return Padding(
-      padding: const EdgeInsets.only(top: 28, bottom: 8),
+      padding: const EdgeInsets.only(top: 16, bottom: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

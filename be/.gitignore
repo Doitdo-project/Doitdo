@@ -1,5 +1,6 @@
 HELP.md
 .gradle
+.gradle-user/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
@@ -56,6 +57,7 @@ docs/imgs/
 *.log
 
 ### Claude Code (개인 설정 / 런타임) ###
+.claude/settings.json
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 

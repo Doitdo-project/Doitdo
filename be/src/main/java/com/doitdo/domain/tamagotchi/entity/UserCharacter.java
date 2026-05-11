@@ -1,5 +1,6 @@
 package com.doitdo.domain.tamagotchi.entity;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import com.doitdo.global.entity.BaseTimeEntity;
@@ -52,6 +53,15 @@ public class UserCharacter extends BaseTimeEntity {
 
 	@Column(name = "farewell_available_at")
 	private LocalDateTime farewellAvailableAt;
+
+	@Column(name = "last_touched_at")
+	private LocalDateTime lastTouchedAt;
+
+	@Column(name = "daily_touch_count", nullable = false)
+	private int dailyTouchCount;
+
+	@Column(name = "daily_touch_date")
+	private LocalDate dailyTouchDate;
 
 	@Builder.Default
 	@Column(name = "farewell_notified", nullable = false)
@@ -106,5 +116,18 @@ public class UserCharacter extends BaseTimeEntity {
 			return;
 		}
 		this.farewellNotified = true;
+	}
+
+	public void resetDailyTouchIfNewDate(LocalDate today) {
+		if (!today.equals(this.dailyTouchDate)) {
+			this.dailyTouchCount = 0;
+			this.dailyTouchDate = today;
+		}
+	}
+
+	public void recordTouch(LocalDateTime now, LocalDate today) {
+		resetDailyTouchIfNewDate(today);
+		this.dailyTouchCount += 1;
+		this.lastTouchedAt = now;
 	}
 }

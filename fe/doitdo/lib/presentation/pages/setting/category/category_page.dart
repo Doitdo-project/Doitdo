@@ -419,15 +419,33 @@ class _PaletteSelector extends ConsumerWidget {
 
         var currentIndex = palettes.indexWhere((p) => p.paletteId == activeId);
         if (currentIndex < 0) currentIndex = 0;
-        final current = palettes[currentIndex];
 
-        // 첫 진입 시 활성 팔레트 미설정이면 첫 팔레트로 자동 set (post-frame).
+        // activePaletteProvider 가 null 이면(= 로그아웃 후 첫 진입 등)
+        // 서버 카테고리의 colorId 로 실제 팔레트를 역추론해 설정한다.
+        // 단순히 첫 팔레트(기본)로 고정하면 서버 색상과 선택된 팔레트 이름이
+        // 어긋나는 현상이 발생하기 때문.
         if (activeId == null) {
+          final cats = ref.read(categoryViewModelProvider).valueOrNull ?? [];
+          if (cats.isNotEmpty) {
+            final firstColorId = cats.first.colorId;
+            int base = 1;
+            for (int i = 0; i < palettes.length; i++) {
+              final p = palettes[i];
+              if (firstColorId >= base && firstColorId < base + p.colors.length) {
+                currentIndex = i;
+                break;
+              }
+              base += p.colors.length;
+            }
+          }
+          final detectedId = palettes[currentIndex].paletteId;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!context.mounted) return;
-            ref.read(activePaletteProvider.notifier).set(current.paletteId);
+            ref.read(activePaletteProvider.notifier).set(detectedId);
           });
         }
+
+        final current = palettes[currentIndex];
 
         return Container(
           decoration: BoxDecoration(

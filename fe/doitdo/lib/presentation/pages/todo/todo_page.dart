@@ -11,6 +11,7 @@ import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/notification/notification_view_model.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart'; // ✅ 추가
+import 'package:doitdo/presentation/pages/todo/todo_add_notifier.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/widgets/common/todo_item_card.dart';
 import 'package:doitdo/presentation/providers/home_scroll_provider.dart';
@@ -201,7 +202,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
     showModalBottomSheet(
       context: context, isScrollControlled: true,
       backgroundColor: Colors.transparent, useRootNavigator: true,
-      builder: (_) => TodoDetailSheet(todoId: todo.id, isSomeday: isSomeday),
+      builder: (_) => TodoDetailSheet(todo: todo, isSomeday: isSomeday),
     );
   }
 
@@ -214,6 +215,13 @@ class _TodoPageState extends ConsumerState<TodoPage> {
   Widget build(BuildContext context) {
     ref.listen(calendarTodayTriggerProvider, (prev, next) {
       if (prev != null && next > prev) _jumpToToday();
+    });
+    ref.listen<AsyncValue<void>>(todoAddNotifierProvider, (_, next) {
+      next.whenOrNull(
+        error: (_, __) => ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('할 일 저장에 실패했어요. 다시 시도해주세요.')),
+        ),
+      );
     });
 
     final state  = ref.watch(todoViewModelProvider);
@@ -540,7 +548,11 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                     onReorderToday: vm.reorderTodo,
                     onReorderSomeday: vm.reorderSomedayTodo,
                     onMoveToSomeday: vm.moveToSomeday,
-                    onMoveToToday: vm.moveToToday,
+                    onMoveToToday: (id, {targetIndex = -1}) => vm.moveToToday(
+                      id,
+                      targetIndex: targetIndex,
+                      targetDate: state.selectedDay,
+                    ),
                     onSnooze: vm.snoozeTodo,
                     onAddToday: () => _openAddSheet(context, state.selectedDay ?? DateTime.now()),
                     onAddSomeday: () => _openAddSheet(context, null),
@@ -822,7 +834,7 @@ class _SectionHeader extends StatelessWidget {
     // ✅ 상단 패딩을 크게 해서 오늘 섹션 마지막 아이템과 헤더 사이
     // 드롭 감지 영역을 충분히 확보 (off-by-one 방지)
     return Padding(
-      padding: const EdgeInsets.only(top: 28, bottom: 8),
+      padding: const EdgeInsets.only(top: 16, bottom: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

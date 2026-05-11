@@ -3,13 +3,19 @@ package com.doitdo.domain.tamagotchi.application.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentCaptor.forClass;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.ArgumentMatchers.any;
 
+import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -40,8 +46,12 @@ import com.doitdo.domain.tamagotchi.repository.CharacterSpeciesBackgroundReposit
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterHistoryRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
+import com.doitdo.domain.user.application.CreditEarnService;
+import com.doitdo.domain.user.entity.UserWallet;
+import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.entity.User;
 import com.doitdo.domain.user.repository.UserRepository;
+import com.doitdo.domain.user.repository.UserWalletRepository;
 import com.doitdo.global.cache.CacheEvictHelper;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TamagotchiErrorCode;
@@ -76,6 +86,12 @@ class TamagotchiServiceImplTest {
 	@Mock
 	private CacheEvictHelper cacheEvictHelper;
 
+	@Mock
+	private CreditEarnService creditEarnService;
+
+	@Mock
+	private UserWalletRepository userWalletRepository;
+
 	private TamagotchiServiceImpl service() {
 		return new TamagotchiServiceImpl(
 			characterActionRepository,
@@ -86,7 +102,9 @@ class TamagotchiServiceImplTest {
 			characterSpeciesBackgroundRepository,
 			userRepository,
 			eventPublisher,
-			cacheEvictHelper
+			cacheEvictHelper,
+			creditEarnService,
+			userWalletRepository
 		);
 	}
 
@@ -325,10 +343,143 @@ class TamagotchiServiceImplTest {
 			.willReturn(Optional.of(userCharacter));
 		given(characterActionRepository.findAllByCharacterIdAndActionType(9L, "EYE"))
 			.willReturn(List.of(first, second));
+		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet(userId, 100)));
 
 		CharacterActionUrlResp resp = service.getMyCharacterActionUrl(userId, "EYE");
 
 		assertThat(resp.actionUrl()).isIn("https://cdn.example.com/eye_2.gif", "https://cdn.example.com/eye.gif");
+		assertThat(resp.earnedAmount()).isZero();
+	}
+
+	@Test
+	void getMyCharacterActionUrlIdleEarnsThreeTimesAndSkipsFourthWithActionUrl() {
+		TamagotchiServiceImpl service = service();
+		Long userId = 1L;
+		UserCharacter userCharacter = activeUserCharacter(userId);
+		CharacterAction action = idleAction();
+		LocalDate today = LocalDate.of(2026, 5, 7);
+		LocalDateTime baseTime = today.atTime(9, 0);
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(userCharacter));
+		given(userCharacterRepository.findActiveByUserIdForUpdate(userId))
+			.willReturn(Optional.of(userCharacter));
+		given(characterActionRepository.findAllByCharacterIdAndActionType(9L, "IDLE"))
+			.willReturn(List.of(action));
+		given(creditEarnService.tryEarn(userId, WalletEarnSource.PET_TOUCH, 10, 9L, false))
+			.willReturn(10);
+		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet(userId, 130)));
+
+		int earnedSum = 0;
+		for (int i = 0; i < 3; i++) {
+			service.setClock(fixedClock(baseTime.plusHours(i)));
+			earnedSum += service.getMyCharacterActionUrl(userId, "IDLE").earnedAmount();
+		}
+		service.setClock(fixedClock(baseTime.plusHours(3)));
+		CharacterActionUrlResp fourth = service.getMyCharacterActionUrl(userId, "IDLE");
+
+		assertThat(earnedSum).isEqualTo(30);
+		assertThat(fourth.actionUrl()).isEqualTo("https://cdn.example.com/idle.gif");
+		assertThat(fourth.earnedAmount()).isZero();
+		assertThat(fourth.dailyTouchCount()).isEqualTo(3);
+		assertThat(fourth.nextAvailableAt()).isEqualTo(today.plusDays(1).atStartOfDay());
+		then(creditEarnService).should(times(3))
+			.tryEarn(userId, WalletEarnSource.PET_TOUCH, 10, 9L, false);
+	}
+
+	@Test
+	void getMyCharacterActionUrlIdleSkipsEarnDuringOneHourCooldown() {
+		TamagotchiServiceImpl service = service();
+		Long userId = 1L;
+		UserCharacter userCharacter = activeUserCharacter(userId);
+		LocalDateTime baseTime = LocalDateTime.of(2026, 5, 7, 9, 0);
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(userCharacter));
+		given(userCharacterRepository.findActiveByUserIdForUpdate(userId))
+			.willReturn(Optional.of(userCharacter));
+		given(characterActionRepository.findAllByCharacterIdAndActionType(9L, "IDLE"))
+			.willReturn(List.of(idleAction()));
+		given(creditEarnService.tryEarn(userId, WalletEarnSource.PET_TOUCH, 10, 9L, false))
+			.willReturn(10);
+		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet(userId, 110)));
+
+		service.setClock(fixedClock(baseTime));
+		CharacterActionUrlResp first = service.getMyCharacterActionUrl(userId, "IDLE");
+		service.setClock(fixedClock(baseTime.plusMinutes(10)));
+		CharacterActionUrlResp second = service.getMyCharacterActionUrl(userId, "IDLE");
+
+		assertThat(first.earnedAmount()).isEqualTo(10);
+		assertThat(second.actionUrl()).isEqualTo("https://cdn.example.com/idle.gif");
+		assertThat(second.earnedAmount()).isZero();
+		assertThat(second.dailyTouchCount()).isEqualTo(1);
+		assertThat(second.nextAvailableAt()).isEqualTo(baseTime.plusHours(1));
+		then(creditEarnService).should(times(1))
+			.tryEarn(userId, WalletEarnSource.PET_TOUCH, 10, 9L, false);
+	}
+
+	@Test
+	void getMyCharacterActionUrlEyeSkipsEarnEvaluationAndReturnsActionUrl() {
+		TamagotchiServiceImpl service = service();
+		Long userId = 1L;
+		UserCharacter userCharacter = activeUserCharacter(userId);
+		CharacterAction action = CharacterAction.builder()
+			.actionId(11L)
+			.characterId(9L)
+			.actionType("EYE")
+			.actionUrl("https://cdn.example.com/eye.gif")
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(userCharacter));
+		given(characterActionRepository.findAllByCharacterIdAndActionType(9L, "EYE"))
+			.willReturn(List.of(action));
+		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet(userId, 100)));
+
+		CharacterActionUrlResp resp = service.getMyCharacterActionUrl(userId, "EYE");
+
+		assertThat(resp.actionUrl()).isEqualTo("https://cdn.example.com/eye.gif");
+		assertThat(resp.earnedAmount()).isZero();
+		assertThat(resp.dailyTouchCount()).isZero();
+		then(userCharacterRepository).should(never()).findActiveByUserIdForUpdate(anyLong());
+		then(creditEarnService).should(never()).tryEarn(anyLong(), any(), anyInt(), any(), anyBoolean());
+	}
+
+	@Test
+	void getMyCharacterActionUrlIdleResetsDailyTouchDateAfterDayChangesAndEarnsAgain() {
+		TamagotchiServiceImpl service = service();
+		Long userId = 1L;
+		LocalDate today = LocalDate.of(2026, 5, 7);
+		LocalDateTime now = today.atTime(9, 0);
+		UserCharacter userCharacter = UserCharacter.builder()
+			.userCharacterId(10L)
+			.userId(userId)
+			.characterId(9L)
+			.name("rabi")
+			.currentExp(0)
+			.isActive(true)
+			.isDeleted(false)
+			.lastTouchedAt(now.minusDays(1))
+			.dailyTouchDate(today.minusDays(1))
+			.dailyTouchCount(3)
+			.build();
+
+		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
+			.willReturn(Optional.of(userCharacter));
+		given(userCharacterRepository.findActiveByUserIdForUpdate(userId))
+			.willReturn(Optional.of(userCharacter));
+		given(characterActionRepository.findAllByCharacterIdAndActionType(9L, "IDLE"))
+			.willReturn(List.of(idleAction()));
+		given(creditEarnService.tryEarn(userId, WalletEarnSource.PET_TOUCH, 10, 9L, false))
+			.willReturn(10);
+		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet(userId, 140)));
+
+		service.setClock(fixedClock(now));
+		CharacterActionUrlResp resp = service.getMyCharacterActionUrl(userId, "IDLE");
+
+		assertThat(resp.earnedAmount()).isEqualTo(10);
+		assertThat(resp.dailyTouchCount()).isEqualTo(1);
+		assertThat(resp.nextAvailableAt()).isEqualTo(now.plusHours(1));
 	}
 
 	@Test
@@ -865,5 +1016,37 @@ class TamagotchiServiceImplTest {
 				assertThat(exception.getErrorCode()).isEqualTo(TamagotchiErrorCode.M00_002);
 				assertThat(exception.getErrorCode().getHttpStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
 			});
+	}
+
+	private UserCharacter activeUserCharacter(Long userId) {
+		return UserCharacter.builder()
+			.userCharacterId(10L)
+			.userId(userId)
+			.characterId(9L)
+			.name("rabi")
+			.currentExp(0)
+			.isActive(true)
+			.isDeleted(false)
+			.build();
+	}
+
+	private CharacterAction idleAction() {
+		return CharacterAction.builder()
+			.actionId(12L)
+			.characterId(9L)
+			.actionType("IDLE")
+			.actionUrl("https://cdn.example.com/idle.gif")
+			.build();
+	}
+
+	private UserWallet wallet(Long userId, int balance) {
+		return UserWallet.builder()
+			.userId(userId)
+			.balance(balance)
+			.build();
+	}
+
+	private Clock fixedClock(LocalDateTime dateTime) {
+		return Clock.fixed(dateTime.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
 	}
 }

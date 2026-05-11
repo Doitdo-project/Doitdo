@@ -128,9 +128,18 @@ class _TodoCategorySheetState extends ConsumerState<TodoCategorySheet> {
               }),
               if (categories.length < 6)
                 GestureDetector(
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const CategoryPage()),
-                  ),
+                  onTap: () {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    final nav = Navigator.of(context, rootNavigator: true);
+                    nav.pop(); // TodoAddSheet 모달 제거 → 스크림 없애기
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      nav.push(
+                        MaterialPageRoute(
+                          builder: (_) => const CategoryPage(),
+                        ),
+                      );
+                    });
+                  },
                   child: Container(
                     width: chipWidth,
                     height: chipWidth,

@@ -19,6 +19,7 @@ class TodoListItemDto with _$TodoListItemDto {
     required int todoId,
     required String title,
     required String status,
+    String? content,
     int? priority,
     String? category,
     String? type,

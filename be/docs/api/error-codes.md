@@ -146,6 +146,12 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 |---|---|---|---|
 | `U00_009` | `U00-009` | 403 | 온보딩 미완료 사용자가 보호 API 호출 시 차단 |
 
+### `UserErrorCode` 추가 코드 (내 잔액 조회, 2026-05)
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `U05_001` | `U05-001` | 404 | 지갑 데이터를 찾을 수 없음 |
+
 ### `TodoErrorCode` 추가 코드 (alert/recurrence redesign, 2026-04)
 
 | 상수 | code | HTTP | 의미 |
@@ -160,6 +166,8 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 | `M09_001` | `M09-001` | 401 | 인증 토큰이 없거나 유효하지 않음 |
 | `M09_002` | `M09-002` | 404 | 해당 캐릭터의 요청 액션을 찾을 수 없음 |
 | `M09_003` | `M09-003` | 500 | 서버 내부 오류 |
+
+`AnimationAction` enum 전환 후에도 enum 에는 있지만 `character_actions` row 가 등록되지 않은 액션 호출은 `M09_002` 를 재사용한다. enum 자체에 없는 `actionType` 은 컨트롤러 바인딩 단계의 400 으로 처리한다.
 
 ### `ShopErrorCode` 추가 코드 (가구 상점/방 배치, 2026-05)
 

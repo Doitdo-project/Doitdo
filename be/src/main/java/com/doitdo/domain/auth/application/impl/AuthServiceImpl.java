@@ -12,6 +12,7 @@ import com.doitdo.domain.auth.entity.RefreshToken;
 import com.doitdo.domain.auth.repository.RefreshTokenRepository;
 import com.doitdo.domain.setting.entity.UserSetting;
 import com.doitdo.domain.setting.repository.UserSettingRepository;
+import com.doitdo.domain.shop.application.DefaultFurnitureRegistrar;
 import com.doitdo.domain.streak.entity.UserStreak;
 import com.doitdo.domain.streak.repository.UserStreakRepository;
 import com.doitdo.domain.tamagotchi.entity.Character;
@@ -19,9 +20,11 @@ import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.todo.application.DefaultCategoryRegistrar;
+import com.doitdo.domain.user.application.CreditEarnService;
 import com.doitdo.domain.user.api.dto.resp.UserInfoResp;
 import com.doitdo.domain.user.entity.User;
 import com.doitdo.domain.user.entity.UserWallet;
+import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.domain.user.repository.UserWalletRepository;
 import com.doitdo.global.exception.AuthErrorCode;
@@ -56,8 +59,10 @@ public class AuthServiceImpl implements AuthService {
 	private final AuthenticationManager authenticationManager;
 	private final JwtUtil jwtUtil;
 	private final DefaultCategoryRegistrar defaultCategoryRegistrar;
+	private final DefaultFurnitureRegistrar defaultFurnitureRegistrar;
 	private final CharacterRepository characterRepository;
 	private final UserCharacterRepository userCharacterRepository;
+	private final CreditEarnService creditEarnService;
 
 	@Value("${jwt.refresh-token-expiration}")
 	private long refreshTokenExpiration;
@@ -78,10 +83,12 @@ public class AuthServiceImpl implements AuthService {
 				encodedPassword,
 				req.username()));
 
-		userWalletRepository.save(UserWallet.create(user.getUserId()));
+		userWalletRepository.save(UserWallet.createEmpty(user.getUserId()));
+		creditEarnService.tryEarn(user.getUserId(), WalletEarnSource.SIGNUP_BONUS, 100, null, true);
 		userSettingRepository.save(UserSetting.create(user.getUserId()));
 		userStreakRepository.save(UserStreak.create(user.getUserId()));
 		defaultCategoryRegistrar.registerFor(user.getUserId());
+		defaultFurnitureRegistrar.registerFor(user.getUserId());
 
 		// 회원가입 직후부터 exp 시스템 대상이 되도록 EGG UserCharacter 자동 생성.
 		// 기존 /api/characters/me/egg (receiveEgg) 는 이미 멱등이라 호환성 영향 없음.

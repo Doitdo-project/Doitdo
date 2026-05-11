@@ -57,6 +57,22 @@ class TodoTest {
 		assertThat(todo.getDoneDate()).isEqualTo(existingDoneDate);
 	}
 
+	@Test
+	void markFirstCompletedIfAbsentSetsOnlyOnceAcrossUndoRedo() {
+		Todo todo = todo(TodoStatus.TODO, null);
+		LocalDate firstCompletedDate = LocalDate.parse("2026-05-07");
+		LocalDate laterDate = firstCompletedDate.plusDays(1);
+
+		for (int i = 0; i < 5; i++) {
+			todo.changeStatus(TodoStatus.DONE);
+			todo.markFirstCompletedIfAbsent(i == 0 ? firstCompletedDate : laterDate);
+			todo.changeStatus(TodoStatus.TODO);
+		}
+
+		assertThat(todo.getFirstCompletedDate()).isEqualTo(firstCompletedDate);
+		assertThat(todo.getDoneDate()).isNull();
+	}
+
 	private Todo todo(TodoStatus status, LocalDate doneDate) {
 		return Todo.builder()
 				.userId(1L)

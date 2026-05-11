@@ -7,7 +7,9 @@ import com.doitdo.domain.streak.entity.StreakRewardLog;
 import com.doitdo.domain.streak.entity.UserStreak;
 import com.doitdo.domain.streak.repository.StreakRewardLogRepository;
 import com.doitdo.domain.streak.repository.UserStreakRepository;
+import com.doitdo.domain.user.application.CreditEarnService;
 import com.doitdo.domain.user.entity.UserWallet;
+import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.repository.UserWalletRepository;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.UserErrorCode;
@@ -21,11 +23,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserStreakServiceImpl implements UserStreakService {
 
 	private static final int REWARD_INTERVAL_DAYS = 7;
-	private static final int SEVEN_DAY_REWARD_AMOUNT = 100;
+	private static final int SEVEN_DAY_REWARD_AMOUNT = 200;
 
 	private final UserStreakRepository userStreakRepository;
 	private final UserWalletRepository userWalletRepository;
 	private final StreakRewardLogRepository streakRewardLogRepository;
+	private final CreditEarnService creditEarnService;
 
 	@Override
 	@Transactional
@@ -40,7 +43,7 @@ public class UserStreakServiceImpl implements UserStreakService {
 	public UserStreakResp getMyStreak(Long userId) {
 		UserStreak streak = userStreakRepository.findByUserId(userId)
 				.orElseThrow(() -> new CustomException(UserErrorCode.U06_002));
-		return UserStreakResp.from(streak);
+		return UserStreakResp.from(streak, canClaimReward(userId, streak));
 	}
 
 	@Override
@@ -63,17 +66,23 @@ public class UserStreakServiceImpl implements UserStreakService {
 			return StreakRewardResp.notRewarded(streakCount);
 		}
 
-		UserWallet wallet = userWalletRepository.findByUserId(userId)
-				.orElseThrow(() -> new CustomException(UserErrorCode.U06_004));
-		wallet.addBalance(SEVEN_DAY_REWARD_AMOUNT);
-		streakRewardLogRepository.save(StreakRewardLog.create(
+		StreakRewardLog rewardLog = streakRewardLogRepository.save(StreakRewardLog.create(
 				userId,
 				streak.getCurrentStreakStartDate(),
 				streakCount,
 				SEVEN_DAY_REWARD_AMOUNT
 		));
+		int earnedAmount = creditEarnService.tryEarn(
+				userId,
+				WalletEarnSource.STREAK_7DAY,
+				SEVEN_DAY_REWARD_AMOUNT,
+				rewardLog.getStreakRewardLogId(),
+				true
+		);
+		UserWallet wallet = userWalletRepository.findByUserId(userId)
+				.orElseThrow(() -> new CustomException(UserErrorCode.U06_004));
 
-		return StreakRewardResp.rewarded(streakCount, SEVEN_DAY_REWARD_AMOUNT, wallet.getBalance());
+		return StreakRewardResp.rewarded(streakCount, earnedAmount, wallet.getBalance());
 	}
 
 	private boolean isRewardable(UserStreak streak) {
@@ -82,5 +91,16 @@ public class UserStreakServiceImpl implements UserStreakService {
 				&& streakCount != null
 				&& streakCount >= REWARD_INTERVAL_DAYS
 				&& streakCount % REWARD_INTERVAL_DAYS == 0;
+	}
+
+	private boolean canClaimReward(Long userId, UserStreak streak) {
+		if (!isRewardable(streak)) {
+			return false;
+		}
+		return !streakRewardLogRepository.existsByUserIdAndStreakStartDateAndStreakCount(
+				userId,
+				streak.getCurrentStreakStartDate(),
+				streak.getCurrentStreakCount()
+		);
 	}
 }

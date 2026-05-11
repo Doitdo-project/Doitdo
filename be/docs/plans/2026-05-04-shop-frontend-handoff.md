@@ -100,8 +100,6 @@ if status == PLACED:
 | `name` | 가구 이름 |
 | `category` | 가구 카테고리 |
 | `imageUrl` | 렌더링 이미지 |
-| `x` | 배치 x 좌표 |
-| `y` | 배치 y 좌표 |
 | `width` | 렌더링 너비 |
 | `height` | 렌더링 높이 |
 | `zIndex` | 레이어 순서 |
@@ -120,7 +118,7 @@ if status == PLACED:
 
 - 내 실제 방 배치를 기반으로 응답한다.
 - 미리보기 대상과 같은 `category` 의 기존 배치 가구는 응답에서 제외한다.
-- 미리보기 대상 가구를 기본 좌표로 응답에 추가한다.
+- 미리보기 대상 가구를 `preview=true` 로 응답에 추가한다.
 - DB에는 저장하지 않는다.
 - 미리보기 대상 항목은 `preview=true` 다.
 
@@ -343,7 +341,7 @@ GET /api/users/me/room
 5. 각 배치의 `Furniture` 를 조회한다.
 6. 미리보기 대상과 같은 `category` 의 기존 배치는 제외한다.
 7. 다른 카테고리 배치는 그대로 유지한다.
-8. 미리보기 대상 가구를 기본 좌표로 응답에 추가한다.
+8. 미리보기 대상 가구를 `preview=true` 로 응답에 추가한다.
    - `placementId=null`
    - `userFurnitureId=null`
    - `preview=true`

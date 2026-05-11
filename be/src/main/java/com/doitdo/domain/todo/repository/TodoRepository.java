@@ -34,6 +34,33 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 
 	List<Todo> findAllByTypeAndIsDeletedFalse(TodoType type);
 
+	long countByUserIdAndFirstCompletedDate(Long userId, LocalDate firstCompletedDate);
+
+	@Query("""
+			select count(t) from Todo t
+			where t.userId = :userId
+			  and t.firstCompletedDate = :today
+			  and t.isDeleted = false
+			  and (
+			      t.type = com.doitdo.domain.todo.entity.Todo.TodoType.SOMEDAY
+			      or (
+			          t.type = com.doitdo.domain.todo.entity.Todo.TodoType.PERIOD
+			          and (
+			              (t.endDate is not null and t.endDate >= :today)
+			              or (t.endDate is null and t.startDate >= :today)
+			          )
+			      )
+			      or (
+			          t.type <> com.doitdo.domain.todo.entity.Todo.TodoType.SOMEDAY
+			          and t.type <> com.doitdo.domain.todo.entity.Todo.TodoType.PERIOD
+			          and t.startDate >= :today
+			      )
+			  )
+			""")
+	long countRewardEligibleByUserIdAndFirstCompletedDate(
+			@Param("userId") Long userId,
+			@Param("today") LocalDate today);
+
 	@Query("""
 			SELECT t FROM Todo t
 			WHERE t.userId = :userId
@@ -59,6 +86,21 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 			  and t.isDeleted = false
 			""")
 	long countPendingByUserId(@Param("userId") Long userId);
+
+	@Query("""
+			select count(t) from Todo t
+			where t.userId = :userId
+			  and t.status <> com.doitdo.domain.todo.entity.Todo.TodoStatus.DONE
+			  and t.isDeleted = false
+			  and t.type <> com.doitdo.domain.todo.entity.Todo.TodoType.RECURRING
+			  and (
+			      (t.type = com.doitdo.domain.todo.entity.Todo.TodoType.NORMAL and t.startDate = :today)
+			      or (t.type = com.doitdo.domain.todo.entity.Todo.TodoType.PERIOD
+			          and t.startDate <= :today
+			          and (t.endDate is null or t.endDate >= :today))
+			  )
+			""")
+	long countPendingByUserIdAndToday(@Param("userId") Long userId, @Param("today") LocalDate today);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("UPDATE Todo t SET t.isDeleted = true WHERE t.userId = :userId AND t.isDeleted = false")

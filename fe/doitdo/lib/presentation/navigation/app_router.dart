@@ -21,6 +21,7 @@ import 'package:doitdo/presentation/pages/tamagochi/character_hatch_page.dart';
 import 'package:doitdo/presentation/pages/tamagochi/character_naming_page.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_page.dart';
 import 'package:doitdo/presentation/pages/todo/todo_page.dart';
+import 'package:doitdo/presentation/pages/tutorial/tutorial_page.dart';
 import 'package:doitdo/presentation/widgets/shell/doitdo_shell.dart';
 
 /// 앱 라우트 경로 상수.
@@ -48,6 +49,7 @@ class AppRoutes {
   static const String notification = '/setting/notification';
   static const String bugReport = '/setting/bug-report';
   static const String notifications = '/todo/notifications';
+  static const String tutorial = '/tutorial';
 }
 
 /// 탭별 중첩 네비게이터가 각자의 스택을 보존하도록 NavigatorKey 분리.
@@ -104,14 +106,16 @@ final GoRouter appRouter = GoRouter(
     final raw = state.uri.toString();
     final path = state.uri.path;
     if (raw.startsWith('doitdo://widget') || path.startsWith('/widget')) {
-      return AppRoutes.splash;
+      return '${AppRoutes.splash}?from=widget';
     }
     return null;
   },
   routes: [
     GoRoute(
       path: AppRoutes.splash,
-      builder: (context, state) => const SplashPage(),
+      builder: (context, state) => SplashPage(
+        fromWidget: state.uri.queryParameters['from'] == 'widget',
+      ),
     ),
 
     // 홈스크린 위젯에서 진입(`doitdo://widget/open`) 시 받는 라우트.
@@ -119,7 +123,7 @@ final GoRouter appRouter = GoRouter(
     // 메인/로그인 화면으로 분기되는 기존 부팅 흐름을 그대로 재사용한다.
     GoRoute(
       path: '/widget/open',
-      redirect: (context, state) => AppRoutes.splash,
+      redirect: (context, state) => '${AppRoutes.splash}?from=widget',
     ),
 
     // 인증 플로우 (탭 셸 바깥)
@@ -142,6 +146,15 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.resetPassword,
       builder: (context, state) => const ResetPasswordPage(),
+    ),
+
+    // 튜토리얼 (첫 진입 시 메인 탭 진입 전 1회 표시).
+    // next 쿼리 파라미터로 완료 후 이동할 탭을 전달한다.
+    GoRoute(
+      path: AppRoutes.tutorial,
+      builder: (context, state) => TutorialPage(
+        next: state.uri.queryParameters['next'] ?? AppRoutes.tamagochi,
+      ),
     ),
 
     // 온보딩 (첫 로그인 — 인증 직후 진입, 메인 탭 이전).
