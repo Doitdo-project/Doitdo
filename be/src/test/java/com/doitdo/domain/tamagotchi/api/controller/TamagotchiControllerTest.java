@@ -182,7 +182,7 @@ class TamagotchiControllerTest {
 			"TEEN",
 			120,
 			100,
-			"https://cdn.example.com/tamagotchi/animations/baby-to-teen",
+			"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/evolution/evolution.gif",
 			"https://cdn.example.com/slime-teen.png",
 			"2026-04-22T10:30:00Z"
 		);
@@ -210,7 +210,7 @@ class TamagotchiControllerTest {
 			30L,
 			true,
 			"EGG",
-			"https://cdn.example.com/tamagotchi/animations/adult-to-egg"
+			"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/independence/independence.gif"
 		);
 
 		given(tamagotchiService.approveIndependence(1L, true)).willReturn(serviceResp);
