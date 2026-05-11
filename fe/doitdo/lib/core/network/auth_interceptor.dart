@@ -25,10 +25,17 @@ import 'package:doitdo/core/utils/app_logger.dart';
 /// 여러 요청이 동시에 401 을 받아도 refresh 는 **한 번만** 호출한다.
 /// [Completer] 로 진행 중 refresh 결과를 공유.
 class AuthInterceptor extends Interceptor {
-  AuthInterceptor({required this.dio, required this.storage});
+  AuthInterceptor({
+    required this.dio,
+    required this.storage,
+    this.onTokenRefreshed,
+  });
 
   final Dio dio;
   final FlutterSecureStorage storage;
+
+  /// refresh 성공 시 새 토큰 쌍을 외부(위젯 동기화 등)에 전달하는 콜백.
+  final void Function(String accessToken, String refreshToken)? onTokenRefreshed;
 
   static const _kAccess = 'auth_access_token';
   static const _kRefresh = 'auth_refresh_token';
@@ -145,6 +152,7 @@ class AuthInterceptor extends Interceptor {
       }
       await storage.write(key: _kAccess, value: newAccess);
       await storage.write(key: _kRefresh, value: newRefresh);
+      onTokenRefreshed?.call(newAccess, newRefresh);
       completer.complete(true);
       return true;
     } catch (_) {
