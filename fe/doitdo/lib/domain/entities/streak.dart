@@ -10,6 +10,7 @@ class Streak {
   const Streak({
     required this.currentCount,
     required this.longestCount,
+    required this.canClaim,
     this.currentStartDate,
     this.lastActiveDate,
     this.longestStartDate,
@@ -34,8 +35,16 @@ class Streak {
   /// 최장 기록의 종료일.
   final DateTime? longestEndDate;
 
+  /// 지금 보상 수령 가능 여부. BE 가 직접 판정해서 내려준다 —
+  /// `currentCount > 0 && currentCount % 7 == 0 && (해당 구간으로 streak_reward_logs
+  /// 에 수령 기록 없음)`. 수령 직후엔 false 가 되어 버튼이 자연스럽게 꺼진다.
+  /// 클라가 일수만으로 추론하던 시기엔 "이미 받았는데 버튼이 계속 활성" 인 버그가
+  /// 있었음 — 그래서 BE 진실에 위임.
+  final bool canClaim;
+
   /// 0 일 때를 위한 빈 값 (네트워크 오류 시 fallback 으로도 사용 가능).
-  static const Streak empty = Streak(currentCount: 0, longestCount: 0);
+  static const Streak empty =
+      Streak(currentCount: 0, longestCount: 0, canClaim: false);
 
   /// 현재 7일 블록에서 채워진 칸 수 (1~7). [currentCount] 가 0 이면 0.
   int get filledInCurrentBlock {
@@ -44,8 +53,9 @@ class Streak {
     return currentCount - blockIndex * 7;
   }
 
-  /// 현재 7일 블록을 모두 채웠는지. 보상 수령 CTA 노출 트리거.
-  bool get hasCompletedBlock => currentCount > 0 && filledInCurrentBlock == 7;
+  /// 7일 블록의 마지막 날(=수령 가능 시점) 에 도달했는지. 수령 여부와 무관 —
+  /// "오늘 슬롯이 7개 다 채워졌느냐" 만 본다. 수령 가능 여부는 [canClaim] 사용.
+  bool get isAtBlockEnd => currentCount > 0 && filledInCurrentBlock == 7;
 }
 
 /// `POST /api/users/me/streak/rewards` 결과.
