@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:doitdo/core/errors/exceptions.dart';
 import 'package:doitdo/domain/entities/shop_entry.dart';
 import 'package:doitdo/domain/entities/shop_furniture.dart';
 import 'package:doitdo/domain/entities/user_furniture.dart';
@@ -71,8 +73,11 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
   /// 낙관적 업데이트: 서버 응답 전에 UI 를 먼저 반영해 체감 속도를 높인다.
   /// - 탭 즉시: 코인 차감 + 아이템 placed 상태로 전환
   /// - 백그라운드: 실제 서버 호출
-  /// - 실패 시: 원래 상태(s)로 롤백
-  Future<bool> purchaseAndPlace(String itemId) async {
+  /// - 실패 시: 원래 상태(s)로 롤백 + [onFailure] 콜백 호출
+  Future<bool> purchaseAndPlace(
+      String itemId, {
+        void Function(String message)? onFailure,
+      }) async {
     final s = state.valueOrNull;
     if (s == null) return false;
     final item = _findItem(s, itemId);
@@ -100,9 +105,10 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
       await _refresh(preserveUi: s, coinsOverride: purchase.balance);
       ref.invalidate(myRoomProvider);
       return true;
-    } catch (_) {
-      // 실패 시 낙관적 업데이트 롤백
+    } catch (e) {
+      // 실패 시 낙관적 업데이트 롤백 + 에러 종류별 메시지
       state = AsyncData(s);
+      onFailure?.call(_errorMessage(e));
       return false;
     }
   }
@@ -111,8 +117,11 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
   /// 같은 카테고리에 이미 배치된 아이템을 교체하지 않고 인벤토리에만 추가하고 싶을 때.
   ///
   /// 낙관 업데이트는 구매 직후 owned 상태로 표시하고 코인을 차감한다.
-  /// 실패 시 원래 상태로 롤백.
-  Future<bool> purchaseOnly(String itemId) async {
+  /// 실패 시 원래 상태로 롤백 + [onFailure] 콜백 호출 (UX 패턴은 purchaseAndPlace 와 동일).
+  Future<bool> purchaseOnly(
+      String itemId, {
+        void Function(String message)? onFailure,
+      }) async {
     final s = state.valueOrNull;
     if (s == null) return false;
     final item = _findItem(s, itemId);
@@ -129,8 +138,9 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
       final purchase = await _repo.purchaseFurniture(item.furnitureId);
       await _refresh(preserveUi: s, coinsOverride: purchase.balance);
       return true;
-    } catch (_) {
+    } catch (e) {
       state = AsyncData(s);
+      onFailure?.call(_errorMessage(e));
       return false;
     }
   }
@@ -151,7 +161,7 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
       await _refresh(preserveUi: s);
       ref.invalidate(myRoomProvider);
       return true;
-    } catch (_) {
+    } catch (e) {
       return false;
     }
   }
@@ -172,15 +182,31 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
       await _refresh(preserveUi: s);
       ref.invalidate(myRoomProvider);
       return true;
-    } catch (_) {
+    } catch (e) {
       return false;
     }
   }
 
   // ─── 내부 헬퍼 ────────────────────────────────────────────────
 
+  /// 에러 종류별 사용자 메시지 반환.
+  static String _errorMessage(Object e) {
+    if (e is NetworkException) {
+      return '네트워크 연결을 확인해주세요.';
+    } else if (e is ServerException) {
+      // 서버가 내려준 메시지가 한국어면 그대로 노출, 아니면 공용 문구.
+      final msg = e.message ?? '';
+      return RegExp(r'[가-힣]').hasMatch(msg)
+          ? msg
+          : '서버 오류가 발생했어요. 잠시 후 다시 시도해주세요.';
+    } else {
+      return '구매에 실패했어요. 코인 잔액이나 네트워크를 확인해주세요.';
+    }
+  }
+
   /// 액션 후 서버 상태를 재조회해 카탈로그·매핑을 갱신.
-  /// 카테고리 / 미리보기 / 잔액 같은 UI 상태는 [preserveUi] 에서 그대로 가져온다.
+  /// UI 상태(카테고리·미리보기)는 _refresh 완료 시점의 현재 state 기준으로 유지.
+  /// preserveUi 는 잔액 폴백 용도로만 사용.
   Future<void> _refresh({
     required ShopState preserveUi,
     int? coinsOverride,
@@ -191,12 +217,17 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
     ]);
     final entry = results[0] as ShopEntry;
     final myFurnitures = results[1] as List<UserFurnitureItem>;
+
+    // API 호출이 끝난 시점의 현재 상태를 기준으로 UI 상태 유지.
+    // 백그라운드 처리 중 사용자가 카테고리를 바꿨다면 그 카테고리를 그대로 유지.
+    final currentUi = state.valueOrNull ?? preserveUi;
+
     state = AsyncData(_composeState(
       entry: entry,
       myFurnitures: myFurnitures,
-      coins: coinsOverride ?? preserveUi.coins,
-      preserveSelected: preserveUi.selectedCategory,
-      preservePreviewing: preserveUi.previewingItemId,
+      coins: coinsOverride ?? currentUi.coins,
+      preserveSelected: currentUi.selectedCategory,
+      preservePreviewing: currentUi.previewingItemId,
     ));
   }
 
@@ -248,10 +279,8 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
     ShopCategory selected;
     if (preserveSelected != null) {
       selected = preserveSelected;
-    } else if (items.isNotEmpty) {
-      selected = items.first.category;
     } else {
-      selected = ShopCategory.bed;
+      selected = ShopCategory.background;
     }
 
     return ShopState(

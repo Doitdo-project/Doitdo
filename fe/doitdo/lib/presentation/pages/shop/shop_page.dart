@@ -99,10 +99,10 @@ class _ShopBody extends ConsumerWidget {
   }
 
   Future<void> _openPurchaseDialog(
-    BuildContext context,
-    WidgetRef ref,
-    ShopItem item,
-  ) async {
+      BuildContext context,
+      WidgetRef ref,
+      ShopItem item,
+      ) async {
     final messenger = ScaffoldMessenger.of(context);
     final shopState = ref.read(shopViewModelProvider).valueOrNull;
     final coins = shopState?.coins ?? 0;
@@ -125,32 +125,43 @@ class _ShopBody extends ConsumerWidget {
     );
     if (choice == null || choice == PurchaseChoice.cancel) return;
 
-    final vm = ref.read(shopViewModelProvider.notifier);
-    final bool ok;
-    final String successMsg;
-    switch (choice) {
-      case PurchaseChoice.purchaseAndPlace:
-        ok = await vm.purchaseAndPlace(item.id);
-        successMsg = '"${item.name}"을(를) 방에 배치했어요!';
-      case PurchaseChoice.purchaseOnly:
-        ok = await vm.purchaseOnly(item.id);
-        successMsg = '"${item.name}"을(를) 인벤토리에 담았어요.';
-      case PurchaseChoice.cancel:
-        return;
-    }
-
+    // 다이얼로그 닫히는 즉시 success 스낵바 + 낙관 업데이트.
+    // 서버 호출은 background, 실패 시 onFailure 콜백에서 에러 스낵바로 덮어씀.
+    final successMsg = switch (choice) {
+      PurchaseChoice.purchaseAndPlace => '"${item.name}"을(를) 방에 배치했어요!',
+      PurchaseChoice.purchaseOnly => '"${item.name}"을(를) 인벤토리에 담았어요.',
+      PurchaseChoice.cancel => '',
+    };
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
-        content: Text(
-          ok
-              ? successMsg
-              : '구매에 실패했어요. 코인 잔액이나 네트워크를 확인해주세요.',
-        ),
+        content: Text(successMsg),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
     );
+
+    void showFailure(String message) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
+    final vm = ref.read(shopViewModelProvider.notifier);
+    // unawaited — 백그라운드 실행, 결과 대기 안 함. 실패 시 onFailure 콜백.
+    switch (choice) {
+      case PurchaseChoice.purchaseAndPlace:
+        vm.purchaseAndPlace(item.id, onFailure: showFailure);
+      case PurchaseChoice.purchaseOnly:
+        vm.purchaseOnly(item.id, onFailure: showFailure);
+      case PurchaseChoice.cancel:
+        return;
+    }
   }
 
   /// place / unplace 공통 호출 래퍼. ViewModel 이 false 를 돌려주면 실패 스낵바.
