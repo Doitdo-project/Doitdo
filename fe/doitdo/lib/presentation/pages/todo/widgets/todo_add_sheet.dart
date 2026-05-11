@@ -14,6 +14,7 @@ import 'package:doitdo/presentation/pages/todo/widgets/todo_category_sheet.dart'
 import 'package:doitdo/presentation/pages/todo/widgets/todo_date_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_time_sheet.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
+import 'package:doitdo/presentation/widgets/common/character_mascot_image.dart';
 
 class TodoAddSheet extends ConsumerStatefulWidget {
   const TodoAddSheet({super.key, this.initialDate});
@@ -462,7 +463,7 @@ class _MascotBubble extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Image.asset('assets/images/Dooit.png', width: 36, height: 36),
+        const CharacterMascotImage(size: 36),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

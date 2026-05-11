@@ -13,6 +13,7 @@ import 'package:doitdo/presentation/pages/notification/notification_view_model.d
 import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart'; // ✅ 추가
 import 'package:doitdo/presentation/pages/todo/todo_add_notifier.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
+import 'package:doitdo/presentation/widgets/common/character_mascot_image.dart';
 import 'package:doitdo/presentation/widgets/common/todo_item_card.dart';
 import 'package:doitdo/presentation/providers/home_scroll_provider.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
@@ -503,7 +504,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Image.asset('assets/images/Dooit.png', width: 26, height: 26, filterQuality: FilterQuality.high),
+                const CharacterMascotImage(size: 36),
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

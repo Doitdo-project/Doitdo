@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:doitdo/domain/entities/user.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
 import 'package:doitdo/presentation/providers/current_user_provider.dart';
+import 'package:doitdo/presentation/pages/tamagochi/character_view_model.dart';
 
 /// 소셜 로그인 성공 시 전달되는 요약 데이터.
 ///
@@ -44,6 +45,8 @@ class WelcomeViewModel extends AsyncNotifier<WelcomeSuccess?> {
       final repo = ref.read(authRepositoryProvider);
       final (user, _, isNewUser) = await repo.signInWithGoogle();
       ref.read(currentUserProvider.notifier).replace(user);
+      // 캘린더 기본화면 설정 시에도 캐릭터가 처음부터 표시되도록 미리 로드.
+      unawaited(ref.read(characterViewModelProvider.notifier).load());
       // 온보딩 미완료 유저는 서버가 FCM 등록을 403으로 막으므로 스킵.
       // 온보딩 완료 후 OnboardingAgreementsViewModel 에서 등록한다.
       if (user.isOnboardingComplete) {
@@ -61,6 +64,7 @@ class WelcomeViewModel extends AsyncNotifier<WelcomeSuccess?> {
       final repo = ref.read(authRepositoryProvider);
       final (user, _, isNewUser) = await repo.signInWithKakao();
       ref.read(currentUserProvider.notifier).replace(user);
+      unawaited(ref.read(characterViewModelProvider.notifier).load());
       if (user.isOnboardingComplete) {
         unawaited(ref.read(fcmTokenRegistrarProvider).register());
       }
@@ -76,6 +80,7 @@ class WelcomeViewModel extends AsyncNotifier<WelcomeSuccess?> {
       final repo = ref.read(authRepositoryProvider);
       final (user, _, isNewUser) = await repo.signInWithApple();
       ref.read(currentUserProvider.notifier).replace(user);
+      unawaited(ref.read(characterViewModelProvider.notifier).load());
       if (user.isOnboardingComplete) {
         unawaited(ref.read(fcmTokenRegistrarProvider).register());
       }
@@ -92,6 +97,6 @@ class WelcomeViewModel extends AsyncNotifier<WelcomeSuccess?> {
 }
 
 final welcomeViewModelProvider =
-    AsyncNotifierProvider<WelcomeViewModel, WelcomeSuccess?>(
+AsyncNotifierProvider<WelcomeViewModel, WelcomeSuccess?>(
   WelcomeViewModel.new,
 );
