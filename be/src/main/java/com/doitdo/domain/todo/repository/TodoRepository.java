@@ -71,6 +71,14 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 	List<Todo> findReorderTargetsForNonSomeday(@Param("userId") Long userId);
 
 	@Query("""
+			SELECT COALESCE(MAX(t.priority), 0) FROM Todo t
+			WHERE t.userId = :userId
+			  AND t.isDeleted = false
+			  AND t.type <> com.doitdo.domain.todo.entity.Todo.TodoType.SOMEDAY
+			""")
+	int findMaxPriorityForNonSomeday(@Param("userId") Long userId);
+
+	@Query("""
 			SELECT t FROM Todo t
 			WHERE t.userId = :userId
 			  AND t.isDeleted = false
@@ -78,6 +86,14 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 			ORDER BY t.priority ASC, t.todoId ASC
 			""")
 	List<Todo> findReorderTargetsForSomeday(@Param("userId") Long userId);
+
+	@Query("""
+			SELECT COALESCE(MAX(t.priority), 0) FROM Todo t
+			WHERE t.userId = :userId
+			  AND t.isDeleted = false
+			  AND t.type = com.doitdo.domain.todo.entity.Todo.TodoType.SOMEDAY
+			""")
+	int findMaxPriorityForSomeday(@Param("userId") Long userId);
 
 	@Query("""
 			select count(t) from Todo t
