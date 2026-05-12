@@ -285,7 +285,10 @@ public class TodoServiceImpl implements TodoService {
 		}
 
 		if (todo.getType() == TodoType.RECURRING) {
-			throw new CustomException(TodoErrorCode.T03_004);
+			if (req.occurrenceDate() == null) {
+				throw new CustomException(TodoErrorCode.T03_004);
+			}
+			todo = recurrenceService.materializeRecurringOccurrence(userId, todo, req.occurrenceDate());
 		}
 
 		TodoStatus beforeStatus = todo.getStatus();
