@@ -56,6 +56,14 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
   final List<int> _hours = List.generate(12, (i) => i + 1);
   final List<int> _minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
+  // 시간 휠 무한 루프 — 중간(600)에서 시작해 양방향 600아이템(50사이클) 여유
+  static const int _hourLoopCount  = 1200;
+  static const int _hourMidOffset  = 600;
+
+  late FixedExtentScrollController _amPmController;
+  late FixedExtentScrollController _hourController;
+  int _hourScrollIndex = 0;
+
   @override
   void initState() {
     super.initState();
@@ -65,6 +73,18 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
     _selectedHour =
     time.hour == 0 ? 12 : (time.hour > 12 ? time.hour - 12 : time.hour);
     _selectedMinute = time.minute;
+
+    final hourIdx    = _hours.indexOf(_selectedHour);
+    _hourScrollIndex = _hourMidOffset + hourIdx;
+    _amPmController  = FixedExtentScrollController(initialItem: _isAm ? 0 : 1);
+    _hourController  = FixedExtentScrollController(initialItem: _hourScrollIndex);
+  }
+
+  @override
+  void dispose() {
+    _amPmController.dispose();
+    _hourController.dispose();
+    super.dispose();
   }
 
   @override
@@ -227,7 +247,7 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
     return ListWheelScrollView.useDelegate(
       itemExtent: 48,
       perspective: 0.002,
-      controller: FixedExtentScrollController(initialItem: _isAm ? 0 : 1),
+      controller: _amPmController,
       physics: const FixedExtentScrollPhysics(),
       onSelectedItemChanged: (i) => setState(() => _isAm = i == 0),
       childDelegate: ListWheelChildBuilderDelegate(
@@ -255,17 +275,34 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
     return ListWheelScrollView.useDelegate(
       itemExtent: 48,
       perspective: 0.002,
-      controller: FixedExtentScrollController(
-          initialItem: _hours.indexOf(_selectedHour)),
+      controller: _hourController,
       physics: const FixedExtentScrollPhysics(),
-      onSelectedItemChanged: (i) => setState(() => _selectedHour = _hours[i]),
+      onSelectedItemChanged: (i) {
+        final prevCycle = _hourScrollIndex ~/ 12;
+        final newCycle  = i ~/ 12;
+        final crossed   = (newCycle - prevCycle).abs() % 2 == 1;
+        final newIsAm   = crossed ? !_isAm : _isAm;
+        setState(() {
+          _selectedHour    = _hours[i % 12];
+          _hourScrollIndex = i;
+          _isAm            = newIsAm;
+        });
+        if (crossed) {
+          _amPmController.animateToItem(
+            newIsAm ? 0 : 1,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+          );
+        }
+      },
       childDelegate: ListWheelChildBuilderDelegate(
-        childCount: _hours.length,
+        childCount: _hourLoopCount,
         builder: (_, i) {
-          final isSelected = _hours[i] == _selectedHour;
+          final hour       = _hours[i % 12];
+          final isSelected = i == _hourScrollIndex;
           return Center(
             child: Text(
-              '${_hours[i]}',
+              '$hour',
               style: (isSelected
                   ? AppTextStyles.displayLarge
                   : AppTextStyles.bodyMedium)
