@@ -7,10 +7,12 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/pages/shop/shop_state.dart';
 import 'package:doitdo/presentation/widgets/common/room_furniture_slots.dart';
 
-/// 미리보기에선 캐릭터가 없어 가구가 박스 상단에 떠있는 듯한 인상을 준다. 슬롯
-/// 정의를 건드리지 않고, 캔버스 자체를 캔버스 height 의 이 비율만큼 박스 안에서
-/// 아래로 더 밀어 가구 분포를 하단으로 모은다. 시각 보정용이라 값은 디자인 감
-/// 확인 후 튜닝.
+/// 미리보기에선 캐릭터가 없어 가구가 박스 상단으로 떠보이는 인상을 준다. 슬롯
+/// 정의를 건드리지 않고, 가구별로 캔버스 height 의 이 비율만큼 y 좌표를 아래로
+/// 시프트해 분포를 하단으로 모은다(`top` 슬롯은 `+`, `bottom` 슬롯은 `-`). 단
+/// 박스 최상단 라인을 형성하는 창문/시계는 [_buildItem] 에서 제외 — 그쪽이
+/// 내려오면 다른 가구와의 상하 균형이 깨진다. 시각 보정용이라 값은 디자인 감으로
+/// 튜닝.
 const double _kPreviewYNudgeRatio = 0.05;
 
 /// 상점 상단의 "방 미리보기" 영역.
@@ -68,11 +70,6 @@ class ShopRoomPreview extends StatelessWidget {
                 parentHeight: constraints.maxHeight,
                 aspect: kRoomCanvasAspect,
               );
-              // 캔버스를 박스 하단 anchor 에서 한 번 더 아래로 시프트 — 박스 풀에
-              // 비해 캔버스가 거의 같은 크기지만 가구가 박스 상단부에 무거워보이는
-              // 시각 인상을 보정. 시프트만큼 캔버스 하단은 박스 밖으로 jutting 되어
-              // ClipRRect 로 잘리나, 슬롯 정의상 그 영역엔 가구가 없어 안전하다.
-              final yNudge = canvas.height * _kPreviewYNudgeRatio;
               return Stack(
                 children: [
                   if (background != null)
@@ -92,7 +89,7 @@ class ShopRoomPreview extends StatelessWidget {
                     ),
                   Positioned(
                     left: canvas.offsetX,
-                    top: canvas.offsetY + yNudge,
+                    top: canvas.offsetY,
                     width: canvas.width,
                     height: canvas.height,
                     child: Stack(
@@ -116,6 +113,14 @@ class ShopRoomPreview extends StatelessWidget {
     final slot =
         kRoomFurnitureSlots[item.category] ?? kRoomFurnitureFallbackSlot;
     final accent = _categoryAccent(item.category);
+    // 미리보기 캐릭터 부재로 가구가 박스 상단부로 떠보이는 인상을 보정 — 가구
+    // 별로 y 비율을 [_kPreviewYNudgeRatio] 만큼 아래로 시프트한다. 단 창문 /
+    // 시계는 박스 최상단 라인을 형성하는 가구라 시프트하면 박스 가운데로 내려와
+    // 다른 가구와 상하 균형이 무너지므로 제외.
+    final isPinnedToTop =
+        item.category == ShopCategory.window ||
+        item.category == ShopCategory.clock;
+    final yNudge = isPinnedToTop ? 0.0 : _kPreviewYNudgeRatio;
     // 카테고리별로 안정된 key — 같은 카테고리 슬롯 안에서 가구만 교체될 때
     // Image 위젯이 remount 되어 디코드를 다시 하는 일이 없도록 한다.
     // gaplessPlayback 으로 새 imageUrl 디코드가 끝나기 직전까지 프레임을 유지해
@@ -124,8 +129,8 @@ class ShopRoomPreview extends StatelessWidget {
       key: ValueKey('shop-preview-slot-${item.category.name}'),
       left: slot.left == null ? null : slot.left! * w,
       right: slot.right == null ? null : slot.right! * w,
-      top: slot.top == null ? null : slot.top! * h,
-      bottom: slot.bottom == null ? null : slot.bottom! * h,
+      top: slot.top == null ? null : (slot.top! + yNudge) * h,
+      bottom: slot.bottom == null ? null : (slot.bottom! - yNudge) * h,
       width: slot.width * w,
       height: slot.height * h,
       child: Image.network(
