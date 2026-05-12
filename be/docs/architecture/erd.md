@@ -49,6 +49,9 @@
 | 테이블 | 컬럼 | 비고 |
 |---|---|---|
 | `todos` | `first_completed_date DATE NULL` | TODO 완료 3개당 뚜레딧 적립 계산용 최초 완료일. 취소·재완료 시 보존 |
+| `todos` | `category_name VARCHAR(10) NULL` | 카테고리 이름 스냅샷. rename 시 전파, 삭제 시 잔여. 필터/응답의 카테고리 매칭 키. |
+| `todos` | `category_color_id INT NULL` | 카테고리 색상(`palette_colors.color_id`) 스냅샷. 동일 이름의 활성 카테고리가 있으면 응답 시 그 색이 override. |
+| `todos` | `idx_todos_list_category_name` | 인덱스 `(user_id, is_deleted, category_name, start_date, todo_id)` — 이름 기반 필터 lookup. |
 
 ## user 도메인 추가 테이블 (뚜레딧 적립 이력)
 

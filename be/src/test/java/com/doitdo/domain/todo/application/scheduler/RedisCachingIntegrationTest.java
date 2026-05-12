@@ -225,9 +225,10 @@ class RedisCachingIntegrationTest {
 		todoService.list(userId, todayReq());
 		categoryService.delete(userId, work.getCategoryId());
 		assertThat(categoryNames(categoryService.list(userId))).doesNotContain("work-new");
+		// 정책: 카테고리 삭제 후에도 todo 에는 카테고리 이름 스냅샷이 그대로 잔여.
 		assertThat(todoService.list(userId, todayReq()).items())
 				.extracting(item -> item.category())
-				.containsNull();
+				.containsExactly("work-new");
 	}
 
 	@Test
@@ -280,9 +281,14 @@ class RedisCachingIntegrationTest {
 	}
 
 	private Todo saveTodo(Long userId, String title, TodoType type, LocalDate startDate, Long categoryId) {
+		Category category = categoryId == null
+				? null
+				: categoryRepository.findById(categoryId).orElse(null);
 		return todoRepository.saveAndFlush(Todo.create(
 				userId,
 				categoryId,
+				category != null ? category.getCategoryName() : null,
+				category != null ? category.getColorId() : null,
 				title,
 				null,
 				type,
@@ -296,6 +302,8 @@ class RedisCachingIntegrationTest {
 	private void saveRecurringMaster(Long userId, String title, LocalDate startDate) {
 		todoRepository.saveAndFlush(Todo.create(
 				userId,
+				null,
+				null,
 				null,
 				title,
 				null,

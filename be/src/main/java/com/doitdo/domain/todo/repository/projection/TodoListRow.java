@@ -10,6 +10,7 @@ public record TodoListRow(
 		String title,
 		String content,
 		String categoryName,
+		Integer categoryColorId,
 		TodoType type,
 		Integer priority,
 		String alertTime,
