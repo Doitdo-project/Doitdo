@@ -46,10 +46,6 @@ public interface ErrorCode {
 > **T05-004 재정의 (2026-04-22):** `TodoErrorCode.T05_004` 메시지를
 > "반복 TODO 는 현재 미루기 미지원 (인스턴스 설계 후 추가 예정)" → "반복 TODO 미루기 시 occurrenceDate 필수" 로 변경.
 > RECURRING 타입 TODO 에 snooze 를 시도할 때 `occurrenceDate` 가 없거나 유효한 발생일이 아니면 422 + T05-004 가 반환된다.
->
-> **T03-004 반복 상태 변경 (2026-05-12):** `PATCH /api/todos/{todoId}/status` 에서
-> `todoId` 가 RECURRING 마스터이면 `occurrenceDate` 가 필요하다. 값이 있으면 해당 날짜의 NORMAL 인스턴스를
-> 찾거나 생성한 뒤 상태를 변경하고, 값이 없거나 반복 규칙에 맞지 않으면 422 + T03-004 를 반환한다.
 
 대표 예시:
 

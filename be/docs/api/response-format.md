@@ -93,20 +93,6 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 
 `TodoListResp.items[]` 와 `TodoSearchResp.items[]` 도 동일한 `TodoDetailResp` 구조를 사용한다.
 
-### `PATCH /api/todos/{todoId}/status` 요청
-
-```json
-{
-  "status": "DONE",
-  "occurrenceDate": "2026-05-12"
-}
-```
-
-| 필드 | 타입 | 비고 |
-|---|---|---|
-| `status` | `TodoStatus` | 필수. TODO / IN_PROGRESS / DONE |
-| `occurrenceDate` | `LocalDate` | nullable. `todoId` 가 RECURRING 마스터일 때만 필수이며, 해당 날짜의 NORMAL 인스턴스를 찾거나 생성한 뒤 상태를 변경한다. NORMAL/PERIOD/SOMEDAY 요청에서는 무시된다. |
-
 ## 7. `TodoCalendarResp` 필드
 
 `GET /api/todos/calendar` 응답:

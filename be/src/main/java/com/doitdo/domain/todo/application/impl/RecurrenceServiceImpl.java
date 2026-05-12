@@ -15,7 +15,6 @@ import com.doitdo.domain.todo.repository.SnoozeHistoryRepository.SnoozeOriginPro
 import com.doitdo.domain.todo.repository.TodoRepository;
 import com.doitdo.domain.todo.repository.TodoSpecifications;
 import com.doitdo.global.exception.CustomException;
-import com.doitdo.global.exception.ErrorCode;
 import com.doitdo.global.exception.TodoErrorCode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -134,29 +133,7 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 		if (todo.getType() != TodoType.RECURRING) {
 			return todo;
 		}
-		LocalDate occurrenceDate = req != null ? req.occurrenceDate() : null;
-		return materializeRecurringOccurrence(userId, todo, occurrenceDate, TodoErrorCode.T05_004);
-	}
-
-	@Override
-	public Todo materializeRecurringOccurrence(Long userId, Todo master, LocalDate occurrenceDate) {
-		return materializeRecurringOccurrence(userId, master, occurrenceDate, TodoErrorCode.T03_004);
-	}
-
-	private Todo materializeRecurringOccurrence(
-			Long userId,
-			Todo master,
-			LocalDate occurrenceDate,
-			ErrorCode invalidOccurrenceErrorCode) {
-		if (occurrenceDate == null || !isOccurrenceOfMaster(master, occurrenceDate)) {
-			throw new CustomException(invalidOccurrenceErrorCode);
-		}
-
-		return todoRepository.findByUserIdAndMasterTodoIdAndStartDateAndIsDeletedFalse(
-						userId,
-						master.getTodoId(),
-						occurrenceDate)
-				.orElseGet(() -> saveRecurringInstanceIdempotently(master, occurrenceDate));
+		return materializeRecurringInstance(userId, todo, req);
 	}
 
 	private void validateCalendarRange(TodoCalendarReq req) {
@@ -268,6 +245,19 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 
 	private LocalDate calendarSortDate(CalendarItemResp item) {
 		return item.occurrenceDate() != null ? item.occurrenceDate() : item.startDate();
+	}
+
+	private Todo materializeRecurringInstance(Long userId, Todo master, TodoSnoozeReq req) {
+		LocalDate occurrenceDate = req != null ? req.occurrenceDate() : null;
+		if (occurrenceDate == null || !isOccurrenceOfMaster(master, occurrenceDate)) {
+			throw new CustomException(TodoErrorCode.T05_004);
+		}
+
+		return todoRepository.findByUserIdAndMasterTodoIdAndStartDateAndIsDeletedFalse(
+						userId,
+						master.getTodoId(),
+						occurrenceDate)
+				.orElseGet(() -> saveRecurringInstanceIdempotently(master, occurrenceDate));
 	}
 
 	private Todo saveRecurringInstanceIdempotently(Todo master, LocalDate occurrenceDate) {

@@ -182,7 +182,7 @@ public class TodoServiceImpl implements TodoService {
 			categoryName = category.getCategoryName();
 		}
 
-		int priority = req.priority() != null ? req.priority() : nextPriority(userId, type);
+		int priority = req.priority() != null ? req.priority() : 1;
 
 		Todo todo = todoRepository.save(
 				Todo.create(userId, categoryId, req.title(), req.content(),
@@ -194,13 +194,6 @@ public class TodoServiceImpl implements TodoService {
 
 		// 새 TODO 이므로 snooze 이력 없음 — count=0 하드코딩 (DB 조회 불필요)
 		return TodoDetailResp.from(todo, categoryName, 0);
-	}
-
-	private int nextPriority(Long userId, TodoType type) {
-		int maxPriority = type == TodoType.SOMEDAY
-				? todoRepository.findMaxPriorityForSomeday(userId)
-				: todoRepository.findMaxPriorityForNonSomeday(userId);
-		return maxPriority + 1;
 	}
 
 	@Override
@@ -292,10 +285,7 @@ public class TodoServiceImpl implements TodoService {
 		}
 
 		if (todo.getType() == TodoType.RECURRING) {
-			if (req.occurrenceDate() == null) {
-				throw new CustomException(TodoErrorCode.T03_004);
-			}
-			todo = recurrenceService.materializeRecurringOccurrence(userId, todo, req.occurrenceDate());
+			throw new CustomException(TodoErrorCode.T03_004);
 		}
 
 		TodoStatus beforeStatus = todo.getStatus();

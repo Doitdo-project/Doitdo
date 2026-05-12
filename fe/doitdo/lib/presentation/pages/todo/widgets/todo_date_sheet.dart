@@ -65,7 +65,6 @@ class TodoDateSheet extends StatefulWidget {
     this.initialDate,
     this.initialResult,
     this.embedded = false,
-    this.disableRange = false,
     this.onConfirm,
     this.onBack,
   });
@@ -76,9 +75,6 @@ class TodoDateSheet extends StatefulWidget {
   /// true 면 drag handle / 외곽 Container 없이 Padding 만 두고,
   /// 확인/이전은 [Navigator.pop] 대신 [onConfirm] / [onBack] 콜백을 호출한다.
   final bool embedded;
-
-  /// true 면 "기간" 탭을 숨긴다 — 언젠가 할 일 컨텍스트에서 사용.
-  final bool disableRange;
 
   final ValueChanged<TodoDateResult>? onConfirm;
   final VoidCallback? onBack;
@@ -432,19 +428,17 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
                   selected: _selectedTab == 0,
                   onTap: () => setState(() => _selectedTab = 0)),
             ),
-            if (!widget.disableRange) ...[
-              const SizedBox(width: 8),
-              Expanded(
-                child: _TabChip(
-                    label: '기간',
-                    selected: _selectedTab == 1,
-                    onTap: () => setState(() {
-                      _selectedTab = 1;
-                      _rangeStart = _selectedDay ?? DateTime.now();
-                      _rangeEnd = null;
-                    })),
-              ),
-            ],
+            const SizedBox(width: 8),
+            Expanded(
+              child: _TabChip(
+                  label: '기간',
+                  selected: _selectedTab == 1,
+                  onTap: () => setState(() {
+                    _selectedTab = 1;
+                    _rangeStart = _selectedDay ?? DateTime.now();
+                    _rangeEnd = null;
+                  })),
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: _TabChip(

@@ -150,32 +150,13 @@ class _TutorialPageState extends State<TutorialPage> {
             SizedBox(height: 28.h),
 
             // ── 하단: 제목 + 부제 + 도트 + CTA ──────────────
-            // GestureDetector 로 하단 영역도 스와이프 감지 (PageView 위 영역은 자체 처리).
-            GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onHorizontalDragEnd: (details) {
-                final vel = details.primaryVelocity ?? 0;
-                if (vel.abs() < 200) return;
-                if (vel < 0) {
-                  _next();
-                } else if (_currentPage > 0) {
-                  _pageController.previousPage(
-                    duration: const Duration(milliseconds: 350),
-                    curve: Curves.easeInOut,
-                  );
-                }
-              },
-              child: Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(28.w, 0, 28.w, 36.h),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 220),
-                    layoutBuilder: (current, previous) => Stack(
-                      alignment: Alignment.centerLeft,
-                      children: [...previous, if (current != null) current],
-                    ),
                     child: Text(
                       slide.title,
                       key: ValueKey('title_$_currentPage'),
@@ -190,10 +171,6 @@ class _TutorialPageState extends State<TutorialPage> {
                   SizedBox(height: 8.h),
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 220),
-                    layoutBuilder: (current, previous) => Stack(
-                      alignment: Alignment.centerLeft,
-                      children: [...previous, if (current != null) current],
-                    ),
                     child: Text(
                       slide.subtitle,
                       key: ValueKey('sub_$_currentPage'),
@@ -276,7 +253,6 @@ class _TutorialPageState extends State<TutorialPage> {
                 ],
               ),
             ),
-            ), // GestureDetector
           ],
         ),
       ),
@@ -341,10 +317,6 @@ class _PhoneCardState extends State<_PhoneCard>
           child: widget.showFingerOverlay
               ? LayoutBuilder(
                   builder: (context, constraints) {
-                    // 이미지(375×812 기준)를 컨테이너 너비에 맞게 스케일했을 때의 배율.
-                    // BoxFit.cover + topCenter 는 portrait 이미지에서 항상 너비 기준으로
-                    // 스케일되므로, 손가락 위치도 너비 비율로 고정하면 기기마다 동일하게 보임.
-                    final imgScale = constraints.maxWidth / 375.0;
                     return Stack(
                       children: [
                         Image.asset(
@@ -355,8 +327,8 @@ class _PhoneCardState extends State<_PhoneCard>
                           filterQuality: FilterQuality.high,
                         ),
                         Positioned(
-                          top: 335.0 * imgScale,
-                          right: 40.0 * imgScale,
+                          top: constraints.maxHeight * 0.57,
+                          right: constraints.maxWidth * 0.10,
                           child: AnimatedBuilder(
                             animation: _pulse,
                             builder: (_, __) => Opacity(
