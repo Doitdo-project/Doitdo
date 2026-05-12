@@ -304,6 +304,40 @@ class TodoServiceImplTest {
 		verify(eventPublisher).publishEvent(any(TodoCompletedEvent.class));
 	}
 
+	@Test
+	void changeStatusForRecurringMaterializesOccurrenceAndMarksOnlyInstanceDone() {
+		Todo master = recurringMaster();
+		Todo instance = recurringInstance(master, LocalDate.parse("2026-05-12"));
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+		given(recurrenceService.materializeRecurringOccurrence(1L, master, LocalDate.parse("2026-05-12")))
+				.willReturn(instance);
+		given(snoozeHistoryRepository.countByTodoId(25L)).willReturn(0L);
+
+		TodoDetailResp resp = service.changeStatus(
+				1L,
+				10L,
+				new TodoStatusChangeReq(TodoStatus.DONE, LocalDate.parse("2026-05-12")));
+
+		assertThat(master.getStatus()).isEqualTo(TodoStatus.TODO);
+		assertThat(instance.getStatus()).isEqualTo(TodoStatus.DONE);
+		assertThat(resp.todoId()).isEqualTo(25L);
+		verify(userStreakService).recordActivity(1L);
+		verify(eventPublisher).publishEvent(any(TodoCompletedEvent.class));
+	}
+
+	@Test
+	void changeStatusForRecurringRequiresOccurrenceDate() {
+		Todo master = recurringMaster();
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+
+		assertThatThrownBy(() -> service.changeStatus(1L, 10L, new TodoStatusChangeReq(TodoStatus.DONE)))
+				.isInstanceOf(CustomException.class)
+				.satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
+						.isEqualTo(TodoErrorCode.T03_004));
+
+		verifyNoInteractions(recurrenceService, userStreakService, eventPublisher);
+	}
+
 	private Todo normalTodo(String alertTime) {
 		return Todo.builder()
 				.todoId(1L)
@@ -314,6 +348,36 @@ class TodoServiceImplTest {
 				.priority(1)
 				.alertTime(alertTime)
 				.startDate(LocalDate.parse("2026-04-20"))
+				.isDeleted(false)
+				.expGranted(false)
+				.build();
+	}
+
+	private Todo recurringMaster() {
+		return Todo.builder()
+				.todoId(10L)
+				.userId(1L)
+				.title("repeat")
+				.type(TodoType.RECURRING)
+				.status(TodoStatus.TODO)
+				.priority(1)
+				.startDate(LocalDate.parse("2026-05-01"))
+				.daysOfWeekRaw("TUE")
+				.isDeleted(false)
+				.expGranted(false)
+				.build();
+	}
+
+	private Todo recurringInstance(Todo master, LocalDate occurrenceDate) {
+		return Todo.builder()
+				.todoId(25L)
+				.userId(master.getUserId())
+				.title(master.getTitle())
+				.type(TodoType.NORMAL)
+				.status(TodoStatus.TODO)
+				.priority(master.getPriority())
+				.startDate(occurrenceDate)
+				.masterTodoId(master.getTodoId())
 				.isDeleted(false)
 				.expGranted(false)
 				.build();
