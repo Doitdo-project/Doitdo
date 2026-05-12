@@ -44,6 +44,16 @@ class TodoViewModel extends StateNotifier<TodoState> {
   final TodoRepository _repository;
   final WidgetSyncService _widgetSync;
 
+  // 빠른 연속 토글 시 마지막 상태만 서버로 전송 — per-todo 디바운스.
+  final Map<String, Timer> _toggleTimers = {};
+
+  @override
+  void dispose() {
+    for (final t in _toggleTimers.values) t.cancel();
+    _toggleTimers.clear();
+    super.dispose();
+  }
+
   static CategoryColorKey _colorKey(String? category) {
     switch (category) {
       case '운동': return CategoryColorKey.exercise;
@@ -491,10 +501,12 @@ class TodoViewModel extends StateNotifier<TodoState> {
     _updateCalendarEvents(state.allTodos);
     _updateDisplayedTodos();
 
-    // 2. PATCH 병렬 발사 — 시각 효과 타이밍을 네트워크 지연과 분리.
-    unawaited(
-      AsyncValue.guard(() => _repository.updateTodoStatus(id, newStatus)),
-    );
+    // 2. 디바운스 PATCH — 빠른 연속 토글 시 마지막 상태만 서버로 전송.
+    _toggleTimers[id]?.cancel();
+    _toggleTimers[id] = Timer(const Duration(milliseconds: 400), () {
+      _toggleTimers.remove(id);
+      AsyncValue.guard(() => _repository.updateTodoStatus(id, newStatus));
+    });
 
     // 3. DONE 으로 토글된 경우 600ms 뒤 fading 해제 → done 필터가 발동해 카드 unmount.
     if (newIsDone) {
@@ -638,9 +650,11 @@ class TodoViewModel extends StateNotifier<TodoState> {
     );
     _updateDisplayedTodos();
 
-    unawaited(
-      AsyncValue.guard(() => _repository.updateTodoStatus(id, newStatus)),
-    );
+    _toggleTimers[id]?.cancel();
+    _toggleTimers[id] = Timer(const Duration(milliseconds: 400), () {
+      _toggleTimers.remove(id);
+      AsyncValue.guard(() => _repository.updateTodoStatus(id, newStatus));
+    });
 
     if (newIsDone) {
       await Future.delayed(const Duration(milliseconds: 600));
