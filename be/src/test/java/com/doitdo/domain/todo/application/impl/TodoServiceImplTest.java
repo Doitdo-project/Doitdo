@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -160,6 +161,27 @@ class TodoServiceImplTest {
 				.isInstanceOf(CustomException.class)
 				.satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
 						.isEqualTo(TodoErrorCode.TODO_RECURRING_START_DATE_DAY_MISMATCH));
+	}
+
+	@Test
+	void createWithoutPriorityAppendsAfterExistingNonSomedayTodos() {
+		given(todoRepository.findMaxPriorityForNonSomeday(1L)).willReturn(2);
+		given(todoRepository.save(any(Todo.class))).willAnswer(invocation -> invocation.getArgument(0));
+		TodoCreateReq req = new TodoCreateReq(
+				"new",
+				null,
+				null,
+				TodoType.NORMAL,
+				LocalDate.parse("2026-04-20"),
+				null,
+				null,
+				null,
+				null);
+
+		TodoDetailResp resp = service.create(1L, req);
+
+		assertThat(resp.priority()).isEqualTo(3);
+		verify(todoRepository).save(argThat(todo -> todo.getPriority() == 3));
 	}
 
 	@Test
