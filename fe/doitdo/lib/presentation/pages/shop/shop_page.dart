@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/pages/shop/shop_state.dart';
@@ -283,9 +282,9 @@ class _CoinBadge extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
       decoration: BoxDecoration(
-        color: AppColors.streakBg,
+        color: colors.streakCardBg,
         borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: AppColors.streakCheck.withValues(alpha: 0.3)),
+        border: Border.all(color: colors.streakDotActive.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
