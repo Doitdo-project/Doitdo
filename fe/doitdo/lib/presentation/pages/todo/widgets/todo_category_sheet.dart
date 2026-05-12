@@ -131,15 +131,11 @@ class _TodoCategorySheetState extends ConsumerState<TodoCategorySheet> {
                 GestureDetector(
                   onTap: () {
                     FocusManager.instance.primaryFocus?.unfocus();
-                    final nav = Navigator.of(context, rootNavigator: true);
-                    nav.pop(); // TodoAddSheet 모달 제거 → 스크림 없애기
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      nav.push(
-                        MaterialPageRoute(
-                          builder: (_) => const CategoryPage(),
-                        ),
-                      );
-                    });
+                    Navigator.of(context, rootNavigator: true).push(
+                      MaterialPageRoute(
+                        builder: (_) => const CategoryPage(),
+                      ),
+                    );
                   },
                   child: Container(
                     width: chipWidth,

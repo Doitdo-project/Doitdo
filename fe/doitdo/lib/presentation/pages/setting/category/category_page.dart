@@ -99,7 +99,17 @@ class CategoryPage extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     CategoryResp category,
+    int categoryCount,
   ) async {
+    if (categoryCount <= 1) {
+      await showDoitdoDialog(
+        context: context,
+        title: '삭제할 수 없어요',
+        message: '카테고리는 최소 1개 이상 있어야 해요.',
+        confirmLabel: '확인',
+      );
+      return;
+    }
     final ok = await showDoitdoDialog(
       context: context,
       title: '카테고리를 삭제할까요?',
@@ -161,7 +171,7 @@ class CategoryPage extends ConsumerWidget {
               _CategoryCard(
                 categories: categories,
                 onEdit: (c) => _handleEdit(context, ref, c),
-                onDelete: (c) => _handleDelete(context, ref, c),
+                onDelete: (c) => _handleDelete(context, ref, c, categories.length),
                 onAddTap: () => _handleAdd(context, ref),
               ),
               const SizedBox(height: 40),
