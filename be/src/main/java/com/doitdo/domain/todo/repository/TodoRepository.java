@@ -118,6 +118,27 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 			""")
 	long countPendingByUserIdAndToday(@Param("userId") Long userId, @Param("today") LocalDate today);
 
+	/**
+	 * 카테고리 rename / 색상 변경 시 해당 카테고리를 쓰는 활성 todo 의
+	 * 이름·색 스냅샷을 일괄 갱신한다 (전파).
+	 */
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("UPDATE Todo t SET t.categoryName = :name, t.categoryColorId = :colorId " +
+			"WHERE t.userId = :userId AND t.categoryId = :categoryId AND t.isDeleted = false")
+	int bulkUpdateCategorySnapshot(@Param("userId") Long userId,
+			@Param("categoryId") Long categoryId,
+			@Param("name") String name,
+			@Param("colorId") Integer colorId);
+
+	/**
+	 * 카테고리 삭제 시 해당 카테고리를 쓰는 활성 todo 의 category_id 만 NULL 로 detach.
+	 * 이름·색 스냅샷(category_name / category_color_id)은 그대로 잔여시킨다.
+	 */
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("UPDATE Todo t SET t.categoryId = NULL " +
+			"WHERE t.userId = :userId AND t.categoryId = :categoryId AND t.isDeleted = false")
+	int detachCategoryId(@Param("userId") Long userId, @Param("categoryId") Long categoryId);
+
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("UPDATE Todo t SET t.isDeleted = true WHERE t.userId = :userId AND t.isDeleted = false")
 	int softDeleteAllByUserId(@Param("userId") Long userId);
