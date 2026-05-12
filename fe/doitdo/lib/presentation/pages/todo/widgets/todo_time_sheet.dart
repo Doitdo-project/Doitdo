@@ -4,7 +4,6 @@ import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
-import 'package:doitdo/presentation/widgets/common/character_mascot_image.dart';
 
 // ─────────────────────────────────────────────
 // 알림 시트 반환 모델
@@ -56,14 +55,6 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
   final List<int> _hours = List.generate(12, (i) => i + 1);
   final List<int> _minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
-  // 시간 휠 무한 루프 — 중간(600)에서 시작해 양방향 600아이템(50사이클) 여유
-  static const int _hourLoopCount  = 1200;
-  static const int _hourMidOffset  = 600;
-
-  late FixedExtentScrollController _amPmController;
-  late FixedExtentScrollController _hourController;
-  int _hourScrollIndex = 0;
-
   @override
   void initState() {
     super.initState();
@@ -73,18 +64,6 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
     _selectedHour =
     time.hour == 0 ? 12 : (time.hour > 12 ? time.hour - 12 : time.hour);
     _selectedMinute = time.minute;
-
-    final hourIdx    = _hours.indexOf(_selectedHour);
-    _hourScrollIndex = _hourMidOffset + hourIdx;
-    _amPmController  = FixedExtentScrollController(initialItem: _isAm ? 0 : 1);
-    _hourController  = FixedExtentScrollController(initialItem: _hourScrollIndex);
-  }
-
-  @override
-  void dispose() {
-    _amPmController.dispose();
-    _hourController.dispose();
-    super.dispose();
   }
 
   @override
@@ -97,7 +76,7 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
     final headerRow = Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const CharacterMascotImage(size: 36),
+        Image.asset('assets/images/Dooit.png', width: 30, height: 30, filterQuality: FilterQuality.high),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -211,34 +190,34 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
       top: false,
       minimum: const EdgeInsets.only(bottom: 8),
       child: Container(
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 드래그 핸들 — standalone 모드 전용
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: colors.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 드래그 핸들 — standalone 모드 전용
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: colors.border,
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const SizedBox(height: 16),
-            headerRow,
-            const SizedBox(height: 24),
-            wheelRow,
-            const SizedBox(height: 24),
-            buttonRow,
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          headerRow,
+          const SizedBox(height: 24),
+          wheelRow,
+          const SizedBox(height: 24),
+          buttonRow,
+        ],
+      ),
       ),
     );
   }
@@ -247,7 +226,7 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
     return ListWheelScrollView.useDelegate(
       itemExtent: 48,
       perspective: 0.002,
-      controller: _amPmController,
+      controller: FixedExtentScrollController(initialItem: _isAm ? 0 : 1),
       physics: const FixedExtentScrollPhysics(),
       onSelectedItemChanged: (i) => setState(() => _isAm = i == 0),
       childDelegate: ListWheelChildBuilderDelegate(
@@ -275,34 +254,17 @@ class _TodoTimeSheetState extends State<TodoTimeSheet> {
     return ListWheelScrollView.useDelegate(
       itemExtent: 48,
       perspective: 0.002,
-      controller: _hourController,
+      controller: FixedExtentScrollController(
+          initialItem: _hours.indexOf(_selectedHour)),
       physics: const FixedExtentScrollPhysics(),
-      onSelectedItemChanged: (i) {
-        final prevCycle = _hourScrollIndex ~/ 12;
-        final newCycle  = i ~/ 12;
-        final crossed   = (newCycle - prevCycle).abs() % 2 == 1;
-        final newIsAm   = crossed ? !_isAm : _isAm;
-        setState(() {
-          _selectedHour    = _hours[i % 12];
-          _hourScrollIndex = i;
-          _isAm            = newIsAm;
-        });
-        if (crossed) {
-          _amPmController.animateToItem(
-            newIsAm ? 0 : 1,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
-          );
-        }
-      },
+      onSelectedItemChanged: (i) => setState(() => _selectedHour = _hours[i]),
       childDelegate: ListWheelChildBuilderDelegate(
-        childCount: _hourLoopCount,
+        childCount: _hours.length,
         builder: (_, i) {
-          final hour       = _hours[i % 12];
-          final isSelected = i == _hourScrollIndex;
+          final isSelected = _hours[i] == _selectedHour;
           return Center(
             child: Text(
-              '$hour',
+              '${_hours[i]}',
               style: (isSelected
                   ? AppTextStyles.displayLarge
                   : AppTextStyles.bodyMedium)
@@ -363,7 +325,7 @@ class _PrevButton extends StatelessWidget {
         elevation: 0,
         shadowColor: Colors.transparent,
         shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(vertical: 12),
       ),
       child: Text(

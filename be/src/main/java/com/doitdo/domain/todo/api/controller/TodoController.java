@@ -116,7 +116,7 @@ public class TodoController {
 				todoService.create(userDetails.getUserId(), req));
 	}
 
-	@Operation(summary = "TODO 상태 변경", description = "TODO 상태를 TODO/IN_PROGRESS/DONE 로 변경. 반복 TODO 마스터(type=RECURRING)는 occurrenceDate로 특정 발생일을 지정하면 실체화 후 상태를 변경한다.")
+	@Operation(summary = "TODO 상태 변경", description = "TODO 상태를 TODO/IN_PROGRESS/DONE 로 변경. 반복 TODO 마스터(type=RECURRING) 는 상태 변경 불가.")
 	@ApiErrorCodes({"T03-001", "T03-003", "T03-004"})
 	@PatchMapping("/{todoId}/status")
 	public GlobalApiResponse<TodoDetailResp> changeStatus(
