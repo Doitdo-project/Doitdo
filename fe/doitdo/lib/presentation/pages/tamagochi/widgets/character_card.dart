@@ -101,8 +101,12 @@ class CharacterCard extends StatelessWidget {
       // width 를 안 잡으면 부모(Column → outer Stack StackFit.loose) 가 loose 로
       // 흘려보내, 안쪽 Stack 의 자식이 모두 Positioned* 라 width 가 0 으로 collapse
       // → 카드가 통째로 빈 박스로 보이는 버그가 난다. 부모 max 까지 늘려 박는다.
+      //
+      // height 의 raw 디자인 값([kRoomFrameDesignHeight]) 은 SSOT 로 추출되어
+      // 상점 미리보기 등 외곽 박스 비율을 재현해야 하는 다른 화면에서 동일 기준으로
+      // 참조한다 ([computeRoomFrameAspect]).
       width: double.infinity,
-      height: 300.h + topSafePadding,
+      height: kRoomFrameDesignHeight.h + topSafePadding,
       child: LayoutBuilder(
         builder: (context, constraints) {
           // 가구 캔버스와 동일한 AR 로 잠가, 캐릭터 발 위치도 가구 바닥선과 함께
