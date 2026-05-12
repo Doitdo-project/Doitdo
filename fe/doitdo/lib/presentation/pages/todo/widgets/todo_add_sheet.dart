@@ -41,6 +41,7 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
   int?      _selectedCategoryId;
   TimeOfDay _selectedTime       = const TimeOfDay(hour: 12, minute: 0);
   bool      _alarmEnabled       = false;
+  bool      _alarmConfigured    = false;
   bool      _isLoading          = false;
   bool      _showTitleError     = false;
 
@@ -260,13 +261,14 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
           key: const ValueKey('alert'),
           child: TodoTimeSheet(
             initialTime:    _selectedTime,
-            initialEnabled: _alarmEnabled,
+            initialEnabled: _alarmConfigured ? _alarmEnabled : true,
             embedded: true,
             onConfirm: (result) {
               setState(() {
-                _selectedTime = result.time;
-                _alarmEnabled = result.enabled;
-                _step = _Step.main;
+                _selectedTime    = result.time;
+                _alarmEnabled    = result.enabled;
+                _alarmConfigured = true;
+                _step            = _Step.main;
               });
             },
             onBack: () => _goToStep(_Step.main),
