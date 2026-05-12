@@ -306,7 +306,14 @@ class TodoViewModel extends StateNotifier<TodoState> {
           if (newEvents[normalizedDay] == null) {
             newEvents[normalizedDay] = [];
           }
-          newEvents[normalizedDay]!.add(todo);
+          // repeat 타입은 같은 마스터 객체를 여러 날짜에 공유하면
+          // isDone 상태도 공유되어 전체 날짜가 동시에 완료 처리됨.
+          // 날짜별 별도 객체로 복사해 각 날짜의 완료 상태를 독립적으로 관리.
+          newEvents[normalizedDay]!.add(
+            todo.dateType == TodoDateType.repeat
+                ? todo.copyWith(date: normalizedDay)
+                : todo,
+          );
         }
 
         if (todo.dateType == TodoDateType.normal && i == 0) break;
@@ -492,9 +499,34 @@ class TodoViewModel extends StateNotifier<TodoState> {
     _updateDisplayedTodos();
 
     // 2. PATCH 병렬 발사 — 시각 효과 타이밍을 네트워크 지연과 분리.
-    unawaited(
-      AsyncValue.guard(() => _repository.updateTodoStatus(id, newStatus)),
+    // repeat 타입이면 selectedDay(occurrenceDate) 전달 → 서버가 해당 날짜
+    // 인스턴스만 DONE 처리. 실패 시 낙관적 업데이트 롤백.
+    final todo = state.allTodos[idx];
+    final occurrenceDate = todo.dateType == TodoDateType.repeat
+        ? (state.selectedDay ?? DateTime.now())
+        : null;
+
+    final result = await AsyncValue.guard(
+          () => _repository.updateTodoStatus(
+        id,
+        newStatus,
+        occurrenceDate: occurrenceDate,
+      ),
     );
+
+    // 실패 시 롤백
+    if (result.hasError) {
+      if (!mounted) return;
+      state = state.copyWith(
+        allTodos: state.allTodos
+            .map((t) => t.id == id ? t.copyWith(isDone: wasDone) : t)
+            .toList(),
+        fadingTodoIds: state.fadingTodoIds.where((it) => it != id).toSet(),
+      );
+      _updateCalendarEvents(state.allTodos);
+      _updateDisplayedTodos();
+      return;
+    }
 
     // 3. DONE 으로 토글된 경우 600ms 뒤 fading 해제 → done 필터가 발동해 카드 unmount.
     if (newIsDone) {
@@ -810,9 +842,9 @@ class TodoViewModel extends StateNotifier<TodoState> {
     final int allInsertIdx = anchorId == null
         ? allList.length
         : () {
-            final i = allList.indexWhere((t) => t.id == anchorId);
-            return i == -1 ? allList.length : i;
-          }();
+      final i = allList.indexWhere((t) => t.id == anchorId);
+      return i == -1 ? allList.length : i;
+    }();
     allList.insert(allInsertIdx, item);
 
     final newAllSomeday = state.allSomedayTodos.where((t) => t.id != id).toList();

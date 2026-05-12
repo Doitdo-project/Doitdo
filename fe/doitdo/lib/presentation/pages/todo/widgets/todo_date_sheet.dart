@@ -6,6 +6,7 @@ import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/models/todo.dart'; // ✏️ 추가: TodoDateType 이 todo.dart 로 이동됨
 import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
+import 'package:doitdo/presentation/widgets/common/character_mascot_image.dart';
 
 // ─────────────────────────────────────────────
 // 날짜 선택 결과 모델
@@ -759,35 +760,35 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
       top: false,
       minimum: const EdgeInsets.only(bottom: 8),
       child: Container(
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // drag handle — standalone 모드 전용
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: c.border, borderRadius: BorderRadius.circular(2)),
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // drag handle — standalone 모드 전용
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: c.border, borderRadius: BorderRadius.circular(2)),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            headerSection,
-            const SizedBox(height: 16),
-            tabContent,
-            const SizedBox(height: 24),
-            buttonRow,
-          ],
+              const SizedBox(height: 16),
+              headerSection,
+              const SizedBox(height: 16),
+              tabContent,
+              const SizedBox(height: 24),
+              buttonRow,
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 }
@@ -993,12 +994,7 @@ class _MascotBubble extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Image.asset(
-          'assets/images/Dooit.png',
-          width: 30,
-          height: 30,
-          filterQuality: FilterQuality.high,
-        ),
+        const CharacterMascotImage(size: 36),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

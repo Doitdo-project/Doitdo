@@ -9,7 +9,11 @@ abstract class TodoRepository {
   Future<TodoDetailResponseDto> createTodo(Todo todo);
 
   // 상태 변경 기능 추가
-  Future<void> updateTodoStatus(String todoId, String status);
+  Future<void> updateTodoStatus(
+      String todoId,
+      String status, {
+        DateTime? occurrenceDate,
+      });
 
   // [추가] TODO 수정 (T04)
   Future<TodoUpdateResponseDto> updateTodo(String id, TodoUpdateRequestDto request);
