@@ -81,7 +81,8 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `todoId` | `Long` | |
 | `title` | `String` | |
 | `content` | `String` | nullable |
-| `category` | `String` | 카테고리 이름, nullable |
+| `category` | `String` | 카테고리 이름 스냅샷, nullable. 카테고리가 삭제되어도 todo 에 남아있던 이름이 그대로 노출된다. |
+| `colorHex` | `String` | 카테고리 색상 hex (예: `"#FF8888"`), nullable. 동일 이름의 활성 카테고리가 있으면 그 색이 우선되고, 없으면 todo 의 스냅샷 색이 사용된다. |
 | `type` | `TodoType` | NORMAL / RECURRING / PERIOD |
 | `priority` | `Integer` | |
 | `startDate` | `LocalDate` | |
@@ -92,6 +93,14 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `snoozedDays` | `int` | 이 TODO 를 미룬 누적 횟수. `snooze_history` 테이블 COUNT 파생 (todos DDL 변경 없음) |
 
 `TodoListResp.items[]` 와 `TodoSearchResp.items[]` 도 동일한 `TodoDetailResp` 구조를 사용한다.
+
+### 카테고리 스냅샷 정책 (2026-05-12 도입)
+
+- **저장**: `todos.category_name` / `todos.category_color_id` 두 컬럼에 카테고리 이름·색 스냅샷을 저장한다.
+- **rename / 색 변경**: 카테고리 update 시 해당 카테고리를 쓰는 활성 todo 들의 스냅샷이 일괄 update 된다.
+- **삭제**: 카테고리 delete 시 `category_id` 는 NULL 로 detach 되고 이름·색 스냅샷은 잔여 → todo 응답의 `category` 는 그대로 유지된다.
+- **응답 colorHex**: 동일 이름의 활성 카테고리가 있으면 그 카테고리의 색이 override, 없으면 todo 의 스냅샷 색.
+- **필터**: `GET /api/todos?category=공부` 는 `todos.category_name` 스냅샷 기반으로 매칭. 동일 이름의 카테고리를 다시 만들면 옛 todo 도 함께 잡힌다 (의도된 동작).
 
 ### `PATCH /api/todos/{todoId}/status` 요청
 
@@ -134,7 +143,8 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `isVirtual` | `boolean` | DB row 없는 가상 인스턴스 여부 |
 | `title` | `String` | |
 | `content` | `String` | nullable |
-| `category` | `String` | 카테고리 이름, nullable |
+| `category` | `String` | 카테고리 이름 스냅샷, nullable. 삭제된 카테고리도 todo 에 남아있던 이름이 노출된다. |
+| `colorHex` | `String` | 카테고리 색상 hex, nullable. 동일 이름의 활성 카테고리 색이 우선, 없으면 스냅샷 색. |
 | `type` | `TodoType` | NORMAL / RECURRING / PERIOD |
 | `priority` | `Integer` | |
 | `startDate` | `LocalDate` | 가상 인스턴스는 occurrenceDate 와 동일 |

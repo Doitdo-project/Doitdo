@@ -13,6 +13,7 @@ public record TodoDetailResp(
 		String title,
 		String content,
 		String category,
+		String colorHex,
 		TodoType type,
 		Integer priority,
 		String alertTime,
@@ -24,12 +25,13 @@ public record TodoDetailResp(
 		int snoozedDays
 ) {
 
-	public static TodoDetailResp from(Todo todo, String categoryName, int snoozedDays) {
+	public static TodoDetailResp from(Todo todo, String categoryName, String colorHex, int snoozedDays) {
 		return new TodoDetailResp(
 				todo.getTodoId(),
 				todo.getTitle(),
 				todo.getContent(),
 				categoryName,
+				colorHex,
 				todo.getType(),
 				todo.getPriority(),
 				todo.getAlertTime(),

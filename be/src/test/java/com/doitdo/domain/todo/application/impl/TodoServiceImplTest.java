@@ -24,6 +24,7 @@ import com.doitdo.domain.todo.entity.Todo.TodoStatus;
 import com.doitdo.domain.todo.entity.Todo.TodoType;
 import com.doitdo.domain.todo.event.TodoCompletedEvent;
 import com.doitdo.domain.todo.repository.CategoryRepository;
+import com.doitdo.domain.todo.repository.PaletteColorRepository;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository;
 import com.doitdo.domain.todo.repository.TodoListQueryRepository;
 import com.doitdo.domain.todo.repository.TodoRepository;
@@ -56,6 +57,9 @@ class TodoServiceImplTest {
 	private CategoryRepository categoryRepository;
 
 	@Mock
+	private PaletteColorRepository paletteColorRepository;
+
+	@Mock
 	private SnoozeHistoryRepository snoozeHistoryRepository;
 
 	@Mock
@@ -78,6 +82,7 @@ class TodoServiceImplTest {
 				todoRepository,
 				todoListQueryRepository,
 				categoryRepository,
+				paletteColorRepository,
 				snoozeHistoryRepository,
 				recurrenceService,
 				userStreakService,
@@ -94,6 +99,7 @@ class TodoServiceImplTest {
 				"todo",
 				"memo",
 				"work",
+				null,
 				TodoType.NORMAL,
 				1,
 				"09:00",
@@ -122,7 +128,10 @@ class TodoServiceImplTest {
 		assertThat(item.category()).isEqualTo("work");
 		assertThat(item.daysOfWeek()).containsExactly("MON", "WED");
 		assertThat(item.snoozedDays()).isEqualTo(2);
-		verifyNoInteractions(todoRepository, categoryRepository, snoozeHistoryRepository);
+		// list 는 todoRepository / snoozeHistoryRepository 와는 상호작용하지 않아야 함 (N+1 회피).
+		// categoryRepository 와 paletteColorRepository 는 활성 카테고리·색상 맵 빌드를 위해
+		// 한 번씩 호출되므로 verifyNoInteractions 대상에서 제외한다.
+		verifyNoInteractions(todoRepository, snoozeHistoryRepository);
 	}
 
 	@Test
