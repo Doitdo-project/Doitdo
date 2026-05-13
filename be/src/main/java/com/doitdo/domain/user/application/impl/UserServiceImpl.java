@@ -21,6 +21,7 @@ import com.doitdo.domain.user.api.dto.req.WithdrawReq;
 import com.doitdo.domain.user.api.dto.resp.CheckDuplicateResp;
 import com.doitdo.domain.user.api.dto.resp.UserInfoResp;
 import com.doitdo.domain.user.api.dto.resp.WalletBalanceResp;
+import com.doitdo.domain.user.application.CreditEarnService;
 import com.doitdo.domain.user.application.UserService;
 import com.doitdo.domain.user.entity.User;
 import com.doitdo.domain.user.entity.WalletEarnSource;
@@ -49,6 +50,7 @@ public class UserServiceImpl implements UserService {
 
 	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 	private static final int MINIMUM_AGE = 14;
+	private static final int DAILY_ATTENDANCE_REWARD = 100;
 
 	private final UserRepository userRepository;
 	private final RefreshTokenRepository refreshTokenRepository;
@@ -65,6 +67,7 @@ public class UserServiceImpl implements UserService {
 	private final WalletEarnLogRepository walletEarnLogRepository;
 	private final UserSettingRepository userSettingRepository;
 	private final CharacterUnlockRepository characterUnlockRepository;
+	private final CreditEarnService creditEarnService;
 	private final PasswordEncoder passwordEncoder;
 	private final AppleOAuthClient appleOAuthClient;
 	private final UserHardDeleteService userHardDeleteService;
@@ -87,11 +90,23 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	@Transactional(readOnly = true)
+	@Transactional
 	public UserInfoResp getMyInfo(Long userId) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new CustomException(UserErrorCode.U01_002));
-		return UserInfoResp.from(user, isAttendanceClaimedToday(userId));
+
+		boolean alreadyClaimed = isAttendanceClaimedToday(userId);
+		if (!alreadyClaimed && userWalletRepository.findByUserId(userId).isPresent()) {
+			creditEarnService.tryEarn(
+					userId,
+					WalletEarnSource.DAILY_ATTENDANCE,
+					DAILY_ATTENDANCE_REWARD,
+					null,
+					true
+			);
+		}
+
+		return UserInfoResp.from(user, alreadyClaimed);
 	}
 
 	@Override

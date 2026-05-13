@@ -156,16 +156,10 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 |---|---|---|---|
 | `U05_001` | `U05-001` | 404 | 지갑 데이터를 찾을 수 없음 |
 
-### `UserErrorCode` 추가 코드 (출석 보상, 2026-05-13 Stage 2)
-
-| 상수 | code | HTTP | 의미 |
-|---|---|---|---|
-| `U07_001` | `U07-001` | 409 | 이미 오늘 출석 보상을 수령함 |
-
 ### 뚜레딧 적립 정책값 (2026-05-13 Stage 1)
 
 Stage 1 신규 에러코드는 없다. `PET_TOUCH`, `TODO_COMPLETION` 의 쿨타임 또는 일일 한도 초과는 예외가 아니라 `earnedAmount=0` 으로 처리한다.
-Stage 2 출석 보상은 일일 1회 중복 수령 시 409 + `U07-001` 을 반환한다.
+Stage 5 출석 보상은 `GET /api/users/me` 호출 시 자동 적립하며, 이미 받은 날에는 에러 없이 `dailyAttendanceClaimed=true` 를 반환한다.
 
 | 항목 | 정책값 |
 |---|---|

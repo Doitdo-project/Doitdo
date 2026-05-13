@@ -49,14 +49,6 @@ public class OpenApiConfig {
     }
 
     @Bean
-    public GroupedOpenApi attendance() {
-        return GroupedOpenApi.builder()
-            .group("attendance")
-            .packagesToScan("com.doitdo.domain.attendance.api.controller")
-            .build();
-    }
-
-    @Bean
     public GroupedOpenApi todo() {
         return GroupedOpenApi.builder()
             .group("todo")
