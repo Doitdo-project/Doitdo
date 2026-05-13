@@ -22,11 +22,16 @@ public class DataInitializer implements CommandLineRunner {
 	 * 회원가입 직후부터 모든 사용자가 사용할 수 있는 기본 팔레트.
 	 *
 	 * <p>Palette / PaletteColor 는 전역 공유 엔티티이며 이 코드 리스트를 SSOT 로
-	 * 둔다. 부팅 시 이름 기준으로 빠진 팔레트만 INSERT 하며, 이미 같은 이름이
-	 * 존재하면 색상까지 그대로 둔다(기존 Category 가 참조 중인 color_id 를
-	 * 깨뜨리지 않기 위함). 첫 번째 팔레트("기본") 의 1~5번 색상이
+	 * 둔다. 부팅 시:
+	 * <ul>
+	 *   <li>이름이 DB 에 없으면 색상까지 함께 INSERT (displayOrder = 리스트 위치 + 1).
+	 *   <li>이름이 이미 존재하면 색상은 손대지 않고 displayOrder 만 코드 위치에 맞춰 sync
+	 *       — 색상 row 의 color_id 는 기존 Category 가 참조 중이라 보존 필수.
+	 * </ul>
+	 * 첫 번째 팔레트("기본") 의 1~5번 색상이
 	 * {@link com.doitdo.domain.todo.application.DefaultCategoryRegistrar} 에서
-	 * 기본 카테고리(공부/운동/업무/집안일/기타) 색상으로 사용된다.
+	 * 기본 카테고리(공부/운동/업무/집안일/기타) 색상으로 사용되며,
+	 * 회원가입 시점에 displayOrder 최소값 팔레트를 "기본" 으로 본다.
 	 */
 	private record PaletteSeed(String name, List<String> colors) {}
 
@@ -154,12 +159,23 @@ public class DataInitializer implements CommandLineRunner {
 
 	private void initializePalettes() {
 		int inserted = 0;
-		for (PaletteSeed seed : PALETTE_SEEDS) {
-			if (paletteRepository.findByPaletteName(seed.name()).isPresent()) {
+		int reordered = 0;
+
+		for (int idx = 0; idx < PALETTE_SEEDS.size(); idx++) {
+			PaletteSeed seed = PALETTE_SEEDS.get(idx);
+			int displayOrder = idx + 1;
+
+			var existing = paletteRepository.findByPaletteName(seed.name());
+			if (existing.isPresent()) {
+				Palette palette = existing.get();
+				if (!Integer.valueOf(displayOrder).equals(palette.getDisplayOrder())) {
+					palette.updateDisplayOrder(displayOrder);
+					reordered++;
+				}
 				continue;
 			}
 
-			Palette palette = paletteRepository.save(Palette.create(seed.name()));
+			Palette palette = paletteRepository.save(Palette.create(seed.name(), displayOrder));
 			Long paletteId = palette.getPaletteId();
 			for (int i = 0; i < seed.colors().size(); i++) {
 				paletteColorRepository.save(PaletteColor.create(
@@ -168,15 +184,13 @@ public class DataInitializer implements CommandLineRunner {
 						i + 1
 				));
 			}
-			log.info("Palette '{}' with {} colors initialized", seed.name(), seed.colors().size());
+			log.info("Palette '{}' (displayOrder={}) with {} colors initialized",
+					seed.name(), displayOrder, seed.colors().size());
 			inserted++;
 		}
 
-		if (inserted == 0) {
-			log.info("All {} seed palettes already present, nothing to insert", PALETTE_SEEDS.size());
-		} else {
-			log.info("Inserted {} missing palettes ({} total seeds)", inserted, PALETTE_SEEDS.size());
-		}
+		log.info("Palette seed sync done — inserted={}, reordered={}, total seeds={}",
+				inserted, reordered, PALETTE_SEEDS.size());
 	}
 
 	private void initializeDefaultFurnitures() {

@@ -24,7 +24,7 @@ public class PaletteServiceImpl implements PaletteService {
 	/**
 	 * 전체 팔레트 목록 조회.
 	 * N+1 회피: PaletteColor 전체를 한 번 조회 후 paletteId 로 그룹핑.
-	 * colors 는 colorOrder 오름차순 hex 배열.
+	 * 팔레트는 displayOrder 오름차순으로 반환하며, colors 는 colorOrder 오름차순 hex 배열.
 	 */
 	@Override
 	@Transactional(readOnly = true)
@@ -36,7 +36,7 @@ public class PaletteServiceImpl implements PaletteService {
 				.collect(Collectors.groupingBy(PaletteColor::getPaletteId));
 
 		return palettes.stream()
-				.sorted(Comparator.comparing(Palette::getPaletteId))
+				.sorted(Comparator.comparing(Palette::getDisplayOrder))
 				.map(palette -> {
 					List<String> colors = colorsByPaletteId
 							.getOrDefault(palette.getPaletteId(), List.of())

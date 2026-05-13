@@ -37,7 +37,7 @@ class DataInitializerTest {
 				paletteColorRepository,
 				furnitureRepository
 		);
-		given(paletteRepository.findByPaletteName(any())).willReturn(Optional.of(Palette.create("이미존재")));
+		given(paletteRepository.findByPaletteName(any())).willReturn(Optional.of(Palette.create("이미존재", 1)));
 		given(furnitureRepository.findByCodeAndIsDeletedFalse("DEFAULT_BACKGROUND")).willReturn(Optional.empty());
 
 		initializer.run();
