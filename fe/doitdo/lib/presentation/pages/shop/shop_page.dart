@@ -10,6 +10,7 @@ import 'package:doitdo/presentation/pages/shop/widgets/coin_icon.dart';
 import 'package:doitdo/presentation/pages/shop/widgets/purchase_dialog.dart';
 import 'package:doitdo/presentation/pages/shop/widgets/shop_category_tabs.dart';
 import 'package:doitdo/presentation/pages/shop/widgets/shop_item_card.dart';
+import 'package:doitdo/presentation/pages/shop/widgets/shop_loading_view.dart';
 import 'package:doitdo/presentation/pages/shop/widgets/shop_room_preview.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_top_bar.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
@@ -41,7 +42,7 @@ class ShopPage extends ConsumerWidget {
         ],
       ),
       body: asyncState.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const ShopLoadingView(),
         error: (err, _) => _ErrorView(
           message: '상점을 불러오지 못했어요. 잠시 후 다시 시도해주세요.',
           onRetry: () => ref.invalidate(shopViewModelProvider),
