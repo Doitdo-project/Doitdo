@@ -2,7 +2,6 @@ package com.doitdo.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -51,17 +50,15 @@ class AttendanceRewardIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("Case 1: 신규 사용자, 첫 출석 보상 호출 시 100 뚜레딧 적립")
-	void case01_firstAttendanceClaimGrantsHundredCredit() throws Exception {
+	@DisplayName("Case 1: 신규 사용자, 첫 GET /api/users/me 호출은 false 반환 후 100 뚜레딧 자동 적립")
+	void case01_firstGetMyInfoAutoClaimsAttendanceReward() throws Exception {
 		Long userId = createCompletedUserWithWallet(0);
 		String token = jwtUtil.generateAccessToken(userId);
 
-		mockMvc.perform(post("/api/users/me/attendance")
+		mockMvc.perform(get("/api/users/me")
 						.header("Authorization", "Bearer " + token))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.earnedAmount").value(100))
-				.andExpect(jsonPath("$.data.balance").value(100))
-				.andExpect(jsonPath("$.data.attendanceDate").value(LocalDate.now(SEOUL).toString()));
+				.andExpect(jsonPath("$.data.dailyAttendanceClaimed").value(false));
 
 		assertThat(walletBalance(userId)).isEqualTo(100);
 		List<WalletEarnLog> logs = walletEarnLogsBySource(userId, WalletEarnSource.DAILY_ATTENDANCE);
@@ -70,77 +67,72 @@ class AttendanceRewardIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("Case 2: 같은 날 두 번째 출석 보상 호출은 409 U07-001")
-	void case02_secondAttendanceClaimSameDayReturnsConflict() throws Exception {
+	@DisplayName("Case 2: 같은 날 두 번째 GET /api/users/me 호출은 true 반환, 지갑 변동 없음")
+	void case02_secondGetMyInfoSameDayReturnsClaimedTrueWithoutChange() throws Exception {
 		Long userId = createCompletedUserWithWallet(0);
 		String token = jwtUtil.generateAccessToken(userId);
 
-		mockMvc.perform(post("/api/users/me/attendance")
+		mockMvc.perform(get("/api/users/me")
 						.header("Authorization", "Bearer " + token))
 				.andExpect(status().isOk());
 		int balanceAfterFirstClaim = walletBalance(userId);
 
-		mockMvc.perform(post("/api/users/me/attendance")
+		mockMvc.perform(get("/api/users/me")
 						.header("Authorization", "Bearer " + token))
-				.andExpect(status().isConflict())
-				.andExpect(jsonPath("$.code").value("U07-001"));
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.dailyAttendanceClaimed").value(true));
 
 		assertThat(walletBalance(userId)).isEqualTo(balanceAfterFirstClaim);
 		assertThat(walletEarnLogsBySource(userId, WalletEarnSource.DAILY_ATTENDANCE)).hasSize(1);
 	}
 
 	@Test
-	@DisplayName("Case 3: Asia/Seoul 자정 경과 후 출석 보상 재수령 가능")
-	void case03_attendanceClaimAvailableAfterSeoulMidnight() throws Exception {
+	@DisplayName("Case 3: 같은 날 세 번째 GET /api/users/me 호출도 true 반환, 적립 1회만 유지")
+	void case03_thirdGetMyInfoSameDayReturnsClaimedTrueWithoutChange() throws Exception {
 		Long userId = createCompletedUserWithWallet(0);
 		String token = jwtUtil.generateAccessToken(userId);
 
-		mockMvc.perform(post("/api/users/me/attendance")
+		mockMvc.perform(get("/api/users/me")
+						.header("Authorization", "Bearer " + token))
+				.andExpect(status().isOk());
+		mockMvc.perform(get("/api/users/me")
+						.header("Authorization", "Bearer " + token))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.dailyAttendanceClaimed").value(true));
+		int balanceAfterSecondCall = walletBalance(userId);
+
+		mockMvc.perform(get("/api/users/me")
+						.header("Authorization", "Bearer " + token))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.dailyAttendanceClaimed").value(true));
+
+		assertThat(walletBalance(userId)).isEqualTo(balanceAfterSecondCall);
+		assertThat(walletEarnLogsBySource(userId, WalletEarnSource.DAILY_ATTENDANCE)).hasSize(1);
+	}
+
+	@Test
+	@DisplayName("Case 4: Asia/Seoul 자정 경과 후 첫 GET /api/users/me 호출은 false 반환 후 추가 적립")
+	void case04_getMyInfoAutoClaimsAgainAfterSeoulMidnight() throws Exception {
+		Long userId = createCompletedUserWithWallet(0);
+		String token = jwtUtil.generateAccessToken(userId);
+
+		mockMvc.perform(get("/api/users/me")
 						.header("Authorization", "Bearer " + token))
 				.andExpect(status().isOk());
 		moveAttendanceLogsToYesterday(userId);
 
-		mockMvc.perform(post("/api/users/me/attendance")
+		mockMvc.perform(get("/api/users/me")
 						.header("Authorization", "Bearer " + token))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.earnedAmount").value(100))
-				.andExpect(jsonPath("$.data.balance").value(200));
+				.andExpect(jsonPath("$.data.dailyAttendanceClaimed").value(false));
 
 		assertThat(walletBalance(userId)).isEqualTo(200);
 		assertThat(walletEarnLogsBySource(userId, WalletEarnSource.DAILY_ATTENDANCE)).hasSize(2);
 	}
 
 	@Test
-	@DisplayName("Case 4: 출석 보상 수령 후 GET /api/users/me 는 dailyAttendanceClaimed=true")
-	void case04_getMyInfoReturnsAttendanceClaimedTrueAfterClaim() throws Exception {
-		Long userId = createCompletedUserWithWallet(0);
-		String token = jwtUtil.generateAccessToken(userId);
-
-		mockMvc.perform(post("/api/users/me/attendance")
-						.header("Authorization", "Bearer " + token))
-				.andExpect(status().isOk());
-
-		mockMvc.perform(get("/api/users/me")
-						.header("Authorization", "Bearer " + token))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.dailyAttendanceClaimed").value(true));
-	}
-
-	@Test
-	@DisplayName("Case 5: 출석 보상 수령 전 GET /api/users/me 는 dailyAttendanceClaimed=false")
-	void case05_getMyInfoReturnsAttendanceClaimedFalseBeforeClaim() throws Exception {
-		Long userId = createCompletedUserWithWallet(0);
-		String token = jwtUtil.generateAccessToken(userId);
-
-		mockMvc.perform(get("/api/users/me")
-						.header("Authorization", "Bearer " + token))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.dailyAttendanceClaimed").value(false));
-	}
-
-	@Test
-	@DisplayName("Case 6: PET_TOUCH 100 + TODO_COMPLETION 100 이후에도 출석 보상 100 적립 가능")
-	void case06_dailyAttendanceDoesNotCountTowardSourceDailyCap() throws Exception {
+	@DisplayName("Case 5: PET_TOUCH 100 + TODO_COMPLETION 100 이후에도 GET /api/users/me 출석 보상 100 자동 적립")
+	void case05_dailyAttendanceDoesNotCountTowardSourceDailyCap() throws Exception {
 		Long userId = createCompletedUserWithWallet(0);
 		String token = jwtUtil.generateAccessToken(userId);
 
@@ -151,11 +143,10 @@ class AttendanceRewardIntegrationTest {
 		assertThat(todoEarned).isEqualTo(100);
 		assertThat(walletBalance(userId)).isEqualTo(200);
 
-		mockMvc.perform(post("/api/users/me/attendance")
+		mockMvc.perform(get("/api/users/me")
 						.header("Authorization", "Bearer " + token))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.earnedAmount").value(100))
-				.andExpect(jsonPath("$.data.balance").value(300));
+				.andExpect(jsonPath("$.data.dailyAttendanceClaimed").value(false));
 
 		assertThat(walletEarnLogsBySource(userId, WalletEarnSource.DAILY_ATTENDANCE)).hasSize(1);
 		assertThat(walletBalance(userId)).isEqualTo(300);

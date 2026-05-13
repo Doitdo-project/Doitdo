@@ -5,6 +5,8 @@
 - **선행:** Stage 1 (`completed_plans/2026-05-13-earning-policy-revision-stage1.md`)
 - **후속:** Stage 3 (캐릭터 EXP DB 변경 75/100/125)
 
+> Stage 5 전환 주석(2026-05-13): 출석 보상은 별도 `POST /api/users/me/attendance` 에서 `GET /api/users/me` 호출 시 자동 적립(lazy claim)으로 변경됐다. Stage 2의 `attendance` 도메인 패키지와 `U07-001` 중복 수령 에러는 제거됐다.
+
 ---
 
 ## 1. 정책

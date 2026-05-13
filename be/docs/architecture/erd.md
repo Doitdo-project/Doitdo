@@ -34,7 +34,6 @@
 |---|---|
 | `auth` | refresh_tokens, auto_providers |
 | `user` | users, user_wallets, wallet_earn_logs |
-| `attendance` | 별도 테이블 없음. `wallet_earn_logs` 의 `DAILY_ATTENDANCE` source 로 수령 여부와 이력을 판단 |
 | `todo` | todos, categories, palettes, palette_colors, snooze_history |
 | `tamagotchi` | characters, character_actions, character_unlocks, user_character |
 | `inventory` | items, user_items |
@@ -69,7 +68,7 @@
 - `DAILY_ATTENDANCE`
 - `POOP_CLEAR`
 
-보상 정책 (2026-05-13 Stage 1 개정 + Stage 2 출석 보상 + Stage 4 똥치우기 반영):
+보상 정책 (2026-05-13 Stage 1 개정 + Stage 5 출석 자동 적립 + Stage 4 똥치우기 반영):
 
 | source | 금액 | 일일 한도 | 비고 |
 |---|---:|---:|---|
@@ -77,10 +76,10 @@
 | `STREAK_7DAY` | 500 | 없음 | 7일 단위 스트릭 보상, `bypassDailyCap=true` |
 | `PET_TOUCH` | 50 | 2회 / 100 | 쿨타임 2시간 |
 | `TODO_COMPLETION` | 20 | 5회 / 100 | 당일 보상 대상 TODO 1개 완료당 1회 |
-| `DAILY_ATTENDANCE` | 100 | 1회 / 100 | 앱 진입 출석 보상, `bypassDailyCap=true`, Asia/Seoul 자정 기준 |
+| `DAILY_ATTENDANCE` | 100 | 1회 / 100 | `GET /api/users/me` 호출 시 자동 적립, `bypassDailyCap=true`, Asia/Seoul 자정 기준 |
 | `POOP_CLEAR` | 50 | 1회 / 50 | 캐릭터 똥치우기 미션, `bypassDailyCap=true`, Asia/Seoul 자정 기준 |
 
-`PET_TOUCH` + `TODO_COMPLETION` 합산 일일 한도는 200 뚜레딧이다. `DAILY_ATTENDANCE` 와 `POOP_CLEAR` 는 각 도메인의 자체 1일 1회 정책으로 중복 수령을 막고, 이 합산 cap 에 포함하지 않는다.
+`PET_TOUCH` + `TODO_COMPLETION` 합산 일일 한도는 200 뚜레딧이다. `DAILY_ATTENDANCE` 는 `wallet_earn_logs` 당일 SUM 조회로 자동 적립 여부를 판단하고, `POOP_CLEAR` 는 `user_character.poop_cleared_date` 로 중복 수령을 막아, 둘 다 이 합산 cap 에 포함하지 않는다.
 
 ## tamagotchi 도메인 성장 EXP 정책
 

@@ -5,6 +5,7 @@
 > 변경 이력: 2026-05-13 Stage 2 attendance 추가 반영. 출석 보상은 `DAILY_ATTENDANCE` source 로 100 뚜레딧 / 일 1회 지급하며, `PET_TOUCH` + `TODO_COMPLETION` 합산 cap 에 포함하지 않는다.
 > 변경 이력: 2026-05-13 Stage 3 EXP 재조정 반영. `characters.required_exp` 는 BABY 75, TEEN 100, ADULT 125 로 운영한다.
 > 변경 이력: 2026-05-13 Stage 4 똥치우기 미션 반영. `POOP_CLEAR` source 로 50 뚜레딧 / 일 1회 지급하며, `PET_TOUCH` + `TODO_COMPLETION` 합산 cap 에 포함하지 않는다.
+> 변경 이력: 2026-05-13 Stage 5 자동 적립 전환. 별도 `POST /api/users/me/attendance` 없이 `GET /api/users/me` 첫 호출에서 출석 보상을 lazy claim 한다.
 
 ## 배경
 
@@ -19,7 +20,7 @@
 - 다마고치 "터치"(아래 정의) 1회당 50 뚜레딧 적립. 쿨다운 2시간, 하루 최대 2회.
 - TODO 완료 1개당 20 뚜레딧 적립. 하루 최대 5회 / 100 뚜레딧. 같은 TODO 의 취소·재완료는 카운트 변동 없음 (중요: 아래 §"TODO 적립 트리거 정밀 정의" 참고).
 - 하루 적립 합산 한도 200 뚜레딧 (`PET_TOUCH` 100 + `TODO_COMPLETION` 100). 가입·스트릭 보너스는 cap 대상 외 (`bypassDailyCap=true`).
-- 출석 보상은 앱 진입 시 FE 의 명시적 API 호출로 하루 1회 100 뚜레딧을 지급한다. `wallet_earn_logs` 의 `DAILY_ATTENDANCE` 당일 SUM 으로 중복 수령을 차단하고, 일일 cap 은 우회한다.
+- 출석 보상은 앱 진입 시 `GET /api/users/me` 첫 호출에서 하루 1회 100 뚜레딧을 자동 적립한다. `wallet_earn_logs` 의 `DAILY_ATTENDANCE` 당일 SUM 으로 중복 수령을 차단하고, 일일 cap 은 우회한다 (Stage 5 lazy claim).
 - 똥치우기 보상은 `GET /api/characters/me` 에서 결정된 캐릭터별 일일 활성 시각 이후 `POST /api/characters/me/actions/POOP` 호출 시 하루 1회 50 뚜레딧을 지급한다. `user_character.poop_cleared_date` 로 중복 수령을 차단하고, 일일 cap 은 우회한다.
   - `POOP` 은 `character_actions` row 가 없어도 보상 처리를 수행한다. row 가 있으면 `actionUrl` 을 같이 반환하고, 없으면 `actionUrl=null` 이다.
 

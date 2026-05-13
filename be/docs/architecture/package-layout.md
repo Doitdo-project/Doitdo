@@ -34,7 +34,7 @@ domain/{domain}/
 
 ## 등록된 도메인
 
-`auth, user, attendance, todo, tamagotchi, inventory, shop, notification, setting, bugreport`
+`auth, user, todo, tamagotchi, inventory, shop, notification, setting, bugreport`
 
 (노션 「엔드포인트」 카테고리 직역. 검색 기능은 `todo` 도메인 내부에서 처리.)
 
@@ -62,7 +62,7 @@ global/
  │   ├ SecurityConfig.java
  │   ├ JpaAuditingConfig.java
  │   ├ PasswordEncoderConfig.java
- │   └ OpenApiConfig.java                # springdoc-openapi 메타 + 12개 그룹 (auth, user, attendance, todo, tamagotchi, streak, inventory, shop, notification, setting, bugreport, global)
+ │   └ OpenApiConfig.java                # springdoc-openapi 메타 + 11개 그룹 (auth, user, todo, tamagotchi, streak, inventory, shop, notification, setting, bugreport, global)
  ├ entity/
  │   └ BaseTimeEntity.java               # 공통 Auditing (createdAt/updatedAt)
  ├ exception/
