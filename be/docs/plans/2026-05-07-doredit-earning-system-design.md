@@ -2,6 +2,7 @@
 
 > 변경 이력: 2026-05-08 `AnimationAction` enum 전환 설계에 맞춰 다마고치 액션 적립 정책을 `EYE` 제외 블랙리스트에서 "모든 enum 액션 호출 적립" 화이트리스트로 갱신.
 > 변경 이력: 2026-05-13 Stage 1 개정 반영. 7일 스트릭 500, TODO 완료 20/1개당(일일 5회), 캐릭터 터치 50/2시간/일일 2회, cap 100/200 정책으로 갱신.
+> 변경 이력: 2026-05-13 Stage 2 attendance 추가 반영. 출석 보상은 `DAILY_ATTENDANCE` source 로 100 뚜레딧 / 일 1회 지급하며, `PET_TOUCH` + `TODO_COMPLETION` 합산 cap 에 포함하지 않는다.
 
 ## 배경
 
@@ -16,6 +17,7 @@
 - 다마고치 "터치"(아래 정의) 1회당 50 뚜레딧 적립. 쿨다운 2시간, 하루 최대 2회.
 - TODO 완료 1개당 20 뚜레딧 적립. 하루 최대 5회 / 100 뚜레딧. 같은 TODO 의 취소·재완료는 카운트 변동 없음 (중요: 아래 §"TODO 적립 트리거 정밀 정의" 참고).
 - 하루 적립 합산 한도 200 뚜레딧 (`PET_TOUCH` 100 + `TODO_COMPLETION` 100). 가입·스트릭 보너스는 cap 대상 외 (`bypassDailyCap=true`).
+- 출석 보상은 앱 진입 시 FE 의 명시적 API 호출로 하루 1회 100 뚜레딧을 지급한다. `wallet_earn_logs` 의 `DAILY_ATTENDANCE` 당일 SUM 으로 중복 수령을 차단하고, 일일 cap 은 우회한다.
 
 ### "다마고치 터치" 정의
 
@@ -60,7 +62,7 @@
 ### Stage 1 — 적립 이력 인프라 + 기존 적립 경로 retrofit
 
 - 신규 엔티티 `WalletEarnLog (logId, userId, source ENUM, amount, refId BIGINT NULL, earnedAt)` + Repository.
-  - source ENUM: `SIGNUP_BONUS`, `STREAK_7DAY`, `PET_TOUCH`, `TODO_COMPLETION`.
+  - source ENUM: `SIGNUP_BONUS`, `STREAK_7DAY`, `PET_TOUCH`, `TODO_COMPLETION`, `DAILY_ATTENDANCE`(Stage 2 추가).
 - `CreditEarnService` 인터페이스 + 구현. 시그니처 `tryEarn(userId, source, amount, refId, bypassDailyCap)`. 락·cap·로그·잔액 갱신을 한 트랜잭션.
 - `WalletErrorCode` (필요 시) + `ErrorCodeRegistry.SOURCES` 등록.
 - 마이그레이션 SQL: `docs/ops/migrations/2026-05-07-wallet-earn-log.sql`.

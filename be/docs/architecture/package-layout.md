@@ -34,7 +34,7 @@ domain/{domain}/
 
 ## 등록된 도메인
 
-`auth, user, todo, tamagotchi, inventory, shop, notification, setting, bugreport`
+`auth, user, attendance, todo, tamagotchi, inventory, shop, notification, setting, bugreport`
 
 (노션 「엔드포인트」 카테고리 직역. 검색 기능은 `todo` 도메인 내부에서 처리.)
 
@@ -44,7 +44,7 @@ domain/{domain}/
 
 | 종류 | 경로 | 비고 |
 |---|---|---|
-| Entity enum | `domain/user/entity/WalletEarnSource.java` | 적립 출처 (`SIGNUP_BONUS`, `STREAK_7DAY`, `PET_TOUCH`, `TODO_COMPLETION`) |
+| Entity enum | `domain/user/entity/WalletEarnSource.java` | 적립 출처 (`SIGNUP_BONUS`, `STREAK_7DAY`, `PET_TOUCH`, `TODO_COMPLETION`, `DAILY_ATTENDANCE`) |
 | Entity | `domain/user/entity/WalletEarnLog.java` | `wallet_earn_logs` 테이블 매핑 |
 | Repository | `domain/user/repository/WalletEarnLogRepository.java` | 출처별/합산 일일 적립액 조회. `sumAmountByUserIdAndSourceAndDate` 는 `CreditEarnServiceImpl.exceedsDailyCap()` 의 cap 합산과 `TodoCompletionCreditListener` 의 오늘 적립 횟수 역산에 모두 재사용됨 |
 | Application interface | `domain/user/application/CreditEarnService.java` | 뚜레딧 적립 단일 진입점 |
@@ -62,7 +62,7 @@ global/
  │   ├ SecurityConfig.java
  │   ├ JpaAuditingConfig.java
  │   ├ PasswordEncoderConfig.java
- │   └ OpenApiConfig.java                # springdoc-openapi 메타 + 11개 그룹 (auth, user, todo, tamagotchi, streak, inventory, shop, notification, setting, bugreport, global)
+ │   └ OpenApiConfig.java                # springdoc-openapi 메타 + 12개 그룹 (auth, user, attendance, todo, tamagotchi, streak, inventory, shop, notification, setting, bugreport, global)
  ├ entity/
  │   └ BaseTimeEntity.java               # 공통 Auditing (createdAt/updatedAt)
  ├ exception/

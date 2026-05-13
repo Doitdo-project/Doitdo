@@ -34,6 +34,7 @@ import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.domain.user.repository.UserWalletRepository;
+import com.doitdo.domain.user.repository.WalletEarnLogRepository;
 import com.doitdo.global.util.JwtUtil;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,6 +54,9 @@ class AuthServiceImplTest {
 
 	@Mock
 	private RefreshTokenRepository refreshTokenRepository;
+
+	@Mock
+	private WalletEarnLogRepository walletEarnLogRepository;
 
 	@Mock
 	private PasswordEncoder passwordEncoder;
@@ -88,6 +92,7 @@ class AuthServiceImplTest {
 			userSettingRepository,
 			userStreakRepository,
 			refreshTokenRepository,
+			walletEarnLogRepository,
 			passwordEncoder,
 			authenticationManager,
 			jwtUtil,

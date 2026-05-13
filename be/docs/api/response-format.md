@@ -72,7 +72,21 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 
 (성공 응답에서는 `code` 키가 없다.)
 
-## 6. `TodoDetailResp` 필드 (참고)
+## 6. `UserInfoResp` 필드
+
+로그인 / 소셜 로그인 / `GET /api/users/me` / 온보딩 응답에서 공통으로 쓰는 사용자 요약 정보:
+
+| 필드 | 타입 | 비고 |
+|---|---|---|
+| `userId` | `Long` | 사용자 ID |
+| `username` | `String` | 닉네임 |
+| `email` | `String` | 이메일 |
+| `hasPassword` | `boolean` | 일반 비밀번호 보유 여부. 소셜 전용 계정은 `false` |
+| `birthDateRegistered` | `boolean` | 생년월일 등록 여부 |
+| `agreementsAccepted` | `boolean` | 필수 약관 동의 완료 여부 |
+| `dailyAttendanceClaimed` | `boolean` | Asia/Seoul 기준 오늘 출석 보상 수령 여부 |
+
+## 7. `TodoDetailResp` 필드 (참고)
 
 모든 TODO 단건/목록/검색 응답 공통 필드:
 
@@ -139,7 +153,7 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `status` | `TodoStatus` | 필수. TODO / IN_PROGRESS / DONE |
 | `occurrenceDate` | `LocalDate` | nullable. `todoId` 가 RECURRING 마스터일 때만 필수이며, 해당 날짜의 NORMAL 인스턴스를 찾거나 생성한 뒤 상태를 변경한다. NORMAL/PERIOD/SOMEDAY 요청에서는 무시된다. |
 
-## 7. `TodoCalendarResp` 필드
+## 8. `TodoCalendarResp` 필드
 
 `GET /api/todos/calendar` 응답:
 
@@ -183,7 +197,7 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 - 이 차단 판단에는 `isDeleted=true` row도 포함한다.
 - `isDeleted=true` row는 응답 `items[]` 에 포함하지 않는다.
 
-## 8. `CharacterActionUrlResp` 필드 (뚜레딧 적립 Stage 3+)
+## 9. `CharacterActionUrlResp` 필드 (뚜레딧 적립 Stage 3+)
 
 `GET /api/characters/me/actions/{actionType}` 응답:
 
@@ -199,7 +213,7 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 
 enum 에는 있지만 해당 캐릭터의 `character_actions` row 가 없는 액션은 404 `M09-002` 를 반환한다.
 
-## 9. `UserStreakResp` 필드
+## 10. `UserStreakResp` 필드
 
 `GET /api/users/me/streak` 응답:
 
@@ -215,7 +229,7 @@ enum 에는 있지만 해당 캐릭터의 `character_actions` row 가 없는 액
 
 `canClaim` 은 현재 연속 달성 일수가 7의 배수이고, 같은 `currentStreakStartDate` / `currentStreakCount` 로 보상 수령 기록이 없을 때만 `true` 다.
 
-## 10. 관련 문서
+## 11. 관련 문서
 
 - 에러 코드 정의/네이밍: [`error-codes.md`](error-codes.md)
 - Swagger 문서화: [`swagger.md`](swagger.md)

@@ -27,6 +27,7 @@ import com.doitdo.domain.user.entity.User;
 import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.domain.user.repository.UserWalletRepository;
+import com.doitdo.domain.user.repository.WalletEarnLogRepository;
 import com.doitdo.global.client.dto.GoogleUserInfo;
 import com.doitdo.global.util.JwtUtil;
 
@@ -52,6 +53,9 @@ class OAuthPersistenceServiceTest {
 	private RefreshTokenRepository refreshTokenRepository;
 
 	@Mock
+	private WalletEarnLogRepository walletEarnLogRepository;
+
+	@Mock
 	private JwtUtil jwtUtil;
 
 	@Mock
@@ -71,6 +75,7 @@ class OAuthPersistenceServiceTest {
 				userStreakRepository,
 				autoProviderRepository,
 				refreshTokenRepository,
+				walletEarnLogRepository,
 				jwtUtil,
 				defaultCategoryRegistrar,
 				defaultTodoRegistrar,

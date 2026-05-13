@@ -49,7 +49,10 @@ public enum UserErrorCode implements ErrorCode {
 	U06_001("U06-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 없거나 유효하지 않음"),
 	U06_002("U06-002", HttpStatus.NOT_FOUND, "스트릭 데이터를 찾을 수 없습니다."),
 	U06_003("U06-003", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
-	U06_004("U06-004", HttpStatus.NOT_FOUND, "지갑 데이터를 찾을 수 없습니다.");
+	U06_004("U06-004", HttpStatus.NOT_FOUND, "지갑 데이터를 찾을 수 없습니다."),
+
+	// U07 - 출석 보상
+	U07_001("U07-001", HttpStatus.CONFLICT, "이미 오늘 출석 보상을 수령했습니다.");
 
 	private final String code;
 	private final HttpStatus httpStatus;

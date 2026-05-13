@@ -28,11 +28,14 @@ import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.domain.user.repository.UserWalletRepository;
+import com.doitdo.domain.user.repository.WalletEarnLogRepository;
 import com.doitdo.global.exception.AuthErrorCode;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.UserErrorCode;
 import com.doitdo.global.util.JwtUtil;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
@@ -51,11 +54,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class AuthServiceImpl implements AuthService {
 
+	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+
 	private final UserRepository userRepository;
 	private final UserWalletRepository userWalletRepository;
 	private final UserSettingRepository userSettingRepository;
 	private final UserStreakRepository userStreakRepository;
 	private final RefreshTokenRepository refreshTokenRepository;
+	private final WalletEarnLogRepository walletEarnLogRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final AuthenticationManager authenticationManager;
 	private final JwtUtil jwtUtil;
@@ -141,7 +147,8 @@ public class AuthServiceImpl implements AuthService {
 
 			log.info("event=LOGIN_SUCCESS userId={}", user.getUserId());
 
-			return new LoginResp(accessToken, refreshToken, UserInfoResp.from(user));
+			return new LoginResp(accessToken, refreshToken,
+					UserInfoResp.from(user, isAttendanceClaimedToday(user.getUserId())));
 		} catch (AuthenticationException e) {
 			throw new CustomException(AuthErrorCode.A00_001);
 		}
@@ -189,5 +196,17 @@ public class AuthServiceImpl implements AuthService {
 	private void saveOrUpdateRefreshToken(Long userId, String refreshToken) {
 		LocalDateTime expiresAt = LocalDateTime.now().plusNanos(refreshTokenExpiration * 1_000_000L);
 		refreshTokenRepository.upsertByUserId(userId, refreshToken, expiresAt);
+	}
+
+	private boolean isAttendanceClaimedToday(Long userId) {
+		LocalDate today = LocalDate.now(SEOUL);
+		LocalDateTime startOfDay = today.atStartOfDay();
+		LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
+		return walletEarnLogRepository.sumAmountByUserIdAndSourceAndDate(
+				userId,
+				WalletEarnSource.DAILY_ATTENDANCE,
+				startOfDay,
+				endOfDay
+		) > 0;
 	}
 }

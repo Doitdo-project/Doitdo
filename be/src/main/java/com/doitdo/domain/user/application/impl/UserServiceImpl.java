@@ -23,14 +23,17 @@ import com.doitdo.domain.user.api.dto.resp.UserInfoResp;
 import com.doitdo.domain.user.api.dto.resp.WalletBalanceResp;
 import com.doitdo.domain.user.application.UserService;
 import com.doitdo.domain.user.entity.User;
+import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.domain.user.repository.UserWalletRepository;
+import com.doitdo.domain.user.repository.WalletEarnLogRepository;
 import com.doitdo.global.client.AppleOAuthClient;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.UserErrorCode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
+import java.time.ZoneId;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +47,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
+	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+	private static final int MINIMUM_AGE = 14;
+
 	private final UserRepository userRepository;
 	private final RefreshTokenRepository refreshTokenRepository;
 	private final AutoProviderRepository autoProviderRepository;
@@ -56,6 +62,7 @@ public class UserServiceImpl implements UserService {
 	private final CategoryRepository categoryRepository;
 	private final UserItemRepository userItemRepository;
 	private final UserWalletRepository userWalletRepository;
+	private final WalletEarnLogRepository walletEarnLogRepository;
 	private final UserSettingRepository userSettingRepository;
 	private final CharacterUnlockRepository characterUnlockRepository;
 	private final PasswordEncoder passwordEncoder;
@@ -64,8 +71,6 @@ public class UserServiceImpl implements UserService {
 
 	@Value("${app.terms.version}")
 	private String appTermsVersion;
-
-	private static final int MINIMUM_AGE = 14;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -86,7 +91,7 @@ public class UserServiceImpl implements UserService {
 	public UserInfoResp getMyInfo(Long userId) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new CustomException(UserErrorCode.U01_002));
-		return UserInfoResp.from(user);
+		return UserInfoResp.from(user, isAttendanceClaimedToday(userId));
 	}
 
 	@Override
@@ -193,7 +198,7 @@ public class UserServiceImpl implements UserService {
 
 		user.registerBirthDate(birthDate);
 		userRepository.saveAndFlush(user);
-		return UserInfoResp.from(user);
+		return UserInfoResp.from(user, isAttendanceClaimedToday(userId));
 	}
 
 	/**
@@ -215,7 +220,19 @@ public class UserServiceImpl implements UserService {
 		LocalDateTime now = LocalDateTime.now();
 		user.registerAgreements(now, req.marketingAgreed(), appTermsVersion);
 		userRepository.saveAndFlush(user);
-		return UserInfoResp.from(user);
+		return UserInfoResp.from(user, isAttendanceClaimedToday(userId));
+	}
+
+	private boolean isAttendanceClaimedToday(Long userId) {
+		LocalDate today = LocalDate.now(SEOUL);
+		LocalDateTime startOfDay = today.atStartOfDay();
+		LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
+		return walletEarnLogRepository.sumAmountByUserIdAndSourceAndDate(
+				userId,
+				WalletEarnSource.DAILY_ATTENDANCE,
+				startOfDay,
+				endOfDay
+		) > 0;
 	}
 
 	/**

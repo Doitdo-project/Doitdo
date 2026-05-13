@@ -7,7 +7,7 @@
 - 의존성: `springdoc-openapi-starter-webmvc-ui:2.7.0` (`be/build.gradle`)
 - 활성 프로파일: **`dev` / `local` 한정** (운영 보안)
 - 설정 위치: `com.doitdo.global.config.OpenApiConfig`
-- 11개 그룹: `auth`, `user`, `todo`, `tamagotchi`, `streak`, `inventory`, `shop`, `notification`, `setting`, `bugreport`, `global`
+- 12개 그룹: `auth`, `user`, `attendance`, `todo`, `tamagotchi`, `streak`, `inventory`, `shop`, `notification`, `setting`, `bugreport`, `global`
 - 인증: JWT BearerAuth (Swagger UI 의 Authorize 버튼)
 - UI: <http://localhost:8080/swagger-ui.html> (부팅 후)
 
@@ -40,6 +40,20 @@
 | `scope=from&occurrenceDate=YYYY-MM-DD` | 기존 RECURRING 마스터를 전날 종료하고, 수정 내용으로 새 RECURRING 마스터 생성 |
 
 `scope=only/from` 은 `todoId` 가 RECURRING 마스터일 때 `occurrenceDate` 가 필수이며, 마스터 반복 규칙에 포함된 날짜여야 한다.
+
+### 출석 보상 API (2026-05-13 Stage 2)
+
+`POST /api/users/me/attendance`:
+
+| 항목 | 내용 |
+|---|---|
+| 인증 | 필요 |
+| 요청 body | 없음 |
+| 성공 응답 | `GlobalApiResponse<AttendanceClaimResp>` |
+| 보상 | `earnedAmount=100`, `balance=적립 후 잔액`, `attendanceDate=Asia/Seoul 기준 오늘` |
+| 중복 수령 | 같은 날 이미 수령한 경우 409 + `U07-001` |
+
+이 API 는 `attendance` Swagger 그룹에 노출된다. 출석 보상은 `WalletEarnSource.DAILY_ATTENDANCE` 로 `wallet_earn_logs` 에 기록하며, `PET_TOUCH` / `TODO_COMPLETION` 합산 일일 cap 에 포함하지 않는다.
 
 ## 2. 컨트롤러 작성 템플릿 (복붙 가능)
 
