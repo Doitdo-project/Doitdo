@@ -18,7 +18,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * TODO DONE 전이 이벤트를 구독해 TODO 완료 3개당 10 뚜레딧을 적립한다.
+ * TODO DONE 전이 이벤트를 구독해 TODO 완료 1개당 20 뚜레딧을 적립한다.
  */
 @Slf4j
 @Component
@@ -26,8 +26,8 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class TodoCompletionCreditListener {
 
 	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
-	private static final int TODO_COMPLETION_CREDIT = 10;
-	private static final int REQUIRED_COMPLETION_COUNT = 3;
+	private static final int TODO_COMPLETION_CREDIT = 20;
+	private static final int REQUIRED_COMPLETION_COUNT = 1;
 
 	private final TodoRepository todoRepository;
 	private final WalletEarnLogRepository walletEarnLogRepository;
@@ -54,7 +54,7 @@ public class TodoCompletionCreditListener {
 		);
 		int todayEarnCount = todayTodoCompletionEarnAmount(event.userId(), today) / TODO_COMPLETION_CREDIT;
 
-		if ((long) (todayEarnCount + 1) * REQUIRED_COMPLETION_COUNT > todayDistinctFirstCompleted) {
+		if (todayDistinctFirstCompleted <= (long) todayEarnCount * REQUIRED_COMPLETION_COUNT) {
 			log.debug("[credit] todo completion threshold not reached; user={} todo={} distinct={} earnCount={}",
 					event.userId(), event.todoId(), todayDistinctFirstCompleted, todayEarnCount);
 			return;

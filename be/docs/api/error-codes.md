@@ -152,6 +152,17 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 |---|---|---|---|
 | `U05_001` | `U05-001` | 404 | 지갑 데이터를 찾을 수 없음 |
 
+### 뚜레딧 적립 정책값 (2026-05-13 Stage 1)
+
+신규 에러코드는 없다. `PET_TOUCH`, `TODO_COMPLETION` 의 쿨타임 또는 일일 한도 초과는 예외가 아니라 `earnedAmount=0` 으로 처리한다.
+
+| 항목 | 정책값 |
+|---|---|
+| 7일 스트릭 보상 | 500 뚜레딧, 일일 cap 우회 |
+| TODO 완료 보상 | 20 뚜레딧 / 1개당, 일일 5회 = 100 뚜레딧 |
+| 캐릭터 터치 보상 | 50 뚜레딧 / 1회, 2시간 쿨타임, 일일 2회 = 100 뚜레딧 |
+| cap 대상 합산 한도 | `PET_TOUCH` + `TODO_COMPLETION` 일일 200 뚜레딧 |
+
 ### `TodoErrorCode` 추가 코드 (alert/recurrence redesign, 2026-04)
 
 | 상수 | code | HTTP | 의미 |
