@@ -21,5 +21,7 @@ public record CurrentCharacterResp(
 	Boolean canFarewell,
 	Long equippedUserItemId,
 	@Schema(description = "사용자가 실제로 키우는 현재 활성 다마고치 row 식별자(user_character.user_character_id). M05~M08 path 식별자로 사용")
-	Long userCharacterId
+	Long userCharacterId,
+	@Schema(description = "오늘 똥치우기 미션 활성 여부")
+	boolean poop
 ) {}

@@ -55,6 +55,27 @@
 
 이 API 는 `attendance` Swagger 그룹에 노출된다. 출석 보상은 `WalletEarnSource.DAILY_ATTENDANCE` 로 `wallet_earn_logs` 에 기록하며, `PET_TOUCH` / `TODO_COMPLETION` 합산 일일 cap 에 포함하지 않는다.
 
+### 다마고치 똥치우기 미션 API (2026-05-13 Stage 4)
+
+`GET /api/characters/me`:
+
+| 항목 | 내용 |
+|---|---|
+| 신규 응답 필드 | `poop: boolean` |
+| Lazy 갱신 | `user_character.poop_time_date` 가 오늘(KST)이 아니면 10:00~22:00 사이 분 단위 `poop_time` 을 새로 결정 |
+| 활성 조건 | 현재 시각(KST) >= `poop_time` 이고 `poop_cleared_date` 가 오늘이 아님 |
+
+`POST /api/characters/me/actions/POOP`:
+
+| 항목 | 내용 |
+|---|---|
+| 성공 응답 | `GlobalApiResponse<CharacterActionUrlResp>` |
+| 보상 | `earnedAmount=50`, `WalletEarnSource.POOP_CLEAR`, `bypassDailyCap=true` |
+| 처리 후 | `user_character.poop_cleared_date=오늘(KST)`, 이후 `poop=false` |
+| 비활성/중복 | 409 + `M09-004` |
+
+`CharacterActionUrlResp` 는 `actionUrl`, `earnedAmount`, `balanceAfter` 만 노출한다. `POOP` 은 등록된 애니메이션 row 가 없으면 `actionUrl=null` 로 보상 처리만 수행한다. 기존 `dailyTouchCount`, `nextAvailableAt` 응답 필드는 제거됐으며, `user_character.daily_touch_count` 컬럼은 터치 쿨타임/한도 검사용으로 유지한다.
+
 ## 2. 컨트롤러 작성 템플릿 (복붙 가능)
 
 ```java

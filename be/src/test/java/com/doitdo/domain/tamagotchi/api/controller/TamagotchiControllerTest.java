@@ -3,7 +3,6 @@ package com.doitdo.domain.tamagotchi.api.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -55,7 +54,8 @@ class TamagotchiControllerTest {
 			false,
 			false,
 			null,
-			10L
+			10L,
+			false
 		);
 
 		given(tamagotchiService.receiveEgg(1L)).willReturn(serviceResp);
@@ -235,9 +235,7 @@ class TamagotchiControllerTest {
 		CharacterActionUrlResp serviceResp = new CharacterActionUrlResp(
 			"https://cdn.example.com/idle.gif",
 			10,
-			110,
-			1,
-			LocalDateTime.of(2026, 5, 7, 10, 0)
+			110
 		);
 
 		given(tamagotchiService.getMyCharacterActionUrl(1L, "IDLE")).willReturn(serviceResp);

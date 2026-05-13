@@ -41,7 +41,8 @@ class TamagotchiCurrentCharacterControllerTest {
 			false,
 			false,
 			42L,
-			10L
+			10L,
+			false
 		);
 
 		given(tamagotchiService.getCurrentCharacter(1L)).willReturn(serviceResp);

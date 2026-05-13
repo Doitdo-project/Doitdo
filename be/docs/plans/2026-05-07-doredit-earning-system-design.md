@@ -4,6 +4,7 @@
 > 변경 이력: 2026-05-13 Stage 1 개정 반영. 7일 스트릭 500, TODO 완료 20/1개당(일일 5회), 캐릭터 터치 50/2시간/일일 2회, cap 100/200 정책으로 갱신.
 > 변경 이력: 2026-05-13 Stage 2 attendance 추가 반영. 출석 보상은 `DAILY_ATTENDANCE` source 로 100 뚜레딧 / 일 1회 지급하며, `PET_TOUCH` + `TODO_COMPLETION` 합산 cap 에 포함하지 않는다.
 > 변경 이력: 2026-05-13 Stage 3 EXP 재조정 반영. `characters.required_exp` 는 BABY 75, TEEN 100, ADULT 125 로 운영한다.
+> 변경 이력: 2026-05-13 Stage 4 똥치우기 미션 반영. `POOP_CLEAR` source 로 50 뚜레딧 / 일 1회 지급하며, `PET_TOUCH` + `TODO_COMPLETION` 합산 cap 에 포함하지 않는다.
 
 ## 배경
 
@@ -19,13 +20,15 @@
 - TODO 완료 1개당 20 뚜레딧 적립. 하루 최대 5회 / 100 뚜레딧. 같은 TODO 의 취소·재완료는 카운트 변동 없음 (중요: 아래 §"TODO 적립 트리거 정밀 정의" 참고).
 - 하루 적립 합산 한도 200 뚜레딧 (`PET_TOUCH` 100 + `TODO_COMPLETION` 100). 가입·스트릭 보너스는 cap 대상 외 (`bypassDailyCap=true`).
 - 출석 보상은 앱 진입 시 FE 의 명시적 API 호출로 하루 1회 100 뚜레딧을 지급한다. `wallet_earn_logs` 의 `DAILY_ATTENDANCE` 당일 SUM 으로 중복 수령을 차단하고, 일일 cap 은 우회한다.
+- 똥치우기 보상은 `GET /api/characters/me` 에서 결정된 캐릭터별 일일 활성 시각 이후 `POST /api/characters/me/actions/POOP` 호출 시 하루 1회 50 뚜레딧을 지급한다. `user_character.poop_cleared_date` 로 중복 수령을 차단하고, 일일 cap 은 우회한다.
+  - `POOP` 은 `character_actions` row 가 없어도 보상 처리를 수행한다. row 가 있으면 `actionUrl` 을 같이 반환하고, 없으면 `actionUrl=null` 이다.
 
 ### "다마고치 터치" 정의
 
 - FE 는 다마고치 캐릭터 탭 시 `GET /api/characters/me/actions/{actionType}` 를 호출한다.
 - 현재 FE 구현상 탭으로 호출되는 actionType 은 `IDLE` 만. `EYE` 는 로컬 에셋(자동 깜빡임)이라 BE 도달 안 함.
 - 적립 트리거: **`AnimationAction` enum 에 포함되고 `character_actions` row 가 등록된 모든 액션 호출**. `EYE` 제외 블랙리스트는 폐기한다.
-- 응답에서 actionUrl 은 **무조건** 정상 반환 (애니메이션은 보여줘야 함). 쿨다운/일일 한도 미충족 시 적립만 silent skip — `earnedAmount: 0` + `nextAvailableAt` 으로 신호.
+- 응답에서 actionUrl 은 **무조건** 정상 반환 (애니메이션은 보여줘야 함). 쿨다운/일일 한도 미충족 시 적립만 silent skip — `earnedAmount: 0` 으로 신호.
 
 ### TODO 적립 트리거 정밀 정의
 
@@ -63,7 +66,7 @@
 ### Stage 1 — 적립 이력 인프라 + 기존 적립 경로 retrofit
 
 - 신규 엔티티 `WalletEarnLog (logId, userId, source ENUM, amount, refId BIGINT NULL, earnedAt)` + Repository.
-  - source ENUM: `SIGNUP_BONUS`, `STREAK_7DAY`, `PET_TOUCH`, `TODO_COMPLETION`, `DAILY_ATTENDANCE`(Stage 2 추가).
+  - source ENUM: `SIGNUP_BONUS`, `STREAK_7DAY`, `PET_TOUCH`, `TODO_COMPLETION`, `DAILY_ATTENDANCE`(Stage 2 추가), `POOP_CLEAR`(Stage 4 추가).
 - `CreditEarnService` 인터페이스 + 구현. 시그니처 `tryEarn(userId, source, amount, refId, bypassDailyCap)`. 락·cap·로그·잔액 갱신을 한 트랜잭션.
 - `WalletErrorCode` (필요 시) + `ErrorCodeRegistry.SOURCES` 등록.
 - 마이그레이션 SQL: `docs/ops/migrations/2026-05-07-wallet-earn-log.sql`.
@@ -96,7 +99,8 @@
   6. `now - lastTouchedAt < 2h` 또는 `dailyTouchCount >= 2` 이면 적립 skip.
   7. 통과 시 `creditEarnService.tryEarn(userId, PET_TOUCH, 50, characterId, false)` 호출. 성공하면 `lastTouchedAt = now`, `dailyTouchCount += 1`.
   8. 모든 mutation 은 같은 트랜잭션 안에서 마무리.
-  9. 응답 DTO `CharacterActionUrlResp` 확장: `(actionUrl, earnedAmount, balanceAfter, dailyTouchCount, nextAvailableAt)`. 적립 skip 시 `earnedAmount: 0`, `nextAvailableAt` 으로 다음 가능 시각 신호.
+  9. 응답 DTO `CharacterActionUrlResp`: `(actionUrl, earnedAmount, balanceAfter)`. 적립 skip 시 `earnedAmount: 0` 으로 신호.
+- Stage 4 에서 `CharacterActionUrlResp.dailyTouchCount`, `nextAvailableAt` 은 제거한다. 단, `UserCharacter.dailyTouchCount` / `dailyTouchDate` 컬럼은 터치 쿨타임·한도 검사용으로 유지한다.
 - Swagger `@ApiErrorCodes`, `docs/api/error-codes.md` 갱신 (필요 시 신규 코드).
 - 액션 enum 전환 상세 설계: `docs/plans/2026-05-08-animation-action-enum-design.md`.
 - **FE 영향 사전 확인**: Flutter `CharacterActionUrlResp` Dart DTO 가 unknown 필드를 무시하는지 (`@JsonSerializable` 의 `disallowUnrecognizedKeys` 설정 점검). strict 면 BE 변경과 같은 시점에 FE DTO 도 확장 필요(별도 FE PR).
