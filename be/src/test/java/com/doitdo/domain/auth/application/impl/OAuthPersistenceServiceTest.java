@@ -22,6 +22,7 @@ import com.doitdo.domain.setting.repository.UserSettingRepository;
 import com.doitdo.domain.shop.application.DefaultFurnitureRegistrar;
 import com.doitdo.domain.streak.repository.UserStreakRepository;
 import com.doitdo.domain.todo.application.DefaultCategoryRegistrar;
+import com.doitdo.domain.todo.application.DefaultTodoRegistrar;
 import com.doitdo.domain.user.entity.User;
 import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.repository.UserRepository;
@@ -57,6 +58,9 @@ class OAuthPersistenceServiceTest {
 	private DefaultCategoryRegistrar defaultCategoryRegistrar;
 
 	@Mock
+	private DefaultTodoRegistrar defaultTodoRegistrar;
+
+	@Mock
 	private DefaultFurnitureRegistrar defaultFurnitureRegistrar;
 
 	private OAuthPersistenceService buildService() {
@@ -69,6 +73,7 @@ class OAuthPersistenceServiceTest {
 				refreshTokenRepository,
 				jwtUtil,
 				defaultCategoryRegistrar,
+				defaultTodoRegistrar,
 				defaultFurnitureRegistrar
 		);
 	}

@@ -11,6 +11,7 @@ import com.doitdo.domain.shop.application.DefaultFurnitureRegistrar;
 import com.doitdo.domain.streak.entity.UserStreak;
 import com.doitdo.domain.streak.repository.UserStreakRepository;
 import com.doitdo.domain.todo.application.DefaultCategoryRegistrar;
+import com.doitdo.domain.todo.application.DefaultTodoRegistrar;
 import com.doitdo.domain.user.api.dto.resp.UserInfoResp;
 import com.doitdo.domain.user.entity.User;
 import com.doitdo.domain.user.entity.UserWallet;
@@ -64,6 +65,7 @@ public class OAuthPersistenceService {
 	private final RefreshTokenRepository refreshTokenRepository;
 	private final JwtUtil jwtUtil;
 	private final DefaultCategoryRegistrar defaultCategoryRegistrar;
+	private final DefaultTodoRegistrar defaultTodoRegistrar;
 	private final DefaultFurnitureRegistrar defaultFurnitureRegistrar;
 
 	@Value("${jwt.refresh-token-expiration}")
@@ -153,6 +155,7 @@ public class OAuthPersistenceService {
 		userStreakRepository.save(UserStreak.create(user.getUserId()));
 		autoProviderRepository.save(AutoProvider.create(user.getUserId(), providerName, providerUid));
 		defaultCategoryRegistrar.registerFor(user.getUserId());
+		defaultTodoRegistrar.registerFor(user.getUserId());
 		defaultFurnitureRegistrar.registerFor(user.getUserId());
 
 		return issueTokens(user, true);
@@ -181,6 +184,7 @@ public class OAuthPersistenceService {
 		userStreakRepository.save(UserStreak.create(user.getUserId()));
 		autoProviderRepository.save(AutoProvider.create(user.getUserId(), providerName, providerUid));
 		defaultCategoryRegistrar.registerFor(user.getUserId());
+		defaultTodoRegistrar.registerFor(user.getUserId());
 		defaultFurnitureRegistrar.registerFor(user.getUserId());
 
 		return issueTokens(user, true);
@@ -228,6 +232,7 @@ public class OAuthPersistenceService {
 		autoProviderRepository.save(AutoProvider.createWithRefreshToken(
 				user.getUserId(), providerName, providerUid, appleRefreshToken));
 		defaultCategoryRegistrar.registerFor(user.getUserId());
+		defaultTodoRegistrar.registerFor(user.getUserId());
 		defaultFurnitureRegistrar.registerFor(user.getUserId());
 
 		return issueTokens(user, true);
