@@ -33,21 +33,21 @@ class UserCharacterRepositoryTest {
 			.name("baby")
 			.stage(Character.Stage.BABY)
 			.thumbnailUrl("https://cdn.example.com/baby.png")
-			.requiredExp(100)
+			.requiredExp(75)
 			.build();
 		Character teen = Character.builder()
 			.species(species)
 			.name("teen")
 			.stage(Character.Stage.TEEN)
 			.thumbnailUrl("https://cdn.example.com/teen.png")
-			.requiredExp(200)
+			.requiredExp(100)
 			.build();
 		Character adult = Character.builder()
 			.species(species)
 			.name("adult")
 			.stage(Character.Stage.ADULT)
 			.thumbnailUrl("https://cdn.example.com/adult.png")
-			.requiredExp(300)
+			.requiredExp(125)
 			.build();
 
 		entityManager.persist(baby);

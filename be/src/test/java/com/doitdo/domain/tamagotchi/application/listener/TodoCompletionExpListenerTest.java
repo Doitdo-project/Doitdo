@@ -101,7 +101,7 @@ class TodoCompletionExpListenerTest {
 		// 최초 DONE 전이 → exp 지급 + expGranted=true
 		Todo todo = buildTodo(1L, false);
 		UserCharacter uc = buildUc(0);
-		Character character = buildCharacter(100);
+		Character character = buildCharacter(75);
 
 		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
 		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L))
@@ -163,10 +163,10 @@ class TodoCompletionExpListenerTest {
 
 	@Test
 	void capsCurrentExpAtRequiredExp() {
-		// Cap 동작: currentExp=95, delta=7, cap=100 → currentExp=100 (5만 가산)
+		// Cap 동작: currentExp=70, delta=7, cap=75 → currentExp=75 (5만 가산)
 		Todo todo = buildTodo(1L, false);
-		UserCharacter uc = buildUc(95);
-		Character character = buildCharacter(100);
+		UserCharacter uc = buildUc(70);
+		Character character = buildCharacter(75);
 
 		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
 		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L))
@@ -176,15 +176,15 @@ class TodoCompletionExpListenerTest {
 
 		listener.onTodoCompleted(new TodoCompletedEvent(1L, 1L));
 
-		assertThat(uc.getCurrentExp()).isEqualTo(100);
+		assertThat(uc.getCurrentExp()).isEqualTo(75);
 		assertThat(todo.getExpGranted()).isTrue();
 	}
 
 	@Test
 	void schedulesFarewellWhenAdultReachesCapTransition() {
 		Todo todo = buildTodo(1L, false);
-		UserCharacter uc = buildUc(95);
-		Character character = buildCharacter(100, Character.Stage.ADULT);
+		UserCharacter uc = buildUc(120);
+		Character character = buildCharacter(125, Character.Stage.ADULT);
 
 		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
 		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L))
@@ -196,7 +196,7 @@ class TodoCompletionExpListenerTest {
 		listener.onTodoCompleted(new TodoCompletedEvent(1L, 1L));
 		LocalDateTime after = LocalDateTime.now();
 
-		assertThat(uc.getCurrentExp()).isEqualTo(100);
+		assertThat(uc.getCurrentExp()).isEqualTo(125);
 		assertThat(uc.getFarewellAvailableAt())
 				.isBetween(before, after);
 		assertThat(todo.getExpGranted()).isTrue();
@@ -211,12 +211,12 @@ class TodoCompletionExpListenerTest {
 				.userId(1L)
 				.characterId(2L)
 				.name("뚜잇이")
-				.currentExp(100)
+				.currentExp(125)
 				.isActive(true)
 				.isDeleted(false)
 				.farewellAvailableAt(scheduledAt)
 				.build();
-		Character character = buildCharacter(100, Character.Stage.ADULT);
+		Character character = buildCharacter(125, Character.Stage.ADULT);
 
 		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
 		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L))
@@ -226,7 +226,7 @@ class TodoCompletionExpListenerTest {
 
 		listener.onTodoCompleted(new TodoCompletedEvent(1L, 1L));
 
-		assertThat(uc.getCurrentExp()).isEqualTo(100);
+		assertThat(uc.getCurrentExp()).isEqualTo(125);
 		assertThat(uc.getFarewellAvailableAt()).isEqualTo(scheduledAt);
 		assertThat(todo.getExpGranted()).isTrue();
 	}
@@ -235,8 +235,9 @@ class TodoCompletionExpListenerTest {
 	@EnumSource(value = Character.Stage.class, names = {"BABY", "TEEN"})
 	void doesNotScheduleFarewellWhenNonAdultReachesCap(Character.Stage stage) {
 		Todo todo = buildTodo(1L, false);
-		UserCharacter uc = buildUc(95);
-		Character character = buildCharacter(100, stage);
+		int requiredExp = stage == Character.Stage.BABY ? 75 : 100;
+		UserCharacter uc = buildUc(requiredExp - 5);
+		Character character = buildCharacter(requiredExp, stage);
 
 		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
 		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L))
@@ -246,7 +247,7 @@ class TodoCompletionExpListenerTest {
 
 		listener.onTodoCompleted(new TodoCompletedEvent(1L, 1L));
 
-		assertThat(uc.getCurrentExp()).isEqualTo(100);
+		assertThat(uc.getCurrentExp()).isEqualTo(requiredExp);
 		assertThat(uc.getFarewellAvailableAt()).isNull();
 		assertThat(todo.getExpGranted()).isTrue();
 	}
@@ -263,7 +264,7 @@ class TodoCompletionExpListenerTest {
 				.priority(1).startDate(today).endDate(null)
 				.isDeleted(false).expGranted(false).build();
 		UserCharacter uc = buildUc(0);
-		Character character = buildCharacter(100);
+		Character character = buildCharacter(75);
 
 		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
 		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L))
@@ -327,7 +328,7 @@ class TodoCompletionExpListenerTest {
 				.priority(1).startDate(tomorrow).endDate(null)
 				.isDeleted(false).expGranted(false).build();
 		UserCharacter uc = buildUc(0);
-		Character character = buildCharacter(100);
+		Character character = buildCharacter(75);
 
 		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
 		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L))
@@ -350,7 +351,7 @@ class TodoCompletionExpListenerTest {
 				.priority(1).startDate(null).endDate(null)
 				.isDeleted(false).expGranted(false).build();
 		UserCharacter uc = buildUc(0);
-		Character character = buildCharacter(100);
+		Character character = buildCharacter(75);
 
 		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
 		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L))
@@ -374,7 +375,7 @@ class TodoCompletionExpListenerTest {
 				.priority(1).startDate(today.minusDays(3)).endDate(today)
 				.isDeleted(false).expGranted(false).build();
 		UserCharacter uc = buildUc(0);
-		Character character = buildCharacter(100);
+		Character character = buildCharacter(75);
 
 		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
 		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L))
@@ -438,7 +439,7 @@ class TodoCompletionExpListenerTest {
 				.priority(1).startDate(today).endDate(null)
 				.isDeleted(false).expGranted(false).build();
 		UserCharacter uc = buildUc(0);
-		Character character = buildCharacter(100);
+		Character character = buildCharacter(75);
 
 		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
 		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(1L))

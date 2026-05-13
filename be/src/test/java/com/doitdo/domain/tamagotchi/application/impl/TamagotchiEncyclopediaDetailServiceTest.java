@@ -95,7 +95,7 @@ class TamagotchiEncyclopediaDetailServiceTest {
 			.name("슬라임 베이비")
 			.stage(Character.Stage.BABY)
 			.thumbnailUrl("https://cdn.example.com/slime-baby.png")
-			.requiredExp(100)
+			.requiredExp(75)
 			.build();
 		Character teen = Character.builder()
 			.characterId(2L)
@@ -103,7 +103,7 @@ class TamagotchiEncyclopediaDetailServiceTest {
 			.name("슬라임 틴")
 			.stage(Character.Stage.TEEN)
 			.thumbnailUrl("https://cdn.example.com/slime-teen.png")
-			.requiredExp(200)
+			.requiredExp(100)
 			.build();
 		Character adult = Character.builder()
 			.characterId(3L)
@@ -111,7 +111,7 @@ class TamagotchiEncyclopediaDetailServiceTest {
 			.name("슬라임 어덜트")
 			.stage(Character.Stage.ADULT)
 			.thumbnailUrl("https://cdn.example.com/slime-adult.png")
-			.requiredExp(300)
+			.requiredExp(125)
 			.build();
 		CharacterSpeciesBackground background = CharacterSpeciesBackground.builder()
 			.species(species)
