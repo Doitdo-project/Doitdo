@@ -48,7 +48,8 @@ class TodoCompletionCreditListenerTest {
 	}
 
 	@Test
-	void skipsSameTodoUndoRedoWhenOnlyOneDistinctTodoWasFirstCompletedToday() {
+	void earnsOnceForSameTodoUndoRedoWhenOnlyOneDistinctTodoWasFirstCompletedToday() {
+		AtomicInteger todayEarnCount = new AtomicInteger();
 		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L))
 				.willReturn(Optional.of(normalTodo(LocalDate.now(SEOUL))));
 		given(todoRepository.countRewardEligibleByUserIdAndFirstCompletedDate(eq(1L), any(LocalDate.class)))
@@ -58,25 +59,37 @@ class TodoCompletionCreditListenerTest {
 				eq(WalletEarnSource.TODO_COMPLETION),
 				any(LocalDateTime.class),
 				any(LocalDateTime.class)
-		)).willReturn(0);
+		)).willAnswer(invocation -> todayEarnCount.get() * 20);
+		given(creditEarnService.tryEarn(
+				eq(1L),
+				eq(WalletEarnSource.TODO_COMPLETION),
+				eq(20),
+				eq(10L),
+				eq(false)
+		)).willAnswer(invocation -> {
+			todayEarnCount.incrementAndGet();
+			return 20;
+		});
 
 		for (int i = 0; i < 5; i++) {
 			listener.onTodoCompleted(new TodoCompletedEvent(1L, 10L));
 		}
 
-		verify(creditEarnService, never()).tryEarn(
+		assertThat(todayEarnCount.get()).isEqualTo(1);
+		verify(creditEarnService, times(1)).tryEarn(
 				eq(1L),
 				eq(WalletEarnSource.TODO_COMPLETION),
-				eq(10),
+				eq(20),
 				eq(10L),
 				eq(false)
 		);
 	}
 
 	@Test
-	void earnsThreeTimesForNineDistinctTodosAndDoesNotEarnOnTenthTodo() {
+	void attemptsEarnForEachNewDistinctTodoAndDelegatesSixthToDailyCap() {
 		AtomicLong todayDistinctFirstCompleted = new AtomicLong();
 		AtomicInteger todayEarnCount = new AtomicInteger();
+		AtomicInteger attemptCount = new AtomicInteger();
 		given(todoRepository.findByTodoIdAndIsDeletedFalse(any(Long.class)))
 				.willReturn(Optional.of(normalTodo(LocalDate.now(SEOUL))));
 		given(todoRepository.countRewardEligibleByUserIdAndFirstCompletedDate(eq(1L), any(LocalDate.class)))
@@ -86,51 +99,55 @@ class TodoCompletionCreditListenerTest {
 				eq(WalletEarnSource.TODO_COMPLETION),
 				any(LocalDateTime.class),
 				any(LocalDateTime.class)
-		)).willAnswer(invocation -> todayEarnCount.get() * 10);
+		)).willAnswer(invocation -> todayEarnCount.get() * 20);
 		given(creditEarnService.tryEarn(
 				eq(1L),
 				eq(WalletEarnSource.TODO_COMPLETION),
-				eq(10),
+				eq(20),
 				any(Long.class),
 				eq(false)
 		)).willAnswer(invocation -> {
+			int attempts = attemptCount.incrementAndGet();
+			if (attempts > 5) {
+				return 0;
+			}
 			todayEarnCount.incrementAndGet();
-			return 10;
+			return 20;
 		});
 
-		for (long completedCount = 1; completedCount <= 10; completedCount++) {
+		for (long completedCount = 1; completedCount <= 6; completedCount++) {
 			todayDistinctFirstCompleted.set(completedCount);
 			listener.onTodoCompleted(new TodoCompletedEvent(1L, completedCount));
 		}
 
-		assertThat(todayEarnCount.get()).isEqualTo(3);
-		verify(creditEarnService, times(3)).tryEarn(
+		assertThat(todayEarnCount.get()).isEqualTo(5);
+		verify(creditEarnService, times(6)).tryEarn(
 				eq(1L),
 				eq(WalletEarnSource.TODO_COMPLETION),
-				eq(10),
+				eq(20),
 				any(Long.class),
 				eq(false)
 		);
 	}
 
 	@Test
-	void earnsWhenThirdDistinctTodoPassesThresholdWithDailyCapEnabled() {
-		given(todoRepository.findByTodoIdAndIsDeletedFalse(3L))
+	void earnsWhenFirstDistinctTodoPassesThresholdWithDailyCapEnabled() {
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L))
 				.willReturn(Optional.of(normalTodo(LocalDate.now(SEOUL))));
 		given(todoRepository.countRewardEligibleByUserIdAndFirstCompletedDate(eq(1L), any(LocalDate.class)))
-				.willReturn(3L);
+				.willReturn(1L);
 		given(walletEarnLogRepository.sumAmountByUserIdAndSourceAndDate(
 				eq(1L),
 				eq(WalletEarnSource.TODO_COMPLETION),
 				any(LocalDateTime.class),
 				any(LocalDateTime.class)
 		)).willReturn(0);
-		given(creditEarnService.tryEarn(1L, WalletEarnSource.TODO_COMPLETION, 10, 3L, false))
-				.willReturn(10);
+		given(creditEarnService.tryEarn(1L, WalletEarnSource.TODO_COMPLETION, 20, 1L, false))
+				.willReturn(20);
 
-		listener.onTodoCompleted(new TodoCompletedEvent(1L, 3L));
+		listener.onTodoCompleted(new TodoCompletedEvent(1L, 1L));
 
-		verify(creditEarnService).tryEarn(1L, WalletEarnSource.TODO_COMPLETION, 10, 3L, false);
+		verify(creditEarnService).tryEarn(1L, WalletEarnSource.TODO_COMPLETION, 20, 1L, false);
 	}
 
 	@Test
@@ -145,7 +162,7 @@ class TodoCompletionCreditListenerTest {
 		verify(creditEarnService, never()).tryEarn(
 				eq(1L),
 				eq(WalletEarnSource.TODO_COMPLETION),
-				eq(10),
+				eq(20),
 				eq(10L),
 				eq(false)
 		);

@@ -48,7 +48,7 @@
 
 | 테이블 | 컬럼 | 비고 |
 |---|---|---|
-| `todos` | `first_completed_date DATE NULL` | TODO 완료 3개당 뚜레딧 적립 계산용 최초 완료일. 취소·재완료 시 보존 |
+| `todos` | `first_completed_date DATE NULL` | TODO 완료 1개당 20 뚜레딧 적립 계산용 최초 완료일. 취소·재완료 시 보존 |
 | `todos` | `category_name VARCHAR(10) NULL` | 카테고리 이름 스냅샷. rename 시 전파, 삭제 시 잔여. 필터/응답의 카테고리 매칭 키. |
 | `todos` | `category_color_id INT NULL` | 카테고리 색상(`palette_colors.color_id`) 스냅샷. 동일 이름의 활성 카테고리가 있으면 응답 시 그 색이 override. |
 | `todos` | `idx_todos_list_category_name` | 인덱스 `(user_id, is_deleted, category_name, start_date, todo_id)` — 이름 기반 필터 lookup. |
@@ -65,6 +65,17 @@
 - `STREAK_7DAY`
 - `PET_TOUCH`
 - `TODO_COMPLETION`
+
+보상 정책 (2026-05-13 Stage 1 개정 반영):
+
+| source | 금액 | 일일 한도 | 비고 |
+|---|---:|---:|---|
+| `SIGNUP_BONUS` | 100 | 없음 | `bypassDailyCap=true` |
+| `STREAK_7DAY` | 500 | 없음 | 7일 단위 스트릭 보상, `bypassDailyCap=true` |
+| `PET_TOUCH` | 50 | 2회 / 100 | 쿨타임 2시간 |
+| `TODO_COMPLETION` | 20 | 5회 / 100 | 당일 보상 대상 TODO 1개 완료당 1회 |
+
+`PET_TOUCH` + `TODO_COMPLETION` 합산 일일 한도는 200 뚜레딧이다.
 
 ## tamagotchi 도메인 변경 컬럼 (다마고치 터치 적립)
 

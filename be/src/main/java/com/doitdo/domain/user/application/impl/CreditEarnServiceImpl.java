@@ -10,6 +10,7 @@ import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.UserErrorCode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,8 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CreditEarnServiceImpl implements CreditEarnService {
 
-	private static final int SOURCE_DAILY_CAP = 30;
-	private static final int COMBINED_DAILY_CAP = 60;
+	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+	private static final int SOURCE_DAILY_CAP = 100;
+	private static final int COMBINED_DAILY_CAP = 200;
 	private static final List<WalletEarnSource> DAILY_CAPPED_SOURCES = List.of(
 			WalletEarnSource.PET_TOUCH,
 			WalletEarnSource.TODO_COMPLETION
@@ -45,7 +47,7 @@ public class CreditEarnServiceImpl implements CreditEarnService {
 				.source(source)
 				.amount(amount)
 				.refId(refId)
-				.earnedAt(LocalDateTime.now())
+				.earnedAt(LocalDateTime.now(SEOUL))
 				.build());
 
 		return amount;
@@ -56,7 +58,7 @@ public class CreditEarnServiceImpl implements CreditEarnService {
 	}
 
 	private boolean exceedsDailyCap(Long userId, WalletEarnSource source, int amount) {
-		LocalDate today = LocalDate.now();
+		LocalDate today = LocalDate.now(SEOUL);
 		LocalDateTime startOfDay = today.atStartOfDay();
 		LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
 

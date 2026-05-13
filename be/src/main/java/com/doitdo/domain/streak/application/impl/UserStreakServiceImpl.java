@@ -14,6 +14,7 @@ import com.doitdo.domain.user.repository.UserWalletRepository;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.UserErrorCode;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserStreakServiceImpl implements UserStreakService {
 
 	private static final int REWARD_INTERVAL_DAYS = 7;
-	private static final int SEVEN_DAY_REWARD_AMOUNT = 200;
+	private static final int SEVEN_DAY_REWARD_AMOUNT = 500;
+	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
 	private final UserStreakRepository userStreakRepository;
 	private final UserWalletRepository userWalletRepository;
@@ -35,7 +37,7 @@ public class UserStreakServiceImpl implements UserStreakService {
 	public void recordActivity(Long userId) {
 		UserStreak streak = userStreakRepository.findByUserId(userId)
 				.orElseGet(() -> userStreakRepository.save(UserStreak.create(userId)));
-		streak.recordActivity(LocalDate.now());
+		streak.recordActivity(LocalDate.now(SEOUL));
 	}
 
 	@Override

@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Optional;
@@ -59,6 +60,10 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/evolution/evolution.gif";
 	private static final String INDEPENDENCE_ANIMATION_URL =
 		"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/independence/independence.gif";
+	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+	private static final int PET_TOUCH_CREDIT = 50;
+	private static final int PET_TOUCH_DAILY_LIMIT = 2;
+	private static final int PET_TOUCH_COOLDOWN_HOURS = 2;
 
 	private final CharacterActionRepository characterActionRepository;
 	private final CharacterRepository characterRepository;
@@ -71,7 +76,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 	private final CacheEvictHelper cacheEvictHelper;
 	private final CreditEarnService creditEarnService;
 	private final UserWalletRepository userWalletRepository;
-	private Clock clock = Clock.systemDefaultZone();
+	private Clock clock = Clock.system(SEOUL);
 
 	void setClock(Clock clock) {
 		this.clock = clock;
@@ -480,7 +485,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			earnedAmount = creditEarnService.tryEarn(
 				userId,
 				WalletEarnSource.PET_TOUCH,
-				10,
+				PET_TOUCH_CREDIT,
 				lockedUserCharacter.getCharacterId(),
 				false
 			);
@@ -500,9 +505,9 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 	}
 
 	private boolean canEarnTouchCredit(UserCharacter userCharacter, LocalDateTime now) {
-		return userCharacter.getDailyTouchCount() < 3
+		return userCharacter.getDailyTouchCount() < PET_TOUCH_DAILY_LIMIT
 			&& (userCharacter.getLastTouchedAt() == null
-				|| !now.isBefore(userCharacter.getLastTouchedAt().plusHours(1)));
+				|| !now.isBefore(userCharacter.getLastTouchedAt().plusHours(PET_TOUCH_COOLDOWN_HOURS)));
 	}
 
 	private int dailyTouchCountForToday(UserCharacter userCharacter, LocalDate today) {
@@ -518,11 +523,11 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		LocalDateTime now,
 		LocalDate today
 	) {
-		if (dailyTouchCount >= 3) {
+		if (dailyTouchCount >= PET_TOUCH_DAILY_LIMIT) {
 			return today.plusDays(1).atStartOfDay();
 		}
 		if (lastTouchedAt != null) {
-			LocalDateTime cooldownEndsAt = lastTouchedAt.plusHours(1);
+			LocalDateTime cooldownEndsAt = lastTouchedAt.plusHours(PET_TOUCH_COOLDOWN_HOURS);
 			if (now.isBefore(cooldownEndsAt)) {
 				return cooldownEndsAt;
 			}
