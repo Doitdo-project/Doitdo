@@ -381,8 +381,7 @@ class TamagotchiServiceImplTest {
 		assertThat(earnedSum).isEqualTo(100);
 		assertThat(third.actionUrl()).isEqualTo("https://cdn.example.com/idle.gif");
 		assertThat(third.earnedAmount()).isZero();
-		assertThat(third.dailyTouchCount()).isEqualTo(2);
-		assertThat(third.nextAvailableAt()).isEqualTo(today.plusDays(1).atStartOfDay());
+		assertThat(userCharacter.getDailyTouchCount()).isEqualTo(2);
 		then(creditEarnService).should(times(2))
 			.tryEarn(userId, WalletEarnSource.PET_TOUCH, 50, 9L, false);
 	}
@@ -412,8 +411,7 @@ class TamagotchiServiceImplTest {
 		assertThat(first.earnedAmount()).isEqualTo(50);
 		assertThat(second.actionUrl()).isEqualTo("https://cdn.example.com/idle.gif");
 		assertThat(second.earnedAmount()).isZero();
-		assertThat(second.dailyTouchCount()).isEqualTo(1);
-		assertThat(second.nextAvailableAt()).isEqualTo(baseTime.plusHours(2));
+		assertThat(userCharacter.getDailyTouchCount()).isEqualTo(1);
 		then(creditEarnService).should(times(1))
 			.tryEarn(userId, WalletEarnSource.PET_TOUCH, 50, 9L, false);
 	}
@@ -440,7 +438,6 @@ class TamagotchiServiceImplTest {
 
 		assertThat(resp.actionUrl()).isEqualTo("https://cdn.example.com/eye.gif");
 		assertThat(resp.earnedAmount()).isZero();
-		assertThat(resp.dailyTouchCount()).isZero();
 		then(userCharacterRepository).should(never()).findActiveByUserIdForUpdate(anyLong());
 		then(creditEarnService).should(never()).tryEarn(anyLong(), any(), anyInt(), any(), anyBoolean());
 	}
@@ -478,8 +475,7 @@ class TamagotchiServiceImplTest {
 		CharacterActionUrlResp resp = service.getMyCharacterActionUrl(userId, "IDLE");
 
 		assertThat(resp.earnedAmount()).isEqualTo(50);
-		assertThat(resp.dailyTouchCount()).isEqualTo(1);
-		assertThat(resp.nextAvailableAt()).isEqualTo(now.plusHours(2));
+		assertThat(userCharacter.getDailyTouchCount()).isEqualTo(1);
 	}
 
 	@Test

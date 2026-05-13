@@ -116,20 +116,16 @@ class RedisCachingIntegrationTest {
 	}
 
 	@Test
-	void cacheHitForHomeQueriesDoesNotIssueSqlOnSecondCall() {
+	void cacheHitForCacheableHomeQueriesDoesNotIssueSqlOnSecondCall() {
 		Long userId = createUser("home");
 		saveTodo(userId, "today", TodoType.NORMAL, LocalDate.now(SEOUL), null);
 		saveTodo(userId, "someday", TodoType.SOMEDAY, null, null);
-		saveActiveCharacter(userId, 0);
 
 		todoService.list(userId, todayReq());
 		assertNoSql(() -> todoService.list(userId, todayReq()));
 
 		todoService.list(userId, somedayReq());
 		assertNoSql(() -> todoService.list(userId, somedayReq()));
-
-		tamagotchiService.getCurrentCharacter(userId);
-		assertNoSql(() -> tamagotchiService.getCurrentCharacter(userId));
 	}
 
 	@Test

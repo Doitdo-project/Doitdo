@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.doitdo.domain.auth.application.CustomUserDetails;
@@ -112,9 +113,9 @@ public class TamagotchiController {
 		return GlobalApiResponse.ok(tamagotchiService.approveIndependence(userDetails.getUserId(), request.approved()));
 	}
 
-	@Operation(summary = "캐릭터 액션 URL 조회", description = "현재 사용자의 활성 캐릭터에서 액션 타입에 해당하는 URL을 조회한다.")
-	@ApiErrorCodes({"M04-002", "M09-001", "M09-002", "M09-003"})
-	@GetMapping("/me/actions/{actionType}")
+	@Operation(summary = "캐릭터 액션 실행", description = "현재 사용자의 활성 캐릭터에서 액션 타입에 해당하는 URL을 조회하고 액션별 보상을 처리한다.")
+	@ApiErrorCodes({"M04-002", "M09-001", "M09-002", "M09-004", "M09-003"})
+	@RequestMapping(value = "/me/actions/{actionType}", method = {RequestMethod.GET, RequestMethod.POST})
 	public GlobalApiResponse<CharacterActionUrlResp> getMyCharacterActionUrl(
 		@PathVariable String actionType,
 		@AuthenticationPrincipal CustomUserDetails userDetails

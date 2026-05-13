@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.EnumMap;
 import java.util.List;
@@ -30,6 +31,7 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaItemResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
 import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
+import com.doitdo.domain.tamagotchi.entity.CharacterActionType;
 import com.doitdo.domain.tamagotchi.entity.UserCharacterHistory;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterActionRepository;
@@ -49,7 +51,6 @@ import com.doitdo.global.exception.TamagotchiErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
 
 @Service
 @RequiredArgsConstructor
@@ -64,6 +65,9 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 	private static final int PET_TOUCH_CREDIT = 50;
 	private static final int PET_TOUCH_DAILY_LIMIT = 2;
 	private static final int PET_TOUCH_COOLDOWN_HOURS = 2;
+	private static final int POOP_CLEAR_REWARD = 50;
+	private static final LocalTime POOP_TIME_START = LocalTime.of(10, 0);
+	private static final int POOP_TIME_WINDOW_MINUTES = 720;
 
 	private final CharacterActionRepository characterActionRepository;
 	private final CharacterRepository characterRepository;
@@ -124,7 +128,8 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			false,
 			false,
 			savedUserCharacter.getEquipedItemsId(),
-			savedUserCharacter.getUserCharacterId()
+			savedUserCharacter.getUserCharacterId(),
+			false
 		);
 	}
 
@@ -216,12 +221,13 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 	}
 
 	@Override
-	@Transactional(readOnly = true)
-	@Cacheable(value = "tamagotchi:current", key = "#userId", unless = "#result == null")
+	@Transactional
 	public CurrentCharacterResp getCurrentCharacter(Long userId) {
 		UserCharacter userCharacter = userCharacterRepository
 			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
+
+		refreshPoopTimeIfNewDate(userCharacter, LocalDate.now(clock));
 
 		return toCurrentCharacterResp(userCharacter, TamagotchiErrorCode.M04_002);
 	}
@@ -243,7 +249,10 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			&& requiredExp != null
 			&& userCharacter.getCurrentExp() >= requiredExp
 			&& userCharacter.getFarewellAvailableAt() != null
-			&& !LocalDateTime.now().isBefore(userCharacter.getFarewellAvailableAt());
+			&& !LocalDateTime.now(clock).isBefore(userCharacter.getFarewellAvailableAt());
+		LocalDateTime now = LocalDateTime.now(clock);
+		LocalDate today = now.toLocalDate();
+		boolean poop = isPoopActive(userCharacter, now, today);
 
 		return new CurrentCharacterResp(
 			character.getCharacterId(),
@@ -256,8 +265,21 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			canEvolve,
 			canFarewell,
 			userCharacter.getEquipedItemsId(),
-			userCharacter.getUserCharacterId()
+			userCharacter.getUserCharacterId(),
+			poop
 		);
+	}
+
+	private void refreshPoopTimeIfNewDate(UserCharacter userCharacter, LocalDate today) {
+		if (today.equals(userCharacter.getPoopTimeDate())) {
+			return;
+		}
+		userCharacter.refreshPoopTime(randomPoopTime(), today);
+	}
+
+	private LocalTime randomPoopTime() {
+		int minuteOffset = ThreadLocalRandom.current().nextInt(POOP_TIME_WINDOW_MINUTES);
+		return POOP_TIME_START.plusMinutes(minuteOffset);
 	}
 
 	@Override
@@ -455,24 +477,27 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
 
-		List<com.doitdo.domain.tamagotchi.entity.CharacterAction> actions = characterActionRepository
-			.findAllByCharacterIdAndActionType(userCharacter.getCharacterId(), actionType);
-		if (actions.isEmpty()) {
-			throw new CustomException(TamagotchiErrorCode.M09_002);
-		}
-		com.doitdo.domain.tamagotchi.entity.CharacterAction action =
-			actions.get(ThreadLocalRandom.current().nextInt(actions.size()));
-
 		LocalDateTime now = LocalDateTime.now(clock);
 		LocalDate today = LocalDate.now(clock);
-		if ("EYE".equalsIgnoreCase(actionType)) {
-			int dailyTouchCount = dailyTouchCountForToday(userCharacter, today);
+
+		if (CharacterActionType.POOP.matches(actionType)) {
+			UserCharacter lockedUserCharacter = userCharacterRepository.findActiveByUserIdForUpdate(userId)
+				.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
+			int earnedAmount = clearPoop(userId, lockedUserCharacter, now, today);
 			return new CharacterActionUrlResp(
-				action.getActionUrl(),
+				findRandomActionUrl(userCharacter.getCharacterId(), actionType).orElse(null),
+				earnedAmount,
+				findCurrentBalance(userId)
+			);
+		}
+
+		String actionUrl = findRandomActionUrl(userCharacter.getCharacterId(), actionType)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M09_002));
+		if ("EYE".equalsIgnoreCase(actionType)) {
+			return new CharacterActionUrlResp(
+				actionUrl,
 				0,
-				findCurrentBalance(userId),
-				dailyTouchCount,
-				nextAvailableAt(userCharacter.getLastTouchedAt(), dailyTouchCount, now, today)
+				findCurrentBalance(userId)
 			);
 		}
 
@@ -494,14 +519,42 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			}
 		}
 
-		int dailyTouchCount = lockedUserCharacter.getDailyTouchCount();
 		return new CharacterActionUrlResp(
-			action.getActionUrl(),
+			actionUrl,
 			earnedAmount,
-			findCurrentBalance(userId),
-			dailyTouchCount,
-			nextAvailableAt(lockedUserCharacter.getLastTouchedAt(), dailyTouchCount, now, today)
+			findCurrentBalance(userId)
 		);
+	}
+
+	private Optional<String> findRandomActionUrl(Long characterId, String actionType) {
+		List<com.doitdo.domain.tamagotchi.entity.CharacterAction> actions = characterActionRepository
+			.findAllByCharacterIdAndActionType(characterId, actionType);
+		if (actions.isEmpty()) {
+			return Optional.empty();
+		}
+		return Optional.of(actions.get(ThreadLocalRandom.current().nextInt(actions.size())).getActionUrl());
+	}
+
+	private int clearPoop(
+		Long userId,
+		UserCharacter userCharacter,
+		LocalDateTime now,
+		LocalDate today
+	) {
+		if (!today.equals(userCharacter.getPoopTimeDate()) || !isPoopActive(userCharacter, now, today)) {
+			throw new CustomException(TamagotchiErrorCode.M09_004);
+		}
+
+		int earnedAmount = creditEarnService.tryEarn(
+			userId,
+			WalletEarnSource.POOP_CLEAR,
+			POOP_CLEAR_REWARD,
+			userCharacter.getCharacterId(),
+			true
+		);
+		userCharacter.markPoopCleared(today);
+		cacheEvictHelper.evictTamagotchiCurrentAfterCommit(userId);
+		return earnedAmount;
 	}
 
 	private boolean canEarnTouchCredit(UserCharacter userCharacter, LocalDateTime now) {
@@ -510,29 +563,10 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 				|| !now.isBefore(userCharacter.getLastTouchedAt().plusHours(PET_TOUCH_COOLDOWN_HOURS)));
 	}
 
-	private int dailyTouchCountForToday(UserCharacter userCharacter, LocalDate today) {
-		if (!today.equals(userCharacter.getDailyTouchDate())) {
-			return 0;
-		}
-		return userCharacter.getDailyTouchCount();
-	}
-
-	private LocalDateTime nextAvailableAt(
-		LocalDateTime lastTouchedAt,
-		int dailyTouchCount,
-		LocalDateTime now,
-		LocalDate today
-	) {
-		if (dailyTouchCount >= PET_TOUCH_DAILY_LIMIT) {
-			return today.plusDays(1).atStartOfDay();
-		}
-		if (lastTouchedAt != null) {
-			LocalDateTime cooldownEndsAt = lastTouchedAt.plusHours(PET_TOUCH_COOLDOWN_HOURS);
-			if (now.isBefore(cooldownEndsAt)) {
-				return cooldownEndsAt;
-			}
-		}
-		return null;
+	private boolean isPoopActive(UserCharacter userCharacter, LocalDateTime now, LocalDate today) {
+		return userCharacter.getPoopTime() != null
+			&& !now.toLocalTime().isBefore(userCharacter.getPoopTime())
+			&& !today.equals(userCharacter.getPoopClearedDate());
 	}
 
 	private int findCurrentBalance(Long userId) {

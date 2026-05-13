@@ -87,6 +87,27 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `agreementsAccepted` | `boolean` | 필수 약관 동의 완료 여부 |
 | `dailyAttendanceClaimed` | `boolean` | `GET /api/users/me` 호출 이전에 오늘 출석 보상을 이미 받았는지 여부. `false` 는 이번 호출에서 100 뚜레딧이 자동 적립됐음을 의미하고, `true` 는 이미 수령해 변동 없음을 의미 |
 
+## 6-1. `CurrentCharacterResp` 필드
+
+`GET /api/characters/me` 응답:
+
+| 필드 | 타입 | 비고 |
+|---|---|---|
+| `characterId` | `Long` | 원본 캐릭터 식별자 |
+| `name` | `String` | 현재 캐릭터 이름 |
+| `stage` | `String` | EGG / BABY / TEEN / ADULT |
+| `thumbnailUrl` | `String` | 대표 이미지 URL |
+| `growthPercent` | `Integer` | 현재 단계 진행률 |
+| `currentExp` | `Integer` | 현재 단계 EXP |
+| `requiredExp` | `Integer` | 현재 단계 필요 EXP |
+| `canEvolve` | `Boolean` | 진화 가능 여부 |
+| `canFarewell` | `Boolean` | 독립 가능 여부 |
+| `equippedUserItemId` | `Long` | 장착 아이템 row ID, nullable |
+| `userCharacterId` | `Long` | 사용자가 실제로 키우는 활성 다마고치 row ID |
+| `poop` | `Boolean` | 오늘 똥치우기 미션 활성 여부. `poop_time` 도래 후이고 오늘 아직 치우지 않았으면 `true` |
+
+`poop_time` 은 `GET /api/characters/me` 호출 시 Asia/Seoul 기준 날짜가 바뀌었을 때 10:00~22:00 사이 분 단위 시각으로 Lazy 결정된다.
+
 ## 7. `TodoDetailResp` 필드 (참고)
 
 모든 TODO 단건/목록/검색 응답 공통 필드:
@@ -200,17 +221,17 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 
 ## 9. `CharacterActionUrlResp` 필드 (뚜레딧 적립 Stage 3+)
 
-`GET /api/characters/me/actions/{actionType}` 응답:
+`POST /api/characters/me/actions/{actionType}` 응답:
 
 | 필드 | 타입 | 비고 |
 |---|---|---|
-| `actionUrl` | `String` | 재생할 캐릭터 애니메이션 URL. 쿨다운/cap 관계없이 항상 정상 반환 |
+| `actionUrl` | `String` | 재생할 캐릭터 애니메이션 URL. 일반 액션은 쿨다운/cap 관계없이 정상 반환. `POOP` 은 등록된 애니메이션 row 가 없으면 `null` |
 | `earnedAmount` | `int` | 이번 호출에서 지급된 뚜레딧 (적립 불가 시 0) |
 | `balanceAfter` | `int` | 호출 직후 지갑 잔액 |
-| `dailyTouchCount` | `int` | 오늘 적립된 터치 횟수 (최대 3) |
-| `nextAvailableAt` | `LocalDateTime` | 다음 적립 가능 시각. 오늘 cap 소진 시 내일 자정, 쿨다운 중이면 `lastTouchedAt + 1h` |
 
-`actionType` 이 `AnimationAction` enum 에 포함되고 활성 캐릭터의 `character_actions` row 가 등록되어 있으면 모든 액션이 동일한 적립 흐름에 진입한다. 쿨다운/cap 으로 적립되지 않는 경우에도 `actionUrl` 은 반환하고 `earnedAmount=0` 으로 응답한다.
+`actionType` 이 캐릭터 액션 enum 에 포함되고 활성 캐릭터의 `character_actions` row 가 등록되어 있으면 등록 액션은 터치 적립 흐름에 진입한다. 쿨다운/cap 으로 적립되지 않는 경우에도 `actionUrl` 은 반환하고 `earnedAmount=0` 으로 응답한다.
+
+`actionType=POOP` 은 `CurrentCharacterResp.poop=true` 일 때만 50 뚜레딧을 `POOP_CLEAR` 로 적립하고, 오늘 처리 완료로 바꾼다. 활성 시각 전이거나 이미 치운 상태이면 409 `M09-004` 를 반환한다.
 
 enum 에는 있지만 해당 캐릭터의 `character_actions` row 가 없는 액션은 404 `M09-002` 를 반환한다.
 

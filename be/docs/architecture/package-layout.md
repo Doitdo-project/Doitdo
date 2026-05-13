@@ -44,7 +44,7 @@ domain/{domain}/
 
 | 종류 | 경로 | 비고 |
 |---|---|---|
-| Entity enum | `domain/user/entity/WalletEarnSource.java` | 적립 출처 (`SIGNUP_BONUS`, `STREAK_7DAY`, `PET_TOUCH`, `TODO_COMPLETION`, `DAILY_ATTENDANCE`) |
+| Entity enum | `domain/user/entity/WalletEarnSource.java` | 적립 출처 (`SIGNUP_BONUS`, `STREAK_7DAY`, `PET_TOUCH`, `TODO_COMPLETION`, `DAILY_ATTENDANCE`, `POOP_CLEAR`) |
 | Entity | `domain/user/entity/WalletEarnLog.java` | `wallet_earn_logs` 테이블 매핑 |
 | Repository | `domain/user/repository/WalletEarnLogRepository.java` | 출처별/합산 일일 적립액 조회. `sumAmountByUserIdAndSourceAndDate` 는 `CreditEarnServiceImpl.exceedsDailyCap()` 의 cap 합산과 `TodoCompletionCreditListener` 의 오늘 적립 횟수 역산에 모두 재사용됨 |
 | Application interface | `domain/user/application/CreditEarnService.java` | 뚜레딧 적립 단일 진입점 |

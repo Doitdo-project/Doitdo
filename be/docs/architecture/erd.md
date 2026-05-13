@@ -66,8 +66,9 @@
 - `PET_TOUCH`
 - `TODO_COMPLETION`
 - `DAILY_ATTENDANCE`
+- `POOP_CLEAR`
 
-보상 정책 (2026-05-13 Stage 1 개정 + Stage 5 출석 자동 적립 반영):
+보상 정책 (2026-05-13 Stage 1 개정 + Stage 5 출석 자동 적립 + Stage 4 똥치우기 반영):
 
 | source | 금액 | 일일 한도 | 비고 |
 |---|---:|---:|---|
@@ -76,8 +77,9 @@
 | `PET_TOUCH` | 50 | 2회 / 100 | 쿨타임 2시간 |
 | `TODO_COMPLETION` | 20 | 5회 / 100 | 당일 보상 대상 TODO 1개 완료당 1회 |
 | `DAILY_ATTENDANCE` | 100 | 1회 / 100 | `GET /api/users/me` 호출 시 자동 적립, `bypassDailyCap=true`, Asia/Seoul 자정 기준 |
+| `POOP_CLEAR` | 50 | 1회 / 50 | 캐릭터 똥치우기 미션, `bypassDailyCap=true`, Asia/Seoul 자정 기준 |
 
-`PET_TOUCH` + `TODO_COMPLETION` 합산 일일 한도는 200 뚜레딧이다. `DAILY_ATTENDANCE` 는 `wallet_earn_logs` 당일 SUM 조회로 자동 적립 여부를 판단하고, 이 합산 cap 에 포함하지 않는다.
+`PET_TOUCH` + `TODO_COMPLETION` 합산 일일 한도는 200 뚜레딧이다. `DAILY_ATTENDANCE` 는 `wallet_earn_logs` 당일 SUM 조회로 자동 적립 여부를 판단하고, `POOP_CLEAR` 는 `user_character.poop_cleared_date` 로 중복 수령을 막아, 둘 다 이 합산 cap 에 포함하지 않는다.
 
 ## tamagotchi 도메인 성장 EXP 정책
 
@@ -99,6 +101,9 @@ TODO 완료 1건당 캐릭터 EXP 보상은 3~7 랜덤이며, `UserCharacter.gai
 | `user_character` | `last_touched_at` | `TIMESTAMP NULL` | 마지막 터치 적립 성공 시각 |
 | `user_character` | `daily_touch_count` | `INT NOT NULL DEFAULT 0` | 해당 일자 터치 적립 성공 횟수 |
 | `user_character` | `daily_touch_date` | `DATE NULL` | `daily_touch_count` 기준 일자 |
+| `user_character` | `poop_time` | `TIME NULL` | 오늘 똥 활성 시각. 10:00~22:00 KST 사이 분 단위 랜덤 |
+| `user_character` | `poop_time_date` | `DATE NULL` | `poop_time` 을 마지막으로 결정한 일자. 날짜가 다르면 `GET /api/characters/me` 에서 Lazy 갱신 |
+| `user_character` | `poop_cleared_date` | `DATE NULL` | 마지막 똥치우기 처리 일자. 오늘이면 `poop=false` |
 
 ## DDL 정책
 

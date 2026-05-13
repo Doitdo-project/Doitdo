@@ -153,10 +153,10 @@ class DoreditEarningSystemIntegrationTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // Case 3: IDLE 2회 터치 → +100; 3번째 터치: actionUrl 정상, earnedAmount=0, nextAvailableAt 설정
+    // Case 3: IDLE 2회 터치 → +100; 3번째 터치: actionUrl 정상, earnedAmount=0
     // ══════════════════════════════════════════════════════════════════════
     @Test
-    @DisplayName("Case 3: IDLE 2회 적립 후 3번째 호출 시 earnedAmount=0, nextAvailableAt 설정")
+    @DisplayName("Case 3: IDLE 2회 적립 후 3번째 호출 시 earnedAmount=0")
     void case03_twoIdleEarnsThenThirdEarnsNothing() {
         Long userId = createUserWithWallet("user3@test.com", "user3");
         UserCharacter uc = seedCharacterWithAction(userId, "IDLE");
@@ -169,12 +169,12 @@ class DoreditEarningSystemIntegrationTest {
             assertThat(resp.earnedAmount()).isEqualTo(50);
         }
 
-        // 3번째: dailyTouchCount=2 이므로 cap 도달 → earn=0, nextAvailableAt 설정됨
+        // 3번째: dailyTouchCount=2 이므로 cap 도달 → earn=0
         CharacterActionUrlResp third = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
         assertThat(third.earnedAmount()).isZero();
         assertThat(third.actionUrl()).isNotBlank();
-        assertThat(third.nextAvailableAt()).isNotNull();
-        assertThat(third.dailyTouchCount()).isEqualTo(2);
+        assertThat(userCharacterRepository.findById(uc.getUserCharacterId()).orElseThrow().getDailyTouchCount())
+                .isEqualTo(2);
 
         int totalEarned = walletEarnLogsBySource(userId, WalletEarnSource.PET_TOUCH).stream()
                 .mapToInt(WalletEarnLog::getAmount).sum();
@@ -225,7 +225,8 @@ class DoreditEarningSystemIntegrationTest {
         // 재적립: 새 날짜이므로 dailyTouchCount 리셋 → 적립 가능
         CharacterActionUrlResp second = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
         assertThat(second.earnedAmount()).isEqualTo(50);
-        assertThat(second.dailyTouchCount()).isEqualTo(1);
+        assertThat(userCharacterRepository.findById(uc.getUserCharacterId()).orElseThrow().getDailyTouchCount())
+                .isEqualTo(1);
     }
 
     // ══════════════════════════════════════════════════════════════════════
