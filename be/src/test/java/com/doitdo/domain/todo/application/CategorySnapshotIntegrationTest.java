@@ -69,7 +69,7 @@ class CategorySnapshotIntegrationTest {
 				"snapshot@test.com", "encoded-pw", "snapshot-user"));
 		userId = user.getUserId();
 
-		Palette palette = paletteRepository.saveAndFlush(Palette.create("default"));
+		Palette palette = paletteRepository.saveAndFlush(Palette.create("default", 1));
 		redColorId = paletteColorRepository.saveAndFlush(
 				PaletteColor.create(palette.getPaletteId(), "#FF0000", 1)).getColorId();
 		blueColorId = paletteColorRepository.saveAndFlush(
