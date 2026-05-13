@@ -22,6 +22,7 @@ class TodoListItemDto with _$TodoListItemDto {
     String? content,
     int? priority,
     String? category,
+    String? colorHex,
     String? type,
     String? startDate,
     String? endDate,

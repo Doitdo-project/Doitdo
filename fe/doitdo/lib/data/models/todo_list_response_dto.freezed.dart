@@ -190,6 +190,7 @@ mixin _$TodoListItemDto {
   String? get content => throw _privateConstructorUsedError;
   int? get priority => throw _privateConstructorUsedError;
   String? get category => throw _privateConstructorUsedError;
+  String? get colorHex => throw _privateConstructorUsedError;
   String? get type => throw _privateConstructorUsedError;
   String? get startDate => throw _privateConstructorUsedError;
   String? get endDate => throw _privateConstructorUsedError;
@@ -220,6 +221,7 @@ abstract class $TodoListItemDtoCopyWith<$Res> {
     String? content,
     int? priority,
     String? category,
+    String? colorHex,
     String? type,
     String? startDate,
     String? endDate,
@@ -249,6 +251,7 @@ class _$TodoListItemDtoCopyWithImpl<$Res, $Val extends TodoListItemDto>
     Object? content = freezed,
     Object? priority = freezed,
     Object? category = freezed,
+    Object? colorHex = freezed,
     Object? type = freezed,
     Object? startDate = freezed,
     Object? endDate = freezed,
@@ -280,6 +283,10 @@ class _$TodoListItemDtoCopyWithImpl<$Res, $Val extends TodoListItemDto>
             category: freezed == category
                 ? _value.category
                 : category // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            colorHex: freezed == colorHex
+                ? _value.colorHex
+                : colorHex // ignore: cast_nullable_to_non_nullable
                       as String?,
             type: freezed == type
                 ? _value.type
@@ -323,6 +330,7 @@ abstract class _$$TodoListItemDtoImplCopyWith<$Res>
     String? content,
     int? priority,
     String? category,
+    String? colorHex,
     String? type,
     String? startDate,
     String? endDate,
@@ -351,6 +359,7 @@ class __$$TodoListItemDtoImplCopyWithImpl<$Res>
     Object? content = freezed,
     Object? priority = freezed,
     Object? category = freezed,
+    Object? colorHex = freezed,
     Object? type = freezed,
     Object? startDate = freezed,
     Object? endDate = freezed,
@@ -382,6 +391,10 @@ class __$$TodoListItemDtoImplCopyWithImpl<$Res>
         category: freezed == category
             ? _value.category
             : category // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        colorHex: freezed == colorHex
+            ? _value.colorHex
+            : colorHex // ignore: cast_nullable_to_non_nullable
                   as String?,
         type: freezed == type
             ? _value.type
@@ -418,6 +431,7 @@ class _$TodoListItemDtoImpl implements _TodoListItemDto {
     this.content,
     this.priority,
     this.category,
+    this.colorHex,
     this.type,
     this.startDate,
     this.endDate,
@@ -441,6 +455,8 @@ class _$TodoListItemDtoImpl implements _TodoListItemDto {
   @override
   final String? category;
   @override
+  final String? colorHex;
+  @override
   final String? type;
   @override
   final String? startDate;
@@ -460,7 +476,7 @@ class _$TodoListItemDtoImpl implements _TodoListItemDto {
 
   @override
   String toString() {
-    return 'TodoListItemDto(todoId: $todoId, title: $title, status: $status, content: $content, priority: $priority, category: $category, type: $type, startDate: $startDate, endDate: $endDate, alarmTime: $alarmTime, daysOfWeek: $daysOfWeek)';
+    return 'TodoListItemDto(todoId: $todoId, title: $title, status: $status, content: $content, priority: $priority, category: $category, colorHex: $colorHex, type: $type, startDate: $startDate, endDate: $endDate, alarmTime: $alarmTime, daysOfWeek: $daysOfWeek)';
   }
 
   @override
@@ -476,6 +492,8 @@ class _$TodoListItemDtoImpl implements _TodoListItemDto {
                 other.priority == priority) &&
             (identical(other.category, category) ||
                 other.category == category) &&
+            (identical(other.colorHex, colorHex) ||
+                other.colorHex == colorHex) &&
             (identical(other.type, type) || other.type == type) &&
             (identical(other.startDate, startDate) ||
                 other.startDate == startDate) &&
@@ -498,6 +516,7 @@ class _$TodoListItemDtoImpl implements _TodoListItemDto {
     content,
     priority,
     category,
+    colorHex,
     type,
     startDate,
     endDate,
@@ -530,6 +549,7 @@ abstract class _TodoListItemDto implements TodoListItemDto {
     final String? content,
     final int? priority,
     final String? category,
+    final String? colorHex,
     final String? type,
     final String? startDate,
     final String? endDate,
@@ -552,6 +572,8 @@ abstract class _TodoListItemDto implements TodoListItemDto {
   int? get priority;
   @override
   String? get category;
+  @override
+  String? get colorHex;
   @override
   String? get type;
   @override
