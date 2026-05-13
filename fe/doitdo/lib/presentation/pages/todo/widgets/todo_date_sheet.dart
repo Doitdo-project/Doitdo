@@ -85,6 +85,8 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
   DateTime? _rangeStart;
   DateTime? _rangeEnd;
 
+  bool _showRangeError = false;
+
   String _repeatType = '매주';
   final List<bool> _selectedWeekdays = List.filled(7, false);
   DateTime _repeatStartDate = DateTime.now();
@@ -153,6 +155,10 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
       AppTextStyles.labelMedium.copyWith(color: c.textPrimary),
       outsideTextStyle:
       AppTextStyles.labelMedium.copyWith(color: c.textHint),
+      // 원 크기 32 (rowHeight 50 - 2*9)
+      cellMargin: const EdgeInsets.all(9),
+      // 전달/이후 달 날짜 숨김
+      outsideDaysVisible: false,
     );
   }
 
@@ -187,6 +193,8 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
       AppTextStyles.labelMedium.copyWith(color: c.textPrimary),
       outsideTextStyle:
       AppTextStyles.labelMedium.copyWith(color: c.textHint),
+      // 전달/이후 달 날짜 숨김 (기간 탭 전용)
+      outsideDaysVisible: false,
     );
   }
 
@@ -236,7 +244,15 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
                     color: AppColors.calendarPoint, size: 18)
                     : null,
                 onTap: () {
-                  setState(() => _repeatType = type);
+                  setState(() {
+                    if (_repeatType != type) {
+                      _repeatType = type;
+                      // 유형이 바뀌면 종료 날짜 초기화.
+                      // 이전 유형의 날짜 목록과 새 유형의 목록이 달라서
+                      // 선택된 날짜가 새 옵션에 없는 불일치 상태 방지.
+                      _repeatEndDate = null;
+                    }
+                  });
                   Navigator.pop(context);
                 },
               );
@@ -252,11 +268,23 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
     final start = _repeatStartDate;
     final result = <DateTime>[];
 
+    // 각 case 가 독립 실행되도록 명시적 return 사용
+    // (Dart 버전에 따라 break 없으면 fall-through 가능성 있음)
     switch (_repeatType) {
       case '매일':
-        for (final days in [7, 14, 30, 60, 90, 180]) {
-          result.add(start.add(Duration(days: days)));
+      // 매일 반복 = 모든 요일이 유효 → '매주'와 동일한 방식으로
+      // 실제 다음 발생 날짜 20개를 순서대로 계산.
+      // 고정 간격(7/14/30일)이 아닌 실제 날짜 패턴 기반.
+        {
+          var cur = start.add(const Duration(days: 1));
+          int safety = 0;
+          while (result.length < 20 && safety < 400) {
+            result.add(cur);
+            cur = cur.add(const Duration(days: 1));
+            safety++;
+          }
         }
+        return result;
       case '매주':
         final selDays = [
           for (int i = 0; i < 7; i++) if (_selectedWeekdays[i]) i,
@@ -269,6 +297,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
           cur = cur.add(const Duration(days: 1));
           safety++;
         }
+        return result;
       case '매월':
         for (int i = 1; i <= 12; i++) {
           var m = start.month + i;
@@ -280,10 +309,12 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
           final maxDay = DateTime(y, m + 1, 0).day;
           result.add(DateTime(y, m, start.day.clamp(1, maxDay)));
         }
+        return result;
       case '매년':
         for (int i = 1; i <= 5; i++) {
           result.add(DateTime(start.year + i, start.month, start.day));
         }
+        return result;
     }
     return result;
   }
@@ -489,6 +520,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
                 _rangeStart = start;
                 _rangeEnd = end;
                 _focusedDay = focusedDay;
+                if (start != null && end != null) _showRangeError = false;
               });
             },
             onPageChanged: (foc) => setState(() => _focusedDay = foc),
@@ -641,6 +673,19 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
       ],
     );
 
+    // 기간 탭 인라인 에러 메시지
+    final rangeErrorText = _showRangeError && _selectedTab == 1
+        ? Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        '기간의 끝 날짜를 선택해주세요',
+        style: AppTextStyles.bodySmall
+            .copyWith(color: Colors.redAccent),
+        textAlign: TextAlign.center,
+      ),
+    )
+        : const SizedBox.shrink();
+
     final buttonRow = Row(
       children: [
         Expanded(
@@ -652,6 +697,13 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
             height: 48,
             label: '확인',
             onPressed: () {
+              // 기간 탭: 시작 + 끝 모두 지정되어야 저장 가능
+              if (_selectedTab == 1 &&
+                  (_rangeStart == null || _rangeEnd == null)) {
+                setState(() => _showRangeError = true);
+                return;
+              }
+
               final TodoDateResult result;
               switch (_selectedTab) {
                 case 1:
@@ -702,7 +754,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
                 child: tabContent,
               ),
             ),
-            const SizedBox(height: 16),
+            rangeErrorText,
             buttonRow,
           ],
         ),
@@ -737,6 +789,7 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
               const SizedBox(height: 16),
               tabContent,
               const SizedBox(height: 24),
+              rangeErrorText,
               buttonRow,
             ],
           ),
@@ -748,11 +801,12 @@ class _TodoDateSheetState extends State<TodoDateSheet> {
 
 // ─────────────────────────────────────────────
 // 공통 상수 (기간 탭)
+// rowHeight 50, 원 크기 32 (캘린더 기본 셀과 동일).
+// _kCircleTop=9: 50px 행에서 32px 원이 정중앙. 막대도 같은 Y 영역.
+// 라벨은 Align(topCenter) 로 9px 공간 최상단에 붙임 → 시각적으로 위로.
 // ─────────────────────────────────────────────
-const double _kLabelH = 12.0;
-const double _kGap = 2.0;
-const double _kCircleTop = _kLabelH + _kGap;
-const double _kCircleSize = 36.0;
+const double _kCircleSize = 32.0;
+const double _kCircleTop = 9.0;  // (50 - 32) / 2 — 중앙 정렬
 
 class _RangeMiddleCell extends StatelessWidget {
   const _RangeMiddleCell({required this.day});
@@ -763,6 +817,7 @@ class _RangeMiddleCell extends StatelessWidget {
     final c = context.colors;
     return Stack(
       children: [
+        // 가운데 막대 — 행의 세로 정중앙에 _kCircleSize 만큼 깔림
         Positioned(
           top: _kCircleTop,
           left: 0,
@@ -770,17 +825,12 @@ class _RangeMiddleCell extends StatelessWidget {
           height: _kCircleSize,
           child: Container(color: c.calendarRangeHighlight),
         ),
-        Positioned(
-          top: _kCircleTop,
-          left: 0,
-          right: 0,
-          height: _kCircleSize,
-          child: Center(
-            child: Text(
-              '${day.day}',
-              style:
-              AppTextStyles.labelMedium.copyWith(color: c.textPrimary),
-            ),
+        // 날짜 텍스트 — 셀 전체에서 중앙 정렬 (기본 셀과 동일 Y)
+        Center(
+          child: Text(
+            '${day.day}',
+            style:
+            AppTextStyles.labelMedium.copyWith(color: c.textPrimary),
           ),
         ),
       ],
@@ -796,7 +846,7 @@ class _RangeLabelCell extends StatelessWidget {
     this.showTail = true,
   });
   final DateTime day;
-  final String label;
+  final String label;  // '시작' or '끝'
   final bool isStart;
   final bool showTail;
 
@@ -805,66 +855,52 @@ class _RangeLabelCell extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final cellW = constraints.maxWidth;
-
         return Stack(
           children: [
+            // 꼬리 막대 — 원과 같은 Y 영역에 연결
             if (showTail)
               Positioned(
                 top: _kCircleTop,
                 left: isStart ? cellW / 2 : 0,
                 right: isStart ? 0 : cellW / 2,
                 height: _kCircleSize,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: context.colors.calendarRangeHighlight,
-                    borderRadius: BorderRadius.only(
-                      topLeft: isStart
-                          ? Radius.circular(_kCircleSize / 2)
-                          : Radius.zero,
-                      bottomLeft: isStart
-                          ? Radius.circular(_kCircleSize / 2)
-                          : Radius.zero,
-                      topRight: !isStart
-                          ? Radius.circular(_kCircleSize / 2)
-                          : Radius.zero,
-                      bottomRight: !isStart
-                          ? Radius.circular(_kCircleSize / 2)
-                          : Radius.zero,
-                    ),
-                  ),
-                ),
+                child: Container(color: context.colors.calendarRangeHighlight),
               ),
+            // 시작/끝 라벨 — 9px 공간 최상단에 위치.
+            // 음수 top 대신 폰트 사이즈를 작게(9) → 9px 안에 깔끔하게 들어가고
+            // 시각적으로 위쪽에 떠있는 느낌. 잘림 없음.
             Positioned(
               top: 0,
               left: 0,
               right: 0,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    height: _kLabelH,
-                    child: Text(
-                      label,
-                      style: AppTextStyles.labelSmall
-                          .copyWith(color: AppColors.calendarPoint),
-                    ),
+              height: _kCircleTop,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Text(
+                  label,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.calendarPoint,
+                    fontSize: 9,
+                    height: 1,
                   ),
-                  const SizedBox(height: _kGap),
-                  Container(
-                    width: _kCircleSize,
-                    height: _kCircleSize,
-                    decoration: const BoxDecoration(
-                      color: AppColors.calendarPoint,
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '${day.day}',
-                      style: AppTextStyles.labelMedium
-                          .copyWith(color: Colors.white),
-                    ),
-                  ),
-                ],
+                ),
+              ),
+            ),
+            // 원 — 행 중앙 정렬 (날짜 y=25, 기본 셀과 동일)
+            Center(
+              child: Container(
+                width: _kCircleSize,
+                height: _kCircleSize,
+                decoration: const BoxDecoration(
+                  color: AppColors.calendarPoint,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '${day.day}',
+                  style: AppTextStyles.labelMedium
+                      .copyWith(color: Colors.white),
+                ),
               ),
             ),
           ],
@@ -883,8 +919,8 @@ class _TodayCell extends StatelessWidget {
     final c = context.colors;
     return Center(
       child: Container(
-        width: 38,
-        height: 38,
+        width: _kCircleSize,
+        height: _kCircleSize,
         decoration: BoxDecoration(
           color: c.calendarRangeHighlight,
           shape: BoxShape.circle,
@@ -1102,6 +1138,10 @@ class _DateScrollPickerState extends State<_DateScrollPicker> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    // 애플 picker 스펙
+    // - itemExtent 36: 한 줄에 5개(중앙 + 위 2 + 아래 2) 보이는 컴팩트한 간격
+    // - 전체 높이 180: 위/아래 여백 + 중앙 선택 영역
+    // - 중앙 highlight bar 가 picker 전체 폭을 가로지르며 선택 영역 시각화
     const itemExtent = 36.0;
     const wheelHeight = 180.0;
 
