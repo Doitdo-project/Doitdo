@@ -63,8 +63,6 @@ class RecurrenceServiceImplTest {
 				.willReturn(List.of(deletedMarker));
 		given(categoryRepository.findAllByUserIdOrderByCategoryIdAsc(1L)).willReturn(List.of());
 		given(paletteColorRepository.findAll()).willReturn(List.of());
-		given(snoozeHistoryRepository.countByTodoIdIn(any())).willReturn(List.of());
-		given(snoozeHistoryRepository.findEarliestFromDateByTodoIdIn(any())).willReturn(List.of());
 
 		TodoCalendarResp resp = service.calendar(
 				1L,
