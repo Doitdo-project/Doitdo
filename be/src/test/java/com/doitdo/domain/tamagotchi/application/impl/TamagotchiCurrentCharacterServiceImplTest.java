@@ -92,7 +92,7 @@ class TamagotchiCurrentCharacterServiceImplTest {
 			.characterId(2L)
 			.species("SLIME")
 			.stage(Character.Stage.BABY)
-			.requiredExp(100)
+			.requiredExp(75)
 			.thumbnailUrl("https://cdn.example.com/slime.png")
 			.build();
 
@@ -107,10 +107,10 @@ class TamagotchiCurrentCharacterServiceImplTest {
 		assertThat(resp.name()).isEqualTo("saesangi");
 		assertThat(resp.stage()).isEqualTo("BABY");
 		assertThat(resp.thumbnailUrl()).isEqualTo("https://cdn.example.com/slime.png");
-		assertThat(resp.growthPercent()).isEqualTo(45); // 45/100 * 100 = 45
+		assertThat(resp.growthPercent()).isEqualTo(60); // 45/75 * 100 = 60
 		assertThat(resp.currentExp()).isEqualTo(45);
-		assertThat(resp.requiredExp()).isEqualTo(100);
-		assertThat(resp.canEvolve()).isFalse(); // 45 < 100
+		assertThat(resp.requiredExp()).isEqualTo(75);
+		assertThat(resp.canEvolve()).isFalse(); // 45 < 75
 		assertThat(resp.canFarewell()).isFalse();
 		assertThat(resp.equippedUserItemId()).isEqualTo(42L);
 	}

@@ -3,6 +3,7 @@
 > 변경 이력: 2026-05-08 `AnimationAction` enum 전환 설계에 맞춰 다마고치 액션 적립 정책을 `EYE` 제외 블랙리스트에서 "모든 enum 액션 호출 적립" 화이트리스트로 갱신.
 > 변경 이력: 2026-05-13 Stage 1 개정 반영. 7일 스트릭 500, TODO 완료 20/1개당(일일 5회), 캐릭터 터치 50/2시간/일일 2회, cap 100/200 정책으로 갱신.
 > 변경 이력: 2026-05-13 Stage 2 attendance 추가 반영. 출석 보상은 `DAILY_ATTENDANCE` source 로 100 뚜레딧 / 일 1회 지급하며, `PET_TOUCH` + `TODO_COMPLETION` 합산 cap 에 포함하지 않는다.
+> 변경 이력: 2026-05-13 Stage 3 EXP 재조정 반영. `characters.required_exp` 는 BABY 75, TEEN 100, ADULT 125 로 운영한다.
 > 변경 이력: 2026-05-13 Stage 5 자동 적립 전환. 별도 `POST /api/users/me/attendance` 없이 `GET /api/users/me` 첫 호출에서 출석 보상을 lazy claim 한다.
 
 ## 배경

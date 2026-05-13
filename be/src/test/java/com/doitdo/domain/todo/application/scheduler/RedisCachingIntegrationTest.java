@@ -320,7 +320,7 @@ class RedisCachingIntegrationTest {
 				.species("SLIME")
 				.name("slime")
 				.stage(Character.Stage.BABY)
-				.requiredExp(100)
+				.requiredExp(75)
 				.thumbnailUrl("https://cdn.example.com/slime.png")
 				.build());
 		userCharacterRepository.saveAndFlush(UserCharacter.builder()

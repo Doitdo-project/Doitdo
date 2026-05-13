@@ -79,6 +79,19 @@
 
 `PET_TOUCH` + `TODO_COMPLETION` 합산 일일 한도는 200 뚜레딧이다. `DAILY_ATTENDANCE` 는 `wallet_earn_logs` 당일 SUM 조회로 자동 적립 여부를 판단하고, 이 합산 cap 에 포함하지 않는다.
 
+## tamagotchi 도메인 성장 EXP 정책
+
+`characters.required_exp` 는 현재 단계에서 다음 상태 전환 또는 독립 가능 판정에 필요한 EXP 기준값이다.
+
+| stage | required_exp | 비고 |
+|---|---:|---|
+| `EGG` | 0 | 부화 전 단계. TODO 완료 EXP 누적 대상 아님 |
+| `BABY` | 75 | `current_exp >= 75` 이면 TEEN 진화 가능 |
+| `TEEN` | 100 | `current_exp >= 100` 이면 ADULT 진화 가능 |
+| `ADULT` | 125 | `current_exp >= 125` 이면 독립 가능 판정 대상 |
+
+TODO 완료 1건당 캐릭터 EXP 보상은 3~7 랜덤이며, `UserCharacter.gainExp` 에서 현재 단계의 `required_exp` 를 cap 으로 사용한다.
+
 ## tamagotchi 도메인 변경 컬럼 (다마고치 터치 적립)
 
 | 테이블 | 컬럼 | 타입 | 비고 |
