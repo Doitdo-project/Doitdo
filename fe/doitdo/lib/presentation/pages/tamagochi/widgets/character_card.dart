@@ -767,9 +767,15 @@ class _GrownCharacterState extends State<_GrownCharacter> {
       );
     }
 
+    // widthFactor: 1.0 으로 Center 가 child 의 자연 폭(이미지 BoxFit.contain 결과
+    // = 자연 종횡비 폭) 만큼만 차지하도록 한다. 기본 widthFactor=null 이면 Center 가
+    // 부모의 max 폭(= 캔버스 전체) 으로 확장돼 _WalkingSlot 의 GestureDetector hit 영역도
+    // 캐릭터 양옆의 빈 여백까지 덮어, "캐릭터 아닌 곳을 눌러도 말풍선이 바뀌는" 버그가
+    // 생긴다.
     return SizedBox(
       height: widget.imageHeight,
       child: Center(
+        widthFactor: 1.0,
         child: Stack(
           alignment: Alignment.center,
           children: [
