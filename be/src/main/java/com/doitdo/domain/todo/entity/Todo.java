@@ -152,6 +152,10 @@ public class Todo extends BaseTimeEntity {
 		this.priority = priority;
 	}
 
+	public void changeEndDate(LocalDate endDate) {
+		this.endDate = endDate;
+	}
+
 	public void clearAlertTime() {
 		this.alertTime = null;
 	}

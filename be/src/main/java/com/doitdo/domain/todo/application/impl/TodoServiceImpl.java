@@ -272,11 +272,43 @@ public class TodoServiceImpl implements TodoService {
 	@Override
 	@Transactional
 	public void delete(Long userId, Long todoId, String scope) {
+		delete(userId, todoId, scope, null);
+	}
+
+	@Override
+	@Transactional
+	public void delete(Long userId, Long todoId, String scope, LocalDate occurrenceDate) {
 		Todo todo = todoRepository.findByTodoIdAndIsDeletedFalse(todoId)
 				.orElseThrow(() -> new CustomException(TodoErrorCode.T01_001));
 
 		if (!todo.getUserId().equals(userId)) {
 			throw new CustomException(TodoErrorCode.T01_003);
+		}
+
+		if (todo.getType() == TodoType.RECURRING && isOnlyScope(scope)) {
+			Todo instance = recurrenceService.materializeRecurringOccurrence(userId, todo, occurrenceDate);
+			instance.softDelete();
+			log.info("event=TODO_RECURRING_OCCURRENCE_DELETED userId={} masterTodoId={} instanceTodoId={} occurrenceDate={}",
+					userId, todo.getTodoId(), instance.getTodoId(), occurrenceDate);
+			cacheEvictHelper.evictUserTodosAfterCommit(userId);
+			cacheEvictHelper.evictTodoItemAfterCommit(userId, todoId);
+			cacheEvictHelper.evictTodoItemAfterCommit(userId, instance.getTodoId());
+			return;
+		}
+
+		if (todo.getType() == TodoType.RECURRING && isFromScope(scope)) {
+			validateOccurrenceOfMaster(todo, occurrenceDate);
+			todo.changeEndDate(occurrenceDate.minusDays(1));
+			todoRepository.findAllByUserIdAndMasterTodoIdAndStartDateGreaterThanEqualAndIsDeletedFalse(
+							userId,
+							todo.getTodoId(),
+							occurrenceDate)
+					.forEach(Todo::softDelete);
+			log.info("event=TODO_RECURRING_FROM_DELETED userId={} masterTodoId={} occurrenceDate={}",
+					userId, todo.getTodoId(), occurrenceDate);
+			cacheEvictHelper.evictUserTodosAfterCommit(userId);
+			cacheEvictHelper.evictTodoItemAfterCommit(userId, todoId);
+			return;
 		}
 
 		todo.softDelete();
@@ -292,12 +324,33 @@ public class TodoServiceImpl implements TodoService {
 	@Override
 	@Transactional
 	public TodoDetailResp update(Long userId, Long todoId, TodoUpdateReq req) {
+		return update(userId, todoId, req, null, null);
+	}
+
+	@Override
+	@Transactional
+	public TodoDetailResp update(Long userId, Long todoId, TodoUpdateReq req, String scope, LocalDate occurrenceDate) {
 		Todo todo = todoRepository.findByTodoIdAndIsDeletedFalse(todoId)
 				.orElseThrow(() -> new CustomException(TodoErrorCode.T04_001));
 
 		if (!todo.getUserId().equals(userId)) {
 			throw new CustomException(TodoErrorCode.T04_003);
 		}
+
+		if (todo.getType() == TodoType.RECURRING && isOnlyScope(scope)) {
+			Todo instance = recurrenceService.materializeRecurringOccurrence(userId, todo, occurrenceDate);
+			return updateSingleTodo(userId, instance, req, todoId);
+		}
+
+		if (todo.getType() == TodoType.RECURRING && isFromScope(scope)) {
+			validateOccurrenceOfMaster(todo, occurrenceDate);
+			return updateRecurringFrom(userId, todo, req, occurrenceDate);
+		}
+
+		return updateSingleTodo(userId, todo, req, todoId);
+	}
+
+	private TodoDetailResp updateSingleTodo(Long userId, Todo todo, TodoUpdateReq req, Long requestedTodoId) {
 
 		if (todo.getStatus() == TodoStatus.IN_PROGRESS || todo.getStatus() == TodoStatus.DONE) {
 			throw new CustomException(TodoErrorCode.T04_004);
@@ -339,11 +392,69 @@ public class TodoServiceImpl implements TodoService {
 
 		log.info("event=TODO_UPDATED userId={} todoId={}", userId, todo.getTodoId());
 		cacheEvictHelper.evictUserTodosAfterCommit(userId);
-		cacheEvictHelper.evictTodoItemAfterCommit(userId, todoId);
+		cacheEvictHelper.evictTodoItemAfterCommit(userId, requestedTodoId);
+		if (!requestedTodoId.equals(todo.getTodoId())) {
+			cacheEvictHelper.evictTodoItemAfterCommit(userId, todo.getTodoId());
+		}
 
 		String colorHex = resolveColorHexForTodo(userId, todo);
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
 		return TodoDetailResp.from(todo, todo.getCategoryName(), colorHex, count);
+	}
+
+	private TodoDetailResp updateRecurringFrom(Long userId, Todo master, TodoUpdateReq req, LocalDate occurrenceDate) {
+		if (master.getStatus() == TodoStatus.IN_PROGRESS || master.getStatus() == TodoStatus.DONE) {
+			throw new CustomException(TodoErrorCode.T04_004);
+		}
+
+		LocalDate originalEndDate = master.getEndDate();
+		master.changeEndDate(occurrenceDate.minusDays(1));
+		todoRepository.findAllByUserIdAndMasterTodoIdAndStartDateGreaterThanEqualAndIsDeletedFalse(
+						userId,
+						master.getTodoId(),
+						occurrenceDate)
+				.forEach(Todo::softDelete);
+
+		Long categoryId = master.getCategoryId();
+		String categoryName = master.getCategoryName();
+		Integer categoryColorId = master.getCategoryColorId();
+		if (req.category() != null && StringUtils.hasText(req.category())) {
+			Category category = categoryRepository.findByCategoryNameAndUserId(req.category(), userId)
+					.orElseThrow(() -> new CustomException(TodoErrorCode.T04_005));
+			categoryId = category.getCategoryId();
+			categoryName = category.getCategoryName();
+			categoryColorId = category.getColorId();
+		}
+
+		Set<DayOfWeek> daysOfWeek = req.daysOfWeek() != null ? parseDaysOfWeek(req.daysOfWeek()) : master.getDaysOfWeek();
+		validateRecurringDays(TodoType.RECURRING, occurrenceDate, daysOfWeek);
+		String alertTime = Boolean.TRUE.equals(req.clearAlertTime())
+				? null
+				: req.alertTime() != null ? req.alertTime() : master.getAlertTime();
+		Todo newMaster = todoRepository.save(Todo.create(
+				userId,
+				categoryId,
+				categoryName,
+				categoryColorId,
+				req.title() != null ? req.title() : master.getTitle(),
+				req.content(),
+				TodoType.RECURRING,
+				master.getPriority(),
+				alertTime,
+				occurrenceDate,
+				req.endDate() != null ? req.endDate() : originalEndDate,
+				daysOfWeek));
+
+		log.info("event=TODO_RECURRING_FROM_UPDATED userId={} oldMasterTodoId={} newMasterTodoId={} occurrenceDate={}",
+				userId, master.getTodoId(), newMaster.getTodoId(), occurrenceDate);
+		cacheEvictHelper.evictUserTodosAfterCommit(userId);
+		cacheEvictHelper.evictTodoItemAfterCommit(userId, master.getTodoId());
+		if (newMaster.getTodoId() != null) {
+			cacheEvictHelper.evictTodoItemAfterCommit(userId, newMaster.getTodoId());
+		}
+
+		String colorHex = resolveColorHexForTodo(userId, newMaster);
+		return TodoDetailResp.from(newMaster, newMaster.getCategoryName(), colorHex, 0);
 	}
 
 	@Override
@@ -512,6 +623,23 @@ public class TodoServiceImpl implements TodoService {
 
 	private boolean isAllScope(String scope) {
 		return StringUtils.hasText(scope) && "all".equalsIgnoreCase(scope);
+	}
+
+	private boolean isOnlyScope(String scope) {
+		return StringUtils.hasText(scope) && "only".equalsIgnoreCase(scope);
+	}
+
+	private boolean isFromScope(String scope) {
+		return StringUtils.hasText(scope) && "from".equalsIgnoreCase(scope);
+	}
+
+	private void validateOccurrenceOfMaster(Todo master, LocalDate occurrenceDate) {
+		if (occurrenceDate == null
+				|| occurrenceDate.isBefore(master.getStartDate())
+				|| (master.getEndDate() != null && occurrenceDate.isAfter(master.getEndDate()))
+				|| !master.getDaysOfWeek().contains(occurrenceDate.getDayOfWeek())) {
+			throw new CustomException(TodoErrorCode.T03_004);
+		}
 	}
 
 	private Set<DayOfWeek> parseDaysOfWeek(Set<String> daysOfWeek) {

@@ -79,6 +79,10 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 				.collect(Collectors.groupingBy(Todo::getTitle));
 
 		Map<Long, Set<LocalDate>> actualizedOccurrencesByMasterId = new HashMap<>();
+		loadRecurringInstanceMarkers(userId, req, recurringMasters)
+				.forEach(marker -> actualizedOccurrencesByMasterId
+						.computeIfAbsent(marker.getMasterTodoId(), ignored -> new java.util.HashSet<>())
+						.add(marker.getStartDate()));
 		List<CalendarItemResp> items = new ArrayList<>();
 
 		for (Todo actualTodo : actualTodos) {
@@ -223,6 +227,16 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 								SnoozeOriginProjection::getTodoId,
 								SnoozeOriginProjection::getFromDate
 						));
+	}
+
+	private List<Todo> loadRecurringInstanceMarkers(Long userId, TodoCalendarReq req, List<Todo> recurringMasters) {
+		List<Long> masterIds = recurringMasters.stream()
+				.map(Todo::getTodoId)
+				.toList();
+
+		return masterIds.isEmpty()
+				? List.of()
+				: todoRepository.findRecurringInstanceMarkers(userId, masterIds, req.from(), req.to());
 	}
 
 	private CalendarItemResp toActualCalendarItem(
