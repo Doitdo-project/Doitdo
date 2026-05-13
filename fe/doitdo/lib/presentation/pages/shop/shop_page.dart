@@ -271,31 +271,202 @@ class _ItemGrid extends StatelessWidget {
   }
 }
 
-class _CoinBadge extends StatelessWidget {
+/// 상점 상단 코인 잔액 뱃지. 탭하면 [StatusPill] 의 스트릭/단계 팝오버와 동일한
+/// 톤(흰 카드 + 꼬리) 으로 "코인을 어떻게 모으는지" 안내를 띄운다 — 신규 사용자가
+/// 코인 획득 경로를 따로 찾지 않아도 되도록 한 화면 안에서 자기 설명적이게.
+class _CoinBadge extends StatefulWidget {
   const _CoinBadge({required this.coins});
 
   final int coins;
 
   @override
+  State<_CoinBadge> createState() => _CoinBadgeState();
+}
+
+class _CoinBadgeState extends State<_CoinBadge> {
+  final GlobalKey _anchorKey = GlobalKey();
+  OverlayEntry? _entry;
+
+  @override
+  void dispose() {
+    _hidePopover();
+    super.dispose();
+  }
+
+  void _hidePopover() {
+    _entry?.remove();
+    _entry = null;
+  }
+
+  void _showPopover() {
+    if (!mounted) return;
+    _hidePopover();
+
+    final box = _anchorKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final overlayState = Overlay.of(context, rootOverlay: true);
+    final overlayBox = overlayState.context.findRenderObject() as RenderBox;
+    final pos = box.localToGlobal(Offset.zero, ancestor: overlayBox);
+    final anchorSize = box.size;
+    final screen = overlayBox.size;
+    final horizontalPadding = 16.w;
+    final cardWidth = 260.w;
+    final anchorCenterX = pos.dx + anchorSize.width / 2;
+    final left = (anchorCenterX - cardWidth / 2).clamp(
+      horizontalPadding,
+      screen.width - horizontalPadding - cardWidth,
+    );
+    // 꼬리 좌표는 카드 좌측 기준. 카드가 화면 가장자리로 밀려도 꼬리는 anchor 중앙을
+    // 가리키도록 위치 보정.
+    final tailRelX = (anchorCenterX - left).clamp(20.w, cardWidth - 20.w);
+
+    _entry = OverlayEntry(
+      builder: (ctx) {
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _hidePopover,
+              ),
+            ),
+            Positioned(
+              left: left,
+              width: cardWidth,
+              // 코인 뱃지가 top bar 에 있으므로 팝오버는 아래로 열림 — 꼬리는 위쪽.
+              top: pos.dy + anchorSize.height + 8.h,
+              child: _CoinPopoverCard(
+                tailLeft: tailRelX,
+                child: const _CoinInfoContent(),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    overlayState.insert(_entry!);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
-      decoration: BoxDecoration(
-        color: colors.streakCardBg,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: colors.streakDotActive.withValues(alpha: 0.3)),
+    return GestureDetector(
+      key: _anchorKey,
+      onTap: _showPopover,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+        decoration: BoxDecoration(
+          color: colors.streakCardBg,
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(color: colors.streakDotActive.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CoinIcon(size: 18.sp),
+            SizedBox(width: 4.w),
+            Text(
+              _formatCoins(widget.coins),
+              style: AppTextStyles.labelMedium.copyWith(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Row(
+    );
+  }
+}
+
+/// 상점 코인 뱃지 아래에 뜨는 팝오버 카드. [StatusPill] 의 흰 카드와 같은 톤이지만
+/// 꼬리가 카드 상단에서 위쪽(anchor)을 가리킨다.
+class _CoinPopoverCard extends StatelessWidget {
+  const _CoinPopoverCard({required this.tailLeft, required this.child});
+
+  /// 카드 좌측 기준 꼬리 중심 X (px, 이미 .w 스케일 적용된 값).
+  final double tailLeft;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16.r),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: child,
+          ),
+          Positioned(
+            left: tailLeft - 8.w,
+            top: -7.h,
+            child: CustomPaint(
+              size: Size(16.w, 8.h),
+              painter: const _UpTailPainter(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UpTailPainter extends CustomPainter {
+  const _UpTailPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    final path = Path()
+      ..moveTo(0, size.height)
+      ..lineTo(size.width, size.height)
+      ..lineTo(size.width / 2, 0)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _UpTailPainter old) => old.color != color;
+}
+
+class _CoinInfoContent extends StatelessWidget {
+  const _CoinInfoContent();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 14.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          CoinIcon(size: 18.sp),
-          SizedBox(width: 4.w),
           Text(
-            _formatCoins(coins),
-            style: AppTextStyles.labelMedium.copyWith(
-              color: colors.textPrimary,
-              fontWeight: FontWeight.w700,
+            '코인은 이렇게 모을 수 있어요',
+            style: AppTextStyles.bodySmall.copyWith(color: Colors.black),
+          ),
+          SizedBox(height: 10.h),
+          Container(height: 1, color: const Color(0xFFF0F0F0)),
+          SizedBox(height: 10.h),
+          Text(
+            '✅ 할 일을 완료할 때마다 코인을 모을 수 있어요\n🔥 7일 연속 달성 시 보너스 코인도 받을 수 있어요!',
+            style: AppTextStyles.labelSmall.copyWith(
+              color: Colors.black54,
+              height: 1.5,
             ),
           ),
         ],
