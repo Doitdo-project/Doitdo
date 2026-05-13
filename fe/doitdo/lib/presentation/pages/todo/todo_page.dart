@@ -10,7 +10,8 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/notification/notification_view_model.dart';
-import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart'; // ✅ 추가
+import 'package:doitdo/data/models/category_dto.dart';
+import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
 import 'package:doitdo/presentation/pages/todo/todo_add_notifier.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/widgets/common/character_mascot_image.dart';
@@ -229,15 +230,13 @@ class _TodoPageState extends ConsumerState<TodoPage> {
     final vm     = ref.read(todoViewModelProvider.notifier);
     final colors = context.colors;
 
-    // ✅ 서버 카테고리 목록 구독 (실제 colorId 기반 색상 사용)
     final categoryList = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
-
-    // ✅ 카테고리 이름으로 실제 Color를 찾는 헬퍼
-    Color getDotColor(String categoryName) {
+    Color getDotColor(Todo t) {
       try {
-        return categoryList.firstWhere((c) => c.categoryName == categoryName).color;
+        return categoryList.firstWhere((c) => c.categoryName == t.category.name).color;
       } catch (_) {
-        return AppColors.category1; // detail sheet와 동일한 fallback
+        if (t.colorHex != null) return hexToColor(t.colorHex!);
+        return AppColors.category1;
       }
     }
 
@@ -350,8 +349,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                   ),
 
                   TableCalendar(
-                    // ✅ 카테고리 목록이 로드되면 마커를 강제로 다시 렌더링
-                    key: ValueKey(categoryList.map((c) => '${c.categoryName}:${c.color.value}').join()),
+                    key: const ValueKey('calendar'),
                     firstDay: DateTime.utc(2020, 1, 1),
                     lastDay: DateTime.utc(2030, 12, 31),
                     focusedDay: state.focusedDay,
@@ -427,14 +425,22 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                         }
                         if (todos.isEmpty) return const SizedBox.shrink();
 
-                        // ✅ 2. 카테고리별로 DOT 중복 제거 (같은 카테고리는 1개만)
+                        // ✅ 2. 카테고리별 개수 집계 후 많은 순 정렬, 카테고리당 1개 DOT
+                        final countByCategory = <String, int>{};
+                        for (final t in todos) {
+                          countByCategory[t.category.name] = (countByCategory[t.category.name] ?? 0) + 1;
+                        }
+                        final sortedTodos = todos.toList()
+                          ..sort((a, b) => (countByCategory[b.category.name] ?? 0)
+                              .compareTo(countByCategory[a.category.name] ?? 0));
                         final seen = <String>{};
-                        final uniqueTodos = todos.where((t) {
-                          final name = t.category.name;
-                          if (seen.contains(name)) return false;
-                          seen.add(name);
-                          return true;
-                        }).take(6).toList();
+                        final uniqueTodos = <Todo>[];
+                        for (final t in sortedTodos) {
+                          if (seen.add(t.category.name)) {
+                            uniqueTodos.add(t);
+                            if (uniqueTodos.length >= 6) break;
+                          }
+                        }
 
                         final row1 = uniqueTodos.take(3).toList();
                         final row2 = uniqueTodos.length > 3 ? uniqueTodos.sublist(3) : <Todo>[];
@@ -448,7 +454,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                             // 좌우로 1픽셀씩 마진을 줍니다. (점 사이 간격은 여전히 2픽셀이 됩니다)
                             margin: const EdgeInsets.symmetric(horizontal: 1),
                             decoration: BoxDecoration(
-                              color: getDotColor(t.category.name)
+                              color: getDotColor(t)
                                   .withOpacity(isOutside ? 0.3 : 1.0),
                               shape: BoxShape.circle,
                             ),
