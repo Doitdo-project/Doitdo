@@ -84,7 +84,7 @@ public class AuthServiceImpl implements AuthService {
 				req.username()));
 
 		userWalletRepository.save(UserWallet.createEmpty(user.getUserId()));
-		creditEarnService.tryEarn(user.getUserId(), WalletEarnSource.SIGNUP_BONUS, 100, null, true);
+		creditEarnService.tryEarn(user.getUserId(), WalletEarnSource.SIGNUP_BONUS, 1000, null, true);
 		userSettingRepository.save(UserSetting.create(user.getUserId()));
 		userStreakRepository.save(UserStreak.create(user.getUserId()));
 		defaultCategoryRegistrar.registerFor(user.getUserId());

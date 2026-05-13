@@ -91,11 +91,11 @@ class DoreditEarningSystemIntegrationTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // Case 1: 회원가입 → 잔액 100 + SIGNUP_BONUS 로그
+    // Case 1: 회원가입 → 잔액 1000 + SIGNUP_BONUS 로그
     // ══════════════════════════════════════════════════════════════════════
     @Test
-    @DisplayName("Case 1: 회원가입 시 100 뚜레딧 적립 및 SIGNUP_BONUS 로그 생성")
-    void case01_signupGrantsHundredCreditAndLog() {
+    @DisplayName("Case 1: 회원가입 시 1000 뚜레딧 적립 및 SIGNUP_BONUS 로그 생성")
+    void case01_signupGrantsInitialCreditAndLog() {
         // EGG 캐릭터가 없으면 signup() 이 예외를 던지므로 미리 seed.
         seedEggCharacter("슬라임");
 
@@ -106,14 +106,14 @@ class DoreditEarningSystemIntegrationTest {
         UserWallet wallet = userWalletRepository.findByUserId(user.getUserId())
                 .orElseThrow(() -> new AssertionError("지갑이 없음"));
 
-        assertThat(wallet.getBalance()).isEqualTo(100);
+        assertThat(wallet.getBalance()).isEqualTo(1000);
 
         List<WalletEarnLog> logs = walletEarnLogRepository.findAll().stream()
                 .filter(l -> l.getUserId().equals(user.getUserId()))
                 .toList();
         assertThat(logs).hasSize(1);
         assertThat(logs.get(0).getSource()).isEqualTo(WalletEarnSource.SIGNUP_BONUS);
-        assertThat(logs.get(0).getAmount()).isEqualTo(100);
+        assertThat(logs.get(0).getAmount()).isEqualTo(1000);
     }
 
     // ══════════════════════════════════════════════════════════════════════

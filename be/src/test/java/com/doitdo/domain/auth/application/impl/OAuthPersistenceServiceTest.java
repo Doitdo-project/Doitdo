@@ -104,6 +104,6 @@ class OAuthPersistenceServiceTest {
 		assertThat(resp.isNewUser()).isTrue();
 		ArgumentCaptor<UserWallet> walletCaptor = forClass(UserWallet.class);
 		then(userWalletRepository).should().save(walletCaptor.capture());
-		assertThat(walletCaptor.getValue().getBalance()).isEqualTo(100);
+		assertThat(walletCaptor.getValue().getBalance()).isEqualTo(1000);
 	}
 }

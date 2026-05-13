@@ -131,7 +131,7 @@ class AuthServiceImplTest {
 		then(userWalletRepository).should().save(walletCaptor.capture());
 		assertThat(walletCaptor.getValue().getBalance()).isZero();
 		then(creditEarnService).should()
-			.tryEarn(1L, WalletEarnSource.SIGNUP_BONUS, 100, null, true);
+			.tryEarn(1L, WalletEarnSource.SIGNUP_BONUS, 1000, null, true);
 
 		ArgumentCaptor<UserCharacter> captor = forClass(UserCharacter.class);
 		then(userCharacterRepository).should().save(captor.capture());
