@@ -23,7 +23,8 @@ public class TodoListQueryRepository {
 				t.todoId,
 				t.title,
 				t.content,
-				c.categoryName,
+				t.categoryName,
+				t.categoryColorId,
 				t.type,
 				t.priority,
 				t.alertTime,
@@ -41,7 +42,8 @@ public class TodoListQueryRepository {
 				t.todoId,
 				t.title,
 				t.content,
-				c.categoryName,
+				t.categoryName,
+				t.categoryColorId,
 				t.type,
 				t.priority,
 				t.alertTime,
@@ -71,13 +73,13 @@ public class TodoListQueryRepository {
 		params.put("today", today);
 
 		StringBuilder jpql = new StringBuilder(SELECT_CLAUSE)
-				.append("FROM Todo t\n");
-		appendCategoryJoin(jpql, params, categoryName);
-		jpql.append("LEFT JOIN SnoozeHistory sh ON sh.todoId = t.todoId\n");
+				.append("FROM Todo t\n")
+				.append("LEFT JOIN SnoozeHistory sh ON sh.todoId = t.todoId\n");
 
 		List<String> where = new ArrayList<>();
 		where.add("t.userId = :userId");
 		where.add("t.isDeleted = false");
+		appendCategoryFilter(where, params, categoryName);
 		where.add("""
 				NOT (
 					t.type = com.doitdo.domain.todo.entity.Todo.TodoType.SOMEDAY
@@ -103,18 +105,17 @@ public class TodoListQueryRepository {
 		return query.getResultList();
 	}
 
-	private void appendCategoryJoin(StringBuilder jpql, Map<String, Object> params, String categoryName) {
-		if (StringUtils.hasText(categoryName)) {
-			jpql.append("""
-					JOIN Category c ON c.categoryId = t.categoryId
-						AND c.userId = :userId
-						AND c.categoryName = :categoryName
-					""");
-			params.put("categoryName", categoryName);
+	/**
+	 * 카테고리 이름 스냅샷 기반 필터.
+	 * Category 엔티티와의 JOIN 을 쓰지 않으므로 카테고리 삭제 후에도
+	 * todo 의 categoryName 스냅샷으로 매칭된다 (정책: 이름 기반 필터).
+	 */
+	private void appendCategoryFilter(List<String> where, Map<String, Object> params, String categoryName) {
+		if (!StringUtils.hasText(categoryName)) {
 			return;
 		}
-
-		jpql.append("LEFT JOIN Category c ON c.categoryId = t.categoryId\n");
+		where.add("t.categoryName = :categoryName");
+		params.put("categoryName", categoryName);
 	}
 
 	private void appendViewFilter(
@@ -192,7 +193,7 @@ public class TodoListQueryRepository {
 	private String resolveOrderBy(String sort) {
 		String normalizedSort = normalize(sort);
 		if ("category".equals(normalizedSort)) {
-			return "\nORDER BY t.categoryId ASC, t.startDate ASC, t.todoId ASC";
+			return "\nORDER BY t.categoryName ASC, t.startDate ASC, t.todoId ASC";
 		}
 		if ("priority".equals(normalizedSort)) {
 			return "\nORDER BY t.priority DESC, t.startDate ASC, t.todoId ASC";

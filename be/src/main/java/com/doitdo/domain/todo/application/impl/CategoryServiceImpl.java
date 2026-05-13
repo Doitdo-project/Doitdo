@@ -9,6 +9,7 @@ import com.doitdo.domain.todo.entity.Category;
 import com.doitdo.domain.todo.entity.PaletteColor;
 import com.doitdo.domain.todo.repository.CategoryRepository;
 import com.doitdo.domain.todo.repository.PaletteColorRepository;
+import com.doitdo.domain.todo.repository.TodoRepository;
 import com.doitdo.global.cache.CacheEvictHelper;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TodoErrorCode;
@@ -29,6 +30,7 @@ public class CategoryServiceImpl implements CategoryService {
 
 	private final CategoryRepository categoryRepository;
 	private final PaletteColorRepository paletteColorRepository;
+	private final TodoRepository todoRepository;
 	private final CacheEvictHelper cacheEvictHelper;
 
 	/**
@@ -57,6 +59,11 @@ public class CategoryServiceImpl implements CategoryService {
 	/**
 	 * T11 — 카테고리 하드 삭제.
 	 * Category 엔티티에 isDeleted 없으므로 DB 에서 직접 삭제한다.
+	 *
+	 * 정책: 삭제 시 해당 카테고리를 쓰던 활성 todo 의 category_id 만 NULL 로 detach 한다.
+	 * 이름·색 스냅샷(category_name / category_color_id)은 그대로 잔여 →
+	 * 응답에서는 삭제된 카테고리 이름이 그대로 노출되고, 같은 이름의 카테고리가
+	 * 다시 생기면 응답 colorHex 가 새 카테고리의 색으로 자연스럽게 override 된다.
 	 */
 	@Override
 	@Transactional
@@ -68,6 +75,7 @@ public class CategoryServiceImpl implements CategoryService {
 			throw new CustomException(TodoErrorCode.T11_003);
 		}
 
+		todoRepository.detachCategoryId(userId, categoryId);
 		categoryRepository.delete(category);
 		log.info("event=CATEGORY_DELETED userId={} categoryId={}", userId, categoryId);
 		cacheEvictHelper.evictCategoriesAfterCommit(userId);
@@ -103,6 +111,15 @@ public class CategoryServiceImpl implements CategoryService {
 		}
 
 		category.update(req.name(), req.colorId());
+
+		// 변경 후 최종 이름·색을 해당 카테고리를 쓰는 활성 todo 들의 스냅샷에 일괄 전파.
+		// 이름·색 어느 한쪽만 바뀌어도 동일 쿼리로 처리됨 (변경 없는 컬럼은 동일 값 재기록).
+		todoRepository.bulkUpdateCategorySnapshot(
+				userId,
+				category.getCategoryId(),
+				category.getCategoryName(),
+				category.getColorId());
+
 		String colorHex = resolveColorHex(category.getColorId());
 		log.info("event=CATEGORY_UPDATED userId={} categoryId={}", userId, categoryId);
 		cacheEvictHelper.evictCategoriesAfterCommit(userId);

@@ -7,6 +7,7 @@ import com.doitdo.domain.todo.repository.CategoryRepository;
 import com.doitdo.domain.todo.repository.TodoRepository;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +19,8 @@ import org.springframework.stereotype.Component;
  *
  * <p>{@link DefaultCategoryRegistrar} 로 생성된 "기타" 카테고리에 묶어 카테고리 필터에서도
  * 자연스럽게 노출되도록 한다. 호출 순서상 카테고리 등록 이후에 와야 한다.
+ *
+ * <p>2026-05-12 카테고리 스냅샷 정책에 맞춰 categoryName / categoryColorId 도 함께 채운다.
  */
 @Slf4j
 @Component
@@ -37,22 +40,23 @@ public class DefaultTodoRegistrar {
 	private final TodoRepository todoRepository;
 
 	public void registerFor(Long userId) {
-		Long categoryId = categoryRepository
-				.findByCategoryNameAndUserId(FALLBACK_CATEGORY_NAME, userId)
-				.map(Category::getCategoryId)
-				.orElse(null);
+		Optional<Category> fallbackCategory = categoryRepository
+				.findByCategoryNameAndUserId(FALLBACK_CATEGORY_NAME, userId);
+		Long categoryId = fallbackCategory.map(Category::getCategoryId).orElse(null);
+		String categoryName = fallbackCategory.map(Category::getCategoryName).orElse(null);
+		Integer categoryColorId = fallbackCategory.map(Category::getColorId).orElse(null);
 
 		LocalDate today = LocalDate.now(KST);
 
 		todoRepository.save(Todo.create(
-				userId, categoryId,
+				userId, categoryId, categoryName, categoryColorId,
 				TODAY_TITLE, TODAY_CONTENT,
 				TodoType.NORMAL, DEFAULT_PRIORITY,
 				null, today, null, Set.of()
 		));
 
 		todoRepository.save(Todo.create(
-				userId, categoryId,
+				userId, categoryId, categoryName, categoryColorId,
 				SOMEDAY_TITLE, SOMEDAY_CONTENT,
 				TodoType.SOMEDAY, DEFAULT_PRIORITY,
 				null, null, null, Set.of()

@@ -540,7 +540,7 @@ class DoreditEarningSystemIntegrationTest {
 
     private Long saveTodo(Long userId, String title, LocalDate startDate) {
         return todoRepository.saveAndFlush(Todo.create(
-                userId, null, title, null, TodoType.NORMAL, 1, null,
+                userId, null, null, null, title, null, TodoType.NORMAL, 1, null,
                 startDate, null, null
         )).getTodoId();
     }
