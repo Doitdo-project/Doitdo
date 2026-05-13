@@ -299,7 +299,7 @@ public class TodoServiceImpl implements TodoService {
 		if (todo.getType() == TodoType.RECURRING && isFromScope(scope)) {
 			validateOccurrenceOfMaster(todo, occurrenceDate);
 			todo.changeEndDate(occurrenceDate.minusDays(1));
-			todoRepository.findAllByUserIdAndMasterTodoIdAndStartDateGreaterThanEqual(
+			todoRepository.findAllByUserIdAndMasterTodoIdAndStartDateGreaterThanEqualAndIsDeletedFalse(
 							userId,
 							todo.getTodoId(),
 							occurrenceDate)
@@ -409,7 +409,7 @@ public class TodoServiceImpl implements TodoService {
 
 		LocalDate originalEndDate = master.getEndDate();
 		master.changeEndDate(occurrenceDate.minusDays(1));
-		todoRepository.findAllByUserIdAndMasterTodoIdAndStartDateGreaterThanEqual(
+		todoRepository.findAllByUserIdAndMasterTodoIdAndStartDateGreaterThanEqualAndIsDeletedFalse(
 						userId,
 						master.getTodoId(),
 						occurrenceDate)

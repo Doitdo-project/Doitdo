@@ -391,7 +391,7 @@ class TodoServiceImplTest {
 		Todo master = recurringMaster();
 		Todo future = recurringInstance(master, LocalDate.parse("2026-05-19"));
 		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
-		given(todoRepository.findAllByUserIdAndMasterTodoIdAndStartDateGreaterThanEqual(
+		given(todoRepository.findAllByUserIdAndMasterTodoIdAndStartDateGreaterThanEqualAndIsDeletedFalse(
 				1L,
 				10L,
 				LocalDate.parse("2026-05-12")))
@@ -432,7 +432,7 @@ class TodoServiceImplTest {
 		Todo master = recurringMaster();
 		Todo future = recurringInstance(master, LocalDate.parse("2026-05-19"));
 		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
-		given(todoRepository.findAllByUserIdAndMasterTodoIdAndStartDateGreaterThanEqual(
+		given(todoRepository.findAllByUserIdAndMasterTodoIdAndStartDateGreaterThanEqualAndIsDeletedFalse(
 				1L,
 				10L,
 				LocalDate.parse("2026-05-12")))
