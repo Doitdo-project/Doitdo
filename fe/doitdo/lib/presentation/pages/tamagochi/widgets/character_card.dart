@@ -82,8 +82,9 @@ class CharacterCard extends StatelessWidget {
   /// 알을 탭했을 때 호출. 부화 페이지로 이동 + 복귀 시 재조회는 부모가 담당.
   final VoidCallback? onEggTap;
 
-  /// 부화 이후 캐릭터 본체를 탭했을 때 호출.
-  final VoidCallback? onCharacterTap;
+  /// 부화 이후 캐릭터 본체를 탭했을 때 호출. 인자는 사용자가 탭한 글로벌 좌표로,
+  /// 호출자(page) 가 그 위치에서 floating "+코인" 위젯을 띄우는 데 사용한다.
+  final ValueChanged<Offset>? onCharacterTap;
 
   /// 카드가 상태바 영역까지 확장될 때 content 가 상태바 아이콘과 겹치지 않도록
   /// 밀어낼 상단 여백. 배경(bg_grass)은 이 영역까지 그대로 이어지고, 내부 content
@@ -823,8 +824,8 @@ class _WalkingSlot extends StatefulWidget {
   final Widget Function(BuildContext, bool isWalking) characterBuilder;
   final Widget? bubble;
 
-  /// 캐릭터 본체 탭 콜백. null 이면 탭 영역 자체가 비활성.
-  final VoidCallback? onCharacterTap;
+  /// 캐릭터 본체 탭 콜백. 인자는 글로벌 좌표(손가락 위치). null 이면 탭 영역 자체가 비활성.
+  final ValueChanged<Offset>? onCharacterTap;
 
   @override
   State<_WalkingSlot> createState() => _WalkingSlotState();
@@ -1064,13 +1065,13 @@ class _WalkingSlotState extends State<_WalkingSlot>
     });
   }
 
-  void _handleCharacterTap() {
+  void _handleCharacterTap(Offset globalPosition) {
     final cb = widget.onCharacterTap;
     if (cb == null) return;
     if (!widget.enableWalk || !_roamingThisSession) {
       // walk 비활성(액션 중) 또는 가만히 모드 세션 — 그냥 콜백만. 가만히 모드는
       // 어차피 안 움직이니까 멈춤 처리도 필요 없다.
-      cb();
+      cb(globalPosition);
       return;
     }
     // 현재 위치를 walkFrom 에 박고 controller 정지 + phase=idling → 그 자리에 캐릭터별
@@ -1096,7 +1097,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
         setState(() {});
       }
     });
-    cb();
+    cb(globalPosition);
   }
 
   @override
@@ -1110,7 +1111,9 @@ class _WalkingSlotState extends State<_WalkingSlot>
     final tapWrapped = cb == null
         ? characterChild
         : GestureDetector(
-            onTap: _handleCharacterTap,
+            // onTapUp 으로 받아야 details.globalPosition 으로 손가락 위치를 잡는다.
+            // floating "+N" 코인 위젯이 이 좌표에서 솟아오른다.
+            onTapUp: (details) => _handleCharacterTap(details.globalPosition),
             behavior: HitTestBehavior.opaque,
             child: characterChild,
           );

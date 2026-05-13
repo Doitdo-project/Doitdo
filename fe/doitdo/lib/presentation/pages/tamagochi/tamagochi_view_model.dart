@@ -58,37 +58,65 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
   ///
   /// [remainingTodayTodos] 는 "오늘의 할 일" 미완료 개수. 0 이면 칭찬 풀,
   /// 1 이상이면 잔여 todo 풀이 메시지 후보에 추가된다.
-  void onCharacterTap({required int remainingTodayTodos}) {
+  ///
+  /// [tapOrigin] 은 사용자가 탭한 글로벌 좌표. 응답에서 earnedAmount > 0 이면
+  /// 이 좌표를 가진 [CharacterTapGain] 시그널을 발화 — 페이지가 받아 floating
+  /// "+N" 위젯을 띄운다.
+  void onCharacterTap({
+    required int remainingTodayTodos,
+    required Offset tapOrigin,
+  }) {
     final message = _pickSpeechBubble(remainingTodayTodos);
     state = state.copyWith(speechBubble: message);
 
     if (_tapping) return;
     _tapping = true;
-    _triggerActionAsync(CharacterAction.idle)
+    _triggerActionAsync(CharacterAction.idle, tapOrigin: tapOrigin)
         .whenComplete(() => _tapping = false);
   }
 
-  Future<void> _triggerActionAsync(CharacterAction action) async {
+  /// 다음 [CharacterTapGain.tick] 값. action 응답마다 단조증가시켜 같은 amount
+  /// 라도 위젯 key 가 바뀌어 floating 인스턴스가 재생성되게 한다.
+  int _gainTick = 0;
+
+  Future<void> _triggerActionAsync(
+    CharacterAction action, {
+    required Offset tapOrigin,
+  }) async {
     try {
-      final url = await _characterRepository.triggerAction(action);
+      final result = await _characterRepository.triggerAction(action);
       if (!mounted) return;
-      if (url.isEmpty) return;
-      // gif 를 ImageCache 에 먼저 적재 → state 를 바꿔 위젯이 mount 될 때
-      // Image.network 가 즉시 첫 프레임을 그려 빈 영역(깜빡임) 이 안 생긴다.
-      await _precacheNetworkImage(url);
-      if (!mounted) return;
-      // 같은 url 이 다시 와도 위젯 key 가 바뀌면 gif 가 처음부터 재생된다.
-      state = state.copyWith(
-        actionUrl: url,
-        actionTick: state.actionTick + 1,
-      );
-      // 응답 도착 시점부터 2초 카운트 — 재탭/새 응답이 오면 새 타이머로 교체된다.
-      _revertTimer?.cancel();
-      _revertTimer = Timer(_actionDuration, () {
+      final url = result.url;
+      // 코인 보상은 gif 응답 유무와 독립적으로 처리 — 빈 url 이라도 earnedAmount
+      // 가 있으면 floating 시그널은 띄운다.
+      if (url.isNotEmpty) {
+        // gif 를 ImageCache 에 먼저 적재 → state 를 바꿔 위젯이 mount 될 때
+        // Image.network 가 즉시 첫 프레임을 그려 빈 영역(깜빡임) 이 안 생긴다.
+        await _precacheNetworkImage(url);
         if (!mounted) return;
-        if (state.actionUrl == null) return;
-        state = state.copyWith(clearActionUrl: true);
-      });
+        // 같은 url 이 다시 와도 위젯 key 가 바뀌면 gif 가 처음부터 재생된다.
+        state = state.copyWith(
+          actionUrl: url,
+          actionTick: state.actionTick + 1,
+        );
+        // 응답 도착 시점부터 2초 카운트 — 재탭/새 응답이 오면 새 타이머로 교체된다.
+        _revertTimer?.cancel();
+        _revertTimer = Timer(_actionDuration, () {
+          if (!mounted) return;
+          if (state.actionUrl == null) return;
+          state = state.copyWith(clearActionUrl: true);
+        });
+      }
+      if (result.earnedAmount > 0) {
+        _gainTick += 1;
+        state = state.copyWith(
+          lastGain: CharacterTapGain(
+            amount: result.earnedAmount,
+            origin: tapOrigin,
+            tick: _gainTick,
+          ),
+        );
+      }
     } catch (e, st) {
       // 인터랙션 핑이라 실패해도 사용자 알림은 안 띄운다 — 무한 스팸 방지 +
       // 화면이 멀쩡히 동작하는데 에러만 뜨는 어색함을 피하려는 의도.

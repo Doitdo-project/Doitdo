@@ -11,6 +11,7 @@ import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_view_model.dart';
 import 'package:doitdo/domain/entities/evolution.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/character_card.dart';
+import 'package:doitdo/presentation/pages/tamagochi/widgets/floating_gain_text.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/status_pill.dart';
 import 'package:doitdo/presentation/pages/todo/todo_state.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
@@ -85,6 +86,16 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   /// 실패 시에는 켜지지 않으므로 popover 가 즉시 닫힘 (page 가 에러 스낵바 안내).
   bool _claimSuccessFlash = false;
   Timer? _claimSuccessTimer;
+
+  /// 캐릭터 탭으로 코인을 획득했을 때 손가락 위치에서 띄우는 floating "+N" 위젯
+  /// 인스턴스 목록. 위젯이 self-dismiss 후 onComplete 콜백에서 자기 자신을 제거.
+  /// global 좌표를 page local 로 변환해 보관 — outer Stack 의 [_overlayKey]
+  /// RenderBox 가 변환 기준이다.
+  final List<_PendingFloatingGain> _floatingGains = [];
+
+  /// outer Stack 의 RenderBox 핸들. ref.listen 콜백 안에서 globalToLocal 좌표
+  /// 변환에 사용 — page 가 mount 된 상태라 RenderObject 는 attached 이다.
+  final GlobalKey _overlayKey = GlobalKey();
 
   @override
   void initState() {
@@ -405,6 +416,28 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       ref.read(streakViewModelProvider.notifier).refresh();
     });
 
+    // 캐릭터 탭 → 코인 지급 시그널 처리. 새 tick 이 떨어질 때만 발화 (말풍선/
+    // actionUrl 같은 다른 필드 갱신으로 lastGain 동일하게 다시 흘러오는 케이스를
+    // 거른다). 글로벌 좌표를 page local 로 변환해 list 에 적재.
+    ref.listen<TamagochiState>(tamagochiViewModelProvider, (prev, next) {
+      final gain = next.lastGain;
+      if (gain == null) return;
+      if (prev?.lastGain?.tick == gain.tick) return;
+      final box =
+          _overlayKey.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null || !box.attached) return;
+      final local = box.globalToLocal(gain.origin);
+      setState(() {
+        _floatingGains.add(
+          _PendingFloatingGain(
+            tick: gain.tick,
+            amount: gain.amount,
+            position: local,
+          ),
+        );
+      });
+    });
+
     // Todo 완료 count 가 증가하면 exp 가 올라갔을 가능성이 있으므로 캐릭터 재조회.
     // 새로 isDone=true 로 전환된 todoId 가 있을 때만 발화 — _doneCount 비교는
     // TODO 생성(addTodo) 시 state 교체 타이밍에도 발화할 수 있어 done-id 집합
@@ -454,6 +487,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
         useSafeArea: false,
         body: DoitdoFullLayout(
           child: Stack(
+            key: _overlayKey,
             children: [
               // 1. 스크롤 본문. 캐릭터 카드가 상태바 영역까지 배경(grass)을 확장하므로
               //    여기서는 top padding 을 주지 않고 Card 내부에서 topSafePadding
@@ -503,7 +537,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                 onTapCollection: () => context
                                     .push(AppRoutes.tamagochiCollection),
                                 onEggTap: _handleEggTap,
-                                onCharacterTap: () {
+                                onCharacterTap: (tapOrigin) {
                                   final remaining = todayTodos
                                       .where((t) => !t.isDone)
                                       .length;
@@ -512,6 +546,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                       .notifier)
                                       .onCharacterTap(
                                     remainingTodayTodos: remaining,
+                                    tapOrigin: tapOrigin,
                                   );
                                 },
                               ),
@@ -599,12 +634,55 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                 height: topInset,
                 child: _StatusBarScrim(visible: _headerVisible),
               ),
+
+              // 3. 캐릭터 탭 코인 획득 floating "+N" 오버레이.
+              //    IgnorePointer 로 손가락 입력을 가로채지 않으며, 각 인스턴스가
+              //    self-dismiss 후 onComplete 콜백에서 list 에서 자기를 제거한다.
+              if (_floatingGains.isNotEmpty)
+                IgnorePointer(
+                  child: Stack(
+                    children: [
+                      for (final g in _floatingGains)
+                        Positioned(
+                          left: g.position.dx,
+                          top: g.position.dy,
+                          child: FloatingGainText(
+                            key: ValueKey(g.tick),
+                            amount: g.amount,
+                            onComplete: () {
+                              if (!mounted) return;
+                              setState(() {
+                                _floatingGains.removeWhere(
+                                  (e) => e.tick == g.tick,
+                                );
+                              });
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+/// 페이지가 들고 있는 floating "+N" 위젯 하나의 좌표/금액 묶음.
+/// [tick] 으로 같은 amount/position 이 다시 와도 위젯 key 가 바뀌어 새 인스턴스가
+/// 만들어지도록 한다.
+class _PendingFloatingGain {
+  const _PendingFloatingGain({
+    required this.tick,
+    required this.amount,
+    required this.position,
+  });
+
+  final int tick;
+  final int amount;
+  final Offset position;
 }
 
 /// 해당 Todo 가 "오늘의 할 일" 에 포함되는지. 단일 날짜는 동일 일자, 기간은 오늘이
