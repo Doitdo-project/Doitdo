@@ -44,6 +44,16 @@ class TodoViewModel extends StateNotifier<TodoState> {
   final TodoRepository _repository;
   final WidgetSyncService _widgetSync;
 
+  // 빠른 연속 토글 시 마지막 상태만 서버로 전송 — per-todo 디바운스.
+  final Map<String, Timer> _toggleTimers = {};
+
+  @override
+  void dispose() {
+    for (final t in _toggleTimers.values) t.cancel();
+    _toggleTimers.clear();
+    super.dispose();
+  }
+
   static CategoryColorKey _colorKey(String? category) {
     switch (category) {
       case '운동': return CategoryColorKey.exercise;
@@ -163,6 +173,29 @@ class TodoViewModel extends StateNotifier<TodoState> {
     } else if (filter == 'done') {
       filteredTodos   = state.allTodos.where((t) => t.isDone).toList();
       filteredSomeday = state.allSomedayTodos.where((t) => t.isDone).toList();
+    }
+
+    // RECURRING 완료 후 fetchTodos() 로 NORMAL 인스턴스가 추가되면
+    // 같은 날짜에 RECURRING 마스터와 NORMAL 인스턴스가 동시에 표시되는 문제 방지.
+    // NORMAL 인스턴스가 있는 날짜엔 같은 제목+카테고리의 RECURRING 마스터를 숨긴다.
+    if (selectedDay != null) {
+      // RECURRING 완료 후 같은 날짜에 RECURRING 마스터와 NORMAL 인스턴스가
+      // 동시에 표시되는 문제 방지. title 기준으로만 매칭한다.
+      // (title + category 조합은 카테고리 변경 시 매칭 실패로 중복 표시 버그 발생)
+      final normalKeys = filteredTodos
+          .where((t) =>
+      t.dateType == TodoDateType.normal &&
+          t.date != null &&
+          isSameDay(t.date!, selectedDay!))
+          .map((t) => t.title)
+          .toSet();
+
+      if (normalKeys.isNotEmpty) {
+        filteredTodos = filteredTodos.where((t) {
+          if (t.dateType != TodoDateType.repeat) return true;
+          return !normalKeys.contains(t.title);
+        }).toList();
+      }
     }
 
     state = state.copyWith(
@@ -471,33 +504,146 @@ class TodoViewModel extends StateNotifier<TodoState> {
     final idx = state.allTodos.indexWhere((t) => t.id == id);
     if (idx == -1) return;
 
-    final wasDone = state.allTodos[idx].isDone;
+    final todo = state.allTodos[idx];
+    final wasDone = todo.isDone;
     final newIsDone = !wasDone;
     final newStatus = newIsDone ? 'DONE' : 'TODO';
 
-    // 1. allTodos isDone 토글 + DONE 으로 가는 경우만 fading 마크.
-    //    fading 동안에는 _updateDisplayedTodos 가 done 필터에도 불구하고 카드를 유지 →
-    //    사용자가 "주황 체크" 된 모습을 잠깐 본 후 사라짐. TODO 로 되돌리는 경우는
-    //    안전 차원에서 혹시 남아있던 fading 마크 정리.
-    final newFading = newIsDone
-        ? {...state.fadingTodoIds, id}
-        : (state.fadingTodoIds.where((it) => it != id).toSet());
-    state = state.copyWith(
-      allTodos: state.allTodos
-          .map((t) => t.id == id ? t.copyWith(isDone: newIsDone) : t)
-          .toList(),
-      fadingTodoIds: newFading,
-    );
-    _updateCalendarEvents(state.allTodos);
-    _updateDisplayedTodos();
+    // RECURRING 타입은 낙관적 업데이트 스킵.
+    // 마스터의 isDone 을 바꾸면 _updateCalendarEvents 의 copyWith 로
+    // 모든 날짜 복사본에 isDone: true 가 전파되어 전체가 완료 처리됨.
+    // 대신 임시 NORMAL 인스턴스를 즉시 추가하고 API 성공 후 실제 id로 교체.
+    final isRecurring = todo.dateType == TodoDateType.repeat;
 
-    // 2. PATCH 병렬 발사 — 시각 효과 타이밍을 네트워크 지연과 분리.
-    unawaited(
-      AsyncValue.guard(() => _repository.updateTodoStatus(id, newStatus)),
-    );
+    if (!isRecurring) {
+      // 1. 일반 타입만 낙관적 업데이트 + fading 마크
+      final newFading = newIsDone
+          ? {...state.fadingTodoIds, id}
+          : (state.fadingTodoIds.where((it) => it != id).toSet());
+      state = state.copyWith(
+        allTodos: state.allTodos
+            .map((t) => t.id == id ? t.copyWith(isDone: newIsDone) : t)
+            .toList(),
+        fadingTodoIds: newFading,
+      );
+      _updateCalendarEvents(state.allTodos);
+      _updateDisplayedTodos();
+    }
 
-    // 3. DONE 으로 토글된 경우 600ms 뒤 fading 해제 → done 필터가 발동해 카드 unmount.
-    if (newIsDone) {
+    // 2. API 호출
+    if (isRecurring) {
+      final occurrenceDate = state.selectedDay ?? DateTime.now();
+      final tempId = 'temp_$id';
+
+      // 연타 방지: 이미 처리 중(임시 인스턴스 존재)이면 무시
+      if (state.allTodos.any((t) => t.id == tempId)) return;
+
+      // 낙관적 업데이트: 임시 NORMAL 인스턴스를 마스터 위치에 즉시 삽입
+      final tempTodo = todo.copyWith(
+        id: tempId,
+        isDone: newIsDone,
+        dateType: TodoDateType.normal,
+        date: occurrenceDate,
+      );
+      final masterIdx = state.allTodos.indexWhere((t) => t.id == id);
+      final optimisticList = List<Todo>.from(state.allTodos);
+      if (masterIdx >= 0) {
+        optimisticList.insert(masterIdx, tempTodo);
+      } else {
+        optimisticList.add(tempTodo);
+      }
+      state = state.copyWith(
+        allTodos: optimisticList,
+        fadingTodoIds: newIsDone
+            ? {...state.fadingTodoIds, tempId}
+            : state.fadingTodoIds,
+      );
+      _updateCalendarEvents(state.allTodos);
+      _updateDisplayedTodos();
+
+      // 백그라운드 API
+      unawaited(
+        AsyncValue.guard(
+              () => _repository.updateTodoStatus(
+            id,
+            newStatus,
+            occurrenceDate: occurrenceDate,
+          ),
+        ).then((result) {
+          if (!mounted) return;
+          if (result.hasError) {
+            // 실패: 임시 인스턴스 제거(롤백)
+            state = state.copyWith(
+              allTodos: state.allTodos.where((t) => t.id != tempId).toList(),
+              fadingTodoIds: state.fadingTodoIds.where((it) => it != tempId).toSet(),
+            );
+            _updateCalendarEvents(state.allTodos);
+            _updateDisplayedTodos();
+            return;
+          }
+          // 성공: 임시 인스턴스를 실제 서버 인스턴스로 교체
+          final dto = result.value;
+          if (dto != null) {
+            final realTodo = Todo(
+              id: dto.todoId.toString(),
+              title: dto.title,
+              isDone: dto.status == 'DONE',
+              memo: dto.content,
+              category: TodoCategory(
+                name: dto.category ?? '기타',
+                colorKey: _colorKey(dto.category),
+              ),
+              date: dto.startDate != null ? DateTime.tryParse(dto.startDate!) : null,
+              alarmTime: _parseTime(dto.alarmTime),
+              alarmEnabled: dto.alarmTime != null,
+              dateType: TodoDateType.normal,
+            );
+            // fading id도 tempId → realId 로 교체
+            final newFading = {
+              ...state.fadingTodoIds.where((it) => it != tempId),
+              if (newIsDone) realTodo.id,
+            };
+            state = state.copyWith(
+              allTodos: state.allTodos
+                  .map((t) => t.id == tempId ? realTodo : t)
+                  .toList(),
+              fadingTodoIds: newFading,
+            );
+            _updateCalendarEvents(state.allTodos);
+            _updateDisplayedTodos();
+          } else {
+            // dto 파싱 실패 시에도 tempId → 정리
+            state = state.copyWith(
+              allTodos: state.allTodos.where((t) => t.id != tempId).toList(),
+              fadingTodoIds: state.fadingTodoIds.where((it) => it != tempId).toSet(),
+            );
+            _updateCalendarEvents(state.allTodos);
+            _updateDisplayedTodos();
+          }
+        }),
+      );
+    } else {
+      _toggleTimers[id] = Timer(const Duration(milliseconds: 400), () async {
+        _toggleTimers.remove(id);
+        final result = await AsyncValue.guard(
+              () => _repository.updateTodoStatus(id, newStatus),
+        );
+        if (!mounted) return;
+        if (result.hasError) {
+          state = state.copyWith(
+            allTodos: state.allTodos
+                .map((t) => t.id == id ? t.copyWith(isDone: wasDone) : t)
+                .toList(),
+            fadingTodoIds: state.fadingTodoIds.where((it) => it != id).toSet(),
+          );
+          _updateCalendarEvents(state.allTodos);
+          _updateDisplayedTodos();
+        }
+      });
+    }
+
+    // 3. DONE 으로 토글된 경우 600ms 뒤 fading 해제 (일반 타입만)
+    if (!isRecurring && newIsDone) {
       await Future.delayed(const Duration(milliseconds: 600));
       if (!mounted) return;
       if (!state.fadingTodoIds.contains(id)) return;
@@ -810,9 +956,9 @@ class TodoViewModel extends StateNotifier<TodoState> {
     final int allInsertIdx = anchorId == null
         ? allList.length
         : () {
-            final i = allList.indexWhere((t) => t.id == anchorId);
-            return i == -1 ? allList.length : i;
-          }();
+      final i = allList.indexWhere((t) => t.id == anchorId);
+      return i == -1 ? allList.length : i;
+    }();
     allList.insert(allInsertIdx, item);
 
     final newAllSomeday = state.allSomedayTodos.where((t) => t.id != id).toList();

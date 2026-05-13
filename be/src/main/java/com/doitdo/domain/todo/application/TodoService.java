@@ -12,6 +12,7 @@ import com.doitdo.domain.todo.api.dto.resp.TodoCalendarResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoListResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoSearchResp;
+import java.time.LocalDate;
 
 public interface TodoService {
 
@@ -25,7 +26,11 @@ public interface TodoService {
 
 	TodoDetailResp update(Long userId, Long todoId, TodoUpdateReq req);
 
+	TodoDetailResp update(Long userId, Long todoId, TodoUpdateReq req, String scope, LocalDate occurrenceDate);
+
 	void delete(Long userId, Long todoId, String scope);
+
+	void delete(Long userId, Long todoId, String scope, LocalDate occurrenceDate);
 
 	TodoDetailResp changeStatus(Long userId, Long todoId, TodoStatusChangeReq req);
 

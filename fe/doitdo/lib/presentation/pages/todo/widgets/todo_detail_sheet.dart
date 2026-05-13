@@ -15,6 +15,7 @@ import 'package:doitdo/presentation/pages/todo/widgets/todo_date_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_time_sheet.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_dialog.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
+import 'package:doitdo/presentation/widgets/common/character_mascot_image.dart';
 
 enum _Step { main, datePicker, categoryPicker, alertPicker }
 
@@ -32,7 +33,6 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
   _Step _step        = _Step.main;
   bool  _initialized = false;
   bool  _isDone      = false;
-  bool  _textDirty   = false;
 
   final _titleController = TextEditingController();
   final _memoController  = TextEditingController();
@@ -49,8 +49,6 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
     super.initState();
     _titleController.addListener(_markDirty);
     _memoController.addListener(_markDirty);
-    _titleFocusNode.addListener(_onFocusChange);
-    _memoFocusNode.addListener(_onFocusChange);
     _initFromTodo(widget.todo);
   }
 
@@ -86,9 +84,6 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
   }
 
   void _markDirty() {
-    if (_initialized) _textDirty = true;
-    // 제목 empty/non-empty 전이 시 확인 버튼 색을 갱신.
-    // 빈 제목으로는 저장 불가 정책이라 disable 신호가 즉시 반영되어야 한다.
     final isEmpty = _titleController.text.trim().isEmpty;
     if (isEmpty != _wasTitleEmpty) {
       _wasTitleEmpty = isEmpty;
@@ -97,22 +92,6 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
   }
 
   bool _wasTitleEmpty = true;
-
-  // 제목/메모 포커스가 둘 다 빠졌을 때 자동 저장
-  void _onFocusChange() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      // 빈 제목이면 자동 저장 트리거하지 않음 — 확인 버튼 회색 정책과 일관.
-      // SnackBar 가 시트에 가려지는 문제로 안내도 불가능하므로 silent skip.
-      // dirty flag 도 그대로 유지 → 이후 사용자가 제목을 다시 채우고 포커스 빠지면 저장 발동.
-      if (_titleController.text.trim().isEmpty) return;
-      if (!_titleFocusNode.hasFocus && !_memoFocusNode.hasFocus &&
-          _textDirty && _initialized && !_isDone) {
-        _textDirty = false;
-        unawaited(_onSave(context, _isDone));
-      }
-    });
-  }
 
   void _goToStep(_Step next) {
     FocusScope.of(context).unfocus();
@@ -188,15 +167,9 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
       return;
     }
 
-    // _textDirty 를 먼저 false 로 — unfocus 로 인한 focus listener 가 중복 저장하지 않도록
-    final wasDirty = _textDirty;
-    _textDirty = false;
     FocusScope.of(context).unfocus();
     final nav = Navigator.of(context, rootNavigator: true);
-
-    if (wasDirty) {
-      await _onSave(context, _isDone);
-    }
+    await _onSave(context, _isDone);
     if (mounted) nav.pop();
   }
 
@@ -274,7 +247,6 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                 _dateResult = result;
                 _step       = _Step.main;
               });
-              unawaited(_onSave(context, _isDone));
             },
             onBack: () => _goToStep(_Step.main),
           ),
@@ -288,9 +260,8 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
             onConfirm: (result) {
               setState(() {
                 _selectedCategory = result.categoryName;
-                _step               = _Step.main;
+                _step             = _Step.main;
               });
-              unawaited(_onSave(context, _isDone));
             },
             onBack: () => _goToStep(_Step.main),
           ),
@@ -308,7 +279,6 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                 _alarmEnabled = result.enabled;
                 _step         = _Step.main;
               });
-              unawaited(_onSave(context, _isDone));
             },
             onBack: () => _goToStep(_Step.main),
           ),
@@ -598,8 +568,7 @@ class _MascotBubble extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Image.asset('assets/images/Dooit.png',
-            width: 30, height: 30, filterQuality: FilterQuality.high),
+        const CharacterMascotImage(size: 36),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

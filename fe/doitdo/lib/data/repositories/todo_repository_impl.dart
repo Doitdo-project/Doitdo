@@ -104,10 +104,27 @@ class TodoRepositoryImpl extends BaseRepository implements TodoRepository {
 
   // [T03] 상태 변경 구현
   @override
-  Future<void> updateTodoStatus(String todoId, String status) async {
+  Future<TodoDetailResponseDto?> updateTodoStatus(
+      String todoId,
+      String status, {
+        DateTime? occurrenceDate,
+      }) async {
     final idAsInt = int.tryParse(todoId) ?? 0;
-
-    await safeApiCall(() => _todoApi.changeTodoStatus(idAsInt, {'status': status}));
+    final body = <String, dynamic>{'status': status};
+    if (occurrenceDate != null) {
+      body['occurrenceDate'] = occurrenceDate.toIso8601String().split('T')[0];
+    }
+    try {
+      final response = await _todoApi.changeTodoStatus(idAsInt, body);
+      if (!response.isSuccess) {
+        throw ServerException(response.message, statusCode: response.status);
+      }
+      final rawData = response.data;
+      if (rawData == null) return null;
+      return TodoDetailResponseDto.fromJson(rawData as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
   }
 
   // ✅ [최종 수정] T04: TODO 수정 실제 구현

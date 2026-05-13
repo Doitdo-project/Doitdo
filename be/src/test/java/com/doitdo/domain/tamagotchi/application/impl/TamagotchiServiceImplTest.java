@@ -690,7 +690,8 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.afterStage()).isEqualTo("TEEN");
 		assertThat(resp.currentExp()).isEqualTo(0); // 筌욊쑵??筌욊낱???귐딅?
 		assertThat(resp.requiredExp()).isEqualTo(200); // TEEN requiredExp
-		assertThat(resp.animationUrl()).isEqualTo("https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/evolution/evolution.gif");
+		assertThat(resp.animationUrl()).isEqualTo(
+			"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/evolution/evolution.gif");
 		assertThat(resp.characterImageUrl()).isEqualTo("https://cdn.example.com/slime-teen.png");
 		assertThat(resp.evolvedAt()).isNotBlank();
 		then(characterUnlockRepository).should(never()).saveAll(any());

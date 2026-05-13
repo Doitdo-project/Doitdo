@@ -19,6 +19,7 @@ import com.doitdo.global.swagger.ApiErrorCodes;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -79,8 +80,9 @@ public class TodoController {
 	public GlobalApiResponse<Void> delete(
 			@AuthenticationPrincipal CustomUserDetails userDetails,
 			@PathVariable Long todoId,
-			@RequestParam(required = false) String scope) {
-		todoService.delete(userDetails.getUserId(), todoId, scope);
+			@RequestParam(required = false) String scope,
+			@RequestParam(required = false) LocalDate occurrenceDate) {
+		todoService.delete(userDetails.getUserId(), todoId, scope, occurrenceDate);
 		return GlobalApiResponse.noContent("삭제 완료");
 	}
 
@@ -100,9 +102,11 @@ public class TodoController {
 	public GlobalApiResponse<TodoDetailResp> update(
 			@AuthenticationPrincipal CustomUserDetails userDetails,
 			@PathVariable Long todoId,
+			@RequestParam(required = false) String scope,
+			@RequestParam(required = false) LocalDate occurrenceDate,
 			@Valid @RequestBody TodoUpdateReq req) {
 		return GlobalApiResponse.ok("TODO 수정 성공",
-				todoService.update(userDetails.getUserId(), todoId, req));
+				todoService.update(userDetails.getUserId(), todoId, req, scope, occurrenceDate));
 	}
 
 	@Operation(summary = "TODO 작성", description = "새로운 TODO 항목을 작성한다")
@@ -116,7 +120,7 @@ public class TodoController {
 				todoService.create(userDetails.getUserId(), req));
 	}
 
-	@Operation(summary = "TODO 상태 변경", description = "TODO 상태를 TODO/IN_PROGRESS/DONE 로 변경. 반복 TODO 마스터(type=RECURRING) 는 상태 변경 불가.")
+	@Operation(summary = "TODO 상태 변경", description = "TODO 상태를 TODO/IN_PROGRESS/DONE 로 변경. 반복 TODO 마스터(type=RECURRING)는 occurrenceDate로 특정 발생일을 지정하면 실체화 후 상태를 변경한다.")
 	@ApiErrorCodes({"T03-001", "T03-003", "T03-004"})
 	@PatchMapping("/{todoId}/status")
 	public GlobalApiResponse<TodoDetailResp> changeStatus(

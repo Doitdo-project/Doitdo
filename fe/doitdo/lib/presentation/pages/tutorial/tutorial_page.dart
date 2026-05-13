@@ -1,5 +1,3 @@
-import 'dart:math' show pi, sin;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -144,7 +142,7 @@ class _TutorialPageState extends State<TutorialPage> {
                 itemCount: _slides.length,
                 itemBuilder: (_, i) => _PhoneCard(
                   slide: _slides[i],
-                  showDragDemo: i == 3,
+                  showFingerOverlay: i == 3,
                 ),
               ),
             ),
@@ -152,13 +150,32 @@ class _TutorialPageState extends State<TutorialPage> {
             SizedBox(height: 28.h),
 
             // ── 하단: 제목 + 부제 + 도트 + CTA ──────────────
-            Padding(
+            // GestureDetector 로 하단 영역도 스와이프 감지 (PageView 위 영역은 자체 처리).
+            GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onHorizontalDragEnd: (details) {
+                final vel = details.primaryVelocity ?? 0;
+                if (vel.abs() < 200) return;
+                if (vel < 0) {
+                  _next();
+                } else if (_currentPage > 0) {
+                  _pageController.previousPage(
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeInOut,
+                  );
+                }
+              },
+              child: Padding(
               padding: EdgeInsets.fromLTRB(28.w, 0, 28.w, 36.h),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 220),
+                    layoutBuilder: (current, previous) => Stack(
+                      alignment: Alignment.centerLeft,
+                      children: [...previous, if (current != null) current],
+                    ),
                     child: Text(
                       slide.title,
                       key: ValueKey('title_$_currentPage'),
@@ -173,6 +190,10 @@ class _TutorialPageState extends State<TutorialPage> {
                   SizedBox(height: 8.h),
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 220),
+                    layoutBuilder: (current, previous) => Stack(
+                      alignment: Alignment.centerLeft,
+                      children: [...previous, if (current != null) current],
+                    ),
                     child: Text(
                       slide.subtitle,
                       key: ValueKey('sub_$_currentPage'),
@@ -255,6 +276,7 @@ class _TutorialPageState extends State<TutorialPage> {
                 ],
               ),
             ),
+            ), // GestureDetector
           ],
         ),
       ),
@@ -264,11 +286,39 @@ class _TutorialPageState extends State<TutorialPage> {
 
 // ── 폰 목업 카드 ─────────────────────────────────────────────
 
-class _PhoneCard extends StatelessWidget {
-  const _PhoneCard({required this.slide, this.showDragDemo = false});
+class _PhoneCard extends StatefulWidget {
+  const _PhoneCard({required this.slide, this.showFingerOverlay = false});
 
   final _Slide slide;
-  final bool showDragDemo;
+  final bool showFingerOverlay;
+
+  @override
+  State<_PhoneCard> createState() => _PhoneCardState();
+}
+
+class _PhoneCardState extends State<_PhoneCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _pulse = Tween<double>(begin: 1.0, end: 0.5).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+    if (widget.showFingerOverlay) _ctrl.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -288,13 +338,50 @@ class _PhoneCard extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24.r),
-          child: showDragDemo
-              ? const _DragDropDemo()
+          child: widget.showFingerOverlay
+              ? LayoutBuilder(
+                  builder: (context, constraints) {
+                    // 이미지(375×812 기준)를 컨테이너 너비에 맞게 스케일했을 때의 배율.
+                    // BoxFit.cover + topCenter 는 portrait 이미지에서 항상 너비 기준으로
+                    // 스케일되므로, 손가락 위치도 너비 비율로 고정하면 기기마다 동일하게 보임.
+                    final imgScale = constraints.maxWidth / 375.0;
+                    return Stack(
+                      children: [
+                        Image.asset(
+                          widget.slide.imagePath,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          alignment: Alignment.topCenter,
+                          filterQuality: FilterQuality.high,
+                        ),
+                        Positioned(
+                          top: 335.0 * imgScale,
+                          right: 40.0 * imgScale,
+                          child: AnimatedBuilder(
+                            animation: _pulse,
+                            builder: (_, __) => Opacity(
+                              opacity: _pulse.value,
+                              child: Transform.rotate(
+                                angle: -0.3,
+                                child: Icon(
+                                  Icons.touch_app_rounded,
+                                  size: 38.sp,
+                                  color: Colors.black.withValues(alpha: 0.65),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                )
               : Image.asset(
-                  slide.imagePath,
+                  widget.slide.imagePath,
                   fit: BoxFit.cover,
                   width: double.infinity,
                   alignment: Alignment.topCenter,
+                  filterQuality: FilterQuality.high,
                 ),
         ),
       ),
@@ -302,222 +389,3 @@ class _PhoneCard extends StatelessWidget {
   }
 }
 
-// ── 드래그앤드롭 데모 (순수 Flutter, 이미지 불필요) ──────────
-
-class _DragDropDemo extends StatefulWidget {
-  const _DragDropDemo();
-
-  @override
-  State<_DragDropDemo> createState() => _DragDropDemoState();
-}
-
-class _DragDropDemoState extends State<_DragDropDemo>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _progress;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1300),
-    )..repeat(reverse: true);
-    _progress = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final w = constraints.maxWidth;
-        final h = constraints.maxHeight;
-
-        return AnimatedBuilder(
-          animation: _progress,
-          builder: (context, _) {
-            final t = _progress.value; // 0↔1 (reverse: true)
-            final cardH = 54.h;
-            final gap = 10.h;
-            final spacing = cardH + gap;
-
-            // 카드1: 위 → 아래, 카드2: 아래 → 위
-            final startY = h * 0.27;
-            final card1Top = startY + t * spacing;
-            final card2Top = startY + (1.0 - t) * spacing;
-
-            // t=0.5 일 때 리프트 최대 (sin 커브)
-            final lift = sin(pi * t);
-            final scale1 = 1.0 + 0.04 * lift;
-            final shadowBlur = 4.0 + 20.0 * lift;
-            final shadowAlpha = 0.06 + 0.18 * lift;
-
-            // 손가락: 카드1 우측 중앙에 위치
-            final fingerTop = card1Top + cardH / 2 - 14.h;
-            final fingerRight = w * 0.08;
-
-            return Stack(
-              children: [
-                // ── 폰 화면 배경 ─────────────────────────
-                Container(color: const Color(0xFFF5F2EC)),
-
-                // ── 상단 헤더 ─────────────────────────────
-                Positioned(
-                  top: h * 0.07,
-                  left: 20.w,
-                  right: 20.w,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '오늘의 할 일',
-                        style: TextStyle(
-                          fontSize: 15.sp,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF231C16),
-                        ),
-                      ),
-                      SizedBox(height: 4.h),
-                      Text(
-                        '길게 눌러 순서를 바꿔보세요',
-                        style: TextStyle(
-                          fontSize: 11.sp,
-                          color: const Color(0xFF9A8E80),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // ── 카드2 (뒤쪽 — 먼저 그려야 카드1 위에 올라옴) ───
-                Positioned(
-                  top: card2Top,
-                  left: 20.w,
-                  right: 20.w,
-                  child: _DemoCard(
-                    label: '공부하기',
-                    dotColor: const Color(0xFF5C6BC0),
-                    elevated: false,
-                  ),
-                ),
-
-                // ── 카드1 (드래그 중 — 위에 그려짐) ─────────────
-                Positioned(
-                  top: card1Top,
-                  left: 20.w,
-                  right: 20.w,
-                  child: Transform.scale(
-                    scale: scale1,
-                    child: _DemoCard(
-                      label: '운동하기',
-                      dotColor: _accent,
-                      elevated: true,
-                      shadowBlur: shadowBlur,
-                      shadowAlpha: shadowAlpha,
-                    ),
-                  ),
-                ),
-
-                // ── 정적 카드3 (하단 컨텍스트) ───────────────────
-                Positioned(
-                  top: startY + spacing * 2 + gap,
-                  left: 20.w,
-                  right: 20.w,
-                  child: Opacity(
-                    opacity: 0.45,
-                    child: _DemoCard(
-                      label: '집안일 정리',
-                      dotColor: const Color(0xFF66BB6A),
-                      elevated: false,
-                    ),
-                  ),
-                ),
-
-                // ── 손가락 커서 ───────────────────────────────
-                Positioned(
-                  top: fingerTop,
-                  right: fingerRight,
-                  child: Opacity(
-                    opacity: 0.85,
-                    child: Transform.rotate(
-                      angle: -0.3,
-                      child: Icon(
-                        Icons.touch_app_rounded,
-                        size: 28.sp,
-                        color: const Color(0xFF231C16).withValues(alpha: 0.75),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _DemoCard extends StatelessWidget {
-  const _DemoCard({
-    required this.label,
-    required this.dotColor,
-    required this.elevated,
-    this.shadowBlur = 4.0,
-    this.shadowAlpha = 0.06,
-  });
-
-  final String label;
-  final Color dotColor;
-  final bool elevated;
-  final double shadowBlur;
-  final double shadowAlpha;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 54.h,
-      padding: EdgeInsets.symmetric(horizontal: 14.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: shadowAlpha),
-            blurRadius: shadowBlur,
-            offset: Offset(0, shadowBlur / 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: dotColor,
-              shape: BoxShape.circle,
-            ),
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 13.sp,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF231C16),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

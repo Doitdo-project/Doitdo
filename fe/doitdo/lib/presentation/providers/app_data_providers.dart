@@ -50,9 +50,21 @@ import 'package:doitdo/domain/repositories/streak_repository.dart';
 final dioProvider = Provider<Dio>((ref) {
   final dio = ApiClient.create();
   final storage = ref.watch(secureStorageProvider);
+  final widgetSync = ref.watch(widgetSyncServiceProvider);
   // Bearer 토큰 주입 + 401 자동 refresh 재시도는 AuthInterceptor 에 일임.
-  // 인증 규칙(skip 경로 목록 등) 도 인터셉터 내부로 모아 한 파일에서 관리.
-  dio.interceptors.add(AuthInterceptor(dio: dio, storage: storage));
+  // refresh 성공 시 위젯 SharedPreferences 도 동기화 — 인터셉터가 갱신한 토큰이
+  // 위젯에 전달되지 않으면 위젯이 만료된 refresh token 으로 재시도해 로그인 필요 상태가 됨.
+  dio.interceptors.add(AuthInterceptor(
+    dio: dio,
+    storage: storage,
+    onTokenRefreshed: (access, refresh) {
+      widgetSync.syncAuthTokens(
+        accessToken: access,
+        refreshToken: refresh,
+        apiBaseUrl: AppConfig.apiBaseUrl,
+      );
+    },
+  ));
   return dio;
 });
 

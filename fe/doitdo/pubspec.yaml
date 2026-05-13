@@ -1,7 +1,7 @@
 name: doitdo
 description: "다마고치를 키우는 TODO 앱"
 publish_to: 'none'
-version: 1.0.1+2
+version: 1.1.0+3
 
 environment:
   sdk: ^3.10.8
@@ -87,6 +87,7 @@ dependencies:
   # 위젯 자체 UI 는 SwiftUI(iOS)/RemoteViews(Android) 로 별도 작성. 본 패키지는 데이터 다리 + 갱신 트리거 역할만.
   # iOS App Group ID: group.com.d107.doitdo (Apple Developer Console + Xcode 양쪽 capability 등록 필요)
   home_widget: ^0.7.0
+  visibility_detector: ^0.4.0+2
 
 dev_dependencies:
   flutter_test:
@@ -123,6 +124,7 @@ flutter:
     - assets/icons/
     - assets/animations/
     - assets/animations/eye/
+    - assets/animations/idle/
     - assets/mock_api/
     - assets/seeds/
     - .env
