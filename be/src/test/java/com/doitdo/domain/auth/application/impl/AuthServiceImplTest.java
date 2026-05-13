@@ -27,6 +27,7 @@ import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.todo.application.DefaultCategoryRegistrar;
+import com.doitdo.domain.todo.application.DefaultTodoRegistrar;
 import com.doitdo.domain.user.application.CreditEarnService;
 import com.doitdo.domain.user.entity.User;
 import com.doitdo.domain.user.entity.UserWallet;
@@ -66,6 +67,9 @@ class AuthServiceImplTest {
 	private DefaultCategoryRegistrar defaultCategoryRegistrar;
 
 	@Mock
+	private DefaultTodoRegistrar defaultTodoRegistrar;
+
+	@Mock
 	private DefaultFurnitureRegistrar defaultFurnitureRegistrar;
 
 	@Mock
@@ -88,6 +92,7 @@ class AuthServiceImplTest {
 			authenticationManager,
 			jwtUtil,
 			defaultCategoryRegistrar,
+			defaultTodoRegistrar,
 			defaultFurnitureRegistrar,
 			characterRepository,
 			userCharacterRepository,
@@ -131,11 +136,12 @@ class AuthServiceImplTest {
 		then(userWalletRepository).should().save(walletCaptor.capture());
 		assertThat(walletCaptor.getValue().getBalance()).isZero();
 		then(creditEarnService).should()
-			.tryEarn(1L, WalletEarnSource.SIGNUP_BONUS, 100, null, true);
+			.tryEarn(1L, WalletEarnSource.SIGNUP_BONUS, 1000, null, true);
 
 		ArgumentCaptor<UserCharacter> captor = forClass(UserCharacter.class);
 		then(userCharacterRepository).should().save(captor.capture());
 		assertThat(captor.getValue().getCharacterId()).isEqualTo(26L);
 		then(defaultFurnitureRegistrar).should().registerFor(1L);
+		then(defaultTodoRegistrar).should().registerFor(1L);
 	}
 }

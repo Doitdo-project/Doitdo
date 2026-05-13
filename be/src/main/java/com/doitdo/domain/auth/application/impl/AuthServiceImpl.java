@@ -20,6 +20,7 @@ import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.todo.application.DefaultCategoryRegistrar;
+import com.doitdo.domain.todo.application.DefaultTodoRegistrar;
 import com.doitdo.domain.user.application.CreditEarnService;
 import com.doitdo.domain.user.api.dto.resp.UserInfoResp;
 import com.doitdo.domain.user.entity.User;
@@ -59,6 +60,7 @@ public class AuthServiceImpl implements AuthService {
 	private final AuthenticationManager authenticationManager;
 	private final JwtUtil jwtUtil;
 	private final DefaultCategoryRegistrar defaultCategoryRegistrar;
+	private final DefaultTodoRegistrar defaultTodoRegistrar;
 	private final DefaultFurnitureRegistrar defaultFurnitureRegistrar;
 	private final CharacterRepository characterRepository;
 	private final UserCharacterRepository userCharacterRepository;
@@ -84,10 +86,11 @@ public class AuthServiceImpl implements AuthService {
 				req.username()));
 
 		userWalletRepository.save(UserWallet.createEmpty(user.getUserId()));
-		creditEarnService.tryEarn(user.getUserId(), WalletEarnSource.SIGNUP_BONUS, 100, null, true);
+		creditEarnService.tryEarn(user.getUserId(), WalletEarnSource.SIGNUP_BONUS, 1000, null, true);
 		userSettingRepository.save(UserSetting.create(user.getUserId()));
 		userStreakRepository.save(UserStreak.create(user.getUserId()));
 		defaultCategoryRegistrar.registerFor(user.getUserId());
+		defaultTodoRegistrar.registerFor(user.getUserId());
 		defaultFurnitureRegistrar.registerFor(user.getUserId());
 
 		// 회원가입 직후부터 exp 시스템 대상이 되도록 EGG UserCharacter 자동 생성.
