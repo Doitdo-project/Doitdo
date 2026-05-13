@@ -272,11 +272,42 @@ public class TodoServiceImpl implements TodoService {
 	@Override
 	@Transactional
 	public void delete(Long userId, Long todoId, String scope) {
+		delete(userId, todoId, scope, null);
+	}
+
+	@Override
+	@Transactional
+	public void delete(Long userId, Long todoId, String scope, LocalDate occurrenceDate) {
 		Todo todo = todoRepository.findByTodoIdAndIsDeletedFalse(todoId)
 				.orElseThrow(() -> new CustomException(TodoErrorCode.T01_001));
 
 		if (!todo.getUserId().equals(userId)) {
 			throw new CustomException(TodoErrorCode.T01_003);
+		}
+
+		if (todo.getType() == TodoType.RECURRING && isOnlyScope(scope)) {
+			Todo instance = recurrenceService.materializeRecurringOccurrence(userId, todo, occurrenceDate);
+			instance.softDelete();
+			log.info("event=TODO_RECURRING_OCCURRENCE_DELETED userId={} masterTodoId={} instanceTodoId={} occurrenceDate={}",
+					userId, todo.getTodoId(), instance.getTodoId(), occurrenceDate);
+			cacheEvictHelper.evictUserTodosAfterCommit(userId);
+			cacheEvictHelper.evictTodoItemAfterCommit(userId, todoId);
+			cacheEvictHelper.evictTodoItemAfterCommit(userId, instance.getTodoId());
+			return;
+		}
+
+		if (todo.getType() == TodoType.RECURRING && isFromScope(scope)) {
+			todo.changeEndDate(occurrenceDate.minusDays(1));
+			todoRepository.findAllByUserIdAndMasterTodoIdAndStartDateGreaterThanEqual(
+							userId,
+							todo.getTodoId(),
+							occurrenceDate)
+					.forEach(Todo::softDelete);
+			log.info("event=TODO_RECURRING_FROM_DELETED userId={} masterTodoId={} occurrenceDate={}",
+					userId, todo.getTodoId(), occurrenceDate);
+			cacheEvictHelper.evictUserTodosAfterCommit(userId);
+			cacheEvictHelper.evictTodoItemAfterCommit(userId, todoId);
+			return;
 		}
 
 		todo.softDelete();
@@ -292,6 +323,12 @@ public class TodoServiceImpl implements TodoService {
 	@Override
 	@Transactional
 	public TodoDetailResp update(Long userId, Long todoId, TodoUpdateReq req) {
+		return update(userId, todoId, req, null, null);
+	}
+
+	@Override
+	@Transactional
+	public TodoDetailResp update(Long userId, Long todoId, TodoUpdateReq req, String scope, LocalDate occurrenceDate) {
 		Todo todo = todoRepository.findByTodoIdAndIsDeletedFalse(todoId)
 				.orElseThrow(() -> new CustomException(TodoErrorCode.T04_001));
 
@@ -512,6 +549,14 @@ public class TodoServiceImpl implements TodoService {
 
 	private boolean isAllScope(String scope) {
 		return StringUtils.hasText(scope) && "all".equalsIgnoreCase(scope);
+	}
+
+	private boolean isOnlyScope(String scope) {
+		return StringUtils.hasText(scope) && "only".equalsIgnoreCase(scope);
+	}
+
+	private boolean isFromScope(String scope) {
+		return StringUtils.hasText(scope) && "from".equalsIgnoreCase(scope);
 	}
 
 	private Set<DayOfWeek> parseDaysOfWeek(Set<String> daysOfWeek) {

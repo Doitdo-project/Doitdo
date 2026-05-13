@@ -32,6 +32,23 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 
 	List<Todo> findAllByUserIdAndMasterTodoIdAndIsDeletedFalse(Long userId, Long masterTodoId);
 
+	List<Todo> findAllByUserIdAndMasterTodoIdAndStartDateGreaterThanEqual(
+			Long userId,
+			Long masterTodoId,
+			LocalDate startDate);
+
+	@Query("""
+			SELECT t FROM Todo t
+			WHERE t.userId = :userId
+			  AND t.masterTodoId IN :masterTodoIds
+			  AND t.startDate BETWEEN :from AND :to
+			""")
+	List<Todo> findRecurringInstanceMarkers(
+			@Param("userId") Long userId,
+			@Param("masterTodoIds") List<Long> masterTodoIds,
+			@Param("from") LocalDate from,
+			@Param("to") LocalDate to);
+
 	List<Todo> findAllByTypeAndIsDeletedFalse(TodoType type);
 
 	long countByUserIdAndFirstCompletedDate(Long userId, LocalDate firstCompletedDate);
