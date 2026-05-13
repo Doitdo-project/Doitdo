@@ -179,18 +179,21 @@ class TodoViewModel extends StateNotifier<TodoState> {
     // 같은 날짜에 RECURRING 마스터와 NORMAL 인스턴스가 동시에 표시되는 문제 방지.
     // NORMAL 인스턴스가 있는 날짜엔 같은 제목+카테고리의 RECURRING 마스터를 숨긴다.
     if (selectedDay != null) {
+      // RECURRING 완료 후 같은 날짜에 RECURRING 마스터와 NORMAL 인스턴스가
+      // 동시에 표시되는 문제 방지. title 기준으로만 매칭한다.
+      // (title + category 조합은 카테고리 변경 시 매칭 실패로 중복 표시 버그 발생)
       final normalKeys = filteredTodos
           .where((t) =>
       t.dateType == TodoDateType.normal &&
           t.date != null &&
           isSameDay(t.date!, selectedDay!))
-          .map((t) => '${t.title}_${t.category.name}')
+          .map((t) => t.title)
           .toSet();
 
       if (normalKeys.isNotEmpty) {
         filteredTodos = filteredTodos.where((t) {
           if (t.dateType != TodoDateType.repeat) return true;
-          return !normalKeys.contains('${t.title}_${t.category.name}');
+          return !normalKeys.contains(t.title);
         }).toList();
       }
     }
