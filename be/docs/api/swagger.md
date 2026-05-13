@@ -18,6 +18,28 @@
 - `GET /api/todos` 응답은 `type=SOMEDAY`, `status=DONE`, `done_date < 오늘(KST)` 인 항목을 제외한다.
 - `done_date IS NULL` 인 기존 `SOMEDAY DONE` 데이터는 제외하지 않는다.
 - `GET /api/todos/search`, `GET /api/todos/calendar` 응답에는 이 제외 정책을 적용하지 않는다.
+- `GET /api/todos/calendar` 는 soft-deleted RECURRING 파생 NORMAL 인스턴스를 응답하지 않지만, 같은 `master_todo_id + start_date` 의 가상 occurrence 생성을 차단하는 마커로 사용한다.
+
+### 반복 TODO 수정/삭제 scope
+
+`DELETE /api/todos/{todoId}`:
+
+| Query | 의미 |
+|---|---|
+| 없음 | 기존 단건 soft delete |
+| `scope=all` | RECURRING 마스터와 활성 파생 인스턴스 전체 soft delete |
+| `scope=only&occurrenceDate=YYYY-MM-DD` | 해당 occurrence만 NORMAL 인스턴스로 실체화 후 soft delete |
+| `scope=from&occurrenceDate=YYYY-MM-DD` | 기존 RECURRING 마스터 `endDate`를 전날로 줄이고, 이후 파생 인스턴스 soft delete |
+
+`PATCH /api/todos/{todoId}`:
+
+| Query | 의미 |
+|---|---|
+| 없음 | 기존 단건 수정 |
+| `scope=only&occurrenceDate=YYYY-MM-DD` | 해당 occurrence만 NORMAL 인스턴스로 실체화 후 수정 |
+| `scope=from&occurrenceDate=YYYY-MM-DD` | 기존 RECURRING 마스터를 전날 종료하고, 수정 내용으로 새 RECURRING 마스터 생성 |
+
+`scope=only/from` 은 `todoId` 가 RECURRING 마스터일 때 `occurrenceDate` 가 필수이며, 마스터 반복 규칙에 포함된 날짜여야 한다.
 
 ## 2. 컨트롤러 작성 템플릿 (복붙 가능)
 

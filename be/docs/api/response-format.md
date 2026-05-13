@@ -94,6 +94,29 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 
 `TodoListResp.items[]` 와 `TodoSearchResp.items[]` 도 동일한 `TodoDetailResp` 구조를 사용한다.
 
+### `DELETE /api/todos/{todoId}` 반복 scope
+
+| Query | 응답 | 비고 |
+|---|---|---|
+| 없음 | 204 | 해당 row 단건 soft delete |
+| `scope=all` | 204 | RECURRING 마스터면 활성 파생 인스턴스도 함께 soft delete |
+| `scope=only&occurrenceDate=YYYY-MM-DD` | 204 | 해당 occurrence를 NORMAL 인스턴스로 실체화 후 soft delete |
+| `scope=from&occurrenceDate=YYYY-MM-DD` | 204 | 마스터 `endDate`를 `occurrenceDate - 1`로 줄이고 이후 파생 인스턴스 soft delete |
+
+`scope=only` 로 삭제된 NORMAL 파생 인스턴스는 `isDeleted=true` 상태로 남아 캘린더 가상 occurrence 생성을 차단한다. 응답에는 포함되지 않는다.
+
+### `PATCH /api/todos/{todoId}` 반복 scope
+
+기본 응답은 `TodoDetailResp` 이다.
+
+| Query | 응답 대상 | 비고 |
+|---|---|---|
+| 없음 | 수정된 기존 TODO | 기존 단건 수정 |
+| `scope=only&occurrenceDate=YYYY-MM-DD` | 수정된 NORMAL 인스턴스 | 해당 occurrence만 실체화 후 수정 |
+| `scope=from&occurrenceDate=YYYY-MM-DD` | 새 RECURRING 마스터 | 기존 마스터를 전날 종료하고 수정 내용으로 새 마스터 생성 |
+
+`scope=from` 수정 응답의 `todoId` 는 새 마스터 ID 다. FE는 이후 같은 반복 흐름을 조작할 때 이 새 `todoId`를 사용해야 한다.
+
 ### 카테고리 스냅샷 정책 (2026-05-12 도입)
 
 - **저장**: `todos.category_name` / `todos.category_color_id` 두 컬럼에 카테고리 이름·색 스냅샷을 저장한다.
@@ -153,6 +176,12 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `status` | `TodoStatus` | 가상 인스턴스는 항상 `TODO` |
 | `updatedAt` | `LocalDateTime` | 가상 인스턴스는 마스터 `updatedAt` |
 | `snoozedDays` | `int` | 가상 인스턴스는 `0` |
+
+반복 TODO의 가상 인스턴스 생성 차단 규칙:
+
+- `type=NORMAL`, `master_todo_id=<RECURRING 마스터 ID>`, `start_date=<occurrenceDate>` 인 파생 row가 있으면 해당 날짜의 가상 인스턴스를 만들지 않는다.
+- 이 차단 판단에는 `isDeleted=true` row도 포함한다.
+- `isDeleted=true` row는 응답 `items[]` 에 포함하지 않는다.
 
 ## 8. `CharacterActionUrlResp` 필드 (뚜레딧 적립 Stage 3+)
 
