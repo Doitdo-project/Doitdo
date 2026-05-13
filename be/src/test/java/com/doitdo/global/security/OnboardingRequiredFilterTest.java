@@ -78,7 +78,8 @@ class OnboardingRequiredFilterTest {
         try {
             mockMvc.perform(get("/api/users/me")
                             .header("Authorization", "Bearer " + token))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.dailyAttendanceClaimed").value(false));
         } finally {
             userRepository.deleteById(user.getUserId());
         }

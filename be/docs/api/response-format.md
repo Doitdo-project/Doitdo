@@ -74,7 +74,8 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 
 ## 6. `UserInfoResp` 필드
 
-로그인 / 소셜 로그인 / `GET /api/users/me` / 온보딩 응답에서 공통으로 쓰는 사용자 요약 정보:
+로그인 / 소셜 로그인 / `GET /api/users/me` / 온보딩 응답에서 공통으로 쓰는 사용자 요약 정보.
+출석 보상 자동 적립은 `GET /api/users/me` 응답에서만 발생한다.
 
 | 필드 | 타입 | 비고 |
 |---|---|---|
@@ -84,7 +85,7 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `hasPassword` | `boolean` | 일반 비밀번호 보유 여부. 소셜 전용 계정은 `false` |
 | `birthDateRegistered` | `boolean` | 생년월일 등록 여부 |
 | `agreementsAccepted` | `boolean` | 필수 약관 동의 완료 여부 |
-| `dailyAttendanceClaimed` | `boolean` | Asia/Seoul 기준 오늘 출석 보상 수령 여부 |
+| `dailyAttendanceClaimed` | `boolean` | `GET /api/users/me` 호출 이전에 오늘 출석 보상을 이미 받았는지 여부. `false` 는 이번 호출에서 100 뚜레딧이 자동 적립됐음을 의미하고, `true` 는 이미 수령해 변동 없음을 의미 |
 
 ## 7. `TodoDetailResp` 필드 (참고)
 

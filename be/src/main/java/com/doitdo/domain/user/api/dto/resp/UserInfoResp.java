@@ -13,7 +13,14 @@ import com.doitdo.domain.user.entity.User;
  * <p>{@code birthDateRegistered} / {@code agreementsAccepted} 는 온보딩 단계 분기용.
  * 클라이언트가 진입 시 어느 온보딩 모달을 띄울지 판정한다.
  *
- * <p>{@code dailyAttendanceClaimed} 는 Asia/Seoul 기준 오늘 출석 보상 수령 여부다.
+ * <p>{@code dailyAttendanceClaimed} 는 {@code GET /api/users/me} 호출 이전에 오늘 출석 보상을
+ * 이미 받았는지 나타낸다.
+ * <ul>
+ *   <li>{@code false} - 이번 호출에서 백엔드가 자동으로 100 뚜레딧을 적립했다.
+ *       FE 는 토스트/모달 등으로 "+100 뚜레딧 획득" 안내를 표시할 수 있다.</li>
+ *   <li>{@code true} - 오늘 이미 받았다. 변동 없음.</li>
+ * </ul>
+ * 기준 시각은 {@code Asia/Seoul} 자정.
  */
 public record UserInfoResp(
 
