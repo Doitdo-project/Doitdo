@@ -6,6 +6,7 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/data/models/category_dto.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
+import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/pages/setting/category/widgets/category_add_sheet.dart';
 import 'package:doitdo/presentation/pages/setting/category/widgets/palette_selector_sheet.dart';
 import 'package:doitdo/presentation/providers/active_palette_provider.dart';
@@ -110,10 +111,20 @@ class CategoryPage extends ConsumerWidget {
       );
       return;
     }
+    final todoState = ref.read(todoViewModelProvider);
+    final todoCount = [
+      ...todoState.allTodos,
+      ...todoState.allSomedayTodos,
+    ].where((t) => t.category.name == category.categoryName).length;
+
+    final message = todoCount > 0
+        ? '"${category.categoryName}" 카테고리가 제거됩니다.\n이 카테고리로 분류된 $todoCount개의 할 일은 그대로 유지됩니다.'
+        : '"${category.categoryName}" 카테고리가 제거됩니다.';
+
     final ok = await showDoitdoDialog(
       context: context,
       title: '카테고리를 삭제할까요?',
-      message: '"${category.categoryName}" 카테고리가 제거됩니다.',
+      message: message,
       confirmLabel: '삭제',
       cancelLabel: '취소',
     );

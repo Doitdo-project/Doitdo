@@ -236,6 +236,7 @@ class TodoViewModel extends StateNotifier<TodoState> {
           name: dto.category ?? '기타',
           colorKey: _colorKey(dto.category),
         ),
+        colorHex: dto.colorHex,
         date: dto.startDate != null ? DateTime.tryParse(dto.startDate!) : null,
         // ✏️ 수정: PERIOD → rangeEnd, RECURRING → repeatEndDate 로 각각 분리
         rangeEnd: dto.type == 'PERIOD' && dto.endDate != null
@@ -484,6 +485,7 @@ class TodoViewModel extends StateNotifier<TodoState> {
         name: dto.category ?? '기타',
         colorKey: _colorKey(dto.category),
       ),
+      colorHex: dto.colorHex,
       date: dto.startDate != null ? DateTime.tryParse(dto.startDate!) : null,
       rangeEnd: dto.type == 'PERIOD' && dto.endDate != null
           ? DateTime.tryParse(dto.endDate!)
@@ -593,6 +595,7 @@ class TodoViewModel extends StateNotifier<TodoState> {
                 name: dto.category ?? '기타',
                 colorKey: _colorKey(dto.category),
               ),
+              colorHex: dto.colorHex,
               date: dto.startDate != null ? DateTime.tryParse(dto.startDate!) : null,
               alarmTime: _parseTime(dto.alarmTime),
               alarmEnabled: dto.alarmTime != null,

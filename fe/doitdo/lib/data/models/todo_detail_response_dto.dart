@@ -11,6 +11,7 @@ class TodoDetailResponseDto with _$TodoDetailResponseDto {
     String? content,
     required String status,
     String? category,
+    String? colorHex,
     int? categoryId,          // ← 이 줄 추가
     required String type,
     required int priority,

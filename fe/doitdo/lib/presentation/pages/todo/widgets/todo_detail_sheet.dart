@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
+import 'package:doitdo/data/models/category_dto.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
@@ -290,13 +291,13 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
   Widget _buildMainStep(DoitdoColors c) {
     final categories = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
     Color getCategoryColor(String name) {
+      if (widget.todo.colorHex != null) return hexToColor(widget.todo.colorHex!);
       try {
         return categories.firstWhere((cat) => cat.categoryName == name).color;
       } catch (_) {
         return AppColors.category1;
       }
     }
-
     return _buildForm(c, getCategoryColor);
   }
 
