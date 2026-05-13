@@ -54,25 +54,25 @@ public class DataInitializer implements CommandLineRunner {
 					"#F5A623", // 앰버 오렌지
 					"#CB3A45"  // 크림슨 레드
 			)),
-			new PaletteSeed("솜사탕", List.of(
-					"#FFD4D9", // 블러시 핑크
-					"#FFD5B8", // 피치 크림
-					"#FFF0B8", // 버터 옐로우
-					"#C4E8BE", // 민트 크림
-					"#B8DCF2", // 스카이 미스트
-					"#D0C4F0", // 라벤더
-					"#F0C5D9", // 로즈 쿼츠
-					"#E0D5C5"  // 오트밀
+			new PaletteSeed("풀잎", List.of(
+					"#004B23", // 다크 포레스트
+					"#006400", // 딥 그린
+					"#007200", // 케리 그린
+					"#008000", // 그린
+					"#38B000", // 라임 그린
+					"#70E000", // 옐로우 그린
+					"#9EF01A", // 샤르트뢰즈
+					"#CCFF33"  // 일렉트릭 라임
 			)),
-			new PaletteSeed("벚꽃", List.of(
-					"#FF5C8A", // 핫 핑크
-					"#FF7096", // 로즈 핑크
-					"#FF85A1", // 코랄 핑크
-					"#FF99AC", // 살구 핑크
-					"#FBB1BD", // 라이트 핑크
-					"#F9BEC7", // 베이비 핑크
-					"#F7CAD0", // 페일 핑크
-					"#FAE0E4"  // 미스티 로즈
+			new PaletteSeed("파도", List.of(
+					"#03045E", // 미드나잇 블루
+					"#023E8A", // 네이비 블루
+					"#0077B6", // 오션 블루
+					"#0096C7", // 시안 블루
+					"#00B4D8", // 시안
+					"#48CAE4", // 스카이 시안
+					"#90E0EF", // 아이스 블루
+					"#ADE8F4"  // 페일 시안
 			)),
 			new PaletteSeed("낙엽", List.of(
 					"#523218", // 다크 브라운
@@ -84,16 +84,6 @@ public class DataInitializer implements CommandLineRunner {
 					"#F18B1E", // 탠저린
 					"#ED7A08"  // 번트 오렌지
 			)),
-			new PaletteSeed("풀잎", List.of(
-					"#004B23", // 다크 포레스트
-					"#006400", // 딥 그린
-					"#007200", // 케리 그린
-					"#008000", // 그린
-					"#38B000", // 라임 그린
-					"#70E000", // 옐로우 그린
-					"#9EF01A", // 샤르트뢰즈
-					"#CCFF33"  // 일렉트릭 라임
-			)),
 			new PaletteSeed("바위", List.of(
 					"#A48971", // 토프
 					"#8D6B48", // 카멜
@@ -104,15 +94,25 @@ public class DataInitializer implements CommandLineRunner {
 					"#E8C9AB", // 페일 탠
 					"#F5D7BD"  // 크림 베이지
 			)),
-			new PaletteSeed("파도", List.of(
-					"#03045E", // 미드나잇 블루
-					"#023E8A", // 네이비 블루
-					"#0077B6", // 오션 블루
-					"#0096C7", // 시안 블루
-					"#00B4D8", // 시안
-					"#48CAE4", // 스카이 시안
-					"#90E0EF", // 아이스 블루
-					"#ADE8F4"  // 페일 시안
+			new PaletteSeed("벚꽃", List.of(
+					"#FF5C8A", // 핫 핑크
+					"#FF7096", // 로즈 핑크
+					"#FF85A1", // 코랄 핑크
+					"#FF99AC", // 살구 핑크
+					"#FBB1BD", // 라이트 핑크
+					"#F9BEC7", // 베이비 핑크
+					"#F7CAD0", // 페일 핑크
+					"#FAE0E4"  // 미스티 로즈
+			)),
+			new PaletteSeed("솜사탕", List.of(
+					"#FFD4D9", // 블러시 핑크
+					"#FFD5B8", // 피치 크림
+					"#FFF0B8", // 버터 옐로우
+					"#C4E8BE", // 민트 크림
+					"#B8DCF2", // 스카이 미스트
+					"#D0C4F0", // 라벤더
+					"#F0C5D9", // 로즈 쿼츠
+					"#E0D5C5"  // 오트밀
 			)),
 			new PaletteSeed("꿈", List.of(
 					"#FF9AA2", // 드림 코랄
