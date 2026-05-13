@@ -12,6 +12,8 @@ import com.doitdo.domain.user.entity.User;
  *
  * <p>{@code birthDateRegistered} / {@code agreementsAccepted} 는 온보딩 단계 분기용.
  * 클라이언트가 진입 시 어느 온보딩 모달을 띄울지 판정한다.
+ *
+ * <p>{@code dailyAttendanceClaimed} 는 Asia/Seoul 기준 오늘 출석 보상 수령 여부다.
  */
 public record UserInfoResp(
 
@@ -20,17 +22,19 @@ public record UserInfoResp(
 		String email,
 		boolean hasPassword,
 		boolean birthDateRegistered,
-		boolean agreementsAccepted
+		boolean agreementsAccepted,
+		boolean dailyAttendanceClaimed
 ) {
 
-	public static UserInfoResp from(User user) {
+	public static UserInfoResp from(User user, boolean dailyAttendanceClaimed) {
 		return new UserInfoResp(
 				user.getUserId(),
 				user.getUsername(),
 				user.getEmail(),
 				user.getPassword() != null,
 				user.getBirthDate() != null,
-				user.getTermsAgreedAt() != null
+				user.getTermsAgreedAt() != null,
+				dailyAttendanceClaimed
 		);
 	}
 }

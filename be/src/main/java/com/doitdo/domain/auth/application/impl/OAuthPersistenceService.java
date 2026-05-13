@@ -15,15 +15,19 @@ import com.doitdo.domain.todo.application.DefaultTodoRegistrar;
 import com.doitdo.domain.user.api.dto.resp.UserInfoResp;
 import com.doitdo.domain.user.entity.User;
 import com.doitdo.domain.user.entity.UserWallet;
+import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.domain.user.repository.UserWalletRepository;
+import com.doitdo.domain.user.repository.WalletEarnLogRepository;
 import com.doitdo.global.client.dto.AppleUserInfo;
 import com.doitdo.global.client.dto.GoogleUserInfo;
 import com.doitdo.global.client.dto.KakaoUserResp;
 import com.doitdo.global.exception.AuthErrorCode;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.util.JwtUtil;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -55,6 +59,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class OAuthPersistenceService {
 
+	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 	private static final int USERNAME_RETRY_LIMIT = 5;
 
 	private final UserRepository userRepository;
@@ -63,6 +68,7 @@ public class OAuthPersistenceService {
 	private final UserStreakRepository userStreakRepository;
 	private final AutoProviderRepository autoProviderRepository;
 	private final RefreshTokenRepository refreshTokenRepository;
+	private final WalletEarnLogRepository walletEarnLogRepository;
 	private final JwtUtil jwtUtil;
 	private final DefaultCategoryRegistrar defaultCategoryRegistrar;
 	private final DefaultTodoRegistrar defaultTodoRegistrar;
@@ -335,7 +341,8 @@ public class OAuthPersistenceService {
 		String accessToken = jwtUtil.generateAccessToken(user.getUserId());
 		String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
 		saveOrUpdateRefreshToken(user.getUserId(), refreshToken);
-		return new OAuthLoginResp(accessToken, refreshToken, UserInfoResp.from(user), isNewUser);
+		return new OAuthLoginResp(accessToken, refreshToken,
+				UserInfoResp.from(user, isAttendanceClaimedToday(user.getUserId())), isNewUser);
 	}
 
 	/**
@@ -349,5 +356,17 @@ public class OAuthPersistenceService {
 	private void saveOrUpdateRefreshToken(Long userId, String refreshToken) {
 		LocalDateTime expiresAt = LocalDateTime.now().plusNanos(refreshTokenExpiration * 1_000_000L);
 		refreshTokenRepository.upsertByUserId(userId, refreshToken, expiresAt);
+	}
+
+	private boolean isAttendanceClaimedToday(Long userId) {
+		LocalDate today = LocalDate.now(SEOUL);
+		LocalDateTime startOfDay = today.atStartOfDay();
+		LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
+		return walletEarnLogRepository.sumAmountByUserIdAndSourceAndDate(
+				userId,
+				WalletEarnSource.DAILY_ATTENDANCE,
+				startOfDay,
+				endOfDay
+		) > 0;
 	}
 }
