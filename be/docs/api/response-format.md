@@ -153,6 +153,7 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `scope=from&occurrenceDate=YYYY-MM-DD` | 새 RECURRING 마스터 | 기존 마스터를 전날 종료하고 수정 내용으로 새 마스터 생성 |
 
 `scope=from` 수정 응답의 `todoId` 는 새 마스터 ID 다. FE는 이후 같은 반복 흐름을 조작할 때 이 새 `todoId`를 사용해야 한다.
+`scope=from` 수정의 `occurrenceDate` 는 기존 마스터 기간 안의 기준일이며, 변경 후 `daysOfWeek` 에 포함되어야 한다.
 
 ### 카테고리 스냅샷 정책 (2026-05-12 도입)
 

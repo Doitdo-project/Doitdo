@@ -373,7 +373,7 @@ public class TodoServiceImpl implements TodoService {
 		}
 
 		if (todo.getType() == TodoType.RECURRING && isFromScope(scope)) {
-			validateOccurrenceOfMaster(todo, occurrenceDate);
+			validateCutDateOfMaster(todo, occurrenceDate);
 			return updateRecurringFrom(userId, todo, req, occurrenceDate);
 		}
 
@@ -678,6 +678,14 @@ public class TodoServiceImpl implements TodoService {
 				|| occurrenceDate.isBefore(master.getStartDate())
 				|| (master.getEndDate() != null && occurrenceDate.isAfter(master.getEndDate()))
 				|| !master.getDaysOfWeek().contains(occurrenceDate.getDayOfWeek())) {
+			throw new CustomException(TodoErrorCode.T03_004);
+		}
+	}
+
+	private void validateCutDateOfMaster(Todo master, LocalDate occurrenceDate) {
+		if (occurrenceDate == null
+				|| occurrenceDate.isBefore(master.getStartDate())
+				|| (master.getEndDate() != null && occurrenceDate.isAfter(master.getEndDate()))) {
 			throw new CustomException(TodoErrorCode.T03_004);
 		}
 	}
