@@ -126,7 +126,7 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
           state = state.copyWith(clearActionUrl: true);
         });
       }
-      if (result.earnedAmount >= 0) {
+      if (result.earnedAmount > 0) {
         _gainTick += 1;
         state = state.copyWith(
           lastGain: CharacterTapGain(
