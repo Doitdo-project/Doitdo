@@ -22,6 +22,7 @@ import com.doitdo.domain.shop.api.dto.resp.FurnitureShopItemResp;
 import com.doitdo.domain.shop.api.dto.resp.FurnitureShopStatus;
 import com.doitdo.domain.shop.api.dto.resp.FurnitureThemeResp;
 import com.doitdo.domain.shop.api.dto.resp.PurchaseFurnitureResp;
+import com.doitdo.domain.shop.api.dto.resp.PurchaseThemeResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomResp;
 import com.doitdo.domain.shop.entity.Furniture;
 import com.doitdo.domain.shop.entity.FurniturePurchaseLog;
@@ -264,24 +265,97 @@ class ShopServiceImplTest {
 	}
 
 	@Test
-	void listThemes_returnsActiveThemesWithFurnitureCount() {
+	void listThemes_returnsThemePricingAndInlineFurnitures() {
 		ShopServiceImpl service = service();
+		Long userId = 1L;
 		FurnitureTheme autumn = furnitureTheme("AUTUMN", "가을", 1, "https://cdn.example.com/autumn.png");
 		FurnitureTheme cherry = furnitureTheme("CHERRY", "벚꽃", 2, "https://cdn.example.com/cherry.png");
+		Furniture autumnBed = furniture(10L, "BED_AUTUMN", "가을 침대", "BED", 300, true);
+		Furniture autumnDesk = furniture(11L, "DESK_AUTUMN", "가을 책상", "DESK", 400, true);
+		Furniture cherryBed = furniture(12L, "BED_CHERRY", "벚꽃 침대", "BED", 500, true);
 
 		given(furnitureThemeRepository.findAllByIsActiveTrueOrderByDisplayOrderAscThemeCodeAsc())
 			.willReturn(List.of(autumn, cherry));
-		given(furnitureRepository.countByThemeCodeAndIsDeletedFalse("AUTUMN")).willReturn(8L);
-		given(furnitureRepository.countByThemeCodeAndIsDeletedFalse("CHERRY")).willReturn(8L);
+		given(furnitureRepository.findAllByThemeCodeAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc("AUTUMN"))
+			.willReturn(List.of(autumnBed, autumnDesk));
+		given(furnitureRepository.findAllByThemeCodeAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc("CHERRY"))
+			.willReturn(List.of(cherryBed));
+		given(userFurnitureRepository.findFurnitureIdsByUserId(userId)).willReturn(List.of(11L));
 
-		List<FurnitureThemeResp> resp = service.listThemes().items();
+		List<FurnitureThemeResp> resp = service.listThemes(userId).items();
 
 		assertThat(resp).hasSize(2);
 		assertThat(resp.get(0).themeCode()).isEqualTo("AUTUMN");
 		assertThat(resp.get(0).themeName()).isEqualTo("가을");
 		assertThat(resp.get(0).thumbnailUrl()).isEqualTo("https://cdn.example.com/autumn.png");
-		assertThat(resp.get(0).furnitureCount()).isEqualTo(8);
+		assertThat(resp.get(0).furnitureCount()).isEqualTo(2);
+		assertThat(resp.get(0).ownedCount()).isEqualTo(1);
+		assertThat(resp.get(0).totalPrice()).isEqualTo(700);
+		assertThat(resp.get(0).purchasePrice()).isEqualTo(300);
+		assertThat(resp.get(0).alreadyOwned()).isFalse();
+		assertThat(resp.get(0).furnitures()).hasSize(2);
+		assertThat(resp.get(0).furnitures().get(0).furnitureId()).isEqualTo(10L);
+		assertThat(resp.get(0).furnitures().get(0).owned()).isFalse();
+		assertThat(resp.get(0).furnitures().get(1).furnitureId()).isEqualTo(11L);
+		assertThat(resp.get(0).furnitures().get(1).owned()).isTrue();
 		assertThat(resp.get(1).themeCode()).isEqualTo("CHERRY");
+		assertThat(resp.get(1).ownedCount()).isZero();
+		assertThat(resp.get(1).totalPrice()).isEqualTo(500);
+		assertThat(resp.get(1).purchasePrice()).isEqualTo(500);
+	}
+
+	@Test
+	void purchaseTheme_buysOnlyMissingFurnituresAndDoesNotPlaceThem() {
+		ShopServiceImpl service = service();
+		Long userId = 1L;
+		FurnitureTheme moon = furnitureTheme("MOON", "달빛", 1, "https://cdn.example.com/moon.png");
+		Furniture bed = furniture(10L, "BED_MOON", "달빛 침대", "BED", 300, true);
+		Furniture desk = furniture(11L, "DESK_MOON", "달빛 책상", "DESK", 400, true);
+		UserWallet wallet = UserWallet.builder()
+			.userId(userId)
+			.balance(1000)
+			.build();
+		UserFurniture savedBed = userFurniture(20L, userId, 10L);
+
+		given(furnitureThemeRepository.findByThemeCodeAndIsActiveTrue("MOON")).willReturn(Optional.of(moon));
+		given(furnitureRepository.findAllByThemeCodeAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc("MOON"))
+			.willReturn(List.of(bed, desk));
+		given(userFurnitureRepository.findFurnitureIdsByUserId(userId)).willReturn(List.of(11L));
+		given(userWalletRepository.findByUserIdForUpdate(userId)).willReturn(Optional.of(wallet));
+		given(userFurnitureRepository.saveAllAndFlush(any())).willReturn(List.of(savedBed));
+
+		PurchaseThemeResp resp = service.purchaseTheme(userId, "moon");
+
+		assertThat(resp.themeCode()).isEqualTo("MOON");
+		assertThat(resp.themeName()).isEqualTo("달빛");
+		assertThat(resp.purchasedCount()).isEqualTo(1);
+		assertThat(resp.skippedOwnedCount()).isEqualTo(1);
+		assertThat(resp.totalPaid()).isEqualTo(300);
+		assertThat(resp.balance()).isEqualTo(700);
+		assertThat(resp.purchasedFurnitures()).hasSize(1);
+		assertThat(resp.purchasedFurnitures().get(0).userFurnitureId()).isEqualTo(20L);
+		assertThat(resp.purchasedFurnitures().get(0).furnitureId()).isEqualTo(10L);
+		verify(roomFurniturePlacementRepository, never()).save(any(RoomFurniturePlacement.class));
+	}
+
+	@Test
+	void purchaseTheme_rejectsAlreadyOwnedTheme() {
+		ShopServiceImpl service = service();
+		Long userId = 1L;
+		FurnitureTheme moon = furnitureTheme("MOON", "달빛", 1, "https://cdn.example.com/moon.png");
+		Furniture bed = furniture(10L, "BED_MOON", "달빛 침대", "BED", 300, true);
+
+		given(furnitureThemeRepository.findByThemeCodeAndIsActiveTrue("MOON")).willReturn(Optional.of(moon));
+		given(furnitureRepository.findAllByThemeCodeAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc("MOON"))
+			.willReturn(List.of(bed));
+		given(userFurnitureRepository.findFurnitureIdsByUserId(userId)).willReturn(List.of(10L));
+
+		assertThatThrownBy(() -> service.purchaseTheme(userId, "MOON"))
+			.isInstanceOf(CustomException.class)
+			.extracting(ex -> ((CustomException)ex).getErrorCode())
+			.isEqualTo(ShopErrorCode.THEME_ALREADY_OWNED);
+		verify(userWalletRepository, never()).findByUserIdForUpdate(userId);
+		verify(userFurnitureRepository, never()).saveAll(any());
 	}
 
 	@Test
