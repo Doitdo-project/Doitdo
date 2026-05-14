@@ -18,7 +18,9 @@ public enum ShopErrorCode implements ErrorCode {
 	USER_FURNITURE_NOT_FOUND("S01-001", HttpStatus.NOT_FOUND, "보유 가구를 찾을 수 없습니다."),
 	PLACEMENT_NOT_FOUND("S02-001", HttpStatus.NOT_FOUND, "배치 정보를 찾을 수 없습니다."),
 	THEME_NOT_FOUND("S03-001", HttpStatus.NOT_FOUND, "테마를 찾을 수 없습니다."),
-	THEME_CATEGORY_DUPLICATED("S03-002", HttpStatus.CONFLICT, "테마에 같은 카테고리 가구가 중복되어 있습니다.")
+	THEME_CATEGORY_DUPLICATED("S03-002", HttpStatus.CONFLICT, "테마에 같은 카테고리 가구가 중복되어 있습니다."),
+	THEME_EMPTY("S03-003", HttpStatus.UNPROCESSABLE_ENTITY, "테마에 구매할 가구가 없습니다."),
+	THEME_ALREADY_OWNED("S03-010", HttpStatus.CONFLICT, "이미 테마 풀세트를 보유하고 있습니다.")
 	;
 
 	private final String code;
