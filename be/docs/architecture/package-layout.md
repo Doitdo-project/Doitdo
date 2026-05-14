@@ -223,7 +223,7 @@ UNIQUE 제약 `uk_todos_user_master_date (user_id, master_todo_id, start_date)` 
 
 | 종류 | 경로 | 비고 |
 |---|---|---|
-| Response DTO | `domain/todo/api/dto/resp/PaletteResp.java` | `paletteId, paletteName, colors[]` |
+| Response DTO | `domain/todo/api/dto/resp/PaletteResp.java` | `paletteId, paletteName, colors: List<Color{colorId, color}>` — FE 가 PATCH 시 color_id 를 정확히 보낼 수 있게 colorId 노출 |
 | Application interface | `domain/todo/application/PaletteService.java` | `list()` |
 | Application impl | `domain/todo/application/impl/PaletteServiceImpl.java` | PaletteColor 전체 1회 조회 후 paletteId 로 그룹핑 |
 | Controller | `domain/todo/api/controller/PaletteController.java` | `GET /api/palettes` |
