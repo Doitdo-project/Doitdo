@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.doitdo.domain.auth.api.dto.req.SignupReq;
 import com.doitdo.domain.auth.api.dto.resp.SignupResp;
+import com.doitdo.domain.auth.repository.PasswordResetTokenRedisRepository;
 import com.doitdo.domain.auth.repository.RefreshTokenRepository;
 import com.doitdo.domain.setting.repository.UserSettingRepository;
 import com.doitdo.domain.shop.application.DefaultFurnitureRegistrar;
@@ -35,6 +36,7 @@ import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.domain.user.repository.UserWalletRepository;
 import com.doitdo.domain.user.repository.WalletEarnLogRepository;
+import com.doitdo.global.mail.MailService;
 import com.doitdo.global.util.JwtUtil;
 
 @ExtendWith(MockitoExtension.class)
@@ -56,6 +58,9 @@ class AuthServiceImplTest {
 	private RefreshTokenRepository refreshTokenRepository;
 
 	@Mock
+	private PasswordResetTokenRedisRepository passwordResetTokenRepository;
+
+	@Mock
 	private WalletEarnLogRepository walletEarnLogRepository;
 
 	@Mock
@@ -66,6 +71,9 @@ class AuthServiceImplTest {
 
 	@Mock
 	private JwtUtil jwtUtil;
+
+	@Mock
+	private MailService mailService;
 
 	@Mock
 	private DefaultCategoryRegistrar defaultCategoryRegistrar;
@@ -92,10 +100,12 @@ class AuthServiceImplTest {
 			userSettingRepository,
 			userStreakRepository,
 			refreshTokenRepository,
+			passwordResetTokenRepository,
 			walletEarnLogRepository,
 			passwordEncoder,
 			authenticationManager,
 			jwtUtil,
+			mailService,
 			defaultCategoryRegistrar,
 			defaultTodoRegistrar,
 			defaultFurnitureRegistrar,
