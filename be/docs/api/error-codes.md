@@ -203,6 +203,9 @@ Stage 4 똥치우기 미션은 활성 시각 전이거나 이미 치운 상태�
 | `PLACEMENT_NOT_FOUND` | `S02-001` | 404 | 배치 정보를 찾을 수 없음 |
 | `THEME_NOT_FOUND` | `S03-001` | 404 | 테마를 찾을 수 없음 |
 | `THEME_CATEGORY_DUPLICATED` | `S03-002` | 409 | 테마에 같은 카테고리 가구가 중복됨 |
+| `THEME_EMPTY` | `S03-003` | 422 | 테마에 구매/배치할 가구가 없음 |
+| `THEME_ALREADY_OWNED` | `S03-010` | 409 | 이미 테마 풀세트를 보유함 |
+| `THEME_NOT_FULLY_OWNED` | `S03-011` | 409 | 테마 가구를 모두 보유하지 않음 |
 
 ### `AuthErrorCode` 추가 코드 (비밀번호 재설정, 2026-05)
 

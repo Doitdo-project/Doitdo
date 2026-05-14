@@ -25,6 +25,16 @@ public interface FurnitureRepository extends JpaRepository<Furniture, Long> {
 	List<Furniture> findAllByThemeCodeAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc(
 		@Param("themeCode") String themeCode);
 
+	@Query("""
+		select f
+		from Furniture f
+		where f.themeCode in :themeCodes
+		  and f.isDeleted = false
+		order by f.zIndex asc, f.furnitureId asc
+		""")
+	List<Furniture> findAllByThemeCodeInAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc(
+		@Param("themeCodes") List<String> themeCodes);
+
 	long countByThemeCodeAndIsDeletedFalse(String themeCode);
 
 	Optional<Furniture> findByFurnitureIdAndIsDeletedFalse(Long furnitureId);
