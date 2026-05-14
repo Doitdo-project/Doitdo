@@ -369,7 +369,7 @@ public class TodoServiceImpl implements TodoService {
 
 		if (todo.getType() == TodoType.RECURRING && isOnlyScope(scope)) {
 			Todo instance = recurrenceService.materializeRecurringOccurrence(userId, todo, occurrenceDate);
-			return updateSingleTodo(userId, instance, req, todoId);
+			return updateSingleTodo(userId, instance, normalizeRecurringOnlyUpdateReq(req), todoId);
 		}
 
 		if (todo.getType() == TodoType.RECURRING && isFromScope(scope)) {
@@ -485,6 +485,19 @@ public class TodoServiceImpl implements TodoService {
 
 		String colorHex = resolveColorHexForTodo(userId, newMaster);
 		return withExcludedDates(userId, newMaster, newMaster.getCategoryName(), colorHex, 0);
+	}
+
+	private TodoUpdateReq normalizeRecurringOnlyUpdateReq(TodoUpdateReq req) {
+		return new TodoUpdateReq(
+				req.title(),
+				req.content(),
+				req.category(),
+				TodoType.NORMAL,
+				req.startDate(),
+				req.endDate(),
+				null,
+				req.alertTime(),
+				req.clearAlertTime());
 	}
 
 	@Override
