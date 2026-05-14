@@ -125,9 +125,12 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 			.findAllByUserIdOrderByUserFurnitureIdAsc(userId)
 			.stream()
 			.collect(Collectors.toMap(UserFurniture::getFurnitureId, Function.identity()));
+		Map<Long, UserFurniture> ownedByUserFurnitureId = ownedByFurnitureId.values()
+			.stream()
+			.collect(Collectors.toMap(UserFurniture::getUserFurnitureId, Function.identity()));
 		for (Furniture furniture : themeFurnitures) {
 			if (!ownedByFurnitureId.containsKey(furniture.getFurnitureId())) {
-				throw new CustomException(ShopErrorCode.USER_FURNITURE_NOT_FOUND);
+				throw new CustomException(ShopErrorCode.THEME_NOT_FULLY_OWNED);
 			}
 		}
 
@@ -136,11 +139,19 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 			.collect(Collectors.toSet());
 		List<RoomFurniturePlacement> currentPlacements =
 			roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId);
+		List<Long> placedFurnitureIds = currentPlacements.stream()
+			.map(RoomFurniturePlacement::getUserFurnitureId)
+			.map(ownedByUserFurnitureId::get)
+			.filter(Objects::nonNull)
+			.map(UserFurniture::getFurnitureId)
+			.toList();
+		Map<Long, Furniture> furnitureById = furnitureRepository.findAllById(placedFurnitureIds)
+			.stream()
+			.collect(Collectors.toMap(Furniture::getFurnitureId, Function.identity()));
 		for (RoomFurniturePlacement placement : currentPlacements) {
-			UserFurniture userFurniture = userFurnitureRepository.findById(placement.getUserFurnitureId())
-				.orElseThrow(() -> new CustomException(ShopErrorCode.USER_FURNITURE_NOT_FOUND));
-			Furniture furniture = findFurniture(userFurniture.getFurnitureId());
-			if (themeCategories.contains(furniture.getCategory())) {
+			UserFurniture userFurniture = ownedByUserFurnitureId.get(placement.getUserFurnitureId());
+			Furniture furniture = userFurniture == null ? null : furnitureById.get(userFurniture.getFurnitureId());
+			if (furniture != null && themeCategories.contains(furniture.getCategory())) {
 				roomFurniturePlacementRepository.delete(placement);
 			}
 		}
@@ -154,7 +165,7 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 			items.add(RoomFurniturePlacementResp.from(placement, furniture));
 		}
 
-		return new PlaceThemeResp(theme.getThemeCode(), items.size(), items);
+		return new PlaceThemeResp(theme.getThemeCode(), theme.getThemeName(), items.size(), items);
 	}
 
 	@Override

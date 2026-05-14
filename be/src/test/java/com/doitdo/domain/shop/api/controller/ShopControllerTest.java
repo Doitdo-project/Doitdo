@@ -180,7 +180,7 @@ class ShopControllerTest {
 
 	@Test
 	void placeTheme_returnsPlacementResult() {
-		PlaceThemeResp resp = new PlaceThemeResp("MOON", 1, List.of(
+		PlaceThemeResp resp = new PlaceThemeResp("MOON", "달빛", 1, List.of(
 			new RoomFurniturePlacementResp(3L, 10L, 1L, "달빛 침대", "BED",
 				"https://cdn.example.com/bed.png", 80, 90, 5, 0, false)
 		));
@@ -191,6 +191,7 @@ class ShopControllerTest {
 		assertThat(response.getStatus()).isEqualTo(200);
 		assertThat(response.getMessage()).isEqualTo("테마 배치 완료");
 		assertThat(response.getData().themeCode()).isEqualTo("MOON");
+		assertThat(response.getData().themeName()).isEqualTo("달빛");
 		assertThat(response.getData().placedCount()).isEqualTo(1);
 	}
 }

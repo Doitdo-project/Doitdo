@@ -8,7 +8,7 @@ public record PurchaseThemeResp(
 	int purchasedCount,
 	int skippedOwnedCount,
 	int totalPaid,
-	Integer balance,
+	int balance,
 	List<PurchaseThemeFurnitureResp> purchasedFurnitures
 ) {
 }

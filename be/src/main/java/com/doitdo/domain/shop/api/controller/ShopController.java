@@ -160,7 +160,7 @@ public class ShopController {
 
 	@Operation(summary = "가구 테마 일괄 배치",
 		description = "현재 사용자가 보유한 테마 가구를 방에 한 번에 배치한다. 같은 카테고리의 기존 배치는 제거하고 테마 가구로 교체한다.")
-	@ApiErrorCodes({"S03-001", "S03-002", "S03-003", "S01-001", "S00-001"})
+	@ApiErrorCodes({"S03-001", "S03-002", "S03-003", "S03-011", "S00-001"})
 	@PostMapping("/users/me/room/themes/{themeCode}/placements")
 	public GlobalApiResponse<PlaceThemeResp> placeTheme(
 		@AuthenticationPrincipal CustomUserDetails userDetails,

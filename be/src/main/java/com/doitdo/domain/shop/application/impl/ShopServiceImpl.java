@@ -3,6 +3,7 @@ package com.doitdo.domain.shop.application.impl;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -74,12 +75,19 @@ public class ShopServiceImpl implements ShopService {
 	@Transactional(readOnly = true)
 	public FurnitureThemeListResp listThemes(Long userId) {
 		Set<Long> ownedFurnitureIds = new HashSet<>(userFurnitureRepository.findFurnitureIdsByUserId(userId));
-		List<FurnitureThemeResp> items = furnitureThemeRepository
-			.findAllByIsActiveTrueOrderByDisplayOrderAscThemeCodeAsc()
+		List<FurnitureTheme> themes = furnitureThemeRepository.findAllByIsActiveTrueOrderByDisplayOrderAscThemeCodeAsc();
+		List<String> themeCodes = themes.stream()
+			.map(FurnitureTheme::getThemeCode)
+			.toList();
+		Map<String, List<Furniture>> furnituresByThemeCode = themeCodes.isEmpty()
+			? Map.of()
+			: furnitureRepository.findAllByThemeCodeInAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc(themeCodes)
+				.stream()
+				.collect(Collectors.groupingBy(Furniture::getThemeCode));
+		List<FurnitureThemeResp> items = themes
 			.stream()
 			.map(theme -> FurnitureThemeResp.from(theme,
-				furnitureRepository.findAllByThemeCodeAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc(
-					theme.getThemeCode()),
+				furnituresByThemeCode.getOrDefault(theme.getThemeCode(), List.of()),
 				ownedFurnitureIds))
 			.toList();
 
@@ -157,11 +165,12 @@ public class ShopServiceImpl implements ShopService {
 			throw new CustomException(ShopErrorCode.FURNITURE_ALREADY_OWNED);
 		}
 
+		List<FurniturePurchaseLog> logs = new java.util.ArrayList<>();
 		List<PurchaseThemeFurnitureResp> purchasedFurnitures = new java.util.ArrayList<>();
 		for (int i = 0; i < savedUserFurnitures.size(); i++) {
 			UserFurniture userFurniture = savedUserFurnitures.get(i);
 			Furniture furniture = toBuy.get(i);
-			furniturePurchaseLogRepository.save(FurniturePurchaseLog.create(
+			logs.add(FurniturePurchaseLog.create(
 				userId,
 				userFurniture.getUserFurnitureId(),
 				furniture.getFurnitureId(),
@@ -170,6 +179,7 @@ public class ShopServiceImpl implements ShopService {
 			));
 			purchasedFurnitures.add(PurchaseThemeFurnitureResp.from(userFurniture, furniture));
 		}
+		furniturePurchaseLogRepository.saveAll(logs);
 
 		return new PurchaseThemeResp(
 			theme.getThemeCode(),

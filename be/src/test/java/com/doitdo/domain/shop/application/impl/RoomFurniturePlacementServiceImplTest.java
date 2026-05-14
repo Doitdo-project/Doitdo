@@ -251,8 +251,7 @@ class RoomFurniturePlacementServiceImplTest {
 			.willReturn(List.of(oldBedUserFurniture, moonBedUserFurniture, moonDeskUserFurniture));
 		given(roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId))
 			.willReturn(List.of(oldBedPlacement));
-		given(userFurnitureRepository.findById(20L)).willReturn(Optional.of(oldBedUserFurniture));
-		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(10L)).willReturn(Optional.of(oldBed));
+		given(furnitureRepository.findAllById(any())).willReturn(List.of(oldBed, moonBed, moonDesk));
 		given(roomFurniturePlacementRepository.save(any(RoomFurniturePlacement.class)))
 			.willReturn(savedBedPlacement, savedDeskPlacement);
 
@@ -260,6 +259,7 @@ class RoomFurniturePlacementServiceImplTest {
 
 		verify(roomFurniturePlacementRepository).delete(oldBedPlacement);
 		assertThat(resp.themeCode()).isEqualTo("MOON");
+		assertThat(resp.themeName()).isEqualTo("달빛");
 		assertThat(resp.placedCount()).isEqualTo(2);
 		assertThat(resp.items()).extracting(RoomFurniturePlacementResp::userFurnitureId)
 			.containsExactly(21L, 22L);
@@ -280,7 +280,7 @@ class RoomFurniturePlacementServiceImplTest {
 		assertThatThrownBy(() -> service.placeTheme(userId, "MOON"))
 			.isInstanceOf(CustomException.class)
 			.extracting(ex -> ((CustomException)ex).getErrorCode())
-			.isEqualTo(ShopErrorCode.USER_FURNITURE_NOT_FOUND);
+			.isEqualTo(ShopErrorCode.THEME_NOT_FULLY_OWNED);
 		verify(roomFurniturePlacementRepository, never()).save(any(RoomFurniturePlacement.class));
 	}
 

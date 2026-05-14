@@ -134,6 +134,7 @@ Body 없음.
   "message": "테마 배치 완료",
   "data": {
     "themeCode": "MOON",
+    "themeName": "달빛",
     "placedCount": 4,
     "items": [
       {
@@ -173,6 +174,7 @@ Body 없음.
 | `THEME_CATEGORY_DUPLICATED` | `S03-002` | 409 | 테마에 같은 카테고리 가구 중복 |
 | `THEME_EMPTY` | `S03-003` | 422 | 활성 테마에 구매/배치할 가구 없음 |
 | `THEME_ALREADY_OWNED` | `S03-010` | 409 | 테마 풀세트를 이미 보유 |
+| `THEME_NOT_FULLY_OWNED` | `S03-011` | 409 | 테마 일괄 배치에 필요한 가구 일부 미보유 |
 | `INSUFFICIENT_BALANCE` | `S00-003` | 409 | 잔액 부족 |
 
 이미지 설계안의 `SH00-*` 는 최종 코드 형식과 맞지 않으므로 현재 레포 규칙인 `S03-*` 를 사용한다.

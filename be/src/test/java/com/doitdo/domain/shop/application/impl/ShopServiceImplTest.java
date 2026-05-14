@@ -276,10 +276,9 @@ class ShopServiceImplTest {
 
 		given(furnitureThemeRepository.findAllByIsActiveTrueOrderByDisplayOrderAscThemeCodeAsc())
 			.willReturn(List.of(autumn, cherry));
-		given(furnitureRepository.findAllByThemeCodeAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc("AUTUMN"))
-			.willReturn(List.of(autumnBed, autumnDesk));
-		given(furnitureRepository.findAllByThemeCodeAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc("CHERRY"))
-			.willReturn(List.of(cherryBed));
+		given(furnitureRepository.findAllByThemeCodeInAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc(
+			List.of("AUTUMN", "CHERRY")))
+			.willReturn(List.of(autumnBed, cherryBed, autumnDesk));
 		given(userFurnitureRepository.findFurnitureIdsByUserId(userId)).willReturn(List.of(11L));
 
 		List<FurnitureThemeResp> resp = service.listThemes(userId).items();
@@ -302,6 +301,10 @@ class ShopServiceImplTest {
 		assertThat(resp.get(1).ownedCount()).isZero();
 		assertThat(resp.get(1).totalPrice()).isEqualTo(500);
 		assertThat(resp.get(1).purchasePrice()).isEqualTo(500);
+		verify(furnitureRepository).findAllByThemeCodeInAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc(
+			List.of("AUTUMN", "CHERRY"));
+		verify(furnitureRepository, never())
+			.findAllByThemeCodeAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc(anyString());
 	}
 
 	@Test
@@ -335,6 +338,7 @@ class ShopServiceImplTest {
 		assertThat(resp.purchasedFurnitures()).hasSize(1);
 		assertThat(resp.purchasedFurnitures().get(0).userFurnitureId()).isEqualTo(20L);
 		assertThat(resp.purchasedFurnitures().get(0).furnitureId()).isEqualTo(10L);
+		verify(furniturePurchaseLogRepository).saveAll(any());
 		verify(roomFurniturePlacementRepository, never()).save(any(RoomFurniturePlacement.class));
 	}
 
@@ -420,6 +424,7 @@ class ShopServiceImplTest {
 			.name(name)
 			.description(name + " 설명")
 			.category(category)
+			.themeCode(resolveThemeCode(code))
 			.price(price)
 			.imageUrl("https://cdn.example.com/" + code + ".png")
 			.thumbnailUrl("https://cdn.example.com/" + code + "_thumb.png")
@@ -431,6 +436,10 @@ class ShopServiceImplTest {
 			.isOnSale(isOnSale)
 			.isDeleted(false)
 			.build();
+	}
+
+	private String resolveThemeCode(String code) {
+		return code.contains("_") ? code.substring(code.lastIndexOf('_') + 1) : null;
 	}
 
 	private FurnitureTheme furnitureTheme(String themeCode, String themeName, Integer displayOrder,
