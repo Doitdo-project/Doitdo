@@ -200,6 +200,8 @@ Stage 4 똥치우기 미션은 활성 시각 전이거나 이미 치운 상태�
 | `WALLET_NOT_FOUND` | `S00-005` | 404 | 월렛을 찾을 수 없음 |
 | `USER_FURNITURE_NOT_FOUND` | `S01-001` | 404 | 보유 가구를 찾을 수 없음 |
 | `PLACEMENT_NOT_FOUND` | `S02-001` | 404 | 배치 정보를 찾을 수 없음 |
+| `THEME_NOT_FOUND` | `S03-001` | 404 | 테마를 찾을 수 없음 |
+| `THEME_CATEGORY_DUPLICATED` | `S03-002` | 409 | 테마에 같은 카테고리 가구가 중복됨 |
 
 ### `BugReportErrorCode` 신규 enum (bugreport, 2026-04, JIRA S14P31D107-442)
 

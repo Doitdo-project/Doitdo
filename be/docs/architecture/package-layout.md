@@ -238,6 +238,8 @@ UNIQUE 제약 `uk_todos_user_master_date (user_id, master_todo_id, start_date)` 
 | Request DTO | `domain/shop/api/dto/req/UpdateRoomFurniturePlacementReq.java` | 배치 좌표/레이어 수정 요청 |
 | Response DTO | `domain/shop/api/dto/resp/FurnitureShopResp.java` | 상점 가구 목록 래퍼 |
 | Response DTO | `domain/shop/api/dto/resp/FurnitureShopItemResp.java` | 상점 가구 단일 응답, `owned/soldOut/placed/status` 포함 |
+| Response DTO | `domain/shop/api/dto/resp/FurnitureThemeListResp.java` | 가구 테마 목록 래퍼 |
+| Response DTO | `domain/shop/api/dto/resp/FurnitureThemeResp.java` | 가구 테마 단일 응답, `themeCode/themeName/thumbnailUrl/furnitureCount` 포함 |
 | Response enum | `domain/shop/api/dto/resp/FurnitureShopStatus.java` | 상점/인벤토리 상태 (`PURCHASABLE`, `PLACEABLE`, `PLACED`) |
 | Response DTO | `domain/shop/api/dto/resp/PurchaseFurnitureResp.java` | 구매 결과, 잔액 포함 |
 | Response DTO | `domain/shop/api/dto/resp/UserFurnitureResp.java` | 보유 가구 목록 래퍼 |
@@ -250,19 +252,23 @@ UNIQUE 제약 `uk_todos_user_master_date (user_id, master_todo_id, start_date)` 
 | Application impl | `domain/shop/application/impl/ShopServiceImpl.java` | 월렛 차감 + 보유 생성 + 구매 로그 저장 |
 | Application impl | `domain/shop/application/impl/RoomFurniturePlacementServiceImpl.java` | 보유 가구 방 배치/수정/제거 |
 | Entity | `domain/shop/entity/Furniture.java` | `furnitures` 테이블 매핑 |
+| Entity | `domain/shop/entity/FurnitureTheme.java` | `furniture_themes` 테이블 매핑 |
 | Entity | `domain/shop/entity/UserFurniture.java` | `user_furnitures` 테이블 매핑, `(user_id, furniture_id)` unique |
 | Entity | `domain/shop/entity/FurniturePurchaseLog.java` | `furniture_purchase_logs` 테이블 매핑 |
 | Entity | `domain/shop/entity/RoomFurniturePlacement.java` | `room_furniture_placements` 테이블 매핑 |
 | Repository | `domain/shop/repository/FurnitureRepository.java` | 가구 조회 |
+| Repository | `domain/shop/repository/FurnitureThemeRepository.java` | 가구 테마 조회 |
 | Repository | `domain/shop/repository/UserFurnitureRepository.java` | 보유 가구 조회/중복 확인 |
 | Repository | `domain/shop/repository/FurniturePurchaseLogRepository.java` | 가구 구매 로그 |
 | Repository | `domain/shop/repository/RoomFurniturePlacementRepository.java` | 방 배치 조회/삭제 |
 | Migration SQL | `docs/ops/migrations/2026-05-shop-furniture.sql` | 수동 실행 필요 |
+| Migration SQL | `docs/ops/migrations/2026-05-14-shop-furniture-theme.sql` | 가구 테마 테이블/컬럼/seed 수동 실행 필요 |
 
 `UserWallet.spend(Integer amount)` 와 `UserWalletRepository.findByUserIdForUpdate(Long userId)` 로 구매 차감과 동시성 제어를 처리한다.
 방에서 가구를 제거할 때는 `UserFurniture` 를 삭제하지 않고 `RoomFurniturePlacement` 만 삭제한다.
 상점/인벤토리 통합 화면에서는 보유 여부와 배치 여부로 `PURCHASABLE`, `PLACEABLE`, `PLACED` 상태를 계산한다.
 방에는 카테고리별 1개 가구만 배치하며, 같은 카테고리의 새 가구를 배치하면 기존 placement 를 자동 삭제한다.
+테마 미리보기는 `furniture_themes.theme_code` 와 `furnitures.theme_code` 로 테마 가구 세트를 조회하고, 같은 카테고리의 기존 방 배치를 응답에서만 교체한다.
 
 ## bugreport 도메인 구현 파일
 
