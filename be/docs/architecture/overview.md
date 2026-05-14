@@ -76,6 +76,7 @@ com.doitdo
 |---|---|---|---|---|
 | 저녁 미완료 리마인더 | `REMINDER_EVENING` | `EveningReminderScheduler` → `NotificationService.sendEveningReminder` | null | 매분 cron, `UserSetting.eveningReminderTime` 일치 유저 대상, 미완료 TODO > 0 조건. 플래그: `notification.evening-reminder.enabled` |
 | 아침 TODO 리마인더 | `REMINDER_MORNING` | `MorningReminderScheduler` → `NotificationService.sendMorningReminder` | null | 매분 cron, `UserSetting.morningReminderTime` 일치 유저 대상, 미완료 TODO > 0 조건. 플래그: `notification.morning-reminder.enabled` |
+| 아침 스트릭 유지 유도 | `REMINDER_STREAK_TODO_EMPTY` | `MorningReminderScheduler` → `NotificationService.sendStreakTodoEmptyReminder` | null | 아침 리마인더 시각에 오늘 대상 TODO 가 0개이고, 어제까지 이어진 스트릭이 있으면 1일 1회 발송. |
 | TODO 완료 | `TODO_DONE` | `TodoServiceImpl.changeStatus()` → `TodoCompletedEvent` → `TodoCompletedNotificationListener` | todoId | DONE 전이 시 1회 발행. 기존 `TodoCompletionExpListener` 와 분리 |
 | TODO 알림 시각 | `TODO_REMINDER` | `TodoAlertScheduler` → `NotificationService.sendTodoAlert` | todoId | 매분 cron, `Todo.alertTime` 일치 + 당일 대상. 기존 FCM 직접 호출을 NotificationService 경유로 교체 (DB 저장 추가) |
 | TODO 미루기 | `TODO_SNOOZED` | `TodoSnoozedNotificationListener` | todoId | 비활성화. Bean 과 이벤트 리스너 메서드는 유지하되 본문은 no-op |

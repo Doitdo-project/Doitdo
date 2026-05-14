@@ -23,6 +23,8 @@ public interface NotificationService {
 
 	void sendMorningReminder(Long userId, int pendingCount, LocalTime now);
 
+	void sendStreakTodoEmptyReminder(Long userId, LocalTime now);
+
 	void sendTodoDone(Long userId, Long todoId, String todoTitle);
 
 	void sendTodoAlert(Long userId, Long todoId, String todoTitle);

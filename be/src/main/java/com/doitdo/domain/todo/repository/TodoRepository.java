@@ -140,6 +140,20 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 			""")
 	long countPendingByUserIdAndToday(@Param("userId") Long userId, @Param("today") LocalDate today);
 
+	@Query("""
+			select count(t) from Todo t
+			where t.userId = :userId
+			  and t.isDeleted = false
+			  and t.type <> com.doitdo.domain.todo.entity.Todo.TodoType.RECURRING
+			  and (
+			      (t.type = com.doitdo.domain.todo.entity.Todo.TodoType.NORMAL and t.startDate = :today)
+			      or (t.type = com.doitdo.domain.todo.entity.Todo.TodoType.PERIOD
+			          and t.startDate <= :today
+			          and (t.endDate is null or t.endDate >= :today))
+			  )
+			""")
+	long countActiveByUserIdAndToday(@Param("userId") Long userId, @Param("today") LocalDate today);
+
 	/**
 	 * 카테고리 rename / 색상 변경 시 해당 카테고리를 쓰는 활성 todo 의
 	 * 이름·색 스냅샷을 일괄 갱신한다 (전파).

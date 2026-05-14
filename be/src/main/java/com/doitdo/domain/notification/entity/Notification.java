@@ -27,6 +27,7 @@ public class Notification extends BaseTimeEntity {
 	public enum NotificationType {
 		REMINDER_EVENING,       // 저녁 미완료 TODO 리마인더 — 구현
 		REMINDER_MORNING,       // 아침 TODO 리마인더 — 구현
+		REMINDER_STREAK_TODO_EMPTY, // 스트릭 유지용 오늘 TODO 추가 유도 알림
 		TODO_DONE,              // TODO 완료 알림
 		TODO_REMINDER,          // TODO 알림 시각 알림
 		TODO_SNOOZED,           // TODO 미루기 알림
