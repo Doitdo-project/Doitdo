@@ -45,6 +45,9 @@ public class Furniture extends BaseTimeEntity {
 	@Column(nullable = false, length = 30)
 	private String category;
 
+	@Column(name = "theme_code", length = 30)
+	private String themeCode;
+
 	@Column(nullable = false)
 	private Integer price;
 
