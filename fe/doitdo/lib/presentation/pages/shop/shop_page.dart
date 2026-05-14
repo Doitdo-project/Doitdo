@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
+import 'package:doitdo/domain/entities/furniture_theme.dart';
 import 'package:doitdo/presentation/pages/shop/shop_state.dart';
 import 'package:doitdo/presentation/pages/shop/shop_view_model.dart';
 import 'package:doitdo/presentation/pages/shop/widgets/coin_icon.dart';
@@ -12,6 +13,8 @@ import 'package:doitdo/presentation/pages/shop/widgets/shop_category_tabs.dart';
 import 'package:doitdo/presentation/pages/shop/widgets/shop_item_card.dart';
 import 'package:doitdo/presentation/pages/shop/widgets/shop_loading_view.dart';
 import 'package:doitdo/presentation/pages/shop/widgets/shop_room_preview.dart';
+import 'package:doitdo/presentation/pages/shop/widgets/shop_theme_card.dart';
+import 'package:doitdo/presentation/pages/shop/widgets/shop_top_tabs.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_top_bar.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
 
@@ -69,32 +72,70 @@ class _ShopBody extends ConsumerWidget {
               ? const ShopRoomPreviewEmpty()
               : ShopRoomPreview(items: state.displayItems),
         ),
-        ShopCategoryTabs(
-          selected: state.selectedCategory,
-          onSelect: vm.selectCategory,
+        ShopTopTabs(
+          selected: state.selectedTab,
+          onSelect: vm.selectTab,
         ),
-        SizedBox(height: 16.h),
-        Expanded(
-          child: _ItemGrid(
-            items: state.visibleItems,
-            previewingItemId: state.previewingItemId,
-            onTapPreview: (item) => vm.togglePreview(item.id),
-            onTapBuy: (item) => _openPurchaseDialog(context, ref, item),
-            onTapPlace: (item) => _runAction(
-              context: context,
-              run: () => vm.place(item.id),
-              successMsg: '"${item.name}"을(를) 방에 배치했어요!',
-              failureMsg: '배치에 실패했어요. 잠시 후 다시 시도해주세요.',
-            ),
-            onTapUnplace: (item) => _runAction(
-              context: context,
-              run: () => vm.unplace(item.id),
-              successMsg: '"${item.name}"을(를) 방에서 뺐어요.',
-              failureMsg: '해제에 실패했어요. 잠시 후 다시 시도해주세요.',
+        if (state.selectedTab == ShopTab.furniture) ...[
+          SizedBox(height: 12.h),
+          ShopCategoryTabs(
+            selected: state.selectedCategory,
+            onSelect: vm.selectCategory,
+          ),
+          SizedBox(height: 16.h),
+          Expanded(
+            child: _ItemGrid(
+              items: state.visibleItems,
+              isPreviewing: state.isPreviewing,
+              onTapPreview: (item) => vm.togglePreview(item.id),
+              onTapBuy: (item) => _openPurchaseDialog(context, ref, item),
+              onTapPlace: (item) => _runAction(
+                context: context,
+                run: () => vm.place(item.id),
+                successMsg: '"${item.name}"을(를) 방에 배치했어요!',
+                failureMsg: '배치에 실패했어요. 잠시 후 다시 시도해주세요.',
+              ),
+              onTapUnplace: (item) => _runAction(
+                context: context,
+                run: () => vm.unplace(item.id),
+                successMsg: '"${item.name}"을(를) 방에서 뺐어요.',
+                failureMsg: '해제에 실패했어요. 잠시 후 다시 시도해주세요.',
+              ),
             ),
           ),
-        ),
+        ] else ...[
+          SizedBox(height: 16.h),
+          Expanded(
+            child: _ThemeGrid(
+              themes: state.themes,
+              previewingThemeCode: state.previewingThemeCode,
+              onTapTheme: (theme) => _toggleThemePreview(context, ref, theme),
+            ),
+          ),
+        ],
       ],
+    );
+  }
+
+  Future<void> _toggleThemePreview(
+    BuildContext context,
+    WidgetRef ref,
+    FurnitureTheme theme,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final vm = ref.read(shopViewModelProvider.notifier);
+    await vm.toggleThemePreview(
+      theme.themeCode,
+      onFailure: (message) {
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(message),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
     );
   }
 
@@ -220,7 +261,7 @@ class _ErrorView extends StatelessWidget {
 class _ItemGrid extends StatelessWidget {
   const _ItemGrid({
     required this.items,
-    required this.previewingItemId,
+    required this.isPreviewing,
     required this.onTapPreview,
     required this.onTapBuy,
     required this.onTapPlace,
@@ -228,7 +269,11 @@ class _ItemGrid extends StatelessWidget {
   });
 
   final List<ShopItem> items;
-  final String? previewingItemId;
+
+  /// 카드별로 미리보기 토글 상태를 묻는 술어. 멀티 미리보기 도입으로 단일 id
+  /// 비교가 아닌 카테고리당 1개 매핑을 보는 [ShopState.isPreviewing] 을 그대로
+  /// 받는다.
+  final bool Function(String itemId) isPreviewing;
   final ValueChanged<ShopItem> onTapPreview;
   final ValueChanged<ShopItem> onTapBuy;
   final ValueChanged<ShopItem> onTapPlace;
@@ -261,11 +306,55 @@ class _ItemGrid extends StatelessWidget {
         final item = items[index];
         return ShopItemCard(
           item: item,
-          isPreviewing: item.id == previewingItemId,
+          isPreviewing: isPreviewing(item.id),
           onTapPreview: () => onTapPreview(item),
           onTapBuy: () => onTapBuy(item),
           onTapPlace: () => onTapPlace(item),
           onTapUnplace: () => onTapUnplace(item),
+        );
+      },
+    );
+  }
+}
+
+class _ThemeGrid extends StatelessWidget {
+  const _ThemeGrid({
+    required this.themes,
+    required this.previewingThemeCode,
+    required this.onTapTheme,
+  });
+
+  final List<FurnitureTheme> themes;
+  final String? previewingThemeCode;
+  final ValueChanged<FurnitureTheme> onTapTheme;
+
+  @override
+  Widget build(BuildContext context) {
+    if (themes.isEmpty) {
+      final colors = context.colors;
+      return Center(
+        child: Text(
+          '아직 등록된 테마가 없어요',
+          style: AppTextStyles.bodySmall.copyWith(color: colors.textHint),
+        ),
+      );
+    }
+    return GridView.builder(
+      padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 24.h),
+      itemCount: themes.length,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 14.h,
+        crossAxisSpacing: 12.w,
+        // 가구 카드와 동일한 비율 — 두 탭의 그리드가 같은 리듬으로 보이도록.
+        childAspectRatio: 0.85,
+      ),
+      itemBuilder: (context, index) {
+        final theme = themes[index];
+        return ShopThemeCard(
+          theme: theme,
+          isPreviewing: theme.themeCode == previewingThemeCode,
+          onTap: () => onTapTheme(theme),
         );
       },
     );
