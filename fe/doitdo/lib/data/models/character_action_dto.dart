@@ -1,12 +1,10 @@
-/// `GET /api/characters/me/actions/{actionType}` 응답(envelope 내부 `data`).
+/// `POST /api/characters/me/actions/{actionType}` 응답(envelope 내부 `data`).
 ///
 /// ```json
 /// {
 ///   "actionUrl": "https://.../characters/duck/actions/teen/eye.gif",
 ///   "earnedAmount": 5,
-///   "balanceAfter": 120,
-///   "dailyTouchCount": 3,
-///   "nextAvailableAt": "2026-05-13T04:40:39.985Z"
+///   "balanceAfter": 120
 /// }
 /// ```
 ///
@@ -20,8 +18,6 @@ class CharacterActionDto {
     required this.actionUrl,
     required this.earnedAmount,
     required this.balanceAfter,
-    required this.dailyTouchCount,
-    this.nextAvailableAt,
   });
 
   final String actionUrl;
@@ -32,21 +28,10 @@ class CharacterActionDto {
   /// 지급 후 사용자의 코인 잔액.
   final int balanceAfter;
 
-  /// 오늘 누적 터치 횟수.
-  final int dailyTouchCount;
-
-  /// 다음 보상 가능 시각. null 인 경우 즉시 다음 보상 가능 또는 BE 미설정.
-  final DateTime? nextAvailableAt;
-
-  factory CharacterActionDto.fromJson(Map<String, dynamic> json) {
-    final rawNext = json['nextAvailableAt'] as String?;
-    return CharacterActionDto(
-      actionUrl: (json['actionUrl'] as String?) ?? '',
-      earnedAmount: (json['earnedAmount'] as num?)?.toInt() ?? 0,
-      balanceAfter: (json['balanceAfter'] as num?)?.toInt() ?? 0,
-      dailyTouchCount: (json['dailyTouchCount'] as num?)?.toInt() ?? 0,
-      nextAvailableAt:
-          rawNext == null ? null : DateTime.tryParse(rawNext)?.toLocal(),
-    );
-  }
+  factory CharacterActionDto.fromJson(Map<String, dynamic> json) =>
+      CharacterActionDto(
+        actionUrl: (json['actionUrl'] as String?) ?? '',
+        earnedAmount: (json['earnedAmount'] as num?)?.toInt() ?? 0,
+        balanceAfter: (json['balanceAfter'] as num?)?.toInt() ?? 0,
+      );
 }

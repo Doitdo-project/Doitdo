@@ -179,7 +179,7 @@ class _CharacterApi implements CharacterApi {
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
     final _options = _setStreamType<ApiResponse<CharacterActionDto>>(
-      Options(method: 'GET', headers: _headers, extra: _extra)
+      Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
             '/api/characters/me/actions/${actionType}',
