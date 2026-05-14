@@ -14,6 +14,7 @@ import com.doitdo.domain.streak.repository.UserStreakRepository;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CharacterActionUrlResp;
 import com.doitdo.domain.tamagotchi.entity.Character;
+import com.doitdo.domain.tamagotchi.entity.CharacterActionType;
 import com.doitdo.domain.tamagotchi.entity.CharacterAction;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterActionRepository;
@@ -36,7 +37,6 @@ import com.doitdo.domain.user.repository.WalletEarnLogRepository;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.ShopErrorCode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
@@ -165,12 +165,12 @@ class DoreditEarningSystemIntegrationTest {
         for (int i = 0; i < 2; i++) {
             // 매 호출마다 lastTouchedAt 을 충분히 과거로 세팅
             resetLastTouchedAt(uc.getUserCharacterId(), 3);
-            CharacterActionUrlResp resp = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
+            CharacterActionUrlResp resp = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
             assertThat(resp.earnedAmount()).isEqualTo(50);
         }
 
         // 3번째: dailyTouchCount=2 이므로 cap 도달 → earn=0
-        CharacterActionUrlResp third = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
+        CharacterActionUrlResp third = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
         assertThat(third.earnedAmount()).isZero();
         assertThat(third.actionUrl()).isNotBlank();
         assertThat(userCharacterRepository.findById(uc.getUserCharacterId()).orElseThrow().getDailyTouchCount())
@@ -190,16 +190,16 @@ class DoreditEarningSystemIntegrationTest {
         Long userId = createUserWithWallet("user4@test.com", "user4");
         UserCharacter uc = seedCharacterWithAction(userId, "IDLE");
 
-        CharacterActionUrlResp first = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
+        CharacterActionUrlResp first = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
         assertThat(first.earnedAmount()).isEqualTo(50);
 
         // 즉시 재호출: lastTouchedAt 이 방금 전이므로 cooldown 미경과
-        CharacterActionUrlResp second = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
+        CharacterActionUrlResp second = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
         assertThat(second.earnedAmount()).isZero();
         assertThat(second.actionUrl()).isNotBlank();
 
         resetLastTouchedAt(uc.getUserCharacterId(), 2);
-        CharacterActionUrlResp third = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
+        CharacterActionUrlResp third = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
         assertThat(third.earnedAmount()).isEqualTo(50);
     }
 
@@ -213,7 +213,7 @@ class DoreditEarningSystemIntegrationTest {
         UserCharacter uc = seedCharacterWithAction(userId, "IDLE");
 
         // 1회 적립
-        CharacterActionUrlResp first = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
+        CharacterActionUrlResp first = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
         assertThat(first.earnedAmount()).isEqualTo(50);
 
         // DB 직접 조작으로 어제 날짜 + 25시간 전으로 세팅
@@ -223,7 +223,7 @@ class DoreditEarningSystemIntegrationTest {
         );
 
         // 재적립: 새 날짜이므로 dailyTouchCount 리셋 → 적립 가능
-        CharacterActionUrlResp second = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
+        CharacterActionUrlResp second = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
         assertThat(second.earnedAmount()).isEqualTo(50);
         assertThat(userCharacterRepository.findById(uc.getUserCharacterId()).orElseThrow().getDailyTouchCount())
                 .isEqualTo(1);
@@ -334,7 +334,7 @@ class DoreditEarningSystemIntegrationTest {
         // PET_TOUCH 100: 2회 IDLE (각 50, 각각 cooldown 우회)
         for (int i = 0; i < 2; i++) {
             resetLastTouchedAt(uc.getUserCharacterId(), 3);
-            CharacterActionUrlResp resp = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
+            CharacterActionUrlResp resp = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
             assertThat(resp.earnedAmount()).isEqualTo(50);
         }
 
@@ -415,7 +415,7 @@ class DoreditEarningSystemIntegrationTest {
                 ready.countDown();
                 try {
                     start.await();
-                    CharacterActionUrlResp resp = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
+                    CharacterActionUrlResp resp = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
                     if (resp.earnedAmount() > 0) {
                         successCount.incrementAndGet();
                     }

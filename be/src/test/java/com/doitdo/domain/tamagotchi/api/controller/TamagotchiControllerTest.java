@@ -24,6 +24,7 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.UpdateCharacterNameResp;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
+import com.doitdo.domain.tamagotchi.entity.CharacterActionType;
 import com.doitdo.domain.user.entity.User;
 import com.doitdo.global.api.response.GlobalApiResponse;
 
@@ -238,9 +239,9 @@ class TamagotchiControllerTest {
 			110
 		);
 
-		given(tamagotchiService.getMyCharacterActionUrl(1L, "IDLE")).willReturn(serviceResp);
+		given(tamagotchiService.getMyCharacterActionUrl(1L, CharacterActionType.IDLE)).willReturn(serviceResp);
 
-		GlobalApiResponse<CharacterActionUrlResp> resp = controller.getMyCharacterActionUrl("IDLE", userDetails);
+		GlobalApiResponse<CharacterActionUrlResp> resp = controller.getMyCharacterActionUrl(CharacterActionType.IDLE, userDetails);
 
 		assertThat(resp.getStatus()).isEqualTo(200);
 		assertThat(resp.getMessage()).isEqualTo("OK");

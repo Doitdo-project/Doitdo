@@ -8,6 +8,7 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EvolutionResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.UpdateCharacterNameResp;
+import com.doitdo.domain.tamagotchi.entity.CharacterActionType;
 
 public interface TamagotchiService {
 
@@ -27,5 +28,5 @@ public interface TamagotchiService {
 
 	FarewellResp approveIndependence(Long userId, Boolean approved);
 
-	CharacterActionUrlResp getMyCharacterActionUrl(Long userId, String actionType);
+	CharacterActionUrlResp getMyCharacterActionUrl(Long userId, CharacterActionType actionType);
 }

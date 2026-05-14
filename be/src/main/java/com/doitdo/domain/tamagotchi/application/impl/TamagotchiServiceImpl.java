@@ -472,7 +472,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 
 	@Override
 	@Transactional
-	public CharacterActionUrlResp getMyCharacterActionUrl(Long userId, String actionType) {
+	public CharacterActionUrlResp getMyCharacterActionUrl(Long userId, CharacterActionType actionType) {
 		UserCharacter userCharacter = userCharacterRepository
 			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
@@ -480,7 +480,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		LocalDateTime now = LocalDateTime.now(clock);
 		LocalDate today = LocalDate.now(clock);
 
-		if (CharacterActionType.POOP.matches(actionType)) {
+		if (actionType == CharacterActionType.POOP) {
 			UserCharacter lockedUserCharacter = userCharacterRepository.findActiveByUserIdForUpdate(userId)
 				.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
 			int earnedAmount = clearPoop(userId, lockedUserCharacter, now, today);
@@ -493,7 +493,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 
 		String actionUrl = findRandomActionUrl(userCharacter.getCharacterId(), actionType)
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M09_002));
-		if ("EYE".equalsIgnoreCase(actionType)) {
+		if (actionType == CharacterActionType.EYE) {
 			return new CharacterActionUrlResp(
 				actionUrl,
 				0,
@@ -526,9 +526,9 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		);
 	}
 
-	private Optional<String> findRandomActionUrl(Long characterId, String actionType) {
+	private Optional<String> findRandomActionUrl(Long characterId, CharacterActionType actionType) {
 		List<com.doitdo.domain.tamagotchi.entity.CharacterAction> actions = characterActionRepository
-			.findAllByCharacterIdAndActionType(characterId, actionType);
+			.findAllByCharacterIdAndActionType(characterId, actionType.name());
 		if (actions.isEmpty()) {
 			return Optional.empty();
 		}
