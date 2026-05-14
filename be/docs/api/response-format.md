@@ -127,6 +127,7 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `status` | `TodoStatus` | TODO / IN_PROGRESS / DONE |
 | `updatedAt` | `LocalDateTime` | |
 | `snoozedDays` | `int` | 이 TODO 를 미룬 누적 횟수. `snooze_history` 테이블 COUNT 파생 (todos DDL 변경 없음) |
+| `excludedDates` | `List<LocalDate>` | RECURRING 마스터에서 `scope=only` 로 삭제된 occurrence 날짜 목록. RECURRING 이 아니면 `[]` |
 
 `TodoListResp.items[]` 와 `TodoSearchResp.items[]` 도 동일한 `TodoDetailResp` 구조를 사용한다.
 
