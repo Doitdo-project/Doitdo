@@ -34,9 +34,12 @@ class CharacterRepositoryImpl extends BaseRepository
           .then((dto) => dto.toEntity());
 
   @override
-  Future<String> triggerAction(CharacterAction action) =>
-      safeApiCall(() => _api.triggerCharacterAction(action.serverValue))
-          .then((dto) => dto.actionUrl);
+  Future<({String url, int earnedAmount})> triggerAction(
+    CharacterAction action,
+  ) =>
+      safeApiCall(() => _api.triggerCharacterAction(action.serverValue)).then(
+        (dto) => (url: dto.actionUrl, earnedAmount: dto.earnedAmount),
+      );
 
   @override
   Future<List<CollectionEntry>> getEncyclopedia() => safeApiCall(

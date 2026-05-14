@@ -1,16 +1,24 @@
 import 'dart:async';
+import 'dart:math';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:doitdo/core/utils/snap_scroll_physics.dart';
 import 'package:doitdo/domain/entities/character.dart';
+import 'package:doitdo/domain/entities/room_placement.dart';
 import 'package:doitdo/domain/entities/streak.dart';
+import 'package:doitdo/domain/entities/user.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/tamagochi/character_view_model.dart';
+import 'package:doitdo/presentation/pages/tamagochi/my_room_provider.dart';
 import 'package:doitdo/presentation/pages/tamagochi/streak_view_model.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_view_model.dart';
 import 'package:doitdo/domain/entities/evolution.dart';
+import 'package:doitdo/presentation/pages/tamagochi/widgets/attendance_celebration.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/character_card.dart';
+import 'package:doitdo/presentation/pages/tamagochi/widgets/room_layer.dart';
+import 'package:doitdo/presentation/pages/tamagochi/widgets/floating_gain_text.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/status_pill.dart';
 import 'package:doitdo/presentation/pages/todo/todo_state.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
@@ -18,6 +26,7 @@ import 'package:doitdo/presentation/pages/todo/widgets/todo_add_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_detail_sheet.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_dialog.dart';
 import 'package:doitdo/presentation/widgets/common/todo_item_card.dart';
+import 'package:doitdo/presentation/providers/current_user_provider.dart';
 import 'package:doitdo/presentation/providers/home_scroll_provider.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_full_layout.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
@@ -86,6 +95,54 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   bool _claimSuccessFlash = false;
   Timer? _claimSuccessTimer;
 
+  /// 캐릭터 탭으로 코인을 획득했을 때 손가락 위치에서 띄우는 floating "+N" 위젯
+  /// 인스턴스 목록. 위젯이 self-dismiss 후 onComplete 콜백에서 자기 자신을 제거.
+  /// global 좌표를 page local 로 변환해 보관 — outer Stack 의 [_overlayKey]
+  /// RenderBox 가 변환 기준이다.
+  final List<_PendingFloatingGain> _floatingGains = [];
+
+  /// outer Stack 의 RenderBox 핸들. ref.listen 콜백 안에서 globalToLocal 좌표
+  /// 변환에 사용 — page 가 mount 된 상태라 RenderObject 는 attached 이다.
+  final GlobalKey _overlayKey = GlobalKey();
+
+  /// 같은 세션 안에서 출석 알림이 이미 노출됐는지. BE 가 첫 GET 후 자동으로
+  /// dailyAttendanceClaimed=true 로 토글해주지만, race / pull-to-refresh 등으로
+  /// false 가 다시 흘러들어와도 중복 발화를 막는다.
+  bool _attendanceChecked = false;
+
+  /// 출석 보상 셀러브레이션 오버레이 표시 여부. 위젯이 self-dismiss 하면 onComplete
+  /// 콜백에서 false 로 되돌려 트리에서 제거한다.
+  bool _showAttendanceCelebration = false;
+
+  /// 똥 청소 흐름. 사용자 인지 시퀀스:
+  ///   탭 (t=0) → 똥 위에 brush.gif 가 덮임 (둘 다 보임)
+  ///   → t=1.0s : 똥이 먼저 사라짐 ([_suppressLocalPoop])
+  ///   → t=2.0s : brush 도 종료 + character silent refresh 로 서버 상태(poop:false)
+  ///             까지 동기화.
+  /// [_cleaningPoop] 가 phase 1·2 동안 true, [_suppressLocalPoop] 가 phase 2 동안 true.
+  bool _cleaningPoop = false;
+  bool _suppressLocalPoop = false;
+  Timer? _poopPhase1Timer; // 1.0s: 똥 숨김
+  Timer? _poopPhase2Timer; // 2.0s: brush 종료 + refresh
+
+  /// 똥이 떠 있는 동안의 랜덤 위치(캔버스 비율 left/bottom). 새 똥이 생길 때마다
+  /// [RoomLayer.safePoopLeftMin]~[safePoopLeftMax] / [safePoopBottomMin]~[safePoopBottomMax]
+  /// 안에서 새로 뽑고, 똥이 사라질 때 null 로 비운다 — 다음 똥은 또 다른 자리.
+  double? _poopLeftRatio;
+  double? _poopBottomRatio;
+  final Random _poopRng = Random();
+
+  void _pickRandomPoopPosition() {
+    const left = RoomLayer.safePoopLeftMin;
+    const leftRange =
+        RoomLayer.safePoopLeftMax - RoomLayer.safePoopLeftMin;
+    const bottom = RoomLayer.safePoopBottomMin;
+    const bottomRange =
+        RoomLayer.safePoopBottomMax - RoomLayer.safePoopBottomMin;
+    _poopLeftRatio = left + _poopRng.nextDouble() * leftRange;
+    _poopBottomRatio = bottom + _poopRng.nextDouble() * bottomRange;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -100,7 +157,107 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       if (!mounted) return;
       ref.read(homeScrollControllerProvider.notifier).state = _scrollController;
       ref.read(characterViewModelProvider.notifier).ensureCharacter();
+      // 이미 currentUserProvider 가 splash 단계에서 로드 완료된 경우 — 다음 ref.listen
+      // 콜백이 안 떨어지므로 초기 1회 직접 체크.
+      _maybeShowAttendanceCelebration();
+      // 페이지 진입 시점에 character 가 이미 poop:true 상태라면 listener 가 안
+      // 흔들리므로 여기서 첫 random 위치를 뽑아준다.
+      final c = ref.read(characterViewModelProvider).valueOrNull;
+      if (c != null && c.poop && _poopLeftRatio == null) {
+        setState(() => _pickRandomPoopPosition());
+      }
     });
+  }
+
+  /// 오늘 자동 출석 보상이 막 지급됐다는 시그널을 본 적이 있다면 셀러브레이션
+  /// 오버레이를 띄운다. 한 세션에 한 번만.
+  ///
+  /// **타이밍 가드 2단계**
+  /// 1. user / character / room 세 조회가 모두 완료(`hasValue`) 됐는지 확인.
+  /// 2. character thumbnailUrl + room 가구 imageUrl 들을 모두 precache — 단순히
+  ///    데이터만 도착한 시점에 띄우면 이미지가 아직 디코드 안 끝나 카드가 "다
+  ///    그려지기 전" 에 셀러브레이션이 떠버린다. 디코드까지 마친 다음 발화.
+  /// 미수령(`data(null)`) / 빈 방(`data([])`) 케이스도 통과 — 그쪽 precache 는
+  /// 빈 list 라 즉시 resolve 된다.
+  void _maybeShowAttendanceCelebration() {
+    if (_attendanceChecked) return;
+    final user = ref.read(currentUserProvider).valueOrNull;
+    if (user == null) return;
+    if (user.dailyAttendanceClaimed) {
+      _attendanceChecked = true;
+      return;
+    }
+    final characterAsync = ref.read(characterViewModelProvider);
+    final roomAsync = ref.read(myRoomProvider);
+    if (!characterAsync.hasValue || !roomAsync.hasValue) return;
+
+    _attendanceChecked = true;
+    // 이미지 디코드 완료까지 기다린 뒤 발화. precache 가 빨리 끝나면 즉시, 첫
+    // 진입에서 네트워크가 길어도 자연스럽게 카드 완성 시점과 정렬된다.
+    unawaited(_precacheRoomVisualsThenCelebrate(
+      character: characterAsync.valueOrNull,
+      room: roomAsync.valueOrNull ?? const <RoomFurniturePlacement>[],
+    ));
+  }
+
+  /// 카드의 캐릭터 thumbnail + 가구 imageUrl 들을 [CachedNetworkImageProvider] 로
+  /// 미리 디코드한 뒤 셀러브레이션을 띄운다. 안전망으로 최대 2.5초 후엔 precache
+  /// 안 끝나도 진행 (네트워크 비정상 지연 시).
+  ///
+  /// precache 완료 후엔 카드가 "완성된 상태로 등장한 직후" 라는 인상을 위해
+  /// 3초 buffer 를 더 두고 발화 — 사용자가 다마고치 화면을 충분히 인지하고
+  /// 어떤 캐릭터/방인지 둘러본 뒤에 셀러브레이션이 뜨도록.
+  Future<void> _precacheRoomVisualsThenCelebrate({
+    required Character? character,
+    required List<RoomFurniturePlacement> room,
+  }) async {
+    final urls = <String>{
+      if (character != null && character.thumbnailUrl.isNotEmpty)
+        character.thumbnailUrl,
+      for (final item in room)
+        if (item.imageUrl.isNotEmpty) item.imageUrl,
+    };
+    final precache = Future.wait(urls.map(_precacheUrl));
+    // 이미지 디코드 완료 대기 (안전망: 최대 3초).
+    await Future.any<void>([
+      precache,
+      Future<void>.delayed(const Duration(milliseconds: 3000)),
+    ]);
+    if (!mounted) return;
+    // 이미지 디코드 ≠ 화면 paint 완료. 다음 frame 들이 실제로 그려지는 걸 보장하기
+    // 위해 endOfFrame 을 두 번 await — 첫 frame 으로 캐릭터/가구가 paint 되고,
+    // 두 번째 frame 으로 합성이 안정화된다.
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    // 카드가 보이고 사용자가 인지할 buffer.
+    // - 3s : 화면을 둘러볼 시간까지 충분
+    // - 1s : paint 직후 살짝 여유만 두고 빠르게 등장 (현재)
+    // - 0  : endOfFrame 직후 즉시 — 너무 빠른 인상 가능
+    await Future<void>.delayed(const Duration(seconds: 1));
+    if (!mounted) return;
+    setState(() => _showAttendanceCelebration = true);
+  }
+
+  /// 단일 URL 디코드. 실패는 무시 — 셀러브레이션은 어차피 띄운다.
+  Future<void> _precacheUrl(String url) async {
+    final completer = Completer<void>();
+    final stream =
+        CachedNetworkImageProvider(url).resolve(ImageConfiguration.empty);
+    late ImageStreamListener listener;
+    listener = ImageStreamListener(
+      (_, _) {
+        stream.removeListener(listener);
+        if (!completer.isCompleted) completer.complete();
+      },
+      onError: (_, _) {
+        stream.removeListener(listener);
+        if (!completer.isCompleted) completer.complete();
+      },
+    );
+    stream.addListener(listener);
+    return completer.future;
   }
 
   @override
@@ -117,7 +274,49 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     _scrollController.dispose();
     _headerVisible.dispose();
     _claimSuccessTimer?.cancel();
+    _poopPhase1Timer?.cancel();
+    _poopPhase2Timer?.cancel();
     super.dispose();
+  }
+
+  /// 방 안 똥을 탭했을 때.
+  ///
+  /// 사용자 인지 시퀀스:
+  ///   탭 → brush.gif 가 똥 위에 덮임 (둘 다 보임)
+  ///   → 1.0s : 똥이 시각적으로 사라짐 (서버 응답과 무관하게 로컬 override)
+  ///   → 2.0s : brush.gif 종료 + character silent refresh 로 서버 위생 상태
+  ///            (poop:false) 까지 동기화. 이미 character.poop=false 라면 추가
+  ///            override 없이도 똥이 안 그려진다.
+  ///
+  /// [tapOrigin] 은 손가락 글로벌 좌표 — ViewModel 이 cleanupPoop 응답으로 코인을
+  /// 받았을 때 그 위치에서 floating "+N" 을 띄우도록 그대로 전달한다.
+  void _handlePoopTap(Offset tapOrigin) {
+    if (_cleaningPoop) return;
+    setState(() {
+      _cleaningPoop = true;
+      _suppressLocalPoop = false;
+    });
+    ref
+        .read(tamagochiViewModelProvider.notifier)
+        .cleanupPoop(tapOrigin: tapOrigin);
+
+    _poopPhase1Timer?.cancel();
+    _poopPhase1Timer = Timer(const Duration(milliseconds: 1000), () {
+      if (!mounted) return;
+      setState(() => _suppressLocalPoop = true);
+    });
+
+    _poopPhase2Timer?.cancel();
+    _poopPhase2Timer = Timer(const Duration(milliseconds: 2000), () async {
+      if (!mounted) return;
+      // brush 만 먼저 종료. poop 시각 차단은 서버 상태가 도착할 때까지 유지 —
+      // 미리 풀면 새 character (poop:false) 가 흘러오기 전 한 frame 동안
+      // 옛 character.poop=true 가 다시 그려져 똥이 잠깐 깜빡인다.
+      setState(() => _cleaningPoop = false);
+      await ref.read(characterViewModelProvider.notifier).refresh();
+      if (!mounted) return;
+      setState(() => _suppressLocalPoop = false);
+    });
   }
 
   /// Todo 완료 후 exp 반영을 기다렸다가 캐릭터 상태를 조용히 재조회한다.
@@ -400,9 +599,62 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
           }
         });
 
+    // 똥 발생/사라짐에 맞춰 random 위치 재추첨. 똥이 새로 생기는 매 순간마다
+    // 안전 구역 안에서 left/bottom 을 새로 뽑아 매번 다른 자리에 떨어지게 한다.
+    // 청소 phase 2 ([_suppressLocalPoop]) 동안은 character.poop 이 여전히 true 라
+    // listener 가 안 흔들려 위치가 그대로 유지된다 — brush 가 같은 자리에서 마무리.
+    ref.listen<AsyncValue<Character?>>(characterViewModelProvider, (prev, next) {
+      final wasPoop = prev?.valueOrNull?.poop ?? false;
+      final nowPoop = next.valueOrNull?.poop ?? false;
+      if (nowPoop && _poopLeftRatio == null) {
+        setState(() => _pickRandomPoopPosition());
+      } else if (!nowPoop && wasPoop && _poopLeftRatio != null) {
+        setState(() {
+          _poopLeftRatio = null;
+          _poopBottomRatio = null;
+        });
+      }
+    });
+
     // 타마고치 탭 진입 시 스트릭 silent refresh.
     ref.listen<int>(tamagochiEnterTriggerProvider, (_, __) {
       ref.read(streakViewModelProvider.notifier).refresh();
+    });
+
+    // 출석 셀러브레이션의 발화 조건은 user / character / room 세 데이터 모두 도착
+    // 후 — 어느 쪽이 늦게 도착할지 모르므로 각각 listen 해 두고, 셋이 모두 채워졌을
+    // 때 한 번 발화시킨다 (_attendanceChecked in-memory flag 가 중복 차단).
+    ref.listen<AsyncValue<User?>>(currentUserProvider, (_, _) {
+      _maybeShowAttendanceCelebration();
+    });
+    ref.listen<AsyncValue<Character?>>(characterViewModelProvider, (_, _) {
+      _maybeShowAttendanceCelebration();
+    });
+    ref.listen<AsyncValue<List<RoomFurniturePlacement>>>(myRoomProvider,
+        (_, _) {
+      _maybeShowAttendanceCelebration();
+    });
+
+    // 캐릭터 탭 → 코인 지급 시그널 처리. 새 tick 이 떨어질 때만 발화 (말풍선/
+    // actionUrl 같은 다른 필드 갱신으로 lastGain 동일하게 다시 흘러오는 케이스를
+    // 거른다). 글로벌 좌표를 page local 로 변환해 list 에 적재.
+    ref.listen<TamagochiState>(tamagochiViewModelProvider, (prev, next) {
+      final gain = next.lastGain;
+      if (gain == null) return;
+      if (prev?.lastGain?.tick == gain.tick) return;
+      final box =
+          _overlayKey.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null || !box.attached) return;
+      final local = box.globalToLocal(gain.origin);
+      setState(() {
+        _floatingGains.add(
+          _PendingFloatingGain(
+            tick: gain.tick,
+            amount: gain.amount,
+            position: local,
+          ),
+        );
+      });
     });
 
     // Todo 완료 count 가 증가하면 exp 가 올라갔을 가능성이 있으므로 캐릭터 재조회.
@@ -454,6 +706,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
         useSafeArea: false,
         body: DoitdoFullLayout(
           child: Stack(
+            key: _overlayKey,
             children: [
               // 1. 스크롤 본문. 캐릭터 카드가 상태바 영역까지 배경(grass)을 확장하므로
               //    여기서는 top padding 을 주지 않고 Card 내부에서 topSafePadding
@@ -503,7 +756,12 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                 onTapCollection: () => context
                                     .push(AppRoutes.tamagochiCollection),
                                 onEggTap: _handleEggTap,
-                                onCharacterTap: () {
+                                onPoopTap: _handlePoopTap,
+                                isCleaningPoop: _cleaningPoop,
+                                suppressPoop: _suppressLocalPoop,
+                                poopLeftRatio: _poopLeftRatio,
+                                poopBottomRatio: _poopBottomRatio,
+                                onCharacterTap: (tapOrigin) {
                                   final remaining = todayTodos
                                       .where((t) => !t.isDone)
                                       .length;
@@ -512,6 +770,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                       .notifier)
                                       .onCharacterTap(
                                     remainingTodayTodos: remaining,
+                                    tapOrigin: tapOrigin,
                                   );
                                 },
                               ),
@@ -599,12 +858,75 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                 height: topInset,
                 child: _StatusBarScrim(visible: _headerVisible),
               ),
+
+              // 3. 캐릭터 탭 코인 획득 floating "+N" 오버레이.
+              //    IgnorePointer 로 손가락 입력을 가로채지 않으며, 각 인스턴스가
+              //    self-dismiss 후 onComplete 콜백에서 list 에서 자기를 제거한다.
+              if (_floatingGains.isNotEmpty)
+                IgnorePointer(
+                  child: Stack(
+                    children: [
+                      for (final g in _floatingGains)
+                        Positioned(
+                          left: g.position.dx,
+                          top: g.position.dy,
+                          child: FloatingGainText(
+                            key: ValueKey(g.tick),
+                            amount: g.amount,
+                            onComplete: () {
+                              if (!mounted) return;
+                              setState(() {
+                                _floatingGains.removeWhere(
+                                  (e) => e.tick == g.tick,
+                                );
+                              });
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+              // 4. 일일 출석 보상 셀러브레이션 오버레이. 캐릭터 카드 상단(상태바
+              //    바로 아래) 가운데에 작은 토스트형 카드로 떠오른다. IgnorePointer
+              //    라 다른 인터랙션을 막지 않으며, onComplete 에서 자기 자신을
+              //    트리에서 제거.
+              if (_showAttendanceCelebration)
+                Positioned(
+                  top: topInset + 64.h,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: AttendanceCelebration(
+                      amount: 100,
+                      onComplete: () {
+                        if (!mounted) return;
+                        setState(() => _showAttendanceCelebration = false);
+                      },
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+/// 페이지가 들고 있는 floating "+N" 위젯 하나의 좌표/금액 묶음.
+/// [tick] 으로 같은 amount/position 이 다시 와도 위젯 key 가 바뀌어 새 인스턴스가
+/// 만들어지도록 한다.
+class _PendingFloatingGain {
+  const _PendingFloatingGain({
+    required this.tick,
+    required this.amount,
+    required this.position,
+  });
+
+  final int tick;
+  final int amount;
+  final Offset position;
 }
 
 /// 해당 Todo 가 "오늘의 할 일" 에 포함되는지. 단일 날짜는 동일 일자, 기간은 오늘이

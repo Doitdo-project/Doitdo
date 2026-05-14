@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/domain/entities/character.dart';
@@ -39,6 +40,11 @@ class CharacterCard extends StatelessWidget {
     this.onTapCollection,
     this.onEggTap,
     this.onCharacterTap,
+    this.onPoopTap,
+    this.isCleaningPoop = false,
+    this.suppressPoop = false,
+    this.poopLeftRatio,
+    this.poopBottomRatio,
     this.topSafePadding = 0,
   });
 
@@ -82,8 +88,27 @@ class CharacterCard extends StatelessWidget {
   /// 알을 탭했을 때 호출. 부화 페이지로 이동 + 복귀 시 재조회는 부모가 담당.
   final VoidCallback? onEggTap;
 
-  /// 부화 이후 캐릭터 본체를 탭했을 때 호출.
-  final VoidCallback? onCharacterTap;
+  /// 부화 이후 캐릭터 본체를 탭했을 때 호출. 인자는 사용자가 탭한 글로벌 좌표로,
+  /// 호출자(page) 가 그 위치에서 floating "+코인" 위젯을 띄우는 데 사용한다.
+  final ValueChanged<Offset>? onCharacterTap;
+
+  /// 방 안 똥을 탭했을 때 호출. 인자는 사용자가 탭한 글로벌 좌표(손가락 위치).
+  /// 페이지가 brush.gif 오버레이 2초 + POOP action 호출을 함께 처리하고, 응답의
+  /// earnedAmount > 0 이면 이 좌표에서 floating "+N" 위젯을 띄운다.
+  final ValueChanged<Offset>? onPoopTap;
+
+  /// 똥 청소 진행 중 여부. true 면 캐릭터 카드에 brush.gif 가 그려진다.
+  final bool isCleaningPoop;
+
+  /// 청소 흐름의 phase 2 — 서버 응답 전이라 character.poop 은 여전히 true 지만
+  /// 시각적으로는 poop 을 먼저 사라지게 한다. brush.gif 는 [isCleaningPoop] 가
+  /// 끝날 때까지 계속 보인다.
+  final bool suppressPoop;
+
+  /// 똥 위치 (캔버스 비율). page 가 새 똥 발생 시점에 안전 범위 안에서 random 으로
+  /// 뽑아 흘려보낸다. null 이면 RoomLayer 의 default 위치 사용.
+  final double? poopLeftRatio;
+  final double? poopBottomRatio;
 
   /// 카드가 상태바 영역까지 확장될 때 content 가 상태바 아이콘과 겹치지 않도록
   /// 밀어낼 상단 여백. 배경(bg_grass)은 이 영역까지 그대로 이어지고, 내부 content
@@ -121,28 +146,35 @@ class CharacterCard extends StatelessWidget {
           const floorInsetRatio = 0.14;
           final floorInset = canvas.height * floorInsetRatio;
 
+          // 똥 / 청소(brush) 는 [RoomLayer] 의 가구 Stack 마지막 자리에 그려
+          // rug 같은 가구 위에 z-stack 되는 게 보장된다. 알 상태에서는 숨김.
+          //
+          // 청소 phase 2 에서는 [suppressPoop] 로 poop 을 먼저 사라지게 하고
+          // brush.gif 만 잠시 더 그려, 빗자루로 똥을 쓸어낸 듯한 흐름을 만든다.
+          final showPoop = character != null &&
+              !character!.isEgg &&
+              character!.poop &&
+              !suppressPoop;
+          final showBrush =
+              character != null && !character!.isEgg && isCleaningPoop;
+
           return Stack(
             children: [
-              // 방 배경 + 가구 합성. listMyFurnitures() 결과를 zIndex 순서로 쌓아
-              // 그리고, 응답 전/실패 시 정적 자산으로 폴백.
-              const Positioned.fill(child: RoomLayer()),
-
-              // 진화/부화/독립 같은 주요 액션 중의 작은 스피너. copyWithPrevious 덕에
-              // 이전 캐릭터 데이터는 그대로 남아 있고, 이 작은 스피너만 카드 좌측
-              // 상단에 얹혀 "서버 갱신 중" 만 표현한다.
-              if (isCharacterLoading && character != null)
-                Positioned(
-                  top: topSafePadding + 20.h,
-                  left: 12.w,
-                  child: SizedBox(
-                    width: 16.sp,
-                    height: 16.sp,
-                    child: const CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  ),
+              // 방 배경 + 가구 + 똥/brush 합성. 한 캔버스 안에서 z-order 가 잡혀,
+              // 외부 Stack 으로 끌어올리지 않아도 가구 위로 떠 있는다.
+              Positioned.fill(
+                child: RoomLayer(
+                  showPoop: showPoop,
+                  showBrush: showBrush,
+                  onPoopTap: onPoopTap,
+                  poopLeftRatio: poopLeftRatio,
+                  poopBottomRatio: poopBottomRatio,
                 ),
+              ),
+
+              // 좌상단 갱신 스피너는 의도적으로 제거 — 평상시 캐릭터 카드가
+              // 안정적으로 그려지는 인상을 주는 게 더 중요하다. 진화/부화/독립
+              // 진행 상태는 별도의 evolution 연출이 표현하므로 추가 알림 불요.
 
               // 중앙 하단: 말풍선 + 캐릭터. 캔버스 하단에 발이 닿도록 bottom anchor
               // 로 잡고, 캔버스 높이 비율(`floorInsetRatio`)만큼 띄워 러그 위에
@@ -242,16 +274,11 @@ class CharacterCard extends StatelessWidget {
     }
 
     if (isCharacterLoading && character == null) {
-      return SizedBox(
-        height: 100.h,
-        child: const Center(
-          child: SizedBox(
-            width: 28,
-            height: 28,
-            child: CircularProgressIndicator(strokeWidth: 2.5),
-          ),
-        ),
-      );
+      // 첫 진입에서 캐릭터 데이터가 도착할 때까지의 짧은 윈도우. 큰 주황 스피너가
+      // 캐릭터 자리에 박히면 시각적으로 거슬리고 캐릭터가 "확" 등장하는 인상을 줘서
+      // 빈 슬롯으로 두고 grass 배경만 보이게 한다 — 데이터 도착 직후 캐릭터가
+      // 자연스럽게 자리에 그려진다.
+      return SizedBox(height: 100.h);
     }
 
     final c = character;
@@ -409,6 +436,37 @@ class _SpeechBubbleTailPainter extends CustomPainter {
       old.color != color;
 }
 
+/// 캐릭터 thumbnailUrl / 액션 gif 를 위한 캐시 + 다운샘플 wrapper.
+///
+/// `Image.network` 은 디스크 캐시가 없어 앱 재진입마다 새로 다운로드 → 첫 표시까지
+/// 수백 ms 지연이 누적된다. `CachedNetworkImage` 로 디스크 캐시 + `memCacheHeight`
+/// 로 디코드 사이즈를 표시 크기 근처로 잡아 메모리/디코드 시간도 줄인다.
+///
+/// 캐시 hit 시 페이드 인 애니메이션은 제거 — 즉시 그려져야 캐릭터 카드가
+/// 끊김없이 채워진다.
+class _CachedCharacterImage extends StatelessWidget {
+  const _CachedCharacterImage({required this.url, required this.height});
+
+  final String url;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return CachedNetworkImage(
+      imageUrl: url,
+      height: height,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.medium,
+      // 캐릭터 본체는 ~80.h (3x DPI 환산 ≈ 240px). 여유 잡아 320 캡.
+      memCacheHeight: 320,
+      fadeInDuration: Duration.zero,
+      fadeOutDuration: Duration.zero,
+      placeholder: (_, _) => const SizedBox.shrink(),
+      errorWidget: (_, _, _) => const _CharacterPlaceholder(),
+    );
+  }
+}
+
 /// 서버 thumbnailUrl 이 비어있거나 로드 실패했을 때 자리를 지키는 중립 플레이스홀더.
 class _CharacterPlaceholder extends StatelessWidget {
   const _CharacterPlaceholder();
@@ -428,25 +486,15 @@ class _CharacterPlaceholder extends StatelessWidget {
   }
 }
 
-/// 아직 알을 수령하지 않은 상태의 방어용 스피너.
+/// 아직 알을 수령하지 않은 상태의 방어용 빈 슬롯.
+/// 일반 플로우에서는 거의 보이지 않는 매우 좁은 윈도우 — 별도 스피너 없이
+/// grass 배경만 비춰지게 둔다.
 class _UnreceivedSlot extends StatelessWidget {
   const _UnreceivedSlot();
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 100.h,
-      child: const Center(
-        child: SizedBox(
-          width: 28,
-          height: 28,
-          child: CircularProgressIndicator(
-            strokeWidth: 2.5,
-            color: Colors.white,
-          ),
-        ),
-      ),
-    );
+    return SizedBox(height: 100.h);
   }
 }
 
@@ -520,12 +568,20 @@ class _EggImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (imageUrl.isEmpty) return _fallback();
-    return Image.network(
-      imageUrl,
+    return CachedNetworkImage(
+      imageUrl: imageUrl,
       height: size,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.medium,
-      errorBuilder: (_, _, _) => _fallback(),
+      // 알 이미지는 ~100.h (3x DPI 환산 ≈ 300px). 여유 잡아 400 캡 — 메모리/디코드
+      // 부담을 줄이면서 시각 품질은 유지.
+      memCacheHeight: 400,
+      // 디스크 캐시 적중시엔 페이드 없이 즉시. 첫 다운로드시에도 placeholder 없이
+      // 그대로 빈 자리에서 등장 — 알 상태는 어차피 진입 동선이 짧다.
+      fadeInDuration: Duration.zero,
+      fadeOutDuration: Duration.zero,
+      placeholder: (_, _) => const SizedBox.shrink(),
+      errorWidget: (_, _, _) => _fallback(),
     );
   }
 
@@ -720,25 +776,17 @@ class _GrownCharacterState extends State<_GrownCharacter> {
         gaplessPlayback: true,
         errorBuilder: (_, _, _) => widget.thumbnailUrl.isEmpty
             ? const _CharacterPlaceholder()
-            : Image.network(
-                widget.thumbnailUrl,
+            : _CachedCharacterImage(
+                url: widget.thumbnailUrl,
                 height: widget.imageHeight,
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.medium,
-                gaplessPlayback: true,
-                errorBuilder: (_, _, _) => const _CharacterPlaceholder(),
               ),
       );
     } else {
       base = widget.thumbnailUrl.isEmpty
           ? const _CharacterPlaceholder()
-          : Image.network(
-              widget.thumbnailUrl,
+          : _CachedCharacterImage(
+              url: widget.thumbnailUrl,
               height: widget.imageHeight,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.medium,
-              gaplessPlayback: true,
-              errorBuilder: (_, _, _) => const _CharacterPlaceholder(),
             );
     }
 
@@ -823,8 +871,8 @@ class _WalkingSlot extends StatefulWidget {
   final Widget Function(BuildContext, bool isWalking) characterBuilder;
   final Widget? bubble;
 
-  /// 캐릭터 본체 탭 콜백. null 이면 탭 영역 자체가 비활성.
-  final VoidCallback? onCharacterTap;
+  /// 캐릭터 본체 탭 콜백. 인자는 글로벌 좌표(손가락 위치). null 이면 탭 영역 자체가 비활성.
+  final ValueChanged<Offset>? onCharacterTap;
 
   @override
   State<_WalkingSlot> createState() => _WalkingSlotState();
@@ -1064,13 +1112,13 @@ class _WalkingSlotState extends State<_WalkingSlot>
     });
   }
 
-  void _handleCharacterTap() {
+  void _handleCharacterTap(Offset globalPosition) {
     final cb = widget.onCharacterTap;
     if (cb == null) return;
     if (!widget.enableWalk || !_roamingThisSession) {
       // walk 비활성(액션 중) 또는 가만히 모드 세션 — 그냥 콜백만. 가만히 모드는
       // 어차피 안 움직이니까 멈춤 처리도 필요 없다.
-      cb();
+      cb(globalPosition);
       return;
     }
     // 현재 위치를 walkFrom 에 박고 controller 정지 + phase=idling → 그 자리에 캐릭터별
@@ -1096,7 +1144,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
         setState(() {});
       }
     });
-    cb();
+    cb(globalPosition);
   }
 
   @override
@@ -1110,7 +1158,9 @@ class _WalkingSlotState extends State<_WalkingSlot>
     final tapWrapped = cb == null
         ? characterChild
         : GestureDetector(
-            onTap: _handleCharacterTap,
+            // onTapUp 으로 받아야 details.globalPosition 으로 손가락 위치를 잡는다.
+            // floating "+N" 코인 위젯이 이 좌표에서 솟아오른다.
+            onTapUp: (details) => _handleCharacterTap(details.globalPosition),
             behavior: HitTestBehavior.opaque,
             child: characterChild,
           );
