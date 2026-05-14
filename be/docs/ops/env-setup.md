@@ -122,6 +122,49 @@ c.d.d.n.a.impl.FirebaseFcmService  : [fcm] FirebaseFcmService is active.
 
 비활성(Noop) 상태라면 `NoopFcmService` 초기화 로그가 대신 나온다.
 
+## 2-3-1. 비밀번호 재설정 메일 (SMTP) 설정
+
+자체 회원가입 사용자의 비밀번호 재설정은 SMTP (MVP: Gmail) 로 재설정 링크 메일을 발송한다. 미설정 시에도 부팅은 성공하지만 `POST /api/auth/password/reset-request` 호출 시 메일 발송이 실패한다 (사용자 응답은 200 OK, 로그에 `PASSWORD_RESET_MAIL_FAILED`).
+
+### Gmail 앱 비밀번호 발급
+
+1. Gmail 계정 → 2단계 인증 활성화 (필수 선행 조건)
+2. <https://myaccount.google.com/apppasswords> → "앱 비밀번호" 16자리 발급
+3. 발급된 16자리(공백 제거) 를 `MAIL_PASSWORD` 에 사용
+
+### env 설정 (`be/env/.env.dev`, kebab-case dot 포맷)
+
+```properties
+mail.host=smtp.gmail.com
+mail.port=587
+mail.username=ssafydoitdo@gmail.com
+mail.password=abcdabcdabcdabcd
+mail.from-address=ssafydoitdo@gmail.com
+mail.from-name=doitdo
+app.password-reset.redirect-url=https://dev.doitdo.site/reset
+# app.password-reset.token-ttl-minutes=30   # 기본 30분, 필요 시 override
+```
+
+Docker env_file (`/home/ubuntu/app/env/.env.dev`, env var 포맷):
+
+```properties
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=ssafydoitdo@gmail.com
+MAIL_PASSWORD=abcdabcdabcdabcd
+MAIL_FROM_ADDRESS=ssafydoitdo@gmail.com
+MAIL_FROM_NAME=doitdo
+APP_PASSWORD_RESET_URL=https://dev.doitdo.site/reset
+```
+
+### redirect-url 에 대해
+
+메일 본문에 들어갈 Universal Link 도메인. 사용자가 클릭하면 `{redirect-url}?token=xxx` 로 이동하고, FE 가 토큰을 추출해 `/api/auth/password/reset/verify` → `/api/auth/password/reset` 를 호출한다. 앱 미설치 시 웹 폴백 페이지가 뜨도록 FE/iOS/Android 의 Universal Link 셋업이 별도로 필요하다 (BE 작업 외).
+
+### 운영 단계 전환
+
+Gmail 일일 한도(~500통) 초과 우려가 보이면 AWS SES / SendGrid 로 교체한다. 코드 변경 없이 `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` 만 바꾸면 된다. DNS 의 SPF/DKIM 레코드 등록은 별도.
+
 ## 2-4. Apple Sign-In 설정
 
 Apple 로그인은 `authorizationCode` 교환과 회원탈퇴 revoke 호출을 위해 Apple `.p8` 개인키가 필요하다.
