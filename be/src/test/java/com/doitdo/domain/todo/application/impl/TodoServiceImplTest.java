@@ -516,6 +516,31 @@ class TodoServiceImplTest {
 		assertThat(resp.title()).isEqualTo("이후 수정");
 	}
 
+	@Test
+	void updateRecurringFromAllowsCutDateThatMatchesNewDaysOfWeek() {
+		Todo master = recurringMaster();
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+		given(todoRepository.findAllByUserIdAndMasterTodoIdAndStartDateGreaterThanEqualAndIsDeletedFalse(
+				1L,
+				10L,
+				LocalDate.parse("2026-05-14")))
+				.willReturn(List.of());
+		given(todoRepository.save(any(Todo.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+		TodoDetailResp resp = service.update(
+				1L,
+				10L,
+				new TodoUpdateReq("요일 변경", "새 메모", null, null, null, null, Set.of("THU"), null, false),
+				"from",
+				LocalDate.parse("2026-05-14"));
+
+		assertThat(master.getEndDate()).isEqualTo(LocalDate.parse("2026-05-13"));
+		verify(todoRepository).save(argThat(newMaster ->
+				newMaster.getStartDate().equals(LocalDate.parse("2026-05-14"))
+						&& newMaster.getDaysOfWeek().contains(java.time.DayOfWeek.THURSDAY)));
+		assertThat(resp.title()).isEqualTo("요일 변경");
+	}
+
 	private Todo normalTodo(String alertTime) {
 		return Todo.builder()
 				.todoId(1L)

@@ -39,7 +39,9 @@
 | `scope=only&occurrenceDate=YYYY-MM-DD` | 해당 occurrence만 NORMAL 인스턴스로 실체화 후 수정 |
 | `scope=from&occurrenceDate=YYYY-MM-DD` | 기존 RECURRING 마스터를 전날 종료하고, 수정 내용으로 새 RECURRING 마스터 생성 |
 
-`scope=only/from` 은 `todoId` 가 RECURRING 마스터일 때 `occurrenceDate` 가 필수이며, 마스터 반복 규칙에 포함된 날짜여야 한다.
+`scope=only/from` 은 `todoId` 가 RECURRING 마스터일 때 `occurrenceDate` 가 필수다.
+`scope=only` 의 `occurrenceDate` 는 마스터 반복 규칙에 포함된 날짜여야 한다.
+`scope=from` 수정의 `occurrenceDate` 는 기존 마스터 기간 안의 기준일이며, 변경 후 `daysOfWeek` 에 포함되어야 한다.
 
 ### 출석 보상 자동 적립 (2026-05-13 Stage 5)
 
