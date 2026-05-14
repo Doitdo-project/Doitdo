@@ -79,6 +79,39 @@
 
 `{actionType}` 은 `CharacterActionType` enum (EYE/IDLE/WALK/SLEEP/HAPPY/SAD/POOP) 으로 Swagger 에서 자동 노출되며 입력 예시는 POOP.
 
+### 가구 테마 구매/배치 API (2026-05-14)
+
+`GET /api/shop/themes`:
+
+| 항목 | 내용 |
+|---|---|
+| 인증 | 필요 |
+| 성공 응답 | `GlobalApiResponse<FurnitureThemeListResp>` |
+| 응답 확장 | `ownedCount`, `totalPrice`, `purchasePrice`, `alreadyOwned`, `furnitures[]` |
+| 가구 인라인 | `furnitureId`, `name`, `price`, `thumbnailUrl`, `owned` |
+
+`POST /api/shop/themes/{themeCode}/purchase`:
+
+| 항목 | 내용 |
+|---|---|
+| 인증 | 필요 |
+| 요청 body | 없음 |
+| 성공 응답 | `GlobalApiResponse<PurchaseThemeResp>` |
+| 처리 | 미보유 테마 가구만 구매, 자동 배치 없음 |
+| 에러 | `S03-001`, `S03-002`, `S03-003`, `S03-010`, `S00-003`, `S00-005` |
+
+`POST /api/users/me/room/themes/{themeCode}/placements`:
+
+| 항목 | 내용 |
+|---|---|
+| 인증 | 필요 |
+| 요청 body | 없음 |
+| 성공 응답 | `GlobalApiResponse<PlaceThemeResp>` |
+| 처리 | 보유한 테마 가구를 일괄 배치, 같은 카테고리 기존 배치는 제거 |
+| 에러 | `S03-001`, `S03-002`, `S03-003`, `S01-001`, `S00-001` |
+
+프론트의 "바로 배치하기"는 테마 구매 API 성공 후 테마 일괄 배치 API를 추가 호출한다. 이미 풀세트를 보유한 경우 구매 API를 건너뛰고 배치 API만 호출한다.
+
 ## 2. 컨트롤러 작성 템플릿 (복붙 가능)
 
 ```java
