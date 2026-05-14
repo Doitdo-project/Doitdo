@@ -488,6 +488,29 @@ class TodoServiceImplTest {
 	}
 
 	@Test
+	void updateRecurringOnlyKeepsMaterializedInstanceNormalWhenRequestTypeIsRecurring() {
+		Todo master = recurringMaster();
+		Todo instance = recurringInstance(master, LocalDate.parse("2026-05-12"));
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+		given(recurrenceService.materializeRecurringOccurrence(1L, master, LocalDate.parse("2026-05-12")))
+				.willReturn(instance);
+		given(snoozeHistoryRepository.countByTodoId(25L)).willReturn(0L);
+
+		TodoDetailResp resp = service.update(
+				1L,
+				10L,
+				new TodoUpdateReq("하루만 수정", "메모", null, TodoType.RECURRING,
+						LocalDate.parse("2026-05-12"), null, Set.of("TUE"), "12:15", false),
+				"only",
+				LocalDate.parse("2026-05-12"));
+
+		assertThat(instance.getType()).isEqualTo(TodoType.NORMAL);
+		assertThat(instance.getAlertTime()).isEqualTo("12:15");
+		assertThat(resp.type()).isEqualTo(TodoType.NORMAL);
+		assertThat(resp.alertTime()).isEqualTo("12:15");
+	}
+
+	@Test
 	void updateRecurringFromCutsMasterDeletesFutureInstancesAndCreatesNewMaster() {
 		Todo master = recurringMaster();
 		Todo future = recurringInstance(master, LocalDate.parse("2026-05-19"));
