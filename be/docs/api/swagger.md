@@ -77,6 +77,8 @@
 
 `CharacterActionUrlResp` 는 `actionUrl`, `earnedAmount`, `balanceAfter` 만 노출한다. `POOP` 은 등록된 애니메이션 row 가 없으면 `actionUrl=null` 로 보상 처리만 수행한다. 기존 `dailyTouchCount`, `nextAvailableAt` 응답 필드는 제거됐으며, `user_character.daily_touch_count` 컬럼은 터치 쿨타임/한도 검사용으로 유지한다.
 
+`{actionType}` 은 `CharacterActionType` enum (EYE/IDLE/WALK/SLEEP/HAPPY/SAD/POOP) 으로 Swagger 에서 자동 노출되며 입력 예시는 POOP.
+
 ## 2. 컨트롤러 작성 템플릿 (복붙 가능)
 
 ```java

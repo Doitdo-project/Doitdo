@@ -37,6 +37,7 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.UpdateCharacterNameResp;
 import com.doitdo.domain.tamagotchi.entity.CharacterAction;
 import com.doitdo.domain.tamagotchi.entity.Character;
+import com.doitdo.domain.tamagotchi.entity.CharacterActionType;
 import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
 import com.doitdo.domain.tamagotchi.entity.UserCharacterHistory;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
@@ -345,7 +346,7 @@ class TamagotchiServiceImplTest {
 			.willReturn(List.of(first, second));
 		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet(userId, 100)));
 
-		CharacterActionUrlResp resp = service.getMyCharacterActionUrl(userId, "EYE");
+		CharacterActionUrlResp resp = service.getMyCharacterActionUrl(userId, CharacterActionType.EYE);
 
 		assertThat(resp.actionUrl()).isIn("https://cdn.example.com/eye_2.gif", "https://cdn.example.com/eye.gif");
 		assertThat(resp.earnedAmount()).isZero();
@@ -373,10 +374,10 @@ class TamagotchiServiceImplTest {
 		int earnedSum = 0;
 		for (int i = 0; i < 2; i++) {
 			service.setClock(fixedClock(baseTime.plusHours(i * 2L)));
-			earnedSum += service.getMyCharacterActionUrl(userId, "IDLE").earnedAmount();
+			earnedSum += service.getMyCharacterActionUrl(userId, CharacterActionType.IDLE).earnedAmount();
 		}
 		service.setClock(fixedClock(baseTime.plusHours(4)));
-		CharacterActionUrlResp third = service.getMyCharacterActionUrl(userId, "IDLE");
+		CharacterActionUrlResp third = service.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
 
 		assertThat(earnedSum).isEqualTo(100);
 		assertThat(third.actionUrl()).isEqualTo("https://cdn.example.com/idle.gif");
@@ -404,9 +405,9 @@ class TamagotchiServiceImplTest {
 		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet(userId, 110)));
 
 		service.setClock(fixedClock(baseTime));
-		CharacterActionUrlResp first = service.getMyCharacterActionUrl(userId, "IDLE");
+		CharacterActionUrlResp first = service.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
 		service.setClock(fixedClock(baseTime.plusMinutes(10)));
-		CharacterActionUrlResp second = service.getMyCharacterActionUrl(userId, "IDLE");
+		CharacterActionUrlResp second = service.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
 
 		assertThat(first.earnedAmount()).isEqualTo(50);
 		assertThat(second.actionUrl()).isEqualTo("https://cdn.example.com/idle.gif");
@@ -434,7 +435,7 @@ class TamagotchiServiceImplTest {
 			.willReturn(List.of(action));
 		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet(userId, 100)));
 
-		CharacterActionUrlResp resp = service.getMyCharacterActionUrl(userId, "EYE");
+		CharacterActionUrlResp resp = service.getMyCharacterActionUrl(userId, CharacterActionType.EYE);
 
 		assertThat(resp.actionUrl()).isEqualTo("https://cdn.example.com/eye.gif");
 		assertThat(resp.earnedAmount()).isZero();
@@ -472,7 +473,7 @@ class TamagotchiServiceImplTest {
 		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet(userId, 140)));
 
 		service.setClock(fixedClock(now));
-		CharacterActionUrlResp resp = service.getMyCharacterActionUrl(userId, "IDLE");
+		CharacterActionUrlResp resp = service.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
 
 		assertThat(resp.earnedAmount()).isEqualTo(50);
 		assertThat(userCharacter.getDailyTouchCount()).isEqualTo(1);
