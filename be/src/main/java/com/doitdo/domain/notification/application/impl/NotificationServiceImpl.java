@@ -115,6 +115,27 @@ public class NotificationServiceImpl implements NotificationService {
 	}
 
 	@Override
+	public void sendStreakTodoEmptyReminder(Long userId, LocalTime now) {
+		LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+		boolean alreadySent = notificationRepository.existsByUserIdAndTypeAndCreatedAtBetweenAndIsDeletedFalse(
+				userId,
+				NotificationType.REMINDER_STREAK_TODO_EMPTY,
+				today.atStartOfDay(),
+				today.plusDays(1).atStartOfDay());
+		if (alreadySent) {
+			return;
+		}
+
+		String title = "오늘 할 일이 비어 있어요";
+		String body  = "스트릭을 이어가려면 오늘 할 일을 하나 추가해봐요.";
+
+		notificationRepository.save(Notification.of(
+				userId, NotificationType.REMINDER_STREAK_TODO_EMPTY, title, body, null));
+
+		dispatchFcm(userId, now, title, body, "[streak-todo-empty-reminder]");
+	}
+
+	@Override
 	public void sendTodoDone(Long userId, Long todoId, String todoTitle) {
 		String title = "할 일 완료!";
 		String body  = "\"%s\" 완료를 기록했어요. 잘 했어요!".formatted(todoTitle);
