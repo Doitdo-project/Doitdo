@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class MailServiceImpl implements MailService {
 
-	private static final String PASSWORD_RESET_SUBJECT = "[doitdo] 비밀번호 재설정 안내";
+	private static final String PASSWORD_RESET_SUBJECT = "[doitdo] 비밀번호 재설정 인증번호";
 
 	private final JavaMailSender javaMailSender;
 
@@ -28,8 +28,11 @@ public class MailServiceImpl implements MailService {
 	@Value("${app.password-reset.from-name}")
 	private String fromName;
 
+	@Value("${app.password-reset.otp-ttl-minutes}")
+	private long otpTtlMinutes;
+
 	/**
-	 * 비밀번호 재설정 링크 메일 발송.
+	 * 비밀번호 재설정 OTP(6자리) 메일 발송.
 	 *
 	 * <p>SMTP 응답 지연(1~3초)이 API 응답에 영향을 주지 않도록 {@code mailExecutor} 풀에서 비동기 처리.
 	 * 발송 실패 시 사용자 응답에는 영향을 주지 않고 로그만 남긴다 — 사용자 입장에선 "메일 보냈음" 응답을 받지만
@@ -37,14 +40,14 @@ public class MailServiceImpl implements MailService {
 	 */
 	@Override
 	@Async("mailExecutor")
-	public void sendPasswordResetMail(String toEmail, String resetLink) {
+	public void sendPasswordResetCodeMail(String toEmail, String code) {
 		try {
 			MimeMessage message = javaMailSender.createMimeMessage();
 			MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
 			helper.setFrom(new InternetAddress(fromAddress, fromName, "UTF-8"));
 			helper.setTo(toEmail);
 			helper.setSubject(PASSWORD_RESET_SUBJECT);
-			helper.setText(buildHtmlBody(resetLink), true);
+			helper.setText(buildHtmlBody(code), true);
 
 			javaMailSender.send(message);
 			log.info("event=PASSWORD_RESET_MAIL_SENT to={}", maskEmail(toEmail));
@@ -53,31 +56,31 @@ public class MailServiceImpl implements MailService {
 		}
 	}
 
-	private String buildHtmlBody(String resetLink) {
+	private String buildHtmlBody(String code) {
 		return """
 				<!DOCTYPE html>
 				<html lang="ko">
 				<body style="font-family: 'Apple SD Gothic Neo', sans-serif; background:#f7f7fa; padding:32px;">
 				  <table style="max-width:480px; margin:0 auto; background:#fff; border-radius:12px; padding:32px;">
 				    <tr><td>
-				      <h2 style="margin:0 0 16px;">비밀번호 재설정 안내</h2>
+				      <h2 style="margin:0 0 16px;">비밀번호 재설정 인증번호</h2>
 				      <p style="color:#333; line-height:1.6;">
-				        doitdo 비밀번호 재설정 요청을 확인했어요.<br/>
-				        아래 버튼을 눌러 30분 이내에 새 비밀번호를 설정해주세요.
+				        doitdo 앱에서 아래 6자리 인증번호를 입력해주세요.
 				      </p>
 				      <p style="text-align:center; margin:32px 0;">
-				        <a href="%s" style="display:inline-block; background:#5b8def; color:#fff; padding:14px 28px; border-radius:8px; text-decoration:none; font-weight:bold;">비밀번호 재설정</a>
+				        <span style="display:inline-block; background:#f1f3f9; color:#222; padding:18px 32px; border-radius:12px; font-size:32px; letter-spacing:8px; font-weight:bold;">%s</span>
+				      </p>
+				      <p style="color:#888; font-size:13px; line-height:1.5; text-align:center;">
+				        이 인증번호는 <b>%d분</b> 동안 유효해요.
 				      </p>
 				      <p style="color:#888; font-size:13px; line-height:1.5;">
-				        본인이 요청하지 않았다면 이 메일을 무시해주세요. 기존 비밀번호는 그대로 유지됩니다.<br/>
-				        링크가 동작하지 않으면 아래 주소를 직접 복사해 이동해주세요.<br/>
-				        <span style="color:#5b8def; word-break:break-all;">%s</span>
+				        본인이 요청하지 않았다면 이 메일을 무시해주세요. 기존 비밀번호는 그대로 유지됩니다.
 				      </p>
 				    </td></tr>
 				  </table>
 				</body>
 				</html>
-				""".formatted(resetLink, resetLink);
+				""".formatted(code, otpTtlMinutes);
 	}
 
 	private String maskEmail(String email) {

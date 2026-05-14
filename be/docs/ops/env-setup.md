@@ -122,9 +122,16 @@ c.d.d.n.a.impl.FirebaseFcmService  : [fcm] FirebaseFcmService is active.
 
 비활성(Noop) 상태라면 `NoopFcmService` 초기화 로그가 대신 나온다.
 
-## 2-3-1. 비밀번호 재설정 메일 (SMTP) 설정
+## 2-3-1. 비밀번호 재설정 메일 (SMTP, OTP 6자리) 설정
 
-자체 회원가입 사용자의 비밀번호 재설정은 SMTP (MVP: Gmail) 로 재설정 링크 메일을 발송한다. 미설정 시에도 부팅은 성공하지만 `POST /api/auth/password/reset-request` 호출 시 메일 발송이 실패한다 (사용자 응답은 200 OK, 로그에 `PASSWORD_RESET_MAIL_FAILED`).
+자체 회원가입 사용자의 비밀번호 재설정은 SMTP (MVP: Gmail) 로 6자리 OTP 를 발송한다. 미설정 시에도 부팅은 성공하지만 `POST /api/auth/password/reset-request` 호출 시 메일 발송이 실패한다 (사용자 응답은 200 OK, 로그에 `PASSWORD_RESET_MAIL_FAILED`).
+
+흐름:
+1. `POST /password/reset-request` → 메일에 6자리 인증번호 발송 (TTL `otp-ttl-minutes`)
+2. `POST /password/reset/verify-code` → 인증번호 검증 후 reset 토큰 반환 (TTL `reset-token-ttl-minutes`)
+3. `POST /password/reset` → resetToken + newPassword
+
+OTP 시도가 `max-attempts` 회 초과되면 키를 삭제하고 410 `A04-005` 응답 — 사용자는 처음부터 다시 요청해야 한다.
 
 ### Gmail 앱 비밀번호 발급
 
@@ -141,8 +148,10 @@ mail.username=ssafydoitdo@gmail.com
 mail.password=abcdabcdabcdabcd
 mail.from-address=ssafydoitdo@gmail.com
 mail.from-name=doitdo
-app.password-reset.redirect-url=https://dev.doitdo.site/reset
-# app.password-reset.token-ttl-minutes=30   # 기본 30분, 필요 시 override
+# (선택) 정책 튜닝 — 기본값 가능
+# app.password-reset.otp-ttl-minutes=10
+# app.password-reset.reset-token-ttl-minutes=5
+# app.password-reset.max-attempts=5
 ```
 
 Docker env_file (`/home/ubuntu/app/env/.env.dev`, env var 포맷):
@@ -154,12 +163,11 @@ MAIL_USERNAME=ssafydoitdo@gmail.com
 MAIL_PASSWORD=abcdabcdabcdabcd
 MAIL_FROM_ADDRESS=ssafydoitdo@gmail.com
 MAIL_FROM_NAME=doitdo
-APP_PASSWORD_RESET_URL=https://dev.doitdo.site/reset
+# (선택)
+# APP_PASSWORD_RESET_OTP_TTL_MINUTES=10
+# APP_PASSWORD_RESET_TOKEN_TTL_MINUTES=5
+# APP_PASSWORD_RESET_MAX_ATTEMPTS=5
 ```
-
-### redirect-url 에 대해
-
-메일 본문에 들어갈 Universal Link 도메인. 사용자가 클릭하면 `{redirect-url}?token=xxx` 로 이동하고, FE 가 토큰을 추출해 `/api/auth/password/reset/verify` → `/api/auth/password/reset` 를 호출한다. 앱 미설치 시 웹 폴백 페이지가 뜨도록 FE/iOS/Android 의 Universal Link 셋업이 별도로 필요하다 (BE 작업 외).
 
 ### 운영 단계 전환
 

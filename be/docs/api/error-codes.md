@@ -73,7 +73,7 @@ public interface ErrorCode {
 | `A00_002` | `A00-002` | 423 | 잠긴 계정 |
 | `A01_001` | `A01-001` | 401 | 리프레시 토큰 무효 |
 | `A03_003` | `A03-003` | 409 | 이미 가입된 소셜 계정 |
-| `A04_001` | `A04-001` | 410 | 유효하지 않거나 만료된 비밀번호 재설정 링크 |
+| `A04_001` | `A04-001` | 410 | 유효하지 않거나 만료된 비밀번호 재설정 요청 |
 
 전체는 `AuthErrorCode.java` 참고. 다른 도메인 enum 도 동일한 형식.
 
@@ -207,16 +207,23 @@ Stage 4 똥치우기 미션은 활성 시각 전이거나 이미 치운 상태�
 | `THEME_ALREADY_OWNED` | `S03-010` | 409 | 이미 테마 풀세트를 보유함 |
 | `THEME_NOT_FULLY_OWNED` | `S03-011` | 409 | 테마 가구를 모두 보유하지 않음 |
 
-### `AuthErrorCode` 추가 코드 (비밀번호 재설정, 2026-05)
+### `AuthErrorCode` 추가 코드 (비밀번호 재설정 OTP, 2026-05)
 
-A04 그룹은 `POST /api/auth/password/reset-request`, `GET /api/auth/password/reset/verify`, `POST /api/auth/password/reset` 흐름에서 사용한다.
-보안상 *invalid* 와 *expired* 를 A04-001 하나로 통합한다 (구분하면 토큰 추측 공격에 정보 제공).
+A04 그룹은 OTP 6자리 인증번호 흐름에서 사용한다:
+1. `POST /api/auth/password/reset-request` — 이메일로 OTP 발송
+2. `POST /api/auth/password/reset/verify-code` — 이메일+OTP 검증 후 reset 토큰 발급
+3. `POST /api/auth/password/reset` — reset 토큰으로 비번 변경
+
+보안상 *invalid* 와 *expired* 를 A04-001 하나로 통합한다 (구분하면 추측 공격에 정보 제공).
+시도 횟수 초과 시 OTP 키를 삭제하고 A04-005 로 응답해 사용자가 재요청하도록 강제한다.
 
 | 상수 | code | HTTP | 의미 |
 |---|---|---|---|
-| `A04_001` | `A04-001` | 410 | 유효하지 않거나 만료된 재설정 링크 |
-| `A04_002` | `A04-002` | 422 | 필수 파라미터 누락 (token 또는 newPassword) |
+| `A04_001` | `A04-001` | 410 | 유효하지 않거나 만료된 재설정 요청 (OTP 미존재 또는 resetToken 무효/만료) |
+| `A04_002` | `A04-002` | 422 | 필수 파라미터 누락 (email/code 또는 resetToken/newPassword) |
 | `A04_003` | `A04-003` | 500 | 서버 내부 오류 |
+| `A04_004` | `A04-004` | 410 | 인증번호 불일치 (attempts 카운트 +1) |
+| `A04_005` | `A04-005` | 410 | 인증번호 시도 횟수 초과 → 키 삭제, 재요청 필요 |
 
 > 미가입 이메일이나 소셜 가입자 이메일에 대한 reset 요청은 200 OK 응답한다 (계정/가입경로 enumeration 차단). 내부 로그로만 분기 기록.
 > 메일 발송 실패는 `@Async` Executor 내부에서 swallow 되고 사용자 응답에는 영향이 없다 — 발송 모니터링은 로그(`event=PASSWORD_RESET_MAIL_FAILED`)로 한다.
