@@ -1,3 +1,4 @@
+import 'package:doitdo/domain/entities/furniture_theme.dart';
 import 'package:doitdo/domain/entities/room_placement.dart';
 import 'package:doitdo/domain/entities/shop_entry.dart';
 import 'package:doitdo/domain/entities/shop_furniture.dart';
@@ -25,6 +26,13 @@ abstract class ShopRepository {
   /// 가구 미리보기. 실제 저장은 발생하지 않는다.
   /// `preview=true` 인 항목이 미리보기 대상이다.
   Future<List<RoomFurniturePlacement>> previewRoom(int furnitureId);
+
+  /// 테마 카드 목록 (`is_active=true`, `display_order ASC`).
+  Future<List<FurnitureTheme>> listThemes();
+
+  /// 테마 전체 방 미리보기. 테마에 속한 여러 가구가 한 번에 합성된 방 응답이
+  /// 돌아온다. 실제 저장은 발생하지 않으며, 테마 가구는 `preview=true` 로 온다.
+  Future<List<RoomFurniturePlacement>> previewThemeRoom(String themeCode);
 
   /// 내 방 현재 배치 조회.
   Future<List<RoomFurniturePlacement>> getMyRoom();

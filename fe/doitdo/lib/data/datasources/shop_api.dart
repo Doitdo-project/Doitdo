@@ -3,6 +3,7 @@ import 'package:retrofit/retrofit.dart';
 
 import 'package:doitdo/core/network/api_response.dart';
 import 'package:doitdo/data/models/furniture_shop_resp_dto.dart';
+import 'package:doitdo/data/models/furniture_theme_resp_dto.dart';
 import 'package:doitdo/data/models/purchase_furniture_resp_dto.dart';
 import 'package:doitdo/data/models/room_resp_dto.dart';
 import 'package:doitdo/data/models/shop_entry_resp_dto.dart';
@@ -50,6 +51,19 @@ abstract class ShopApi {
   @GET('/api/shop/furnitures/{furnitureId}/preview-room')
   Future<ApiResponse<RoomRespDto>> previewRoom(
     @Path('furnitureId') int furnitureId,
+  );
+
+  /// 가구 테마 목록. 상점의 "테마" 탭에서 카드로 노출한다.
+  /// `is_active = true` 한정, `display_order ASC` 정렬은 BE 가 내려준 순서를 그대로 따른다.
+  @GET('/api/shop/themes')
+  Future<ApiResponse<FurnitureThemeListRespDto>> listThemes();
+
+  /// 테마 전체 방 미리보기. 단일 가구 [previewRoom] 의 세트 버전 — 테마에 속한
+  /// 여러 카테고리 가구를 내 실제 방에 저장 없이 합성해서 돌려준다. 응답은
+  /// 기존 [RoomRespDto] 와 동일하며, 테마 가구만 `preview=true` 로 표시된다.
+  @GET('/api/shop/themes/{themeCode}/preview-room')
+  Future<ApiResponse<RoomRespDto>> previewThemeRoom(
+    @Path('themeCode') String themeCode,
   );
 
   /// 내 방 현재 배치.

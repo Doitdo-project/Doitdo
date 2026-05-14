@@ -1,5 +1,6 @@
 import 'package:doitdo/core/network/base_repository.dart';
 import 'package:doitdo/data/datasources/shop_api.dart';
+import 'package:doitdo/domain/entities/furniture_theme.dart';
 import 'package:doitdo/domain/entities/room_placement.dart';
 import 'package:doitdo/domain/entities/shop_entry.dart';
 import 'package:doitdo/domain/entities/shop_furniture.dart';
@@ -33,6 +34,15 @@ class ShopRepositoryImpl extends BaseRepository implements ShopRepository {
   @override
   Future<List<RoomFurniturePlacement>> previewRoom(int furnitureId) =>
       safeApiCall(() => _api.previewRoom(furnitureId))
+          .then((dto) => dto.toEntities());
+
+  @override
+  Future<List<FurnitureTheme>> listThemes() =>
+      safeApiCall(() => _api.listThemes()).then((dto) => dto.toEntities());
+
+  @override
+  Future<List<RoomFurniturePlacement>> previewThemeRoom(String themeCode) =>
+      safeApiCall(() => _api.previewThemeRoom(themeCode))
           .then((dto) => dto.toEntities());
 
   @override
