@@ -27,6 +27,7 @@ import com.doitdo.domain.todo.repository.PaletteColorRepository;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository.SnoozeCountProjection;
 import com.doitdo.domain.todo.repository.TodoRepository;
+import com.doitdo.domain.todo.repository.TodoRepository.ExcludedDateProjection;
 import com.doitdo.domain.todo.repository.TodoListQueryRepository;
 import com.doitdo.domain.todo.repository.TodoSpecifications;
 import com.doitdo.domain.todo.repository.projection.TodoListRow;
@@ -103,8 +104,16 @@ public class TodoServiceImpl implements TodoService {
 		Map<String, Integer> activeColorByName = buildActiveCategoryColorIdByName(userId);
 		Map<Integer, String> hexByColorId = buildPaletteHexByColorId();
 
+		Map<Long, List<LocalDate>> excludedDatesByMasterId = findExcludedDatesByMasterId(
+				userId,
+				rows.stream()
+						.filter(row -> row.type() == TodoType.RECURRING)
+						.map(TodoListRow::todoId)
+						.toList());
+
 		return new TodoListResp(rows.stream()
-				.map(row -> toTodoDetailResp(row, activeColorByName, hexByColorId))
+				.map(row -> toTodoDetailResp(row, activeColorByName, hexByColorId,
+						excludedDatesByMasterId.getOrDefault(row.todoId(), List.of())))
 				.toList());
 	}
 
@@ -117,7 +126,8 @@ public class TodoServiceImpl implements TodoService {
 	private static TodoDetailResp toTodoDetailResp(
 			TodoListRow row,
 			Map<String, Integer> activeColorIdByName,
-			Map<Integer, String> hexByColorId) {
+			Map<Integer, String> hexByColorId,
+			List<LocalDate> excludedDates) {
 		String colorHex = resolveColorHex(
 				row.categoryName(), row.categoryColorId(), activeColorIdByName, hexByColorId);
 		return new TodoDetailResp(
@@ -134,8 +144,28 @@ public class TodoServiceImpl implements TodoService {
 				toDaysOfWeekCodes(row.daysOfWeekRaw()),
 				row.status(),
 				row.updatedAt(),
-				(int) row.snoozeCount()
+				(int) row.snoozeCount(),
+				row.type() == TodoType.RECURRING ? excludedDates : List.of()
 		);
+	}
+
+	private Map<Long, List<LocalDate>> findExcludedDatesByMasterId(Long userId, List<Long> masterTodoIds) {
+		if (masterTodoIds.isEmpty()) {
+			return Map.of();
+		}
+		return todoRepository.findExcludedDatesByMasterTodoIds(userId, masterTodoIds).stream()
+				.collect(Collectors.groupingBy(
+						ExcludedDateProjection::getMasterTodoId,
+						Collectors.mapping(ExcludedDateProjection::getOccurrenceDate, Collectors.toList())
+				));
+	}
+
+	private TodoDetailResp withExcludedDates(Long userId, Todo todo, String categoryName, String colorHex, int snoozedDays) {
+		List<LocalDate> excludedDates = todo.getType() == TodoType.RECURRING && todo.getTodoId() != null
+				? findExcludedDatesByMasterId(userId, List.of(todo.getTodoId()))
+						.getOrDefault(todo.getTodoId(), List.of())
+				: List.of();
+		return TodoDetailResp.from(todo, categoryName, colorHex, snoozedDays, excludedDates);
 	}
 
 	/**
@@ -217,7 +247,7 @@ public class TodoServiceImpl implements TodoService {
 
 		String colorHex = resolveColorHexForTodo(userId, todo);
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
-		return TodoDetailResp.from(todo, todo.getCategoryName(), colorHex, count);
+		return withExcludedDates(userId, todo, todo.getCategoryName(), colorHex, count);
 	}
 
 	@Override
@@ -259,7 +289,7 @@ public class TodoServiceImpl implements TodoService {
 				? paletteColorRepository.findById(categoryColorId).map(PaletteColor::getColor).orElse(null)
 				: null;
 		// 새 TODO 이므로 snooze 이력 없음 — count=0 하드코딩 (DB 조회 불필요)
-		return TodoDetailResp.from(todo, categoryName, colorHex, 0);
+		return withExcludedDates(userId, todo, categoryName, colorHex, 0);
 	}
 
 	private int nextPriority(Long userId, TodoType type) {
@@ -399,7 +429,7 @@ public class TodoServiceImpl implements TodoService {
 
 		String colorHex = resolveColorHexForTodo(userId, todo);
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
-		return TodoDetailResp.from(todo, todo.getCategoryName(), colorHex, count);
+		return withExcludedDates(userId, todo, todo.getCategoryName(), colorHex, count);
 	}
 
 	private TodoDetailResp updateRecurringFrom(Long userId, Todo master, TodoUpdateReq req, LocalDate occurrenceDate) {
@@ -454,7 +484,7 @@ public class TodoServiceImpl implements TodoService {
 		}
 
 		String colorHex = resolveColorHexForTodo(userId, newMaster);
-		return TodoDetailResp.from(newMaster, newMaster.getCategoryName(), colorHex, 0);
+		return withExcludedDates(userId, newMaster, newMaster.getCategoryName(), colorHex, 0);
 	}
 
 	@Override
@@ -495,7 +525,7 @@ public class TodoServiceImpl implements TodoService {
 
 		String colorHex = resolveColorHexForTodo(userId, todo);
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
-		return TodoDetailResp.from(todo, todo.getCategoryName(), colorHex, count);
+		return withExcludedDates(userId, todo, todo.getCategoryName(), colorHex, count);
 	}
 
 	@Override
@@ -525,7 +555,7 @@ public class TodoServiceImpl implements TodoService {
 
 		String colorHex = resolveColorHexForTodo(userId, todo);
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
-		return TodoDetailResp.from(todo, todo.getCategoryName(), colorHex, count);
+		return withExcludedDates(userId, todo, todo.getCategoryName(), colorHex, count);
 	}
 
 	@Override
@@ -563,13 +593,23 @@ public class TodoServiceImpl implements TodoService {
 								p -> p.getCnt().intValue()
 						));
 
+		Map<Long, List<LocalDate>> excludedDatesByMasterId = findExcludedDatesByMasterId(
+				userId,
+				pageResult.getContent().stream()
+						.filter(todo -> todo.getType() == TodoType.RECURRING)
+						.map(Todo::getTodoId)
+						.toList());
+
 		List<TodoDetailResp> items = pageResult.getContent().stream()
 				.map(todo -> TodoDetailResp.from(
 						todo,
 						todo.getCategoryName(),
 						resolveColorHex(todo.getCategoryName(), todo.getCategoryColorId(),
 								activeColorByName, hexByColorId),
-						snoozeCountByTodoId.getOrDefault(todo.getTodoId(), 0)
+						snoozeCountByTodoId.getOrDefault(todo.getTodoId(), 0),
+						todo.getType() == TodoType.RECURRING
+								? excludedDatesByMasterId.getOrDefault(todo.getTodoId(), List.of())
+								: List.of()
 				))
 				.toList();
 
@@ -618,7 +658,7 @@ public class TodoServiceImpl implements TodoService {
 
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
 		String colorHex = resolveColorHexForTodo(userId, todo);
-		return TodoDetailResp.from(todo, todo.getCategoryName(), colorHex, count);
+		return withExcludedDates(userId, todo, todo.getCategoryName(), colorHex, count);
 	}
 
 	private boolean isAllScope(String scope) {
