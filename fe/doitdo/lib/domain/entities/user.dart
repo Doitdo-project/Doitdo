@@ -12,6 +12,7 @@ class User {
     required this.hasPassword,
     required this.birthDateRegistered,
     required this.agreementsAccepted,
+    this.dailyAttendanceClaimed = false,
   });
 
   /// 서버 PK (`userId`).
@@ -41,6 +42,14 @@ class User {
   /// 서버 스펙: `UserInfoResp.agreementsAccepted`.
   final bool agreementsAccepted;
 
+  /// 오늘 자동 출석 보상이 이미 지급/안내 처리됐는지.
+  ///
+  /// BE 가 진입 첫 GET 응답에서만 false 로 내려주고, 그 직후 자동으로 true 로
+  /// 토글한다. 클라는 false 를 본 시점에 +100 코인 알림(스낵바 + floating "+100")
+  /// 만 띄우면 된다 — 실제 보상 지급은 서버가 처리하므로 별도 claim 호출 X.
+  /// 서버 스펙: `UserInfoResp.dailyAttendanceClaimed`.
+  final bool dailyAttendanceClaimed;
+
   /// 두 단계 모두 끝난 사용자만 메인 탭으로 진입시킨다.
   bool get isOnboardingComplete => birthDateRegistered && agreementsAccepted;
 
@@ -51,6 +60,7 @@ class User {
     bool? hasPassword,
     bool? birthDateRegistered,
     bool? agreementsAccepted,
+    bool? dailyAttendanceClaimed,
   }) =>
       User(
         userId: userId ?? this.userId,
@@ -59,6 +69,8 @@ class User {
         hasPassword: hasPassword ?? this.hasPassword,
         birthDateRegistered: birthDateRegistered ?? this.birthDateRegistered,
         agreementsAccepted: agreementsAccepted ?? this.agreementsAccepted,
+        dailyAttendanceClaimed:
+            dailyAttendanceClaimed ?? this.dailyAttendanceClaimed,
       );
 
   @override
@@ -71,7 +83,8 @@ class User {
           email == other.email &&
           hasPassword == other.hasPassword &&
           birthDateRegistered == other.birthDateRegistered &&
-          agreementsAccepted == other.agreementsAccepted;
+          agreementsAccepted == other.agreementsAccepted &&
+          dailyAttendanceClaimed == other.dailyAttendanceClaimed;
 
   @override
   int get hashCode => Object.hash(
@@ -81,5 +94,6 @@ class User {
         hasPassword,
         birthDateRegistered,
         agreementsAccepted,
+        dailyAttendanceClaimed,
       );
 }
