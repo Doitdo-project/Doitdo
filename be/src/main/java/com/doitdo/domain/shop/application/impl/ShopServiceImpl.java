@@ -15,6 +15,8 @@ import com.doitdo.domain.shop.api.dto.resp.FurnitureShopResp;
 import com.doitdo.domain.shop.api.dto.resp.FurnitureThemeListResp;
 import com.doitdo.domain.shop.api.dto.resp.FurnitureThemeResp;
 import com.doitdo.domain.shop.api.dto.resp.PurchaseFurnitureResp;
+import com.doitdo.domain.shop.api.dto.resp.PurchaseThemeFurnitureResp;
+import com.doitdo.domain.shop.api.dto.resp.PurchaseThemeResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomFurniturePlacementResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomResp;
 import com.doitdo.domain.shop.api.dto.resp.UserFurnitureItemResp;
@@ -70,14 +72,15 @@ public class ShopServiceImpl implements ShopService {
 
 	@Override
 	@Transactional(readOnly = true)
-	public FurnitureThemeListResp listThemes() {
+	public FurnitureThemeListResp listThemes(Long userId) {
+		Set<Long> ownedFurnitureIds = new HashSet<>(userFurnitureRepository.findFurnitureIdsByUserId(userId));
 		List<FurnitureThemeResp> items = furnitureThemeRepository
 			.findAllByIsActiveTrueOrderByDisplayOrderAscThemeCodeAsc()
 			.stream()
-			.map(theme -> FurnitureThemeResp.from(
-				theme,
-				furnitureRepository.countByThemeCodeAndIsDeletedFalse(theme.getThemeCode())
-			))
+			.map(theme -> FurnitureThemeResp.from(theme,
+				furnitureRepository.findAllByThemeCodeAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc(
+					theme.getThemeCode()),
+				ownedFurnitureIds))
 			.toList();
 
 		return new FurnitureThemeListResp(items);
@@ -115,6 +118,68 @@ public class ShopServiceImpl implements ShopService {
 
 		return new PurchaseFurnitureResp(furnitureId, userFurniture.getUserFurnitureId(), true, true,
 			wallet.getBalance());
+	}
+
+	@Override
+	@Transactional
+	public PurchaseThemeResp purchaseTheme(Long userId, String themeCode) {
+		String normalizedThemeCode = themeCode.trim().toUpperCase(Locale.ROOT);
+		FurnitureTheme theme = furnitureThemeRepository.findByThemeCodeAndIsActiveTrue(normalizedThemeCode)
+			.orElseThrow(() -> new CustomException(ShopErrorCode.THEME_NOT_FOUND));
+		List<Furniture> themeFurnitures = furnitureRepository
+			.findAllByThemeCodeAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc(normalizedThemeCode);
+		if (themeFurnitures.isEmpty()) {
+			throw new CustomException(ShopErrorCode.THEME_EMPTY);
+		}
+		validateUniqueCategories(themeFurnitures);
+
+		Set<Long> ownedFurnitureIds = new HashSet<>(userFurnitureRepository.findFurnitureIdsByUserId(userId));
+		List<Furniture> toBuy = themeFurnitures.stream()
+			.filter(furniture -> !ownedFurnitureIds.contains(furniture.getFurnitureId()))
+			.toList();
+		if (toBuy.isEmpty()) {
+			throw new CustomException(ShopErrorCode.THEME_ALREADY_OWNED);
+		}
+
+		int totalPaid = toBuy.stream()
+			.mapToInt(Furniture::getPrice)
+			.sum();
+		UserWallet wallet = userWalletRepository.findByUserIdForUpdate(userId)
+			.orElseThrow(() -> new CustomException(ShopErrorCode.WALLET_NOT_FOUND));
+		wallet.spend(totalPaid);
+
+		List<UserFurniture> savedUserFurnitures;
+		try {
+			savedUserFurnitures = userFurnitureRepository.saveAllAndFlush(toBuy.stream()
+				.map(furniture -> UserFurniture.create(userId, furniture.getFurnitureId()))
+				.toList());
+		} catch (DataIntegrityViolationException e) {
+			throw new CustomException(ShopErrorCode.FURNITURE_ALREADY_OWNED);
+		}
+
+		List<PurchaseThemeFurnitureResp> purchasedFurnitures = new java.util.ArrayList<>();
+		for (int i = 0; i < savedUserFurnitures.size(); i++) {
+			UserFurniture userFurniture = savedUserFurnitures.get(i);
+			Furniture furniture = toBuy.get(i);
+			furniturePurchaseLogRepository.save(FurniturePurchaseLog.create(
+				userId,
+				userFurniture.getUserFurnitureId(),
+				furniture.getFurnitureId(),
+				furniture.getPrice(),
+				wallet.getBalance()
+			));
+			purchasedFurnitures.add(PurchaseThemeFurnitureResp.from(userFurniture, furniture));
+		}
+
+		return new PurchaseThemeResp(
+			theme.getThemeCode(),
+			theme.getThemeName(),
+			savedUserFurnitures.size(),
+			themeFurnitures.size() - toBuy.size(),
+			totalPaid,
+			wallet.getBalance(),
+			purchasedFurnitures
+		);
 	}
 
 	@Override

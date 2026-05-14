@@ -15,7 +15,9 @@ import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.shop.api.dto.req.UpdateRoomFurniturePlacementReq;
 import com.doitdo.domain.shop.api.dto.resp.FurnitureShopResp;
 import com.doitdo.domain.shop.api.dto.resp.FurnitureThemeListResp;
+import com.doitdo.domain.shop.api.dto.resp.PlaceThemeResp;
 import com.doitdo.domain.shop.api.dto.resp.PurchaseFurnitureResp;
+import com.doitdo.domain.shop.api.dto.resp.PurchaseThemeResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomFurniturePlacementResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomResp;
 import com.doitdo.domain.shop.api.dto.resp.ShopEntryResp;
@@ -68,8 +70,10 @@ public class ShopController {
 	@Operation(summary = "가구 테마 목록 조회",
 		description = "상점에서 선택 가능한 가구 테마 목록을 조회한다. 활성 테마만 displayOrder 오름차순으로 반환한다.")
 	@GetMapping("/shop/themes")
-	public GlobalApiResponse<FurnitureThemeListResp> listThemes() {
-		return GlobalApiResponse.ok(shopService.listThemes());
+	public GlobalApiResponse<FurnitureThemeListResp> listThemes(
+		@AuthenticationPrincipal CustomUserDetails userDetails
+	) {
+		return GlobalApiResponse.ok(shopService.listThemes(userDetails.getUserId()));
 	}
 
 	@Operation(summary = "가구 구매",
@@ -83,6 +87,18 @@ public class ShopController {
 	) {
 		return GlobalApiResponse.ok("가구 구매 완료",
 			shopService.purchaseFurniture(userDetails.getUserId(), furnitureId));
+	}
+
+	@Operation(summary = "가구 테마 구매",
+		description = "테마에 포함된 가구 중 현재 사용자가 보유하지 않은 가구만 구매한다. 구매 성공 시 자동 배치는 하지 않는다.")
+	@ApiErrorCodes({"S03-001", "S03-002", "S03-003", "S03-010", "S00-003", "S00-005"})
+	@PostMapping("/shop/themes/{themeCode}/purchase")
+	public GlobalApiResponse<PurchaseThemeResp> purchaseTheme(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@PathVariable String themeCode
+	) {
+		return GlobalApiResponse.ok("테마 구매 완료",
+			shopService.purchaseTheme(userDetails.getUserId(), themeCode));
 	}
 
 	@Operation(summary = "내 보유 가구 목록 조회",
@@ -140,6 +156,18 @@ public class ShopController {
 	) {
 		return GlobalApiResponse.ok("가구 배치 완료",
 			roomFurniturePlacementService.placeFurniture(userDetails.getUserId(), userFurnitureId));
+	}
+
+	@Operation(summary = "가구 테마 일괄 배치",
+		description = "현재 사용자가 보유한 테마 가구를 방에 한 번에 배치한다. 같은 카테고리의 기존 배치는 제거하고 테마 가구로 교체한다.")
+	@ApiErrorCodes({"S03-001", "S03-002", "S03-003", "S01-001", "S00-001"})
+	@PostMapping("/users/me/room/themes/{themeCode}/placements")
+	public GlobalApiResponse<PlaceThemeResp> placeTheme(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@PathVariable String themeCode
+	) {
+		return GlobalApiResponse.ok("테마 배치 완료",
+			roomFurniturePlacementService.placeTheme(userDetails.getUserId(), themeCode));
 	}
 
 	@Operation(summary = "배치 가구 위치 수정",
