@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -15,6 +17,7 @@ import 'package:doitdo/presentation/pages/shop/widgets/shop_loading_view.dart';
 import 'package:doitdo/presentation/pages/shop/widgets/shop_room_preview.dart';
 import 'package:doitdo/presentation/pages/shop/widgets/shop_theme_card.dart';
 import 'package:doitdo/presentation/pages/shop/widgets/shop_top_tabs.dart';
+import 'package:doitdo/presentation/pages/shop/widgets/theme_purchase_dialog.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_top_bar.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
 
@@ -110,6 +113,9 @@ class _ShopBody extends ConsumerWidget {
               themes: state.themes,
               previewingThemeCode: state.previewingThemeCode,
               onTapTheme: (theme) => _toggleThemePreview(context, ref, theme),
+              onTapPurchase: (theme) =>
+                  _openThemePurchaseDialog(context, ref, theme),
+              onTapPlace: (theme) => _placeOwnedTheme(context, ref, theme),
             ),
           ),
         ],
@@ -136,6 +142,108 @@ class _ShopBody extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+
+  /// 테마 카드의 "구매" 탭 → 주문서 다이얼로그 → 사용자 선택에 따라 분기 호출.
+  ///
+  /// - [ThemePurchaseChoice.purchaseAndPlace] → `purchaseAndPlaceTheme` (구매 + 배치)
+  /// - [ThemePurchaseChoice.purchaseOnly] → `purchaseTheme` (구매만, 인벤토리로)
+  ///
+  /// 다이얼로그가 닫히는 즉시 success 스낵바 + 백그라운드 호출 (가구 구매와 동일
+  /// 패턴). 실패 시 onFailure 콜백에서 에러 스낵바로 덮어쓴다.
+  Future<void> _openThemePurchaseDialog(
+    BuildContext context,
+    WidgetRef ref,
+    FurnitureTheme theme,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final shopState = ref.read(shopViewModelProvider).valueOrNull;
+    final coins = shopState?.coins ?? 0;
+
+    final choice = await showDialog<ThemePurchaseChoice>(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => ThemePurchaseDialog(
+        theme: theme,
+        currentCoins: coins,
+      ),
+    );
+    if (choice == null || choice == ThemePurchaseChoice.cancel) return;
+
+    final successMsg = switch (choice) {
+      ThemePurchaseChoice.purchaseAndPlace =>
+        '"${theme.themeName}" 테마를 구매하고 배치했어요!',
+      ThemePurchaseChoice.purchaseOnly =>
+        '"${theme.themeName}" 테마를 인벤토리에 담았어요.',
+      ThemePurchaseChoice.cancel => '',
+    };
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(successMsg),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    void showFailure(String message) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
+    final vm = ref.read(shopViewModelProvider.notifier);
+    // unawaited — 백그라운드 실행, 결과 대기 안 함. 실패 시 onFailure 콜백.
+    switch (choice) {
+      case ThemePurchaseChoice.purchaseAndPlace:
+        unawaited(
+          vm.purchaseAndPlaceTheme(theme.themeCode, onFailure: showFailure),
+        );
+      case ThemePurchaseChoice.purchaseOnly:
+        unawaited(
+          vm.purchaseTheme(theme.themeCode, onFailure: showFailure),
+        );
+      case ThemePurchaseChoice.cancel:
+        return;
+    }
+  }
+
+  /// 풀세트 보유 테마 카드의 "배치" 탭 → 다이얼로그 없이 즉시 일괄 배치 (가구
+  /// 카드의 "배치" 와 동일 톤). 같은 카테고리 기존 배치는 BE 가 자동 교체.
+  Future<void> _placeOwnedTheme(
+    BuildContext context,
+    WidgetRef ref,
+    FurnitureTheme theme,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final vm = ref.read(shopViewModelProvider.notifier);
+    final ok = await vm.placeOwnedTheme(
+      theme.themeCode,
+      onFailure: (message) {
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(message),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+    );
+    if (!ok || !context.mounted) return;
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('"${theme.themeName}" 테마를 방에 배치했어요!'),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
     );
   }
 
@@ -322,11 +430,15 @@ class _ThemeGrid extends StatelessWidget {
     required this.themes,
     required this.previewingThemeCode,
     required this.onTapTheme,
+    required this.onTapPurchase,
+    required this.onTapPlace,
   });
 
   final List<FurnitureTheme> themes;
   final String? previewingThemeCode;
   final ValueChanged<FurnitureTheme> onTapTheme;
+  final ValueChanged<FurnitureTheme> onTapPurchase;
+  final ValueChanged<FurnitureTheme> onTapPlace;
 
   @override
   Widget build(BuildContext context) {
@@ -346,8 +458,9 @@ class _ThemeGrid extends StatelessWidget {
         crossAxisCount: 2,
         mainAxisSpacing: 14.h,
         crossAxisSpacing: 12.w,
-        // 가구 카드와 동일한 비율 — 두 탭의 그리드가 같은 리듬으로 보이도록.
-        childAspectRatio: 0.85,
+        // 카드 가로:세로 비. 가구 카드(0.85) 보다 살짝 길게 — 가격 행 + 버튼이
+        // 추가돼 같은 0.85 면 썸네일이 너무 작아진다.
+        childAspectRatio: 0.72,
       ),
       itemBuilder: (context, index) {
         final theme = themes[index];
@@ -355,6 +468,8 @@ class _ThemeGrid extends StatelessWidget {
           theme: theme,
           isPreviewing: theme.themeCode == previewingThemeCode,
           onTap: () => onTapTheme(theme),
+          onTapPurchase: () => onTapPurchase(theme),
+          onTapPlace: () => onTapPlace(theme),
         );
       },
     );
