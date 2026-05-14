@@ -20,14 +20,17 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import com.doitdo.domain.shop.api.dto.resp.FurnitureShopItemResp;
 import com.doitdo.domain.shop.api.dto.resp.FurnitureShopStatus;
+import com.doitdo.domain.shop.api.dto.resp.FurnitureThemeResp;
 import com.doitdo.domain.shop.api.dto.resp.PurchaseFurnitureResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomResp;
 import com.doitdo.domain.shop.entity.Furniture;
 import com.doitdo.domain.shop.entity.FurniturePurchaseLog;
+import com.doitdo.domain.shop.entity.FurnitureTheme;
 import com.doitdo.domain.shop.entity.RoomFurniturePlacement;
 import com.doitdo.domain.shop.entity.UserFurniture;
 import com.doitdo.domain.shop.repository.FurniturePurchaseLogRepository;
 import com.doitdo.domain.shop.repository.FurnitureRepository;
+import com.doitdo.domain.shop.repository.FurnitureThemeRepository;
 import com.doitdo.domain.shop.repository.RoomFurniturePlacementRepository;
 import com.doitdo.domain.shop.repository.UserFurnitureRepository;
 import com.doitdo.domain.user.entity.UserWallet;
@@ -40,6 +43,9 @@ class ShopServiceImplTest {
 
 	@Mock
 	private FurnitureRepository furnitureRepository;
+
+	@Mock
+	private FurnitureThemeRepository furnitureThemeRepository;
 
 	@Mock
 	private UserFurnitureRepository userFurnitureRepository;
@@ -55,13 +61,7 @@ class ShopServiceImplTest {
 
 	@Test
 	void listFurnitures_marksOwnedFurnitureAsSoldOut() {
-		ShopServiceImpl service = new ShopServiceImpl(
-			furnitureRepository,
-			userFurnitureRepository,
-			furniturePurchaseLogRepository,
-			userWalletRepository,
-			roomFurniturePlacementRepository
-		);
+		ShopServiceImpl service = service();
 		Long userId = 1L;
 		Furniture chair = furniture(10L, "CHAIR_001", "의자", "CHAIR", 100, true);
 		Furniture desk = furniture(11L, "DESK_001", "책상", "DESK", 200, true);
@@ -91,13 +91,7 @@ class ShopServiceImplTest {
 
 	@Test
 	void listFurnitures_marksPlacedFurnitureAsPlaced() {
-		ShopServiceImpl service = new ShopServiceImpl(
-			furnitureRepository,
-			userFurnitureRepository,
-			furniturePurchaseLogRepository,
-			userWalletRepository,
-			roomFurniturePlacementRepository
-		);
+		ShopServiceImpl service = service();
 		Long userId = 1L;
 		Furniture clock = furniture(10L, "CLOCK_001", "시계", "CLOCK", 100, true);
 		UserFurniture userFurniture = userFurniture(20L, userId, 10L);
@@ -117,13 +111,7 @@ class ShopServiceImplTest {
 
 	@Test
 	void listFurnitures_convertsCategoryToUppercaseBeforeQuery() {
-		ShopServiceImpl service = new ShopServiceImpl(
-			furnitureRepository,
-			userFurnitureRepository,
-			furniturePurchaseLogRepository,
-			userWalletRepository,
-			roomFurniturePlacementRepository
-		);
+		ShopServiceImpl service = service();
 		Long userId = 1L;
 		Furniture chair = furniture(10L, "CHAIR_001", "의자", "CHAIR", 100, true);
 
@@ -142,13 +130,7 @@ class ShopServiceImplTest {
 
 	@Test
 	void purchaseFurniture_spendsWalletAndCreatesUserFurnitureAndLog() {
-		ShopServiceImpl service = new ShopServiceImpl(
-			furnitureRepository,
-			userFurnitureRepository,
-			furniturePurchaseLogRepository,
-			userWalletRepository,
-			roomFurniturePlacementRepository
-		);
+		ShopServiceImpl service = service();
 		Long userId = 1L;
 		Long furnitureId = 10L;
 		Furniture furniture = furniture(furnitureId, "CHAIR_001", "의자", "CHAIR", 100, true);
@@ -187,13 +169,7 @@ class ShopServiceImplTest {
 
 	@Test
 	void purchaseFurniture_rejectsAlreadyOwnedFurniture() {
-		ShopServiceImpl service = new ShopServiceImpl(
-			furnitureRepository,
-			userFurnitureRepository,
-			furniturePurchaseLogRepository,
-			userWalletRepository,
-			roomFurniturePlacementRepository
-		);
+		ShopServiceImpl service = service();
 		Long userId = 1L;
 		Long furnitureId = 10L;
 
@@ -212,13 +188,7 @@ class ShopServiceImplTest {
 
 	@Test
 	void purchaseFurniture_convertsDuplicateUserFurnitureSaveFailureToAlreadyOwned() {
-		ShopServiceImpl service = new ShopServiceImpl(
-			furnitureRepository,
-			userFurnitureRepository,
-			furniturePurchaseLogRepository,
-			userWalletRepository,
-			roomFurniturePlacementRepository
-		);
+		ShopServiceImpl service = service();
 		Long userId = 1L;
 		Long furnitureId = 10L;
 		UserWallet wallet = UserWallet.builder()
@@ -243,13 +213,7 @@ class ShopServiceImplTest {
 
 	@Test
 	void purchaseFurniture_rejectsInsufficientBalance() {
-		ShopServiceImpl service = new ShopServiceImpl(
-			furnitureRepository,
-			userFurnitureRepository,
-			furniturePurchaseLogRepository,
-			userWalletRepository,
-			roomFurniturePlacementRepository
-		);
+		ShopServiceImpl service = service();
 		Long userId = 1L;
 		Long furnitureId = 10L;
 		UserWallet wallet = UserWallet.builder()
@@ -273,13 +237,7 @@ class ShopServiceImplTest {
 
 	@Test
 	void previewRoom_excludesSameCategoryPlacementAndAddsPreviewFurniture() {
-		ShopServiceImpl service = new ShopServiceImpl(
-			furnitureRepository,
-			userFurnitureRepository,
-			furniturePurchaseLogRepository,
-			userWalletRepository,
-			roomFurniturePlacementRepository
-		);
+		ShopServiceImpl service = service();
 		Long userId = 1L;
 		Furniture oldClock = furniture(10L, "CLOCK_OLD", "기존 시계", "CLOCK", 100, true);
 		Furniture bed = furniture(11L, "BED_001", "침대", "BED", 200, true);
@@ -305,6 +263,81 @@ class ShopServiceImplTest {
 		assertThat(resp.items().get(1).preview()).isTrue();
 	}
 
+	@Test
+	void listThemes_returnsActiveThemesWithFurnitureCount() {
+		ShopServiceImpl service = service();
+		FurnitureTheme autumn = furnitureTheme("AUTUMN", "가을", 1, "https://cdn.example.com/autumn.png");
+		FurnitureTheme cherry = furnitureTheme("CHERRY", "벚꽃", 2, "https://cdn.example.com/cherry.png");
+
+		given(furnitureThemeRepository.findAllByIsActiveTrueOrderByDisplayOrderAscThemeCodeAsc())
+			.willReturn(List.of(autumn, cherry));
+		given(furnitureRepository.countByThemeCodeAndIsDeletedFalse("AUTUMN")).willReturn(8L);
+		given(furnitureRepository.countByThemeCodeAndIsDeletedFalse("CHERRY")).willReturn(8L);
+
+		List<FurnitureThemeResp> resp = service.listThemes().items();
+
+		assertThat(resp).hasSize(2);
+		assertThat(resp.get(0).themeCode()).isEqualTo("AUTUMN");
+		assertThat(resp.get(0).themeName()).isEqualTo("가을");
+		assertThat(resp.get(0).thumbnailUrl()).isEqualTo("https://cdn.example.com/autumn.png");
+		assertThat(resp.get(0).furnitureCount()).isEqualTo(8);
+		assertThat(resp.get(1).themeCode()).isEqualTo("CHERRY");
+	}
+
+	@Test
+	void previewThemeRoom_replacesCategoriesIncludedInThemeAndAddsPreviewFurniture() {
+		ShopServiceImpl service = service();
+		Long userId = 1L;
+		FurnitureTheme autumn = furnitureTheme("AUTUMN", "가을", 1, "https://cdn.example.com/autumn.png");
+		Furniture oldBed = furniture(10L, "BED_OLD", "기존 침대", "BED", 100, true);
+		Furniture plant = furniture(11L, "PLANT_001", "화분", "PLANT", 200, true);
+		Furniture themeBed = furniture(12L, "BED_AUTUMN", "가을 침대", "BED", 150, true);
+		Furniture themeDesk = furniture(13L, "DESK_AUTUMN", "가을 책상", "DESK", 150, true);
+		UserFurniture oldBedUserFurniture = userFurniture(20L, userId, 10L);
+		UserFurniture plantUserFurniture = userFurniture(21L, userId, 11L);
+		RoomFurniturePlacement oldBedPlacement = placement(30L, userId, 20L, 10, 20, 1, 0);
+		RoomFurniturePlacement plantPlacement = placement(31L, userId, 21L, 30, 40, 2, 0);
+
+		given(furnitureThemeRepository.findByThemeCodeAndIsActiveTrue("AUTUMN")).willReturn(Optional.of(autumn));
+		given(furnitureRepository.findAllByThemeCodeAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc("AUTUMN"))
+			.willReturn(List.of(themeBed, themeDesk));
+		given(roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId))
+			.willReturn(List.of(oldBedPlacement, plantPlacement));
+		given(userFurnitureRepository.findById(20L)).willReturn(Optional.of(oldBedUserFurniture));
+		given(userFurnitureRepository.findById(21L)).willReturn(Optional.of(plantUserFurniture));
+		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(10L)).willReturn(Optional.of(oldBed));
+		given(furnitureRepository.findByFurnitureIdAndIsDeletedFalse(11L)).willReturn(Optional.of(plant));
+
+		RoomResp resp = service.previewThemeRoom(userId, "AUTUMN");
+
+		assertThat(resp.items()).hasSize(3);
+		assertThat(resp.items()).extracting("furnitureId").containsExactly(11L, 12L, 13L);
+		assertThat(resp.items()).extracting("preview").containsExactly(false, true, true);
+	}
+
+	@Test
+	void previewThemeRoom_rejectsUnknownTheme() {
+		ShopServiceImpl service = service();
+
+		given(furnitureThemeRepository.findByThemeCodeAndIsActiveTrue("UNKNOWN")).willReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.previewThemeRoom(1L, "UNKNOWN"))
+			.isInstanceOf(CustomException.class)
+			.extracting(ex -> ((CustomException)ex).getErrorCode())
+			.isEqualTo(ShopErrorCode.THEME_NOT_FOUND);
+	}
+
+	private ShopServiceImpl service() {
+		return new ShopServiceImpl(
+			furnitureRepository,
+			furnitureThemeRepository,
+			userFurnitureRepository,
+			furniturePurchaseLogRepository,
+			userWalletRepository,
+			roomFurniturePlacementRepository
+		);
+	}
+
 	private Furniture furniture(Long furnitureId, String code, String name, String category, Integer price,
 		boolean isOnSale) {
 		return Furniture.builder()
@@ -323,6 +356,17 @@ class ShopServiceImplTest {
 			.zIndex(1)
 			.isOnSale(isOnSale)
 			.isDeleted(false)
+			.build();
+	}
+
+	private FurnitureTheme furnitureTheme(String themeCode, String themeName, Integer displayOrder,
+		String thumbnailUrl) {
+		return FurnitureTheme.builder()
+			.themeCode(themeCode)
+			.themeName(themeName)
+			.thumbnailUrl(thumbnailUrl)
+			.displayOrder(displayOrder)
+			.isActive(true)
 			.build();
 	}
 
