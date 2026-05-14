@@ -28,6 +28,7 @@ import com.doitdo.domain.todo.repository.PaletteColorRepository;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository;
 import com.doitdo.domain.todo.repository.TodoListQueryRepository;
 import com.doitdo.domain.todo.repository.TodoRepository;
+import com.doitdo.domain.todo.repository.TodoRepository.ExcludedDateProjection;
 import com.doitdo.domain.todo.repository.projection.TodoListRow;
 import com.doitdo.global.cache.CacheEvictHelper;
 import com.doitdo.global.exception.CustomException;
@@ -128,10 +129,69 @@ class TodoServiceImplTest {
 		assertThat(item.category()).isEqualTo("work");
 		assertThat(item.daysOfWeek()).containsExactly("MON", "WED");
 		assertThat(item.snoozedDays()).isEqualTo(2);
-		// list 는 todoRepository / snoozeHistoryRepository 와는 상호작용하지 않아야 함 (N+1 회피).
+		assertThat(item.excludedDates()).isEmpty();
+		// list 는 NORMAL TODO 에 대해 todoRepository / snoozeHistoryRepository 와는
+		// 상호작용하지 않아야 함 (N+1 회피).
 		// categoryRepository 와 paletteColorRepository 는 활성 카테고리·색상 맵 빌드를 위해
 		// 한 번씩 호출되므로 verifyNoInteractions 대상에서 제외한다.
 		verifyNoInteractions(todoRepository, snoozeHistoryRepository);
+	}
+
+	@Test
+	void listIncludesExcludedDatesForRecurringMasters() {
+		LocalDate baseDate = LocalDate.parse("2026-05-06");
+		TodoListReq req = new TodoListReq("today", null, null, null, baseDate, null, null);
+		TodoListRow row = new TodoListRow(
+				10L,
+				"repeat",
+				"memo",
+				"work",
+				null,
+				TodoType.RECURRING,
+				1,
+				"09:00",
+				baseDate,
+				null,
+				"WED,MON",
+				TodoStatus.TODO,
+				LocalDateTime.parse("2026-05-06T10:00:00"),
+				2L);
+		given(todoListQueryRepository.findListRows(
+				eq(1L),
+				eq("today"),
+				isNull(),
+				isNull(),
+				isNull(),
+				eq(baseDate),
+				any(LocalDate.class),
+				isNull(),
+				isNull()))
+				.willReturn(List.of(row));
+		given(todoRepository.findExcludedDatesByMasterTodoIds(1L, List.of(10L)))
+				.willReturn(List.of(excludedDate(10L, LocalDate.parse("2026-05-14"))));
+
+		TodoListResp resp = service.list(1L, req);
+
+		assertThat(resp.items()).hasSize(1);
+		TodoDetailResp item = resp.items().getFirst();
+		assertThat(item.category()).isEqualTo("work");
+		assertThat(item.daysOfWeek()).containsExactly("MON", "WED");
+		assertThat(item.snoozedDays()).isEqualTo(2);
+		assertThat(item.excludedDates()).containsExactly(LocalDate.parse("2026-05-14"));
+		verifyNoInteractions(snoozeHistoryRepository);
+	}
+
+	@Test
+	void detailIncludesExcludedDatesForRecurringMaster() {
+		Todo master = recurringMaster();
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+		given(snoozeHistoryRepository.countByTodoId(10L)).willReturn(0L);
+		given(todoRepository.findExcludedDatesByMasterTodoIds(1L, List.of(10L)))
+				.willReturn(List.of(excludedDate(10L, LocalDate.parse("2026-05-14"))));
+
+		TodoDetailResp resp = service.detail(1L, 10L);
+
+		assertThat(resp.excludedDates()).containsExactly(LocalDate.parse("2026-05-14"));
 	}
 
 	@Test
@@ -528,5 +588,19 @@ class TodoServiceImplTest {
 				.isDeleted(false)
 				.expGranted(false)
 				.build();
+	}
+
+	private ExcludedDateProjection excludedDate(Long masterTodoId, LocalDate occurrenceDate) {
+		return new ExcludedDateProjection() {
+			@Override
+			public Long getMasterTodoId() {
+				return masterTodoId;
+			}
+
+			@Override
+			public LocalDate getOccurrenceDate() {
+				return occurrenceDate;
+			}
+		};
 	}
 }

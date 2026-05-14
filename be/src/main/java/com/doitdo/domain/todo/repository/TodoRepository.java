@@ -13,6 +13,12 @@ import org.springframework.data.repository.query.Param;
 
 public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificationExecutor<Todo> {
 
+	interface ExcludedDateProjection {
+		Long getMasterTodoId();
+
+		LocalDate getOccurrenceDate();
+	}
+
 	Optional<Todo> findByTodoIdAndIsDeletedFalse(Long todoId);
 
 	Optional<Todo> findByUserIdAndTitleAndStartDateAndIsDeletedFalse(Long userId, String title, LocalDate startDate);
@@ -36,6 +42,19 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 			Long userId,
 			Long masterTodoId,
 			LocalDate startDate);
+
+	@Query("""
+			SELECT t.masterTodoId AS masterTodoId, t.startDate AS occurrenceDate
+			FROM Todo t
+			WHERE t.userId = :userId
+			  AND t.masterTodoId IN :masterTodoIds
+			  AND t.isDeleted = true
+			  AND t.type = com.doitdo.domain.todo.entity.Todo.TodoType.NORMAL
+			ORDER BY t.masterTodoId ASC, t.startDate ASC
+			""")
+	List<ExcludedDateProjection> findExcludedDatesByMasterTodoIds(
+			@Param("userId") Long userId,
+			@Param("masterTodoIds") List<Long> masterTodoIds);
 
 	/**
 	 * RECURRING 가상 occurrence 생성 차단용 마커 조회.
