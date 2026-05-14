@@ -3,14 +3,17 @@ package com.doitdo.domain.auth.application.impl;
 import com.doitdo.domain.auth.api.dto.req.LoginReq;
 import com.doitdo.domain.auth.api.dto.req.PasswordResetReq;
 import com.doitdo.domain.auth.api.dto.req.PasswordResetRequestReq;
+import com.doitdo.domain.auth.api.dto.req.PasswordResetVerifyCodeReq;
 import com.doitdo.domain.auth.api.dto.req.RefreshTokenReq;
 import com.doitdo.domain.auth.api.dto.req.SignupReq;
 import com.doitdo.domain.auth.api.dto.resp.LoginResp;
+import com.doitdo.domain.auth.api.dto.resp.PasswordResetVerifyCodeResp;
 import com.doitdo.domain.auth.api.dto.resp.SignupResp;
 import com.doitdo.domain.auth.api.dto.resp.TokenResp;
 import com.doitdo.domain.auth.application.AuthService;
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.auth.entity.RefreshToken;
+import com.doitdo.domain.auth.repository.PasswordResetOtpRedisRepository;
 import com.doitdo.domain.auth.repository.PasswordResetTokenRedisRepository;
 import com.doitdo.domain.auth.repository.RefreshTokenRepository;
 import com.doitdo.domain.setting.entity.UserSetting;
@@ -37,12 +40,13 @@ import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.UserErrorCode;
 import com.doitdo.global.mail.MailService;
 import com.doitdo.global.util.JwtUtil;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Base64;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,12 +66,16 @@ public class AuthServiceImpl implements AuthService {
 
 	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
+	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+	private static final int RESET_TOKEN_BYTES = 12; // → Base64URL 16자
+
 	private final UserRepository userRepository;
 	private final UserWalletRepository userWalletRepository;
 	private final UserSettingRepository userSettingRepository;
 	private final UserStreakRepository userStreakRepository;
 	private final RefreshTokenRepository refreshTokenRepository;
 	private final PasswordResetTokenRedisRepository passwordResetTokenRepository;
+	private final PasswordResetOtpRedisRepository passwordResetOtpRepository;
 	private final WalletEarnLogRepository walletEarnLogRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final AuthenticationManager authenticationManager;
@@ -83,11 +91,14 @@ public class AuthServiceImpl implements AuthService {
 	@Value("${jwt.refresh-token-expiration}")
 	private long refreshTokenExpiration;
 
-	@Value("${app.password-reset.redirect-url}")
-	private String passwordResetRedirectUrl;
+	@Value("${app.password-reset.otp-ttl-minutes}")
+	private long otpTtlMinutes;
 
-	@Value("${app.password-reset.token-ttl-minutes}")
-	private long passwordResetTokenTtlMinutes;
+	@Value("${app.password-reset.reset-token-ttl-minutes}")
+	private long resetTokenTtlMinutes;
+
+	@Value("${app.password-reset.max-attempts}")
+	private int maxAttempts;
 
 	@Override
 	@Transactional
@@ -204,17 +215,15 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	/**
-	 * 비밀번호 재설정 요청.
+	 * 비밀번호 재설정 요청 — 6자리 OTP 발송.
 	 *
-	 * <p>이메일이 미가입이거나 소셜 가입자(password null)면 메일 발송 없이 조용히 종료한다.
+	 * <p>이메일이 미가입이거나 소셜 가입자(password null)·탈퇴 사용자면 OTP 발급/메일 발송 없이 조용히 종료한다.
 	 * 호출자 응답은 항상 200 OK — 이메일/계정 존재 여부 및 가입 경로 노출 방지 (enumeration attack 차단).
+	 *
+	 * <p>같은 이메일에 OTP 가 이미 존재하면 새 OTP 로 덮어쓴다 (재요청 = 무효화 + 재발급).
 	 */
 	@Override
 	public void requestPasswordReset(PasswordResetRequestReq req) {
-		if (passwordResetRedirectUrl == null || passwordResetRedirectUrl.isBlank()) {
-			throw new IllegalStateException("app.password-reset.redirect-url is not configured");
-		}
-
 		userRepository.findByEmail(req.email()).ifPresent(user -> {
 			if (Boolean.TRUE.equals(user.getIsDeleted())) {
 				log.info("event=PASSWORD_RESET_SKIPPED reason=DELETED userId={}", user.getUserId());
@@ -225,36 +234,63 @@ public class AuthServiceImpl implements AuthService {
 				return;
 			}
 
-			String token = UUID.randomUUID().toString().replace("-", "");
-			passwordResetTokenRepository.save(
-					token,
+			String code = generateOtpCode();
+			passwordResetOtpRepository.save(
+					user.getEmail(),
+					code,
 					user.getUserId(),
-					Duration.ofMinutes(passwordResetTokenTtlMinutes));
+					Duration.ofMinutes(otpTtlMinutes));
 
-			String resetLink = passwordResetRedirectUrl
-					+ (passwordResetRedirectUrl.contains("?") ? "&" : "?")
-					+ "token=" + token;
-			mailService.sendPasswordResetMail(user.getEmail(), resetLink);
+			mailService.sendPasswordResetCodeMail(user.getEmail(), code);
 
 			log.info("event=PASSWORD_RESET_REQUESTED userId={}", user.getUserId());
 		});
 	}
 
 	/**
-	 * 메일 링크 진입 시점에 토큰 유효성만 확인. 토큰은 소비하지 않는다 (실제 재설정에서 소비).
-	 * 유효하지 않거나 만료된 토큰은 410 GONE + A04-001 반환.
+	 * OTP 6자리 검증 + 짧은 reset 토큰 발급.
+	 *
+	 * <ul>
+	 *   <li>OTP 없음/만료 → 410 A04-001</li>
+	 *   <li>code 불일치 → attempts +1 (HINCRBY atomic). max 도달 시 OTP 삭제 + 410 A04-005, 아니면 410 A04-004</li>
+	 *   <li>일치 → OTP 삭제 + reset 토큰(12 byte SecureRandom → Base64URL 16자) 발급, Redis TTL 5분</li>
+	 * </ul>
 	 */
 	@Override
-	public void verifyPasswordResetToken(String token) {
-		if (token == null || token.isBlank()) {
-			throw new CustomException(AuthErrorCode.A04_001);
-		}
-		passwordResetTokenRepository.findUserIdByToken(token)
+	public PasswordResetVerifyCodeResp verifyCode(PasswordResetVerifyCodeReq req) {
+		PasswordResetOtpRedisRepository.Otp otp = passwordResetOtpRepository.find(req.email())
 				.orElseThrow(() -> new CustomException(AuthErrorCode.A04_001));
+
+		// 이미 max 도달된 상태 — incrementAttempts 가 없을 때도 방어
+		if (otp.attempts() >= maxAttempts) {
+			passwordResetOtpRepository.delete(req.email());
+			throw new CustomException(AuthErrorCode.A04_005);
+		}
+
+		if (!otp.code().equals(req.code())) {
+			long next = passwordResetOtpRepository.incrementAttempts(req.email());
+			if (next >= maxAttempts) {
+				passwordResetOtpRepository.delete(req.email());
+				log.info("event=PASSWORD_RESET_OTP_LOCKED userId={}", otp.userId());
+				throw new CustomException(AuthErrorCode.A04_005);
+			}
+			throw new CustomException(AuthErrorCode.A04_004);
+		}
+
+		passwordResetOtpRepository.delete(req.email());
+
+		String resetToken = generateResetToken();
+		passwordResetTokenRepository.save(
+				resetToken,
+				otp.userId(),
+				Duration.ofMinutes(resetTokenTtlMinutes));
+
+		log.info("event=PASSWORD_RESET_OTP_VERIFIED userId={}", otp.userId());
+		return new PasswordResetVerifyCodeResp(resetToken);
 	}
 
 	/**
-	 * 새 비밀번호로 변경 후 토큰 소비 + 기존 refresh token 전부 무효화.
+	 * reset 토큰 검증 후 새 비밀번호로 변경 + 토큰 소비 + 기존 refresh token 전부 무효화.
 	 *
 	 * <p>refresh token 무효화로 비번 재설정 직전까지 로그인돼 있던 다른 기기는 토큰 재발급 시 401 을 받게 된다.
 	 * (이미 발급된 access token 은 만료(30분) 까지 유효 — JWT 특성상 즉시 차단 불가, 짧은 TTL 로 완화.)
@@ -262,22 +298,32 @@ public class AuthServiceImpl implements AuthService {
 	@Override
 	@Transactional
 	public void resetPassword(PasswordResetReq req) {
-		Long userId = passwordResetTokenRepository.findUserIdByToken(req.token())
+		Long userId = passwordResetTokenRepository.findUserIdByToken(req.resetToken())
 				.orElseThrow(() -> new CustomException(AuthErrorCode.A04_001));
 
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new CustomException(AuthErrorCode.A04_001));
 
 		if (Boolean.TRUE.equals(user.getIsDeleted()) || user.getPassword() == null) {
-			passwordResetTokenRepository.delete(req.token());
+			passwordResetTokenRepository.delete(req.resetToken());
 			throw new CustomException(AuthErrorCode.A04_001);
 		}
 
 		user.updatePassword(passwordEncoder.encode(req.newPassword()));
-		passwordResetTokenRepository.delete(req.token());
+		passwordResetTokenRepository.delete(req.resetToken());
 		refreshTokenRepository.deleteByUserId(userId);
 
 		log.info("event=PASSWORD_RESET_COMPLETED userId={}", userId);
+	}
+
+	private String generateOtpCode() {
+		return String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
+	}
+
+	private String generateResetToken() {
+		byte[] bytes = new byte[RESET_TOKEN_BYTES];
+		SECURE_RANDOM.nextBytes(bytes);
+		return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 	}
 
 	/**

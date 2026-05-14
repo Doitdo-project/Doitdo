@@ -91,10 +91,11 @@ app:
     allowed-origins: ""
   terms:
     version: "1.0"
-  # 비밀번호 재설정 메일에 들어갈 Universal Link 도메인 + 토큰 정책.
-  # redirect-url 미설정 시 메일 발송 시 IllegalStateException — 환경별 yml 에서 반드시 주입.
+  # 비밀번호 재설정 OTP 정책. 6자리 인증번호 발급(TTL otp-ttl-minutes) → 검증 통과 시 짧은 reset 토큰 발급(TTL reset-token-ttl-minutes).
+  # otp 시도가 max-attempts 회 초과되면 Redis 키 삭제 후 재요청 강제 (A04-005).
   password-reset:
-    redirect-url: ${APP_PASSWORD_RESET_URL:}
-    token-ttl-minutes: ${APP_PASSWORD_RESET_TTL_MINUTES:30}
+    otp-ttl-minutes: ${APP_PASSWORD_RESET_OTP_TTL_MINUTES:10}
+    reset-token-ttl-minutes: ${APP_PASSWORD_RESET_TOKEN_TTL_MINUTES:5}
+    max-attempts: ${APP_PASSWORD_RESET_MAX_ATTEMPTS:5}
     from-address: ${MAIL_FROM_ADDRESS:${MAIL_USERNAME:}}
     from-name: ${MAIL_FROM_NAME:doitdo}

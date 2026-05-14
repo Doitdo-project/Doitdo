@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.doitdo.domain.auth.api.dto.req.SignupReq;
 import com.doitdo.domain.auth.api.dto.resp.SignupResp;
+import com.doitdo.domain.auth.repository.PasswordResetOtpRedisRepository;
 import com.doitdo.domain.auth.repository.PasswordResetTokenRedisRepository;
 import com.doitdo.domain.auth.repository.RefreshTokenRepository;
 import com.doitdo.domain.setting.repository.UserSettingRepository;
@@ -61,6 +62,9 @@ class AuthServiceImplTest {
 	private PasswordResetTokenRedisRepository passwordResetTokenRepository;
 
 	@Mock
+	private PasswordResetOtpRedisRepository passwordResetOtpRepository;
+
+	@Mock
 	private WalletEarnLogRepository walletEarnLogRepository;
 
 	@Mock
@@ -101,6 +105,7 @@ class AuthServiceImplTest {
 			userStreakRepository,
 			refreshTokenRepository,
 			passwordResetTokenRepository,
+			passwordResetOtpRepository,
 			walletEarnLogRepository,
 			passwordEncoder,
 			authenticationManager,

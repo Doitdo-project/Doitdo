@@ -4,10 +4,12 @@ import com.doitdo.domain.auth.api.dto.req.LoginReq;
 import com.doitdo.domain.auth.api.dto.req.OAuthLoginReq;
 import com.doitdo.domain.auth.api.dto.req.PasswordResetReq;
 import com.doitdo.domain.auth.api.dto.req.PasswordResetRequestReq;
+import com.doitdo.domain.auth.api.dto.req.PasswordResetVerifyCodeReq;
 import com.doitdo.domain.auth.api.dto.req.RefreshTokenReq;
 import com.doitdo.domain.auth.api.dto.req.SignupReq;
 import com.doitdo.domain.auth.api.dto.resp.LoginResp;
 import com.doitdo.domain.auth.api.dto.resp.OAuthLoginResp;
+import com.doitdo.domain.auth.api.dto.resp.PasswordResetVerifyCodeResp;
 import com.doitdo.domain.auth.api.dto.resp.SignupResp;
 import com.doitdo.domain.auth.api.dto.resp.TokenResp;
 import com.doitdo.domain.auth.application.AuthService;
@@ -23,12 +25,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -77,28 +77,28 @@ public class AuthController {
 
 	@Operation(
 			summary = "비밀번호 재설정 요청",
-			description = "이메일로 재설정 링크를 발송. 미가입/소셜 가입자도 동일하게 200 OK 응답(정보 노출 방지)."
+			description = "이메일로 6자리 인증번호(OTP)를 발송. 미가입/소셜 가입자도 동일하게 200 OK 응답(정보 노출 방지)."
 	)
 	@PostMapping("/password/reset-request")
 	public GlobalApiResponse<Void> requestPasswordReset(@Valid @RequestBody PasswordResetRequestReq req) {
 		authService.requestPasswordReset(req);
-		return GlobalApiResponse.ok("비밀번호 재설정 안내 메일을 발송했습니다.", null);
+		return GlobalApiResponse.ok("비밀번호 재설정 인증번호를 발송했습니다.", null);
 	}
 
 	@Operation(
-			summary = "비밀번호 재설정 토큰 검증",
-			description = "메일 링크 진입 시 토큰이 유효한지 사전 확인. 만료/무효 토큰은 410 GONE."
+			summary = "비밀번호 재설정 코드 검증",
+			description = "이메일·6자리 OTP 검증. 성공 시 새 비밀번호 설정에 사용할 짧은 reset 토큰을 반환."
 	)
-	@ApiErrorCodes({"A04-001"})
-	@GetMapping("/password/reset/verify")
-	public GlobalApiResponse<Void> verifyPasswordResetToken(@RequestParam String token) {
-		authService.verifyPasswordResetToken(token);
-		return GlobalApiResponse.ok("유효한 재설정 링크입니다.", null);
+	@ApiErrorCodes({"A04-001", "A04-004", "A04-005"})
+	@PostMapping("/password/reset/verify-code")
+	public GlobalApiResponse<PasswordResetVerifyCodeResp> verifyPasswordResetCode(
+			@Valid @RequestBody PasswordResetVerifyCodeReq req) {
+		return GlobalApiResponse.ok("인증번호가 확인되었습니다.", authService.verifyCode(req));
 	}
 
 	@Operation(
 			summary = "비밀번호 재설정",
-			description = "토큰 검증 후 새 비밀번호로 변경. 성공 시 기존 모든 기기 로그아웃."
+			description = "verify-code 에서 발급받은 resetToken 으로 새 비밀번호로 변경. 성공 시 기존 모든 기기 로그아웃."
 	)
 	@ApiErrorCodes({"A04-001"})
 	@PostMapping("/password/reset")
