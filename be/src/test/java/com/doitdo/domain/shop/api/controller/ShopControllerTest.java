@@ -15,6 +15,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.shop.api.dto.req.UpdateRoomFurniturePlacementReq;
 import com.doitdo.domain.shop.api.dto.resp.FurnitureShopResp;
+import com.doitdo.domain.shop.api.dto.resp.FurnitureThemeListResp;
+import com.doitdo.domain.shop.api.dto.resp.FurnitureThemeResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomFurniturePlacementResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomResp;
 import com.doitdo.domain.shop.api.dto.resp.ShopEntryResp;
@@ -127,6 +129,34 @@ class ShopControllerTest {
 		given(shopService.previewRoom(1L, 2L)).willReturn(resp);
 
 		GlobalApiResponse<RoomResp> response = controller.previewRoom(userDetails, 2L);
+
+		assertThat(response.getStatus()).isEqualTo(200);
+		assertThat(response.getData().items().get(0).preview()).isTrue();
+	}
+
+	@Test
+	void listThemes_returnsFurnitureThemes() {
+		FurnitureThemeListResp resp = new FurnitureThemeListResp(List.of(
+			new FurnitureThemeResp("AUTUMN", "가을", "https://cdn.example.com/autumn.png", 8)
+		));
+		given(shopService.listThemes()).willReturn(resp);
+
+		GlobalApiResponse<FurnitureThemeListResp> response = controller.listThemes();
+
+		assertThat(response.getStatus()).isEqualTo(200);
+		assertThat(response.getData().items()).hasSize(1);
+		assertThat(response.getData().items().get(0).themeCode()).isEqualTo("AUTUMN");
+	}
+
+	@Test
+	void previewThemeRoom_returnsPreviewRoom() {
+		RoomResp resp = new RoomResp(List.of(
+			new RoomFurniturePlacementResp(null, null, 2L, "가을 침대", "BED",
+				"https://cdn.example.com/bed.png", 80, 90, 5, 0, true)
+		));
+		given(shopService.previewThemeRoom(1L, "AUTUMN")).willReturn(resp);
+
+		GlobalApiResponse<RoomResp> response = controller.previewThemeRoom(userDetails, "AUTUMN");
 
 		assertThat(response.getStatus()).isEqualTo(200);
 		assertThat(response.getData().items().get(0).preview()).isTrue();

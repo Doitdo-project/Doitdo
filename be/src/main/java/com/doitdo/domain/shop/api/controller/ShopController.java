@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.shop.api.dto.req.UpdateRoomFurniturePlacementReq;
 import com.doitdo.domain.shop.api.dto.resp.FurnitureShopResp;
+import com.doitdo.domain.shop.api.dto.resp.FurnitureThemeListResp;
 import com.doitdo.domain.shop.api.dto.resp.PurchaseFurnitureResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomFurniturePlacementResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomResp;
@@ -64,6 +65,13 @@ public class ShopController {
 		return GlobalApiResponse.ok(shopService.listFurnitures(userDetails.getUserId(), category));
 	}
 
+	@Operation(summary = "가구 테마 목록 조회",
+		description = "상점에서 선택 가능한 가구 테마 목록을 조회한다. 활성 테마만 displayOrder 오름차순으로 반환한다.")
+	@GetMapping("/shop/themes")
+	public GlobalApiResponse<FurnitureThemeListResp> listThemes() {
+		return GlobalApiResponse.ok(shopService.listThemes());
+	}
+
 	@Operation(summary = "가구 구매",
 		description = "월렛 잔액으로 가구를 구매한다. 가구 존재/판매 여부, 중복 보유 여부, 월렛 존재 여부, 잔액을 검증한다. "
 			+ "구매 성공 시 월렛 차감, 보유 가구 생성, 구매 로그 저장을 한 트랜잭션으로 처리한다.")
@@ -96,6 +104,18 @@ public class ShopController {
 		@PathVariable Long furnitureId
 	) {
 		return GlobalApiResponse.ok(shopService.previewRoom(userDetails.getUserId(), furnitureId));
+	}
+
+	@Operation(summary = "가구 테마 방 미리보기",
+		description = "테마에 포함된 여러 가구를 현재 사용자의 방에 배치했을 때의 미리보기 목록을 조회한다. 실제 배치는 저장하지 않는다. "
+			+ "테마에 포함된 카테고리의 기존 배치는 응답에서 제외하고, 테마 가구는 preview=true 항목으로 포함한다.")
+	@ApiErrorCodes({"S03-001", "S03-002"})
+	@GetMapping("/shop/themes/{themeCode}/preview-room")
+	public GlobalApiResponse<RoomResp> previewThemeRoom(
+		@AuthenticationPrincipal CustomUserDetails userDetails,
+		@PathVariable String themeCode
+	) {
+		return GlobalApiResponse.ok(shopService.previewThemeRoom(userDetails.getUserId(), themeCode));
 	}
 
 	@Operation(summary = "내 방 조회",
