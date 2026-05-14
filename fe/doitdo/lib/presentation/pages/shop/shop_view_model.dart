@@ -149,6 +149,111 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
     }
   }
 
+  /// 테마 세트 일괄 구매. 미보유 가구만 결제되어 보유 인벤토리로 들어가며
+  /// 자동 배치는 일어나지 않는다 — 풀세트 보유 상태가 되면 카드 버튼이 "배치"
+  /// 로 바뀌고 [placeOwnedTheme] 가 후속으로 호출 가능해진다.
+  ///
+  /// `alreadyOwned == true` 인 테마는 카드 버튼이 "배치" 라 이 액션이 호출되지
+  /// 않지만, 방어적으로 진입 시 알림 후 false 리턴.
+  ///
+  /// 성공 시 코인/카탈로그/테마 목록을 재조회 — 보유 상태가 바뀌어 카드의
+  /// alreadyOwned/purchasePrice 가 갱신돼야 하므로.
+  Future<bool> purchaseTheme(
+    String themeCode, {
+    required void Function(String message) onFailure,
+  }) async {
+    final s = state.valueOrNull;
+    if (s == null) return false;
+    final theme = _findTheme(s, themeCode);
+    if (theme == null) return false;
+    if (theme.alreadyOwned) {
+      onFailure('이미 보유한 테마예요.');
+      return false;
+    }
+
+    try {
+      final purchase = await _repo.purchaseTheme(themeCode);
+      await _refresh(preserveUi: s, coinsOverride: purchase.balance);
+      return true;
+    } catch (e) {
+      onFailure(_errorMessage(e));
+      return false;
+    }
+  }
+
+  /// 테마 세트 구매 + 일괄 배치 (가구 카드의 purchaseAndPlace 와 동일 톤).
+  /// 주문서 다이얼로그의 primary CTA "구매하고 바로 배치하기" 가 호출하는 액션.
+  ///
+  /// 같은 카테고리에 이미 배치된 가구는 BE 가 자동 교체. 구매 후 배치 API 가
+  /// 실패해도 구매 자체는 끝난 상태이므로, 그 경우 사용자가 카드의 "배치" 로
+  /// 다시 시도하면 [placeOwnedTheme] 가 자연스럽게 회복시킨다.
+  Future<bool> purchaseAndPlaceTheme(
+    String themeCode, {
+    required void Function(String message) onFailure,
+  }) async {
+    final s = state.valueOrNull;
+    if (s == null) return false;
+    final theme = _findTheme(s, themeCode);
+    if (theme == null) return false;
+    if (theme.alreadyOwned) {
+      onFailure('이미 보유한 테마예요.');
+      return false;
+    }
+
+    try {
+      final purchase = await _repo.purchaseTheme(themeCode);
+      await _repo.placeTheme(themeCode);
+      await _refresh(preserveUi: s, coinsOverride: purchase.balance);
+      // myRoomProvider 가 cache-first 라 invalidate 하면 build() 가 캐시(직전
+      // 상태) 를 한 번 emit 한 뒤 fresh 를 받아 깜빡임이 생긴다. notifier 의
+      // refreshFromNetwork 로 fresh 만 떨어뜨려 변경이 즉시 반영되게 한다.
+      unawaited(ref.read(myRoomProvider.notifier).refreshFromNetwork());
+      // 적용 후 미리보기 상태는 의미 없음 — 카드 강조도 빠지게 명시적으로 해제.
+      final cur = state.valueOrNull;
+      if (cur != null) {
+        state = AsyncData(cur.copyWith(clearThemePreview: true));
+      }
+      return true;
+    } catch (e) {
+      onFailure(_errorMessage(e));
+      return false;
+    }
+  }
+
+  /// 보유한 테마 가구를 한 번에 방에 배치. 같은 카테고리에 이미 배치된 가구가
+  /// 있으면 BE 가 자동 교체한다.
+  ///
+  /// `alreadyOwned == false` 인 테마는 카드 버튼이 "구매" 라 이 액션이 호출되지
+  /// 않지만, 방어적으로 BE 가 `S03-011 THEME_NOT_FULLY_OWNED` 를 던지면
+  /// onFailure 로 사용자에게 알린다 (구매 → 배치 순으로 다시 시도하도록).
+  Future<bool> placeOwnedTheme(
+    String themeCode, {
+    required void Function(String message) onFailure,
+  }) async {
+    final s = state.valueOrNull;
+    if (s == null) return false;
+    final theme = _findTheme(s, themeCode);
+    if (theme == null) return false;
+
+    try {
+      await _repo.placeTheme(themeCode);
+      await _refresh(preserveUi: s);
+      // myRoomProvider 가 cache-first 라 invalidate 하면 build() 가 캐시(직전
+      // 상태) 를 한 번 emit 한 뒤 fresh 를 받아 깜빡임이 생긴다. notifier 의
+      // refreshFromNetwork 로 fresh 만 떨어뜨려 변경이 즉시 반영되게 한다.
+      unawaited(ref.read(myRoomProvider.notifier).refreshFromNetwork());
+      // 적용 후 미리보기 상태는 의미 없음 — 카드 강조도 빠지게 명시적으로 해제.
+      final cur = state.valueOrNull;
+      if (cur != null) {
+        state = AsyncData(cur.copyWith(clearThemePreview: true));
+      }
+      return true;
+    } catch (e) {
+      onFailure(_errorMessage(e));
+      return false;
+    }
+  }
+
   // ─── 비동기 액션 (서버 호출) ────────────────────────────────
 
   /// 미보유 아이템을 구매하고 즉시 방에 배치한다(주문서 확인 모달의 단일 액션).
@@ -296,9 +401,13 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
     }
   }
 
-  /// 액션 후 서버 상태를 재조회해 카탈로그·매핑을 갱신.
+  /// 액션 후 서버 상태를 재조회해 카탈로그·매핑·테마 메타를 갱신.
   /// UI 상태(탭·카테고리·미리보기)는 _refresh 완료 시점의 현재 state 기준으로 유지.
   /// preserveUi 는 잔액 폴백 용도로만 사용.
+  ///
+  /// 테마 목록도 같이 재조회 — 가구 1개를 사거나 배치하기만 해도 테마의
+  /// `ownedCount`/`purchasePrice`/`alreadyOwned` 가 달라지므로 카탈로그와 동기화가
+  /// 깨지지 않게 한다. 테마 호출 실패 시에는 직전 themes 를 폴백.
   Future<void> _refresh({
     required ShopState preserveUi,
     int? coinsOverride,
@@ -306,9 +415,13 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
     final results = await Future.wait([
       _repo.getShopEntry(),
       _repo.listMyFurnitures(),
+      _repo.listThemes().catchError(
+        (_) => preserveUi.themes,
+      ),
     ]);
     final entry = results[0] as ShopEntry;
     final myFurnitures = results[1] as List<UserFurnitureItem>;
+    final themes = results[2] as List<FurnitureTheme>;
 
     // API 호출이 끝난 시점의 현재 상태를 기준으로 UI 상태 유지.
     // 백그라운드 처리 중 사용자가 카테고리/탭을 바꿨다면 그쪽을 그대로 유지.
@@ -318,7 +431,7 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
       entry: entry,
       myFurnitures: myFurnitures,
       coins: coinsOverride ?? currentUi.coins,
-      themes: currentUi.themes,
+      themes: themes,
       preserveTab: currentUi.selectedTab,
       preserveSelected: currentUi.selectedCategory,
       preservePreviewing: currentUi.previewingItemIds,
@@ -330,6 +443,13 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
   static ShopItem? _findItem(ShopState s, String id) {
     for (final it in s.items) {
       if (it.id == id) return it;
+    }
+    return null;
+  }
+
+  static FurnitureTheme? _findTheme(ShopState s, String themeCode) {
+    for (final t in s.themes) {
+      if (t.themeCode == themeCode) return t;
     }
     return null;
   }
@@ -396,10 +516,44 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
       ));
     }
 
+    // listThemes 응답이 furnitures[].category 를 안 내려주는 상태(BE MR !285)
+    // 라, 같은 furnitureId 의 카탈로그 항목에서 카테고리를 가져와 보강한다.
+    // 이미지도 응답이 빈 경우 카탈로그 이미지로 폴백 — 다이얼로그가 향후 행에
+    // 썸네일을 추가해도 빈 자리가 안 보이도록.
+    final catalogByFurnitureId = <int, FurnitureShopItem>{
+      for (final f in entry.furnitures) f.furnitureId: f,
+    };
+    final enrichedThemes = themes
+        .map((t) => FurnitureTheme(
+              themeCode: t.themeCode,
+              themeName: t.themeName,
+              thumbnailUrl: t.thumbnailUrl,
+              furnitureCount: t.furnitureCount,
+              ownedCount: t.ownedCount,
+              totalPrice: t.totalPrice,
+              purchasePrice: t.purchasePrice,
+              alreadyOwned: t.alreadyOwned,
+              furnitures: t.furnitures.map((tf) {
+                final catalog = catalogByFurnitureId[tf.furnitureId];
+                return ThemeFurniture(
+                  furnitureId: tf.furnitureId,
+                  name: tf.name,
+                  category:
+                      tf.category.isNotEmpty ? tf.category : (catalog?.category ?? ''),
+                  price: tf.price,
+                  imageUrl: tf.imageUrl.isNotEmpty
+                      ? tf.imageUrl
+                      : (catalog?.thumbnailUrl ?? catalog?.imageUrl ?? ''),
+                  owned: tf.owned,
+                );
+              }).toList(growable: false),
+            ))
+        .toList(growable: false);
+
     return ShopState(
       coins: coins,
       items: items,
-      themes: themes,
+      themes: enrichedThemes,
       selectedTab: preserveTab ?? ShopTab.furniture,
       selectedCategory: preserveSelected ?? ShopCategory.background,
       previewingItemIds: preservePreviewing ?? const {},
