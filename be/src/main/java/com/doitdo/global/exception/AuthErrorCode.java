@@ -32,7 +32,13 @@ public enum AuthErrorCode implements ErrorCode {
 	A03_003("A03-003", HttpStatus.CONFLICT, "이미 가입된 소셜 계정"),
 	A03_004("A03-004", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
 	A03_005("A03-005", HttpStatus.UNAUTHORIZED, "소셜 계정의 이메일이 검증되지 않았습니다."),
-	A03_006("A03-006", HttpStatus.CONFLICT, "이미 일반 계정으로 가입된 이메일입니다. 아이디/비밀번호로 로그인해주세요.");
+	A03_006("A03-006", HttpStatus.CONFLICT, "이미 일반 계정으로 가입된 이메일입니다. 아이디/비밀번호로 로그인해주세요."),
+
+	// A04 - 비밀번호 재설정
+	// invalid 와 expired 를 의도적으로 구분하지 않음 (정보 노출 방지).
+	A04_001("A04-001", HttpStatus.GONE, "유효하지 않거나 만료된 재설정 링크입니다."),
+	A04_002("A04-002", HttpStatus.UNPROCESSABLE_ENTITY, "필수 파라미터 누락 (token 또는 newPassword)"),
+	A04_003("A04-003", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류");
 
 	private final String code;
 	private final HttpStatus httpStatus;

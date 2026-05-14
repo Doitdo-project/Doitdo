@@ -1,6 +1,8 @@
 package com.doitdo.domain.auth.application;
 
 import com.doitdo.domain.auth.api.dto.req.LoginReq;
+import com.doitdo.domain.auth.api.dto.req.PasswordResetReq;
+import com.doitdo.domain.auth.api.dto.req.PasswordResetRequestReq;
 import com.doitdo.domain.auth.api.dto.req.RefreshTokenReq;
 import com.doitdo.domain.auth.api.dto.req.SignupReq;
 import com.doitdo.domain.auth.api.dto.resp.LoginResp;
@@ -16,4 +18,10 @@ public interface AuthService {
 	TokenResp refresh(RefreshTokenReq req);
 
 	void logout(Long userId);
+
+	void requestPasswordReset(PasswordResetRequestReq req);
+
+	void verifyPasswordResetToken(String token);
+
+	void resetPassword(PasswordResetReq req);
 }

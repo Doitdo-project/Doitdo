@@ -41,6 +41,7 @@ public class SecurityConfig {
 			"/api/auth/login",
 			"/api/auth/refresh",
 			"/api/auth/social/**",
+			"/api/auth/password/**",
 			"/api/users/check-email",
 			"/api/users/check-username",
 			"/v3/api-docs/**",

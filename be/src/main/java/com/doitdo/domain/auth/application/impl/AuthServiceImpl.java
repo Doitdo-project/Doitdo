@@ -1,6 +1,8 @@
 package com.doitdo.domain.auth.application.impl;
 
 import com.doitdo.domain.auth.api.dto.req.LoginReq;
+import com.doitdo.domain.auth.api.dto.req.PasswordResetReq;
+import com.doitdo.domain.auth.api.dto.req.PasswordResetRequestReq;
 import com.doitdo.domain.auth.api.dto.req.RefreshTokenReq;
 import com.doitdo.domain.auth.api.dto.req.SignupReq;
 import com.doitdo.domain.auth.api.dto.resp.LoginResp;
@@ -9,6 +11,7 @@ import com.doitdo.domain.auth.api.dto.resp.TokenResp;
 import com.doitdo.domain.auth.application.AuthService;
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.auth.entity.RefreshToken;
+import com.doitdo.domain.auth.repository.PasswordResetTokenRedisRepository;
 import com.doitdo.domain.auth.repository.RefreshTokenRepository;
 import com.doitdo.domain.setting.entity.UserSetting;
 import com.doitdo.domain.setting.repository.UserSettingRepository;
@@ -32,11 +35,14 @@ import com.doitdo.domain.user.repository.WalletEarnLogRepository;
 import com.doitdo.global.exception.AuthErrorCode;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.UserErrorCode;
+import com.doitdo.global.mail.MailService;
 import com.doitdo.global.util.JwtUtil;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,10 +67,12 @@ public class AuthServiceImpl implements AuthService {
 	private final UserSettingRepository userSettingRepository;
 	private final UserStreakRepository userStreakRepository;
 	private final RefreshTokenRepository refreshTokenRepository;
+	private final PasswordResetTokenRedisRepository passwordResetTokenRepository;
 	private final WalletEarnLogRepository walletEarnLogRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final AuthenticationManager authenticationManager;
 	private final JwtUtil jwtUtil;
+	private final MailService mailService;
 	private final DefaultCategoryRegistrar defaultCategoryRegistrar;
 	private final DefaultTodoRegistrar defaultTodoRegistrar;
 	private final DefaultFurnitureRegistrar defaultFurnitureRegistrar;
@@ -74,6 +82,12 @@ public class AuthServiceImpl implements AuthService {
 
 	@Value("${jwt.refresh-token-expiration}")
 	private long refreshTokenExpiration;
+
+	@Value("${app.password-reset.redirect-url}")
+	private String passwordResetRedirectUrl;
+
+	@Value("${app.password-reset.token-ttl-minutes}")
+	private long passwordResetTokenTtlMinutes;
 
 	@Override
 	@Transactional
@@ -187,6 +201,83 @@ public class AuthServiceImpl implements AuthService {
 	public void logout(Long userId) {
 		refreshTokenRepository.deleteByUserId(userId);
 		log.info("event=LOGOUT userId={}", userId);
+	}
+
+	/**
+	 * 비밀번호 재설정 요청.
+	 *
+	 * <p>이메일이 미가입이거나 소셜 가입자(password null)면 메일 발송 없이 조용히 종료한다.
+	 * 호출자 응답은 항상 200 OK — 이메일/계정 존재 여부 및 가입 경로 노출 방지 (enumeration attack 차단).
+	 */
+	@Override
+	public void requestPasswordReset(PasswordResetRequestReq req) {
+		if (passwordResetRedirectUrl == null || passwordResetRedirectUrl.isBlank()) {
+			throw new IllegalStateException("app.password-reset.redirect-url is not configured");
+		}
+
+		userRepository.findByEmail(req.email()).ifPresent(user -> {
+			if (Boolean.TRUE.equals(user.getIsDeleted())) {
+				log.info("event=PASSWORD_RESET_SKIPPED reason=DELETED userId={}", user.getUserId());
+				return;
+			}
+			if (user.getPassword() == null) {
+				log.info("event=PASSWORD_RESET_SKIPPED reason=SOCIAL_ACCOUNT userId={}", user.getUserId());
+				return;
+			}
+
+			String token = UUID.randomUUID().toString().replace("-", "");
+			passwordResetTokenRepository.save(
+					token,
+					user.getUserId(),
+					Duration.ofMinutes(passwordResetTokenTtlMinutes));
+
+			String resetLink = passwordResetRedirectUrl
+					+ (passwordResetRedirectUrl.contains("?") ? "&" : "?")
+					+ "token=" + token;
+			mailService.sendPasswordResetMail(user.getEmail(), resetLink);
+
+			log.info("event=PASSWORD_RESET_REQUESTED userId={}", user.getUserId());
+		});
+	}
+
+	/**
+	 * 메일 링크 진입 시점에 토큰 유효성만 확인. 토큰은 소비하지 않는다 (실제 재설정에서 소비).
+	 * 유효하지 않거나 만료된 토큰은 410 GONE + A04-001 반환.
+	 */
+	@Override
+	public void verifyPasswordResetToken(String token) {
+		if (token == null || token.isBlank()) {
+			throw new CustomException(AuthErrorCode.A04_001);
+		}
+		passwordResetTokenRepository.findUserIdByToken(token)
+				.orElseThrow(() -> new CustomException(AuthErrorCode.A04_001));
+	}
+
+	/**
+	 * 새 비밀번호로 변경 후 토큰 소비 + 기존 refresh token 전부 무효화.
+	 *
+	 * <p>refresh token 무효화로 비번 재설정 직전까지 로그인돼 있던 다른 기기는 토큰 재발급 시 401 을 받게 된다.
+	 * (이미 발급된 access token 은 만료(30분) 까지 유효 — JWT 특성상 즉시 차단 불가, 짧은 TTL 로 완화.)
+	 */
+	@Override
+	@Transactional
+	public void resetPassword(PasswordResetReq req) {
+		Long userId = passwordResetTokenRepository.findUserIdByToken(req.token())
+				.orElseThrow(() -> new CustomException(AuthErrorCode.A04_001));
+
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new CustomException(AuthErrorCode.A04_001));
+
+		if (Boolean.TRUE.equals(user.getIsDeleted()) || user.getPassword() == null) {
+			passwordResetTokenRepository.delete(req.token());
+			throw new CustomException(AuthErrorCode.A04_001);
+		}
+
+		user.updatePassword(passwordEncoder.encode(req.newPassword()));
+		passwordResetTokenRepository.delete(req.token());
+		refreshTokenRepository.deleteByUserId(userId);
+
+		log.info("event=PASSWORD_RESET_COMPLETED userId={}", userId);
 	}
 
 	/**
