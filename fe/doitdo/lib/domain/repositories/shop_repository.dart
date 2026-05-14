@@ -28,11 +28,18 @@ abstract class ShopRepository {
   Future<List<RoomFurniturePlacement>> previewRoom(int furnitureId);
 
   /// 테마 카드 목록 (`is_active=true`, `display_order ASC`).
+  /// 응답에는 사용자별 보유/결제 메타가 포함된다.
   Future<List<FurnitureTheme>> listThemes();
 
   /// 테마 전체 방 미리보기. 테마에 속한 여러 가구가 한 번에 합성된 방 응답이
   /// 돌아온다. 실제 저장은 발생하지 않으며, 테마 가구는 `preview=true` 로 온다.
   Future<List<RoomFurniturePlacement>> previewThemeRoom(String themeCode);
+
+  /// 테마 세트 일괄 구매 (미보유 가구만 결제). 자동 배치 없음.
+  Future<ThemePurchaseResult> purchaseTheme(String themeCode);
+
+  /// 보유한 테마 가구를 한 번에 방에 배치. 같은 카테고리는 자동 교체.
+  Future<ThemePlacementResult> placeTheme(String themeCode);
 
   /// 내 방 현재 배치 조회.
   Future<List<RoomFurniturePlacement>> getMyRoom();

@@ -46,6 +46,16 @@ class ShopRepositoryImpl extends BaseRepository implements ShopRepository {
           .then((dto) => dto.toEntities());
 
   @override
+  Future<ThemePurchaseResult> purchaseTheme(String themeCode) =>
+      safeApiCall(() => _api.purchaseTheme(themeCode))
+          .then((dto) => dto.toEntity());
+
+  @override
+  Future<ThemePlacementResult> placeTheme(String themeCode) =>
+      safeApiCall(() => _api.placeTheme(themeCode))
+          .then((dto) => dto.toEntity());
+
+  @override
   Future<List<RoomFurniturePlacement>> getMyRoom() =>
       safeApiCall(() => _api.getMyRoom()).then((dto) => dto.toEntities());
 
