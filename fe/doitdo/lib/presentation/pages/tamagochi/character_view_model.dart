@@ -70,7 +70,15 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
 
   /// 로그인 직후 호출. GET → 미수령이면 POST 로 자동 수령.
   /// 이미 받은 사용자든 신규든 한 번 부르면 캐릭터가 채워진 상태가 된다.
+  ///
+  /// splash 단계에서 prime 으로 이미 캐릭터 데이터가 있는 경우, 또 GET 을 날리지
+  /// 않는다 — 페이지 진입 시 중복 네트워크 왕복을 막아 즉시 그려지게 한다.
+  /// 진화/부화 등 명시적 갱신은 [load] / [refresh] 를 직접 호출하면 된다.
   Future<void> ensureCharacter() async {
+    final cached = state.valueOrNull;
+    if (cached != null) {
+      return; // 이미 prime 된 상태 — 추가 fetch 생략.
+    }
     await load();
     final current = state;
     final hasNoCharacter =

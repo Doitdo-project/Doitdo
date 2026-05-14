@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:doitdo/core/errors/exceptions.dart';
@@ -103,7 +104,10 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
       final purchase = await _repo.purchaseFurniture(item.furnitureId);
       await _repo.placeFurniture(purchase.userFurnitureId);
       await _refresh(preserveUi: s, coinsOverride: purchase.balance);
-      ref.invalidate(myRoomProvider);
+      // myRoomProvider 가 cache-first 라 invalidate 하면 build() 가 캐시(직전
+      // 상태) 를 한 번 emit 한 뒤 fresh 를 받아 깜빡임이 생긴다. notifier 의
+      // refreshFromNetwork 로 fresh 만 떨어뜨려 변경이 즉시 반영되게 한다.
+      unawaited(ref.read(myRoomProvider.notifier).refreshFromNetwork());
       return true;
     } catch (e) {
       // 실패 시 낙관적 업데이트 롤백 + 에러 종류별 메시지
@@ -159,7 +163,10 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
     try {
       await _repo.placeFurniture(item.userFurnitureId!);
       await _refresh(preserveUi: s);
-      ref.invalidate(myRoomProvider);
+      // myRoomProvider 가 cache-first 라 invalidate 하면 build() 가 캐시(직전
+      // 상태) 를 한 번 emit 한 뒤 fresh 를 받아 깜빡임이 생긴다. notifier 의
+      // refreshFromNetwork 로 fresh 만 떨어뜨려 변경이 즉시 반영되게 한다.
+      unawaited(ref.read(myRoomProvider.notifier).refreshFromNetwork());
       return true;
     } catch (e) {
       return false;
@@ -180,7 +187,10 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
     try {
       await _repo.removePlacement(item.placementId!);
       await _refresh(preserveUi: s);
-      ref.invalidate(myRoomProvider);
+      // myRoomProvider 가 cache-first 라 invalidate 하면 build() 가 캐시(직전
+      // 상태) 를 한 번 emit 한 뒤 fresh 를 받아 깜빡임이 생긴다. notifier 의
+      // refreshFromNetwork 로 fresh 만 떨어뜨려 변경이 즉시 반영되게 한다.
+      unawaited(ref.read(myRoomProvider.notifier).refreshFromNetwork());
       return true;
     } catch (e) {
       return false;

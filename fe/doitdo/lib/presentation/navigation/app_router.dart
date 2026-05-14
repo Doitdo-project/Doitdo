@@ -129,7 +129,9 @@ final GoRouter appRouter = GoRouter(
     // 인증 플로우 (탭 셸 바깥)
     GoRoute(
       path: AppRoutes.welcome,
-      builder: (context, state) => const WelcomePage(),
+      // splash → welcome 도 트랜지션 제거. (login/register 등 후속은 일반 전환 유지)
+      pageBuilder: (context, state) =>
+          const NoTransitionPage(child: WelcomePage()),
     ),
     GoRoute(
       path: AppRoutes.login,
@@ -169,10 +171,15 @@ final GoRouter appRouter = GoRouter(
     ),
 
     // 메인 탭 셸. 각 브랜치가 고유의 네비게이션 스택을 가진다.
+    //
+    // pageBuilder 로 [NoTransitionPage] 를 반환해 splash → 메인 탭 진입 시 기본
+    // 페이지 트랜지션(슬라이드/페이드 ~300ms) 을 없앤다. splash 종료 후 흰 화면이
+    // 한 번 비치고 들어오는 인상을 제거 — 데이터/이미지가 prime 으로 이미 준비된
+    // 상태라 트랜지션 없이 곧장 노출하는 게 더 자연스럽다.
     StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) {
-        return DoitdoShell(navigationShell: navigationShell);
-      },
+      pageBuilder: (context, state, navigationShell) => NoTransitionPage(
+        child: DoitdoShell(navigationShell: navigationShell),
+      ),
       branches: [
         StatefulShellBranch(
           navigatorKey: _todoNavigatorKey,
