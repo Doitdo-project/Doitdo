@@ -16,12 +16,17 @@ class RequestTimeoutException implements Exception {
 }
 
 class ServerException implements Exception {
-  const ServerException(this.message, {this.statusCode});
+  const ServerException(this.message, {this.statusCode, this.code});
   final String message;
   final int? statusCode;
 
+  /// 서버 정의 비즈니스 에러 코드(예: "A04-006") — envelope `code` 필드에서 옮겨온다.
+  /// 동일 statusCode 안에서 도메인별 분기에 쓰인다. (예: 409 + A04-006 → 소셜 가입자)
+  final String? code;
+
   @override
-  String toString() => 'ServerException($statusCode): $message';
+  String toString() =>
+      'ServerException($statusCode${code != null ? '/$code' : ''}): $message';
 }
 
 /// HTTP 401. 세션 만료/미인증 시 글로벌로 로그인 화면으로 튕기기 위해 분리.
