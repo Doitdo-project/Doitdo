@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:doitdo/core/errors/exceptions.dart';
+import 'package:doitdo/core/utils/email_validator.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/app_theme.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
@@ -12,7 +13,7 @@ import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/auth/find_password_view_model.dart';
 import 'package:doitdo/presentation/pages/auth/widgets/auth_inline_notice.dart';
-import 'package:doitdo/presentation/pages/auth/widgets/auth_pill_button.dart';
+import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
 import 'package:doitdo/presentation/pages/auth/widgets/auth_text_field.dart';
 import 'package:doitdo/presentation/pages/auth/widgets/inline_back_bar.dart';
 
@@ -70,8 +71,6 @@ class _FindPasswordPageState extends ConsumerState<FindPasswordPage> {
   /// 사용자에게 다른 흐름으로의 액션 버튼을 제시한다.
   _Step1Notice _notice = _Step1Notice.none;
 
-  static final _emailRegex = RegExp(r'^[\w.+-]+@[\w-]+\.[\w.-]+$');
-
   @override
   void initState() {
     super.initState();
@@ -102,7 +101,7 @@ class _FindPasswordPageState extends ConsumerState<FindPasswordPage> {
     if (!_emailTouched) return null;
     final v = _emailCtrl.text.trim();
     if (v.isEmpty) return '이메일을 입력해주세요';
-    if (!_emailRegex.hasMatch(v)) return '올바른 이메일 형식이 아닙니다';
+    if (!isValidEmail(v)) return '올바른 이메일 형식이 아닙니다';
     return null;
   }
 
@@ -119,8 +118,7 @@ class _FindPasswordPageState extends ConsumerState<FindPasswordPage> {
 
   bool get _isStepValid {
     if (_step == 1) {
-      return _emailCtrl.text.trim().isNotEmpty &&
-          _emailRegex.hasMatch(_emailCtrl.text.trim());
+      return isValidEmail(_emailCtrl.text.trim());
     }
     return _codeCtrl.text.trim().length == FindPasswordPage._codeLength;
   }
@@ -308,7 +306,7 @@ class _FindPasswordPageState extends ConsumerState<FindPasswordPage> {
             ? const SizedBox(width: double.infinity)
             : Padding(
                 padding: EdgeInsets.only(top: 16.h),
-                child: AuthPillButton(
+                child: DoitdoPrimaryButton(
                   label: isLoading ? '발송 중...' : '인증번호 보내기',
                   onPressed:
                       isLoading ? null : () => _onButtonPressed(isLoading),
@@ -400,7 +398,7 @@ class _FindPasswordPageState extends ConsumerState<FindPasswordPage> {
         onSubmitted: (_) => _onButtonPressed(isLoading),
       ),
       SizedBox(height: 16.h),
-      AuthPillButton(
+      DoitdoPrimaryButton(
         label: isLoading ? '확인 중...' : '다음',
         onPressed: isLoading ? null : () => _onButtonPressed(isLoading),
       ),

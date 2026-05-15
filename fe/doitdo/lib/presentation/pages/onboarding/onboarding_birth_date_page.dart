@@ -10,7 +10,7 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/domain/entities/user.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
-import 'package:doitdo/presentation/pages/auth/widgets/auth_pill_button.dart';
+import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
 import 'package:doitdo/presentation/pages/onboarding/onboarding_view_model.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
 
@@ -251,7 +251,7 @@ class _OnboardingBirthDatePageState
             // ── CTA ──
             Padding(
               padding: EdgeInsets.fromLTRB(24.w, 12.h, 24.w, 16.h),
-              child: AuthPillButton(
+              child: DoitdoPrimaryButton(
                 label: isLoading ? '저장 중…' : '다음',
                 onPressed: (_canSubmit && !isLoading) ? _submit : null,
               ),

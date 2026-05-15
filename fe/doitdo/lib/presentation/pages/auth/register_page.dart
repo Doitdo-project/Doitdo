@@ -8,12 +8,12 @@ import 'package:go_router/go_router.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/app_theme.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
-import 'package:doitdo/core/utils/error_message_mapper.dart';
+import 'package:doitdo/core/utils/email_validator.dart';
 import 'package:doitdo/domain/entities/user.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/navigation/post_auth_destination.dart';
 import 'package:doitdo/presentation/pages/auth/register_view_model.dart';
-import 'package:doitdo/presentation/pages/auth/widgets/auth_pill_button.dart';
+import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
 import 'package:doitdo/presentation/pages/auth/widgets/auth_text_field.dart';
 import 'package:doitdo/presentation/pages/auth/widgets/inline_back_bar.dart';
 
@@ -52,8 +52,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   Timer? _userIdDebounce;
   static const _debounceDelay = Duration(milliseconds: 400);
 
-  static final _emailRegex = RegExp(r'^[\w.+-]+@[\w-]+\.[\w.-]+$');
-
   @override
   void initState() {
     super.initState();
@@ -75,7 +73,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     _emailDebounce?.cancel();
     final v = _emailCtrl.text.trim();
     // 형식 유효하지 않은 값은 서버에 보내지 않음 — 기존 check 결과만 초기화.
-    if (v.isEmpty || !_emailRegex.hasMatch(v)) {
+    if (v.isEmpty || !isValidEmail(v)) {
       ref.read(emailAvailabilityProvider.notifier).clear();
       return;
     }
@@ -116,7 +114,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     if (!_emailTouched) return null;
     final v = _emailCtrl.text.trim();
     if (v.isEmpty) return '이메일을 입력해주세요';
-    if (!_emailRegex.hasMatch(v)) return '올바른 이메일 형식이 아닙니다';
+    if (!isValidEmail(v)) return '올바른 이메일 형식이 아닙니다';
     final avail = ref.read(emailAvailabilityProvider).valueOrNull;
     if (avail == false) return '이미 사용 중인 이메일입니다';
     return null;
@@ -152,8 +150,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       _passwordCtrl.text == _confirmCtrl.text;
 
   bool get _isFormValid {
-    if (_emailCtrl.text.trim().isEmpty) return false;
-    if (!_emailRegex.hasMatch(_emailCtrl.text.trim())) return false;
+    if (!isValidEmail(_emailCtrl.text.trim())) return false;
     if (_userIdCtrl.text.trim().length < 4) return false;
     if (_passwordCtrl.text.length < 8) return false;
     if (_passwordCtrl.text != _confirmCtrl.text) return false;
@@ -198,8 +195,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         },
         error: (error, _) {
           if (!mounted) return;
+          // 회원가입 컨텍스트 전용 매핑 — 409(아이디/이메일 중복) / 422(유효성)
+          // 응답을 일반 폴백("이미 처리된 내용") 대신 회원가입에 맞는 문구로 표시.
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(mapErrorMessage(error))),
+            SnackBar(content: Text(mapRegisterErrorMessage(error))),
           );
         },
       );
@@ -322,7 +321,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
                       SizedBox(height: 16.h),
 
-                      AuthPillButton(
+                      DoitdoPrimaryButton(
                         label:
                             registerState.isLoading ? '가입 중…' : '회원가입 완료',
                         onPressed: registerState.isLoading ? null : _submit,

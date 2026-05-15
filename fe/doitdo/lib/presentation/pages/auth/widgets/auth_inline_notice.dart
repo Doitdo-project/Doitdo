@@ -94,8 +94,9 @@ class AuthInlineNotice extends StatelessWidget {
             ),
           ),
           SizedBox(height: 14.h),
-          // 카드 내부 CTA — 페이지 메인 버튼(인증번호 보내기) 과 한눈에 구분되도록
-          // 다른 톤. 채움(primary)이 아니라 살짝 톤다운된 베이지/브라운 톤.
+          // 카드 내부 CTA — 메인 앱 디자인 시스템과 통일된 radius 12.
+          // 컬러는 페이지 메인 primary 버튼과 시각적 위계가 구분되도록 톤다운된
+          // 베이지/브라운 secondary 톤 유지.
           SizedBox(
             height: 44.h,
             child: ElevatedButton(
@@ -105,7 +106,7 @@ class AuthInlineNotice extends StatelessWidget {
                 foregroundColor: const Color(0xFF3A352D),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(22.r),
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
                 textStyle: AppTextStyles.bodyMedium.copyWith(
                   fontWeight: FontWeight.w600,

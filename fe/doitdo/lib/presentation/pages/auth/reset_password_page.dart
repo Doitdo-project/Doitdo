@@ -9,7 +9,7 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/auth/reset_password_view_model.dart';
-import 'package:doitdo/presentation/pages/auth/widgets/auth_pill_button.dart';
+import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
 import 'package:doitdo/presentation/pages/auth/widgets/auth_text_field.dart';
 import 'package:doitdo/presentation/pages/auth/widgets/inline_back_bar.dart';
 
@@ -193,7 +193,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
 
                         SizedBox(height: 16.h),
 
-                        AuthPillButton(
+                        DoitdoPrimaryButton(
                           label: isLoading ? '변경 중...' : '완료',
                           onPressed:
                               isLoading ? null : () => _submit(isLoading),

@@ -12,7 +12,7 @@ import 'package:doitdo/domain/entities/user.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/navigation/post_auth_destination.dart';
 import 'package:doitdo/presentation/pages/auth/login_view_model.dart';
-import 'package:doitdo/presentation/pages/auth/widgets/auth_pill_button.dart';
+import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
 import 'package:doitdo/presentation/pages/auth/widgets/auth_text_field.dart';
 import 'package:doitdo/presentation/pages/auth/widgets/inline_back_bar.dart';
 
@@ -208,7 +208,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                       SizedBox(height: 24.h),
 
-                      AuthPillButton(
+                      DoitdoPrimaryButton(
                         label: loginState.isLoading ? '로그인 중…' : '로그인',
                         onPressed: loginState.isLoading ? null : _submit,
                       ),

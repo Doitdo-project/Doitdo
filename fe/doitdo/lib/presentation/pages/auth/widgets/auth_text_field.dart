@@ -6,12 +6,18 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 
 /// 인증 화면(로그인·회원가입·비밀번호 찾기)에서 공통으로 쓰는 텍스트 필드.
 ///
+/// 메인 앱 디자인 시스템(radius 12) 과 통일된 직사각형 채움 인풋. 따뜻한 베이지 톤
+/// (#EFE8DC) 은 유지해 인증 화면의 크림 배경 위 대비를 보존한다.
+///
+/// 한글 입력은 자동으로 차단된다 — 인증 자격증명(아이디/이메일/비밀번호)에 한글이
+/// 섞이면 서버/스토리지 호환성 문제가 생기고 OTP/이메일도 ASCII 기반이라 의미 없음.
+/// 자모(ᄀ-ᇿ), 호환 자모(㄰-㆏, ㄱ-ㅎ ㅏ-ㅣ), 완성형(가-힣,
+/// 가-힣) 모두 거른다. 직접 입력·붙여넣기 모두 차단.
+///
 /// - [obscureText] true 이면 비밀번호 표시/숨김 토글 아이콘이 자동으로 붙는다.
 /// - [errorText] 비어있지 않으면 필드 아래 빨간 에러 메시지 표시 + 테두리 빨강.
 /// - [helperText] 은 [errorText] 가 없을 때만 표시되는 보조 안내 문구.
 /// - [showSuccess] true 면 suffix 에 초록 체크 아이콘을 보여준다 (비밀번호 일치 등).
-/// - [variant] 기본값 [AuthFieldVariant.pill] — 둥근 알약형(현재 디자인 시스템).
-///   [AuthFieldVariant.outlined] 는 라운드 12 + 테두리 형태(레거시).
 class AuthTextField extends StatefulWidget {
   const AuthTextField({
     super.key,
@@ -25,7 +31,6 @@ class AuthTextField extends StatefulWidget {
     this.errorText,
     this.helperText,
     this.showSuccess = false,
-    this.variant = AuthFieldVariant.pill,
     this.autofillHints,
     this.maxLength,
     this.inputFormatters,
@@ -60,14 +65,15 @@ class AuthTextField extends StatefulWidget {
   /// 유효값 입력 완료시 suffix 에 초록 체크 아이콘 노출.
   final bool showSuccess;
 
-  /// 시각적 스타일.
-  final AuthFieldVariant variant;
-
   @override
   State<AuthTextField> createState() => _AuthTextFieldState();
 }
 
-enum AuthFieldVariant { pill, outlined }
+/// 한글(자모·호환자모·완성형) 입력을 거르는 inputFormatter.
+/// AuthTextField 가 내부적으로 무조건 prepend 한다.
+final _denyKoreanFormatter = FilteringTextInputFormatter.deny(
+  RegExp(r'[ᄀ-ᇿ㄰-㆏가-힣]'),
+);
 
 class _AuthTextFieldState extends State<AuthTextField> {
   late bool _obscure;
@@ -114,27 +120,15 @@ class _AuthTextFieldState extends State<AuthTextField> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final hasError = widget.errorText != null && widget.errorText!.isNotEmpty;
-    final isPill = widget.variant == AuthFieldVariant.pill;
 
-    // pill: 알약형 — 라운드 28, 테두리 없음, 따뜻한 그레이 배경.
-    // outlined: 12px 라운드 + 1px 테두리 (레거시 호환용).
-    final radius = isPill ? 28.0 : 12.0;
-    final fillColor = isPill ? const Color(0xFFEFE8DC) : colors.surface;
-    final borderSide = isPill
-        ? BorderSide.none
-        : BorderSide(color: colors.border, width: 1);
-    final focusedBorderSide = isPill
-        ? BorderSide.none
-        : BorderSide(
-            color: hasError ? const Color(0xFFD64545) : colors.primary,
-            width: 1.5,
-          );
-    final errorBorderSide = isPill
-        ? const BorderSide(color: Color(0xFFD64545), width: 1)
-        : const BorderSide(color: Color(0xFFD64545), width: 1);
-    final focusedErrorBorderSide = isPill
-        ? const BorderSide(color: Color(0xFFD64545), width: 1.2)
-        : const BorderSide(color: Color(0xFFD64545), width: 1.5);
+    // 라운드 12 채움 인풋(테두리 없음) — 메인 앱 디자인 시스템과 통일.
+    // 채움 색은 인증 화면 크림 배경 위 대비 확보를 위해 한 톤 진한 베이지 유지.
+    const radius = 12.0;
+    const fillColor = Color(0xFFEFE8DC);
+    const borderSide = BorderSide.none;
+    const errorBorderSide = BorderSide(color: Color(0xFFD64545), width: 1);
+    const focusedErrorBorderSide =
+        BorderSide(color: Color(0xFFD64545), width: 1.2);
 
     return TextField(
       controller: widget.controller,
@@ -149,7 +143,12 @@ class _AuthTextFieldState extends State<AuthTextField> {
       // 레이아웃이 흔들린다. 카운터 자체는 OTP UX 에 가치가 적으므로 숨김.
       buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
           null,
-      inputFormatters: widget.inputFormatters,
+      // 한글 차단을 무조건 최상위에 두고, 호출측이 추가로 준 formatter 는 그 뒤에.
+      // 순서 중요 — 한글이 먼저 걸러진 뒤 도메인별 formatter(예: digitsOnly)가 동작.
+      inputFormatters: [
+        _denyKoreanFormatter,
+        ...?widget.inputFormatters,
+      ],
       style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
       decoration: InputDecoration(
         hintText: widget.hint,
@@ -166,9 +165,9 @@ class _AuthTextFieldState extends State<AuthTextField> {
         ),
         filled: true,
         fillColor: fillColor,
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: isPill ? 24 : 16,
-          vertical: isPill ? 18 : 15,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 16,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radius),
@@ -180,9 +179,10 @@ class _AuthTextFieldState extends State<AuthTextField> {
               ? const BorderSide(color: Color(0xFFD64545), width: 1)
               : borderSide,
         ),
+        // 채움형이라 focus 시 별도 테두리는 보이지 않음 (에러 시에만 빨강 테두리).
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radius),
-          borderSide: hasError ? errorBorderSide : focusedBorderSide,
+          borderSide: hasError ? errorBorderSide : borderSide,
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radius),
