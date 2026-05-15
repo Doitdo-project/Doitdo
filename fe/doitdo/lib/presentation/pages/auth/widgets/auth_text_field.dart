@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
@@ -25,6 +26,9 @@ class AuthTextField extends StatefulWidget {
     this.helperText,
     this.showSuccess = false,
     this.variant = AuthFieldVariant.pill,
+    this.autofillHints,
+    this.maxLength,
+    this.inputFormatters,
   });
 
   final TextEditingController controller;
@@ -34,6 +38,18 @@ class AuthTextField extends StatefulWidget {
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onSubmitted;
   final bool enabled;
+
+  /// iOS Keychain / Android Autofill 통합용. 예: `[AutofillHints.password]`.
+  /// OTP 화면이면 `[AutofillHints.oneTimeCode]`, 신규 비밀번호는 `newPassword`.
+  /// AutofillGroup 으로 폼 전체를 감싸야 일부 제스처(저장 제안 등) 가 활성화된다.
+  final Iterable<String>? autofillHints;
+
+  /// 입력 최대 길이. OTP / 자릿수 고정 입력용. helper/error 자리에 카운터가 뜨지
+  /// 않도록 [TextField.buildCounter] 를 빈 위젯으로 반환해 자동 카운터는 숨긴다.
+  final int? maxLength;
+
+  /// 입력 필터 — 예: `[FilteringTextInputFormatter.digitsOnly]`.
+  final List<TextInputFormatter>? inputFormatters;
 
   /// 비어있지 않으면 에러 상태로 표시된다.
   final String? errorText;
@@ -127,6 +143,13 @@ class _AuthTextFieldState extends State<AuthTextField> {
       textInputAction: widget.textInputAction,
       onSubmitted: widget.onSubmitted,
       enabled: widget.enabled,
+      autofillHints: widget.autofillHints,
+      maxLength: widget.maxLength,
+      // maxLength 를 주면 기본 카운터("3/6")가 helperText 자리에 끼어들어
+      // 레이아웃이 흔들린다. 카운터 자체는 OTP UX 에 가치가 적으므로 숨김.
+      buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
+          null,
+      inputFormatters: widget.inputFormatters,
       style: AppTextStyles.bodyMedium.copyWith(color: colors.textPrimary),
       decoration: InputDecoration(
         hintText: widget.hint,

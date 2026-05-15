@@ -147,7 +147,15 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: AppRoutes.resetPassword,
-      builder: (context, state) => const ResetPasswordPage(),
+      // FindPasswordPage 의 인증번호 검증 단계에서 발급된 1회용 resetToken 을
+      // extra 로 전달받는다. 직접 진입(예: 딥링크)으로 extra 가 없는 경우는
+      // 토큰이 없어서 의미가 없으므로 비밀번호 찾기 시작 화면으로 되돌린다.
+      redirect: (context, state) {
+        if (state.extra is! String) return AppRoutes.findPassword;
+        return null;
+      },
+      builder: (context, state) =>
+          ResetPasswordPage(resetToken: state.extra as String),
     ),
 
     // 튜토리얼 (첫 진입 시 메인 탭 진입 전 1회 표시).
