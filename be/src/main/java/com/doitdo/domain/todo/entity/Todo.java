@@ -173,6 +173,15 @@ public class Todo extends BaseTimeEntity {
 		this.alertTime = null;
 	}
 
+	public void applyRecurringMasterSnapshot(Todo master) {
+		this.title = master.title;
+		this.content = master.content;
+		this.categoryId = master.categoryId;
+		this.categoryName = master.categoryName;
+		this.categoryColorId = master.categoryColorId;
+		this.alertTime = master.alertTime;
+	}
+
 	public void snooze() {
 		this.startDate = this.startDate.plusDays(1);
 		if (this.endDate != null) {

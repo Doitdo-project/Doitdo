@@ -35,7 +35,8 @@ TODO 목록 키에는 요청 `date`가 있으면 그 날짜, 없으면 Asia/Seou
 | TODO create | `todos:list::{userId}:*` |
 | TODO update/delete/changePriority/snooze | `todos:list::{userId}:*`, `todos:item::{userId}:{todoId}` |
 | RECURRING scope only update/delete | `todos:list::{userId}:*`, requested master `todos:item::{userId}:{masterTodoId}`, materialized instance `todos:item::{userId}:{instanceTodoId}` |
-| RECURRING scope from update/delete | `todos:list::{userId}:*`, old master `todos:item::{userId}:{masterTodoId}`, new master item if created |
+| RECURRING scope from update | `todos:list::{userId}:*`, master `todos:item::{userId}:{masterTodoId}`, non-DONE materialized instance items |
+| RECURRING scope from delete | `todos:list::{userId}:*`, old master `todos:item::{userId}:{masterTodoId}` |
 | TODO changeStatus | TODO evict |
 | Category create/update/delete | `categories::{userId}`, `todos:list::{userId}:*` |
 | RecurrenceMaterializeScheduler | created instance owners' `todos:list::{userId}:*` |
