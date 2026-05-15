@@ -217,40 +217,41 @@ public class AuthServiceImpl implements AuthService {
 	/**
 	 * 비밀번호 재설정 요청 — 6자리 OTP 발송.
 	 *
-	 * <p>응답 정책:
+	 * <p>응답 정책 (UX 우선 — 한국 모바일 앱 컨벤션 따라 명확한 안내):
 	 * <ul>
 	 *   <li>일반 가입자 → 200 OK + 메일 발송</li>
-	 *   <li>미가입 이메일·탈퇴 사용자 → 200 OK + 발송 없음 (enumeration 방어)</li>
-	 *   <li>소셜 가입자(password=null) → <b>409 A04-006</b> + 안내 메시지 (UX 우선,
-	 *       "왜 메일이 안 오나요" 문의 방지). 소셜 가입자 enumeration 은 일부 노출되지만
-	 *       모바일 앱 + 한국 사용자 UX 컨벤션 우선.</li>
+	 *   <li>미가입 이메일·탈퇴 사용자 → <b>404 A04-007</b> + 회원가입 안내</li>
+	 *   <li>소셜 가입자(password=null) → <b>409 A04-006</b> + 해당 IdP 로그인 안내</li>
 	 * </ul>
 	 *
-	 * <p>같은 이메일에 OTP 가 이미 존재하면 새 OTP 로 덮어쓴다 (재요청 = 무효화 + 재발급).
+	 * <p>탈퇴 사용자는 익명화 처리(이메일/유저네임 marker 치환)되어있어 미가입과 사실상 구분 불가 →
+	 * A04-007 로 통합 처리. 같은 이메일에 OTP 가 이미 존재하면 새 OTP 로 덮어쓴다 (재요청 = 무효화 + 재발급).
 	 */
 	@Override
 	public void requestPasswordReset(PasswordResetRequestReq req) {
-		userRepository.findByEmail(req.email()).ifPresent(user -> {
-			if (Boolean.TRUE.equals(user.getIsDeleted())) {
-				log.info("event=PASSWORD_RESET_SKIPPED reason=DELETED userId={}", user.getUserId());
-				return;
-			}
-			if (user.getPassword() == null) {
-				log.info("event=PASSWORD_RESET_REJECTED reason=SOCIAL_ACCOUNT userId={}", user.getUserId());
-				throw new CustomException(AuthErrorCode.A04_006);
-			}
+		User user = userRepository.findByEmail(req.email())
+				.filter(u -> !Boolean.TRUE.equals(u.getIsDeleted()))
+				.orElseThrow(() -> {
+					log.info("event=PASSWORD_RESET_REJECTED reason=NOT_FOUND emailHash={}",
+							Integer.toHexString(req.email().hashCode()));
+					return new CustomException(AuthErrorCode.A04_007);
+				});
 
-			String code = generateOtpCode();
-			passwordResetOtpRepository.save(
-					user.getEmail(),
-					code,
-					user.getUserId(),
-					Duration.ofMinutes(otpTtlMinutes));
+		if (user.getPassword() == null) {
+			log.info("event=PASSWORD_RESET_REJECTED reason=SOCIAL_ACCOUNT userId={}", user.getUserId());
+			throw new CustomException(AuthErrorCode.A04_006);
+		}
 
-			mailService.sendPasswordResetCodeMail(user.getEmail(), code);
+		String code = generateOtpCode();
+		passwordResetOtpRepository.save(
+				user.getEmail(),
+				code,
+				user.getUserId(),
+				Duration.ofMinutes(otpTtlMinutes));
 
-			log.info("event=PASSWORD_RESET_REQUESTED userId={}", user.getUserId());
-		});
+		mailService.sendPasswordResetCodeMail(user.getEmail(), code);
+
+		log.info("event=PASSWORD_RESET_REQUESTED userId={}", user.getUserId());
 	}
 
 	/**
