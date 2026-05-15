@@ -1225,15 +1225,15 @@ class _CrossSectionTodoListState extends ConsumerState<_CrossSectionTodoList> {
           ],
         ),
         const SizedBox(height: 12),
-        if (totalCount == 0)
+        if (widget.todayTodos.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Center(
               child: Text('할 일을 추가해보세요!',
                   style: AppTextStyles.bodySmall.copyWith(color: colors.textHint)),
             ),
-          )
-        else
+          ),
+        if (totalCount > 0)
         // ✅ Listener로 드래그 중 포인터 위치 감지 → 자동 스크롤
           Listener(
             onPointerMove: (event) {
@@ -1250,6 +1250,14 @@ class _CrossSectionTodoListState extends ConsumerState<_CrossSectionTodoList> {
               proxyDecorator: (child, index, animation) =>
                   Material(color: Colors.transparent, elevation: 0, child: child),
               itemBuilder: buildItem,
+            ),
+          ),
+        if (widget.showSomeday && widget.somedayTodos.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: Text('할 일을 추가해보세요!',
+                  style: AppTextStyles.bodySmall.copyWith(color: colors.textHint)),
             ),
           ),
       ],
