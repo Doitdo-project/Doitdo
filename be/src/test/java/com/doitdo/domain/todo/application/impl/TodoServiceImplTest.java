@@ -658,6 +658,27 @@ class TodoServiceImplTest {
 	}
 
 	@Test
+	void updateRecurringAllowsChangingDaysOfWeekWithoutMovingExistingStartDate() {
+		Todo master = recurringMaster();
+		ReflectionTestUtils.setField(master, "startDate", LocalDate.parse("2026-05-04"));
+		ReflectionTestUtils.setField(master, "daysOfWeekRaw", "MON,TUE");
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+		given(todoRepository.findAllByUserIdAndMasterTodoIdAndIsDeletedFalse(1L, 10L))
+				.willReturn(List.of());
+
+		service.update(
+				1L,
+				10L,
+				new TodoUpdateReq(null, null, null, null, null, null, Set.of("WED", "THU", "FRI"), null, false));
+
+		assertThat(master.getStartDate()).isEqualTo(LocalDate.parse("2026-05-04"));
+		assertThat(master.getDaysOfWeek()).containsExactlyInAnyOrder(
+				DayOfWeek.WEDNESDAY,
+				DayOfWeek.THURSDAY,
+				DayOfWeek.FRIDAY);
+	}
+
+	@Test
 	void deleteRecurringFromCutsOverlappingGroupSegments() {
 		Todo task2 = recurringSegment(20L, "task2", LocalDate.parse("2026-05-10"), LocalDate.parse("2026-05-19"));
 		Todo task3 = recurringSegment(30L, "task3", LocalDate.parse("2026-05-20"), LocalDate.parse("2026-05-30"));

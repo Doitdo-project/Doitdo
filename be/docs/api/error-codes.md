@@ -180,6 +180,10 @@ Stage 4 똥치우기 미션은 활성 시각 전이거나 이미 치운 상태�
 | `TODO_RECURRING_DAYS_OF_WEEK_REQUIRED` | `T14-001` | 400 | 반복 TODO는 daysOfWeek가 필요함 |
 | `TODO_RECURRING_START_DATE_DAY_MISMATCH` | `T14-002` | 400 | 반복 TODO의 startDate 요일이 daysOfWeek에 포함되어야 함 |
 
+> **T14-002 수정 예외 (2026-05-15):** 기존 RECURRING 마스터 수정에서 `startDate` 를 보내지 않고
+> `daysOfWeek` 만 변경하는 경우에는 기존 `startDate` 요일이 새 `daysOfWeek` 에 없어도 허용한다.
+> `startDate` 는 반복 시작 경계로 유지되고, 캘린더 occurrence 는 그 이후 새 요일 기준으로 생성된다.
+
 ### `TamagotchiErrorCode` 추가 코드 (character action url, 2026-04)
 
 | 상수 | code | HTTP | 의미 |
