@@ -18,17 +18,26 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.doitdo.domain.auth.api.dto.req.SignupReq;
 import com.doitdo.domain.auth.api.dto.resp.SignupResp;
+import com.doitdo.domain.auth.repository.PasswordResetOtpRedisRepository;
+import com.doitdo.domain.auth.repository.PasswordResetTokenRedisRepository;
 import com.doitdo.domain.auth.repository.RefreshTokenRepository;
 import com.doitdo.domain.setting.repository.UserSettingRepository;
+import com.doitdo.domain.shop.application.DefaultFurnitureRegistrar;
 import com.doitdo.domain.streak.repository.UserStreakRepository;
 import com.doitdo.domain.tamagotchi.entity.Character;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.todo.application.DefaultCategoryRegistrar;
+import com.doitdo.domain.todo.application.DefaultTodoRegistrar;
+import com.doitdo.domain.user.application.CreditEarnService;
 import com.doitdo.domain.user.entity.User;
+import com.doitdo.domain.user.entity.UserWallet;
+import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.domain.user.repository.UserWalletRepository;
+import com.doitdo.domain.user.repository.WalletEarnLogRepository;
+import com.doitdo.global.mail.MailService;
 import com.doitdo.global.util.JwtUtil;
 
 @ExtendWith(MockitoExtension.class)
@@ -50,6 +59,15 @@ class AuthServiceImplTest {
 	private RefreshTokenRepository refreshTokenRepository;
 
 	@Mock
+	private PasswordResetTokenRedisRepository passwordResetTokenRepository;
+
+	@Mock
+	private PasswordResetOtpRedisRepository passwordResetOtpRepository;
+
+	@Mock
+	private WalletEarnLogRepository walletEarnLogRepository;
+
+	@Mock
 	private PasswordEncoder passwordEncoder;
 
 	@Mock
@@ -59,13 +77,25 @@ class AuthServiceImplTest {
 	private JwtUtil jwtUtil;
 
 	@Mock
+	private MailService mailService;
+
+	@Mock
 	private DefaultCategoryRegistrar defaultCategoryRegistrar;
+
+	@Mock
+	private DefaultTodoRegistrar defaultTodoRegistrar;
+
+	@Mock
+	private DefaultFurnitureRegistrar defaultFurnitureRegistrar;
 
 	@Mock
 	private CharacterRepository characterRepository;
 
 	@Mock
 	private UserCharacterRepository userCharacterRepository;
+
+	@Mock
+	private CreditEarnService creditEarnService;
 
 	private AuthServiceImpl buildService() {
 		return new AuthServiceImpl(
@@ -74,12 +104,19 @@ class AuthServiceImplTest {
 			userSettingRepository,
 			userStreakRepository,
 			refreshTokenRepository,
+			passwordResetTokenRepository,
+			passwordResetOtpRepository,
+			walletEarnLogRepository,
 			passwordEncoder,
 			authenticationManager,
 			jwtUtil,
+			mailService,
 			defaultCategoryRegistrar,
+			defaultTodoRegistrar,
+			defaultFurnitureRegistrar,
 			characterRepository,
-			userCharacterRepository
+			userCharacterRepository,
+			creditEarnService
 		);
 	}
 
@@ -115,8 +152,16 @@ class AuthServiceImplTest {
 		assertThat(resp.birthDateRegistered()).isFalse();
 		assertThat(resp.agreementsAccepted()).isFalse();
 
+		ArgumentCaptor<UserWallet> walletCaptor = forClass(UserWallet.class);
+		then(userWalletRepository).should().save(walletCaptor.capture());
+		assertThat(walletCaptor.getValue().getBalance()).isZero();
+		then(creditEarnService).should()
+			.tryEarn(1L, WalletEarnSource.SIGNUP_BONUS, 1000, null, true);
+
 		ArgumentCaptor<UserCharacter> captor = forClass(UserCharacter.class);
 		then(userCharacterRepository).should().save(captor.capture());
 		assertThat(captor.getValue().getCharacterId()).isEqualTo(26L);
+		then(defaultFurnitureRegistrar).should().registerFor(1L);
+		then(defaultTodoRegistrar).should().registerFor(1L);
 	}
 }

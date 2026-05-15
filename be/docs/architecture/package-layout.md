@@ -34,11 +34,23 @@ domain/{domain}/
 
 ## 등록된 도메인
 
-`auth, user, todo, tamagotchi, inventory, shop, notification, setting, bugreport`
+`auth, user, todo, tamagotchi, inventory, shop, notification, setting, bugreport, notice`
 
 (노션 「엔드포인트」 카테고리 직역. 검색 기능은 `todo` 도메인 내부에서 처리.)
 
 도메인 ↔ 테이블 매핑은 [`erd.md`](erd.md) 참고.
+
+## user 도메인 추가 파일 (뚜레딧 적립 이력)
+
+| 종류 | 경로 | 비고 |
+|---|---|---|
+| Entity enum | `domain/user/entity/WalletEarnSource.java` | 적립 출처 (`SIGNUP_BONUS`, `STREAK_7DAY`, `PET_TOUCH`, `TODO_COMPLETION`, `DAILY_ATTENDANCE`, `POOP_CLEAR`) |
+| Entity | `domain/user/entity/WalletEarnLog.java` | `wallet_earn_logs` 테이블 매핑 |
+| Repository | `domain/user/repository/WalletEarnLogRepository.java` | 출처별/합산 일일 적립액 조회. `sumAmountByUserIdAndSourceAndDate` 는 `CreditEarnServiceImpl.exceedsDailyCap()` 의 cap 합산과 `TodoCompletionCreditListener` 의 오늘 적립 횟수 역산에 모두 재사용됨 |
+| Application interface | `domain/user/application/CreditEarnService.java` | 뚜레딧 적립 단일 진입점 |
+| Application impl | `domain/user/application/impl/CreditEarnServiceImpl.java` | 지갑 락, 일일 cap, 잔액 가산, 적립 로그 저장 |
+| Listener | `domain/user/application/listener/TodoCompletionCreditListener.java` | `TodoCompletedEvent` 구독, AFTER_COMMIT + REQUIRES_NEW 로 TODO 완료 3개당 10 뚜레딧 적립 |
+| Migration SQL | `docs/ops/migrations/2026-05-07-wallet-earn-log.sql` | 수동 실행 필요 |
 
 ## global 패키지
 
@@ -50,12 +62,12 @@ global/
  │   ├ SecurityConfig.java
  │   ├ JpaAuditingConfig.java
  │   ├ PasswordEncoderConfig.java
- │   └ OpenApiConfig.java                # springdoc-openapi 메타 + 11개 그룹 (auth, user, todo, tamagotchi, streak, inventory, shop, notification, setting, bugreport, global)
+ │   └ OpenApiConfig.java                # springdoc-openapi 메타 + 12개 그룹 (auth, user, todo, tamagotchi, streak, inventory, shop, notification, setting, bugreport, notice, global)
  ├ entity/
  │   └ BaseTimeEntity.java               # 공통 Auditing (createdAt/updatedAt)
  ├ exception/
  │   ├ ErrorCode.java                    # 인터페이스
- │   ├ ErrorCodeRegistry.java            # 10개 도메인 enum 정적 인덱스
+ │   ├ ErrorCodeRegistry.java            # 11개 도메인 enum 정적 인덱스
  │   ├ CommonErrorCode.java              # G/G99
  │   ├ AuthErrorCode.java                # A
  │   ├ UserErrorCode.java                # U
@@ -66,6 +78,7 @@ global/
  │   ├ NotificationErrorCode.java        # N
  │   ├ SettingErrorCode.java             # C
  │   ├ BugReportErrorCode.java           # B
+ │   ├ NoticeErrorCode.java              # O
  │   ├ CustomException.java
  │   └ GlobalExceptionHandler.java
  ├ swagger/                              # be/feat/swagger 머지 후 등장
@@ -211,7 +224,7 @@ UNIQUE 제약 `uk_todos_user_master_date (user_id, master_todo_id, start_date)` 
 
 | 종류 | 경로 | 비고 |
 |---|---|---|
-| Response DTO | `domain/todo/api/dto/resp/PaletteResp.java` | `paletteId, paletteName, colors[]` |
+| Response DTO | `domain/todo/api/dto/resp/PaletteResp.java` | `paletteId, paletteName, colors: List<Color{colorId, color}>` — FE 가 PATCH 시 color_id 를 정확히 보낼 수 있게 colorId 노출 |
 | Application interface | `domain/todo/application/PaletteService.java` | `list()` |
 | Application impl | `domain/todo/application/impl/PaletteServiceImpl.java` | PaletteColor 전체 1회 조회 후 paletteId 로 그룹핑 |
 | Controller | `domain/todo/api/controller/PaletteController.java` | `GET /api/palettes` |
@@ -226,8 +239,14 @@ UNIQUE 제약 `uk_todos_user_master_date (user_id, master_todo_id, start_date)` 
 | Request DTO | `domain/shop/api/dto/req/UpdateRoomFurniturePlacementReq.java` | 배치 좌표/레이어 수정 요청 |
 | Response DTO | `domain/shop/api/dto/resp/FurnitureShopResp.java` | 상점 가구 목록 래퍼 |
 | Response DTO | `domain/shop/api/dto/resp/FurnitureShopItemResp.java` | 상점 가구 단일 응답, `owned/soldOut/placed/status` 포함 |
+| Response DTO | `domain/shop/api/dto/resp/FurnitureThemeListResp.java` | 가구 테마 목록 래퍼 |
+| Response DTO | `domain/shop/api/dto/resp/FurnitureThemeResp.java` | 가구 테마 단일 응답, 가격/보유 수/인라인 가구 목록 포함 |
+| Response DTO | `domain/shop/api/dto/resp/FurnitureThemeFurnitureResp.java` | 테마 목록에 포함되는 가구 단일 응답 |
 | Response enum | `domain/shop/api/dto/resp/FurnitureShopStatus.java` | 상점/인벤토리 상태 (`PURCHASABLE`, `PLACEABLE`, `PLACED`) |
 | Response DTO | `domain/shop/api/dto/resp/PurchaseFurnitureResp.java` | 구매 결과, 잔액 포함 |
+| Response DTO | `domain/shop/api/dto/resp/PurchaseThemeResp.java` | 테마 구매 결과, 구매 수/스킵 수/차감액/잔액 포함 |
+| Response DTO | `domain/shop/api/dto/resp/PurchaseThemeFurnitureResp.java` | 테마 구매로 새로 보유한 가구 단일 응답 |
+| Response DTO | `domain/shop/api/dto/resp/PlaceThemeResp.java` | 테마 일괄 배치 결과, 배치 목록 포함 |
 | Response DTO | `domain/shop/api/dto/resp/UserFurnitureResp.java` | 보유 가구 목록 래퍼 |
 | Response DTO | `domain/shop/api/dto/resp/UserFurnitureItemResp.java` | 보유 가구 단일 응답 |
 | Response DTO | `domain/shop/api/dto/resp/RoomResp.java` | 내 방 배치 가구 목록 래퍼 |
@@ -238,19 +257,25 @@ UNIQUE 제약 `uk_todos_user_master_date (user_id, master_todo_id, start_date)` 
 | Application impl | `domain/shop/application/impl/ShopServiceImpl.java` | 월렛 차감 + 보유 생성 + 구매 로그 저장 |
 | Application impl | `domain/shop/application/impl/RoomFurniturePlacementServiceImpl.java` | 보유 가구 방 배치/수정/제거 |
 | Entity | `domain/shop/entity/Furniture.java` | `furnitures` 테이블 매핑 |
+| Entity | `domain/shop/entity/FurnitureTheme.java` | `furniture_themes` 테이블 매핑 |
 | Entity | `domain/shop/entity/UserFurniture.java` | `user_furnitures` 테이블 매핑, `(user_id, furniture_id)` unique |
 | Entity | `domain/shop/entity/FurniturePurchaseLog.java` | `furniture_purchase_logs` 테이블 매핑 |
 | Entity | `domain/shop/entity/RoomFurniturePlacement.java` | `room_furniture_placements` 테이블 매핑 |
 | Repository | `domain/shop/repository/FurnitureRepository.java` | 가구 조회 |
+| Repository | `domain/shop/repository/FurnitureThemeRepository.java` | 가구 테마 조회 |
 | Repository | `domain/shop/repository/UserFurnitureRepository.java` | 보유 가구 조회/중복 확인 |
 | Repository | `domain/shop/repository/FurniturePurchaseLogRepository.java` | 가구 구매 로그 |
 | Repository | `domain/shop/repository/RoomFurniturePlacementRepository.java` | 방 배치 조회/삭제 |
 | Migration SQL | `docs/ops/migrations/2026-05-shop-furniture.sql` | 수동 실행 필요 |
+| Migration SQL | `docs/ops/migrations/2026-05-14-shop-furniture-theme.sql` | 가구 테마 테이블/컬럼/seed 수동 실행 필요 |
 
 `UserWallet.spend(Integer amount)` 와 `UserWalletRepository.findByUserIdForUpdate(Long userId)` 로 구매 차감과 동시성 제어를 처리한다.
+테마 구매는 미보유 테마 가구만 구매하고 자동 배치하지 않는다. 바로 배치 UX 는 구매 성공 후 테마 일괄 배치 API를 별도로 호출한다.
 방에서 가구를 제거할 때는 `UserFurniture` 를 삭제하지 않고 `RoomFurniturePlacement` 만 삭제한다.
 상점/인벤토리 통합 화면에서는 보유 여부와 배치 여부로 `PURCHASABLE`, `PLACEABLE`, `PLACED` 상태를 계산한다.
 방에는 카테고리별 1개 가구만 배치하며, 같은 카테고리의 새 가구를 배치하면 기존 placement 를 자동 삭제한다.
+테마 미리보기는 `furniture_themes.theme_code` 와 `furnitures.theme_code` 로 테마 가구 세트를 조회하고, 같은 카테고리의 기존 방 배치를 응답에서만 교체한다.
+테마 일괄 배치는 사용자가 테마 내 모든 가구를 보유해야 하며, 같은 카테고리 기존 배치를 제거한 뒤 테마 가구를 저장한다.
 
 ## bugreport 도메인 구현 파일
 
@@ -266,6 +291,24 @@ UNIQUE 제약 `uk_todos_user_master_date (user_id, master_todo_id, start_date)` 
 | Migration SQL | `docs/ops/migrations/2026-04-bug-report.sql` | 수동 실행 필요 |
 
 `BugReportErrorCode` (`B` 접두, `global/exception/`) — `ErrorCodeRegistry.SOURCES` 에 등록.
+
+## notice 도메인 구현 파일
+
+| 종류 | 경로 | 비고 |
+|---|---|---|
+| Controller | `domain/notice/api/controller/NoticeController.java` | 초기 팝업/목록/상세/다시 안보기 엔드포인트 |
+| Response DTO | `domain/notice/api/dto/resp/NoticePopupResp.java` | `show`, `notice` — 초기 진입 모달 판단 |
+| Response DTO | `domain/notice/api/dto/resp/NoticeListResp.java` | `items[]` 래퍼 |
+| Response DTO | `domain/notice/api/dto/resp/NoticeResp.java` | 공지 단일 응답 |
+| Application interface | `domain/notice/application/NoticeService.java` | 공지 조회/다시 안보기 인터페이스 |
+| Application impl | `domain/notice/application/impl/NoticeServiceImpl.java` | 활성 기간 필터, 최신 공지, 사용자별 dismiss 처리 |
+| Entity | `domain/notice/entity/Notice.java` | `notices` 테이블 매핑 |
+| Entity | `domain/notice/entity/NoticeDismissal.java` | `notice_dismissals` 테이블 매핑, `(user_id, notice_id)` unique |
+| Repository | `domain/notice/repository/NoticeRepository.java` | 활성 공지 최신/목록/상세 조회 |
+| Repository | `domain/notice/repository/NoticeDismissalRepository.java` | 사용자별 dismiss 존재 여부 조회 |
+| Migration SQL | `docs/ops/migrations/2026-05-15-notice.sql` | 공지/다시 안보기 테이블 수동 실행 필요 |
+
+`NoticeErrorCode` (`O` 접두, `global/exception/`) — `ErrorCodeRegistry.SOURCES` 에 등록.
 
 ## 네이밍/엔티티 규칙
 

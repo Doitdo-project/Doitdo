@@ -13,6 +13,12 @@ import org.springframework.data.repository.query.Param;
 
 public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificationExecutor<Todo> {
 
+	interface ExcludedDateProjection {
+		Long getMasterTodoId();
+
+		LocalDate getOccurrenceDate();
+	}
+
 	Optional<Todo> findByTodoIdAndIsDeletedFalse(Long todoId);
 
 	Optional<Todo> findByUserIdAndTitleAndStartDateAndIsDeletedFalse(Long userId, String title, LocalDate startDate);
@@ -32,7 +38,97 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 
 	List<Todo> findAllByUserIdAndMasterTodoIdAndIsDeletedFalse(Long userId, Long masterTodoId);
 
+	List<Todo> findAllByUserIdAndMasterTodoIdAndStartDateGreaterThanEqualAndIsDeletedFalse(
+			Long userId,
+			Long masterTodoId,
+			LocalDate startDate);
+
+	@Query("""
+			SELECT t FROM Todo t
+			WHERE t.userId = :userId
+			  AND t.recurrenceGroupId = :recurrenceGroupId
+			  AND t.isDeleted = false
+			  AND t.type = com.doitdo.domain.todo.entity.Todo.TodoType.RECURRING
+			  AND (t.endDate IS NULL OR t.endDate >= :occurrenceDate)
+			ORDER BY t.startDate ASC, t.todoId ASC
+			""")
+	List<Todo> findRecurringMastersOverlappingFromDate(
+			@Param("userId") Long userId,
+			@Param("recurrenceGroupId") Long recurrenceGroupId,
+			@Param("occurrenceDate") LocalDate occurrenceDate);
+
+	@Query("""
+			SELECT t FROM Todo t
+			WHERE t.userId = :userId
+			  AND t.masterTodoId IN :masterTodoIds
+			  AND t.startDate >= :occurrenceDate
+			  AND t.isDeleted = false
+			  AND t.type = com.doitdo.domain.todo.entity.Todo.TodoType.NORMAL
+			ORDER BY t.startDate ASC, t.todoId ASC
+			""")
+	List<Todo> findMaterializedInstancesByMasterTodoIdInFromDate(
+			@Param("userId") Long userId,
+			@Param("masterTodoIds") List<Long> masterTodoIds,
+			@Param("occurrenceDate") LocalDate occurrenceDate);
+
+	@Query("""
+			SELECT t.masterTodoId AS masterTodoId, t.startDate AS occurrenceDate
+			FROM Todo t
+			WHERE t.userId = :userId
+			  AND t.masterTodoId IN :masterTodoIds
+			  AND t.isDeleted = true
+			  AND t.type = com.doitdo.domain.todo.entity.Todo.TodoType.NORMAL
+			ORDER BY t.masterTodoId ASC, t.startDate ASC
+			""")
+	List<ExcludedDateProjection> findExcludedDatesByMasterTodoIds(
+			@Param("userId") Long userId,
+			@Param("masterTodoIds") List<Long> masterTodoIds);
+
+	/**
+	 * RECURRING 가상 occurrence 생성 차단용 마커 조회.
+	 * 활성 파생 인스턴스와 soft-deleted 파생 인스턴스 모두 같은 날짜 가상 생성을 막아야 하므로
+	 * isDeleted 조건을 의도적으로 두지 않는다.
+	 */
+	@Query("""
+			SELECT t FROM Todo t
+			WHERE t.userId = :userId
+			  AND t.masterTodoId IN :masterTodoIds
+			  AND t.startDate BETWEEN :from AND :to
+			""")
+	List<Todo> findRecurringInstanceMarkers(
+			@Param("userId") Long userId,
+			@Param("masterTodoIds") List<Long> masterTodoIds,
+			@Param("from") LocalDate from,
+			@Param("to") LocalDate to);
+
 	List<Todo> findAllByTypeAndIsDeletedFalse(TodoType type);
+
+	long countByUserIdAndFirstCompletedDate(Long userId, LocalDate firstCompletedDate);
+
+	@Query("""
+			select count(t) from Todo t
+			where t.userId = :userId
+			  and t.firstCompletedDate = :today
+			  and t.isDeleted = false
+			  and (
+			      t.type = com.doitdo.domain.todo.entity.Todo.TodoType.SOMEDAY
+			      or (
+			          t.type = com.doitdo.domain.todo.entity.Todo.TodoType.PERIOD
+			          and (
+			              (t.endDate is not null and t.endDate >= :today)
+			              or (t.endDate is null and t.startDate >= :today)
+			          )
+			      )
+			      or (
+			          t.type <> com.doitdo.domain.todo.entity.Todo.TodoType.SOMEDAY
+			          and t.type <> com.doitdo.domain.todo.entity.Todo.TodoType.PERIOD
+			          and t.startDate >= :today
+			      )
+			  )
+			""")
+	long countRewardEligibleByUserIdAndFirstCompletedDate(
+			@Param("userId") Long userId,
+			@Param("today") LocalDate today);
 
 	@Query("""
 			SELECT t FROM Todo t
@@ -44,6 +140,14 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 	List<Todo> findReorderTargetsForNonSomeday(@Param("userId") Long userId);
 
 	@Query("""
+			SELECT COALESCE(MAX(t.priority), 0) FROM Todo t
+			WHERE t.userId = :userId
+			  AND t.isDeleted = false
+			  AND t.type <> com.doitdo.domain.todo.entity.Todo.TodoType.SOMEDAY
+			""")
+	int findMaxPriorityForNonSomeday(@Param("userId") Long userId);
+
+	@Query("""
 			SELECT t FROM Todo t
 			WHERE t.userId = :userId
 			  AND t.isDeleted = false
@@ -51,6 +155,14 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 			ORDER BY t.priority ASC, t.todoId ASC
 			""")
 	List<Todo> findReorderTargetsForSomeday(@Param("userId") Long userId);
+
+	@Query("""
+			SELECT COALESCE(MAX(t.priority), 0) FROM Todo t
+			WHERE t.userId = :userId
+			  AND t.isDeleted = false
+			  AND t.type = com.doitdo.domain.todo.entity.Todo.TodoType.SOMEDAY
+			""")
+	int findMaxPriorityForSomeday(@Param("userId") Long userId);
 
 	@Query("""
 			select count(t) from Todo t
@@ -74,6 +186,41 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 			  )
 			""")
 	long countPendingByUserIdAndToday(@Param("userId") Long userId, @Param("today") LocalDate today);
+
+	@Query("""
+			select count(t) from Todo t
+			where t.userId = :userId
+			  and t.isDeleted = false
+			  and t.type <> com.doitdo.domain.todo.entity.Todo.TodoType.RECURRING
+			  and (
+			      (t.type = com.doitdo.domain.todo.entity.Todo.TodoType.NORMAL and t.startDate = :today)
+			      or (t.type = com.doitdo.domain.todo.entity.Todo.TodoType.PERIOD
+			          and t.startDate <= :today
+			          and (t.endDate is null or t.endDate >= :today))
+			  )
+			""")
+	long countActiveByUserIdAndToday(@Param("userId") Long userId, @Param("today") LocalDate today);
+
+	/**
+	 * 카테고리 rename / 색상 변경 시 해당 카테고리를 쓰는 활성 todo 의
+	 * 이름·색 스냅샷을 일괄 갱신한다 (전파).
+	 */
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("UPDATE Todo t SET t.categoryName = :name, t.categoryColorId = :colorId " +
+			"WHERE t.userId = :userId AND t.categoryId = :categoryId AND t.isDeleted = false")
+	int bulkUpdateCategorySnapshot(@Param("userId") Long userId,
+			@Param("categoryId") Long categoryId,
+			@Param("name") String name,
+			@Param("colorId") Integer colorId);
+
+	/**
+	 * 카테고리 삭제 시 해당 카테고리를 쓰는 활성 todo 의 category_id 만 NULL 로 detach.
+	 * 이름·색 스냅샷(category_name / category_color_id)은 그대로 잔여시킨다.
+	 */
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("UPDATE Todo t SET t.categoryId = NULL " +
+			"WHERE t.userId = :userId AND t.categoryId = :categoryId AND t.isDeleted = false")
+	int detachCategoryId(@Param("userId") Long userId, @Param("categoryId") Long categoryId);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("UPDATE Todo t SET t.isDeleted = true WHERE t.userId = :userId AND t.isDeleted = false")

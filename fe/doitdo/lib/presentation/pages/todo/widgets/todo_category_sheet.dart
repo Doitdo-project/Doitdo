@@ -5,6 +5,7 @@ import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
+import 'package:doitdo/presentation/widgets/common/character_mascot_image.dart';
 
 import 'package:doitdo/data/models/category_dto.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
@@ -108,7 +109,7 @@ class _TodoCategorySheetState extends ConsumerState<TodoCategorySheet> {
                         const SizedBox(height: 10),
                         Padding(
                           padding:
-                              const EdgeInsets.symmetric(horizontal: 6),
+                          const EdgeInsets.symmetric(horizontal: 6),
                           child: Text(
                             cat.categoryName,
                             maxLines: 1,
@@ -128,9 +129,14 @@ class _TodoCategorySheetState extends ConsumerState<TodoCategorySheet> {
               }),
               if (categories.length < 6)
                 GestureDetector(
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const CategoryPage()),
-                  ),
+                  onTap: () {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    Navigator.of(context, rootNavigator: true).push(
+                      MaterialPageRoute(
+                        builder: (_) => const CategoryPage(),
+                      ),
+                    );
+                  },
                   child: Container(
                     width: chipWidth,
                     height: chipWidth,
@@ -264,7 +270,7 @@ class _MascotBubble extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Image.asset('assets/images/Dooit.png', width: 30, height: 30, filterQuality: FilterQuality.high),
+        const CharacterMascotImage(size: 36),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

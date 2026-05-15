@@ -150,7 +150,10 @@ class _OnboardingBirthDatePageState
         data: (user) {
           if (user == null) return;
           if (!mounted) return;
-          context.go(AppRoutes.onboardingAgreements);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            context.go(AppRoutes.onboardingAgreements);
+          });
         },
         error: (error, _) {
           if (!mounted) return;

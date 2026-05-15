@@ -9,6 +9,10 @@ import 'package:doitdo/domain/entities/user.dart';
 ///
 /// `birthDateRegistered` / `agreementsAccepted` 는 첫 로그인 시 온보딩 분기에 사용.
 /// 서버가 항상 내려주지만 누락에 대비해 false 로 폴백 (= 온보딩 다시 노출).
+///
+/// `dailyAttendanceClaimed` 는 오늘 자동 출석 보상이 지급됐는지. BE 가 점진적으로
+/// 배포 중이라 누락될 수 있으니 default true (= 알림 안 띄움) 폴백 — 잘못된 알림
+/// 발화를 막는 게 누락된 알림보다 안전하다.
 class UserDto {
   const UserDto({
     required this.userId,
@@ -17,6 +21,7 @@ class UserDto {
     required this.hasPassword,
     required this.birthDateRegistered,
     required this.agreementsAccepted,
+    required this.dailyAttendanceClaimed,
   });
 
   final int userId;
@@ -25,6 +30,7 @@ class UserDto {
   final bool hasPassword;
   final bool birthDateRegistered;
   final bool agreementsAccepted;
+  final bool dailyAttendanceClaimed;
 
   factory UserDto.fromJson(Map<String, dynamic> json) => UserDto(
         userId: (json['userId'] as num).toInt(),
@@ -33,6 +39,8 @@ class UserDto {
         hasPassword: json['hasPassword'] as bool? ?? false,
         birthDateRegistered: json['birthDateRegistered'] as bool? ?? false,
         agreementsAccepted: json['agreementsAccepted'] as bool? ?? false,
+        dailyAttendanceClaimed:
+            json['dailyAttendanceClaimed'] as bool? ?? true,
       );
 
   User toEntity() => User(
@@ -42,5 +50,6 @@ class UserDto {
         hasPassword: hasPassword,
         birthDateRegistered: birthDateRegistered,
         agreementsAccepted: agreementsAccepted,
+        dailyAttendanceClaimed: dailyAttendanceClaimed,
       );
 }

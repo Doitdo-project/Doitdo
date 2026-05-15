@@ -36,6 +36,7 @@ import lombok.NoArgsConstructor;
 				@Index(name = "idx_todos_list_type", columnList = "user_id, is_deleted, type, start_date, todo_id"),
 				@Index(name = "idx_todos_list_status", columnList = "user_id, is_deleted, status, start_date, todo_id"),
 				@Index(name = "idx_todos_list_category", columnList = "user_id, is_deleted, category_id, start_date, todo_id"),
+				@Index(name = "idx_todos_list_category_name", columnList = "user_id, is_deleted, category_name, start_date, todo_id"),
 				@Index(name = "idx_todos_list_priority", columnList = "user_id, is_deleted, priority, start_date, todo_id")
 		}
 )
@@ -59,6 +60,20 @@ public class Todo extends BaseTimeEntity {
 	@Column(name = "category_id")
 	private Long categoryId;
 
+	/**
+	 * 카테고리 이름 스냅샷. 카테고리 rename 시 일괄 update 로 전파되며,
+	 * 카테고리 삭제 시에도 그대로 남아 todo 가 "삭제된 카테고리" 를 표현한다.
+	 */
+	@Column(name = "category_name", length = 10)
+	private String categoryName;
+
+	/**
+	 * 카테고리 색상 스냅샷 (PaletteColor.colorId). 응답 단계에서 동일 이름의
+	 * 활성 카테고리가 있으면 그 색이 override 하고, 없으면 이 값으로 hex 를 해석한다.
+	 */
+	@Column(name = "category_color_id")
+	private Integer categoryColorId;
+
 	@Column(nullable = false, length = 20)
 	private String title;
 
@@ -76,6 +91,9 @@ public class Todo extends BaseTimeEntity {
 	@Column(name = "done_date")
 	private LocalDate doneDate;
 
+	@Column(name = "first_completed_date", nullable = true)
+	private LocalDate firstCompletedDate;
+
 	@Column(nullable = false)
 	private Integer priority;
 
@@ -90,6 +108,9 @@ public class Todo extends BaseTimeEntity {
 
 	@Column(name = "master_todo_id")
 	private Long masterTodoId;
+
+	@Column(name = "recurrence_group_id")
+	private Long recurrenceGroupId;
 
 	@Column(name = "days_of_week", length = 27)
 	private String daysOfWeekRaw;
@@ -123,8 +144,29 @@ public class Todo extends BaseTimeEntity {
 		this.expGranted = true;
 	}
 
+	/** 최초 완료일 마킹. 멱등 (이미 값이 있으면 no-op). */
+	public void markFirstCompletedIfAbsent(LocalDate today) {
+		if (this.firstCompletedDate == null) {
+			this.firstCompletedDate = today;
+		}
+	}
+
 	public void changePriority(Integer priority) {
 		this.priority = priority;
+	}
+
+	public void changeEndDate(LocalDate endDate) {
+		this.endDate = endDate;
+	}
+
+	public void assignRecurrenceGroupId(Long recurrenceGroupId) {
+		this.recurrenceGroupId = recurrenceGroupId;
+	}
+
+	public void assignOwnRecurrenceGroupIdIfAbsent() {
+		if (this.recurrenceGroupId == null) {
+			this.recurrenceGroupId = this.todoId;
+		}
 	}
 
 	public void clearAlertTime() {
@@ -158,6 +200,8 @@ public class Todo extends BaseTimeEntity {
 			String title,
 			String content,
 			Long categoryId,
+			String categoryName,
+			Integer categoryColorId,
 			TodoType type,
 			LocalDate startDate,
 			LocalDate endDate,
@@ -165,7 +209,11 @@ public class Todo extends BaseTimeEntity {
 			String alertTime) {
 		if (title != null) this.title = title;
 		this.content = content;
-		if (categoryId != null) this.categoryId = categoryId;
+		if (categoryId != null) {
+			this.categoryId = categoryId;
+			this.categoryName = categoryName;
+			this.categoryColorId = categoryColorId;
+		}
 		if (type != null) this.type = type;
 		if (type == TodoType.SOMEDAY) {
 			this.startDate = startDate;
@@ -180,6 +228,8 @@ public class Todo extends BaseTimeEntity {
 	public static Todo create(
 			Long userId,
 			Long categoryId,
+			String categoryName,
+			Integer categoryColorId,
 			String title,
 			String content,
 			TodoType type,
@@ -191,6 +241,8 @@ public class Todo extends BaseTimeEntity {
 		return Todo.builder()
 				.userId(userId)
 				.categoryId(categoryId)
+				.categoryName(categoryName)
+				.categoryColorId(categoryColorId)
 				.title(title)
 				.content(content)
 				.type(type)
@@ -200,6 +252,7 @@ public class Todo extends BaseTimeEntity {
 				.startDate(type == TodoType.SOMEDAY ? null : startDate)
 				.endDate(endDate)
 				.masterTodoId(null)
+				.recurrenceGroupId(null)
 				.daysOfWeekRaw(toRawDaysOfWeek(daysOfWeek))
 				.isDeleted(false)
 				.expGranted(false)
@@ -210,6 +263,8 @@ public class Todo extends BaseTimeEntity {
 		return Todo.builder()
 				.userId(master.getUserId())
 				.categoryId(master.getCategoryId())
+				.categoryName(master.getCategoryName())
+				.categoryColorId(master.getCategoryColorId())
 				.title(master.getTitle())
 				.content(master.getContent())
 				.type(TodoType.NORMAL)
@@ -219,6 +274,7 @@ public class Todo extends BaseTimeEntity {
 				.startDate(occurrenceDate)
 				.endDate(null)
 				.masterTodoId(master.getTodoId())
+				.recurrenceGroupId(master.getRecurrenceGroupId())
 				.daysOfWeekRaw(null)
 				.isDeleted(false)
 				.expGranted(false)

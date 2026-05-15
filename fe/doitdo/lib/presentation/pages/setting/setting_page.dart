@@ -90,6 +90,13 @@ class SettingPage extends ConsumerWidget {
             _SettingCard(
               children: [
                 _SettingTile(
+                  icon: Icons.play_circle_outline_rounded,
+                  label: '튜토리얼 다시 보기',
+                  onTap: () => context.go(
+                    '${AppRoutes.tutorial}?next=${Uri.encodeComponent(AppRoutes.setting)}',
+                  ),
+                ),
+                _SettingTile(
                   icon: Icons.chat_bubble_outline_rounded,
                   label: '문의하기',
                   onTap: () => context.push(AppRoutes.bugReport),

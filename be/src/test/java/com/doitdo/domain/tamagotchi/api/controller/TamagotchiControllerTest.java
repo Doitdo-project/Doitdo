@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.tamagotchi.api.dto.req.ApproveIndependenceReq;
 import com.doitdo.domain.tamagotchi.api.dto.req.UpdateCharacterNameReq;
+import com.doitdo.domain.tamagotchi.api.dto.resp.CharacterActionUrlResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaDetailCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaDetailResp;
@@ -23,6 +24,7 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.UpdateCharacterNameResp;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
+import com.doitdo.domain.tamagotchi.entity.CharacterActionType;
 import com.doitdo.domain.user.entity.User;
 import com.doitdo.global.api.response.GlobalApiResponse;
 
@@ -53,7 +55,8 @@ class TamagotchiControllerTest {
 			false,
 			false,
 			null,
-			10L
+			10L,
+			false
 		);
 
 		given(tamagotchiService.receiveEgg(1L)).willReturn(serviceResp);
@@ -180,7 +183,7 @@ class TamagotchiControllerTest {
 			"TEEN",
 			120,
 			100,
-			"https://cdn.example.com/tamagotchi/animations/baby-to-teen",
+			"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/evolution/evolution.gif",
 			"https://cdn.example.com/slime-teen.png",
 			"2026-04-22T10:30:00Z"
 		);
@@ -208,12 +211,37 @@ class TamagotchiControllerTest {
 			30L,
 			true,
 			"EGG",
-			"https://cdn.example.com/tamagotchi/animations/adult-to-egg"
+			"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/independence/independence.gif"
 		);
 
 		given(tamagotchiService.approveIndependence(1L, true)).willReturn(serviceResp);
 
 		GlobalApiResponse<FarewellResp> resp = controller.approveIndependence(userDetails, new ApproveIndependenceReq(true));
+
+		assertThat(resp.getStatus()).isEqualTo(200);
+		assertThat(resp.getMessage()).isEqualTo("OK");
+		assertThat(resp.getData()).isEqualTo(serviceResp);
+	}
+
+	@Test
+	void getMyCharacterActionUrlReturnsGlobalApiResponse() {
+		TamagotchiController controller = new TamagotchiController(tamagotchiService);
+		CustomUserDetails userDetails = new CustomUserDetails(User.builder()
+			.userId(1L)
+			.email("user@example.com")
+			.username("user")
+			.password("password")
+			.isDeleted(false)
+			.build());
+		CharacterActionUrlResp serviceResp = new CharacterActionUrlResp(
+			"https://cdn.example.com/idle.gif",
+			10,
+			110
+		);
+
+		given(tamagotchiService.getMyCharacterActionUrl(1L, CharacterActionType.IDLE)).willReturn(serviceResp);
+
+		GlobalApiResponse<CharacterActionUrlResp> resp = controller.getMyCharacterActionUrl(CharacterActionType.IDLE, userDetails);
 
 		assertThat(resp.getStatus()).isEqualTo(200);
 		assertThat(resp.getMessage()).isEqualTo("OK");

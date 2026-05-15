@@ -1,18 +1,28 @@
 package com.doitdo.domain.shop.application.impl;
 
 import java.util.List;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.doitdo.domain.shop.api.dto.req.UpdateRoomFurniturePlacementReq;
+import com.doitdo.domain.shop.api.dto.resp.PlaceThemeResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomFurniturePlacementResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomResp;
+import com.doitdo.domain.shop.application.DefaultFurnitureRegistrar;
 import com.doitdo.domain.shop.application.RoomFurniturePlacementService;
 import com.doitdo.domain.shop.entity.Furniture;
+import com.doitdo.domain.shop.entity.FurnitureTheme;
 import com.doitdo.domain.shop.entity.RoomFurniturePlacement;
 import com.doitdo.domain.shop.entity.UserFurniture;
 import com.doitdo.domain.shop.repository.FurnitureRepository;
+import com.doitdo.domain.shop.repository.FurnitureThemeRepository;
 import com.doitdo.domain.shop.repository.RoomFurniturePlacementRepository;
 import com.doitdo.domain.shop.repository.UserFurnitureRepository;
 import com.doitdo.global.exception.CustomException;
@@ -27,17 +37,51 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 	private final RoomFurniturePlacementRepository roomFurniturePlacementRepository;
 	private final UserFurnitureRepository userFurnitureRepository;
 	private final FurnitureRepository furnitureRepository;
+	private final FurnitureThemeRepository furnitureThemeRepository;
+	private final DefaultFurnitureRegistrar defaultFurnitureRegistrar;
 
 	@Override
-	@Transactional(readOnly = true)
+	@Transactional
 	public RoomResp getMyRoom(Long userId) {
-		List<RoomFurniturePlacementResp> items = roomFurniturePlacementRepository
-			.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId)
-			.stream()
-			.map(this::toResp)
-			.toList();
+		List<RoomFurniturePlacement> placements =
+			roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId);
+		if (missingBackground(placements)) {
+			defaultFurnitureRegistrar.registerFor(userId);
+			placements = roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId);
+		}
+
+		List<RoomFurniturePlacementResp> items = placements.stream()
+				.map(this::toResp)
+				.toList();
 
 		return new RoomResp(items);
+	}
+
+	private boolean missingBackground(List<RoomFurniturePlacement> placements) {
+		List<Long> userFurnitureIds = placements.stream()
+				.map(RoomFurniturePlacement::getUserFurnitureId)
+				.toList();
+		Map<Long, UserFurniture> userFurnitureById = userFurnitureRepository.findAllById(userFurnitureIds)
+				.stream()
+				.collect(Collectors.toMap(UserFurniture::getUserFurnitureId, Function.identity()));
+		List<Long> furnitureIds = userFurnitureById.values()
+				.stream()
+				.map(UserFurniture::getFurnitureId)
+				.toList();
+		Map<Long, Furniture> furnitureById = furnitureRepository.findAllById(furnitureIds)
+				.stream()
+				.collect(Collectors.toMap(Furniture::getFurnitureId, Function.identity()));
+
+		Set<String> categories = placements.stream()
+				.map(RoomFurniturePlacement::getUserFurnitureId)
+				.map(userFurnitureById::get)
+				.filter(Objects::nonNull)
+				.map(UserFurniture::getFurnitureId)
+				.map(furnitureById::get)
+				.filter(Objects::nonNull)
+				.map(Furniture::getCategory)
+				.collect(Collectors.toSet());
+		return !categories.contains("BACKGROUND");
 	}
 
 	@Override
@@ -66,6 +110,66 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 
 	@Override
 	@Transactional
+	public PlaceThemeResp placeTheme(Long userId, String themeCode) {
+		String normalizedThemeCode = themeCode.trim().toUpperCase(java.util.Locale.ROOT);
+		FurnitureTheme theme = furnitureThemeRepository.findByThemeCodeAndIsActiveTrue(normalizedThemeCode)
+			.orElseThrow(() -> new CustomException(ShopErrorCode.THEME_NOT_FOUND));
+		List<Furniture> themeFurnitures = furnitureRepository
+			.findAllByThemeCodeAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc(normalizedThemeCode);
+		if (themeFurnitures.isEmpty()) {
+			throw new CustomException(ShopErrorCode.THEME_EMPTY);
+		}
+		validateUniqueCategories(themeFurnitures);
+
+		Map<Long, UserFurniture> ownedByFurnitureId = userFurnitureRepository
+			.findAllByUserIdOrderByUserFurnitureIdAsc(userId)
+			.stream()
+			.collect(Collectors.toMap(UserFurniture::getFurnitureId, Function.identity()));
+		Map<Long, UserFurniture> ownedByUserFurnitureId = ownedByFurnitureId.values()
+			.stream()
+			.collect(Collectors.toMap(UserFurniture::getUserFurnitureId, Function.identity()));
+		for (Furniture furniture : themeFurnitures) {
+			if (!ownedByFurnitureId.containsKey(furniture.getFurnitureId())) {
+				throw new CustomException(ShopErrorCode.THEME_NOT_FULLY_OWNED);
+			}
+		}
+
+		Set<String> themeCategories = themeFurnitures.stream()
+			.map(Furniture::getCategory)
+			.collect(Collectors.toSet());
+		List<RoomFurniturePlacement> currentPlacements =
+			roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId);
+		List<Long> placedFurnitureIds = currentPlacements.stream()
+			.map(RoomFurniturePlacement::getUserFurnitureId)
+			.map(ownedByUserFurnitureId::get)
+			.filter(Objects::nonNull)
+			.map(UserFurniture::getFurnitureId)
+			.toList();
+		Map<Long, Furniture> furnitureById = furnitureRepository.findAllById(placedFurnitureIds)
+			.stream()
+			.collect(Collectors.toMap(Furniture::getFurnitureId, Function.identity()));
+		for (RoomFurniturePlacement placement : currentPlacements) {
+			UserFurniture userFurniture = ownedByUserFurnitureId.get(placement.getUserFurnitureId());
+			Furniture furniture = userFurniture == null ? null : furnitureById.get(userFurniture.getFurnitureId());
+			if (furniture != null && themeCategories.contains(furniture.getCategory())) {
+				roomFurniturePlacementRepository.delete(placement);
+			}
+		}
+
+		List<RoomFurniturePlacementResp> items = new java.util.ArrayList<>();
+		for (Furniture furniture : themeFurnitures) {
+			UserFurniture userFurniture = ownedByFurnitureId.get(furniture.getFurnitureId());
+			RoomFurniturePlacement placement = roomFurniturePlacementRepository.save(
+				RoomFurniturePlacement.create(userId, userFurniture.getUserFurnitureId(), furniture)
+			);
+			items.add(RoomFurniturePlacementResp.from(placement, furniture));
+		}
+
+		return new PlaceThemeResp(theme.getThemeCode(), theme.getThemeName(), items.size(), items);
+	}
+
+	@Override
+	@Transactional
 	public RoomFurniturePlacementResp updatePlacement(Long userId, Long placementId,
 		UpdateRoomFurniturePlacementReq req) {
 		RoomFurniturePlacement placement = findMyPlacement(userId, placementId);
@@ -86,6 +190,15 @@ public class RoomFurniturePlacementServiceImpl implements RoomFurniturePlacement
 			.orElseThrow(() -> new CustomException(ShopErrorCode.USER_FURNITURE_NOT_FOUND));
 		Furniture furniture = findFurniture(userFurniture.getFurnitureId());
 		return RoomFurniturePlacementResp.from(placement, furniture);
+	}
+
+	private void validateUniqueCategories(List<Furniture> furnitures) {
+		Set<String> categories = new HashSet<>();
+		for (Furniture furniture : furnitures) {
+			if (!categories.add(furniture.getCategory())) {
+				throw new CustomException(ShopErrorCode.THEME_CATEGORY_DUPLICATED);
+			}
+		}
 	}
 
 	private UserFurniture findMyUserFurniture(Long userId, Long userFurnitureId) {

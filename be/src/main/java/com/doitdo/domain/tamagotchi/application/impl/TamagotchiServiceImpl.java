@@ -1,7 +1,11 @@
 package com.doitdo.domain.tamagotchi.application.impl;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Optional;
@@ -27,6 +31,7 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaItemResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.EncyclopediaResp;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
 import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
+import com.doitdo.domain.tamagotchi.entity.CharacterActionType;
 import com.doitdo.domain.tamagotchi.entity.UserCharacterHistory;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterActionRepository;
@@ -35,19 +40,34 @@ import com.doitdo.domain.tamagotchi.repository.CharacterSpeciesBackgroundReposit
 import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterHistoryRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
+import com.doitdo.domain.user.application.CreditEarnService;
+import com.doitdo.domain.user.entity.UserWallet;
+import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.repository.UserRepository;
+import com.doitdo.domain.user.repository.UserWalletRepository;
 import com.doitdo.global.cache.CacheEvictHelper;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TamagotchiErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class TamagotchiServiceImpl implements TamagotchiService {
+
+	private static final String EVOLUTION_ANIMATION_URL =
+		"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/evolution/evolution.gif";
+	private static final String INDEPENDENCE_ANIMATION_URL =
+		"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/independence/independence.gif";
+	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+	private static final int PET_TOUCH_CREDIT = 50;
+	private static final int PET_TOUCH_DAILY_LIMIT = 2;
+	private static final int PET_TOUCH_COOLDOWN_HOURS = 2;
+	private static final int POOP_CLEAR_REWARD = 50;
+	private static final LocalTime POOP_TIME_START = LocalTime.of(10, 0);
+	private static final int POOP_TIME_WINDOW_MINUTES = 720;
 
 	private final CharacterActionRepository characterActionRepository;
 	private final CharacterRepository characterRepository;
@@ -58,6 +78,13 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 	private final UserRepository userRepository;
 	private final ApplicationEventPublisher eventPublisher;
 	private final CacheEvictHelper cacheEvictHelper;
+	private final CreditEarnService creditEarnService;
+	private final UserWalletRepository userWalletRepository;
+	private Clock clock = Clock.system(SEOUL);
+
+	void setClock(Clock clock) {
+		this.clock = clock;
+	}
 
 	@Override
 	@Transactional
@@ -101,7 +128,8 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			false,
 			false,
 			savedUserCharacter.getEquipedItemsId(),
-			savedUserCharacter.getUserCharacterId()
+			savedUserCharacter.getUserCharacterId(),
+			false
 		);
 	}
 
@@ -193,12 +221,13 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 	}
 
 	@Override
-	@Transactional(readOnly = true)
-	@Cacheable(value = "tamagotchi:current", key = "#userId", unless = "#result == null")
+	@Transactional
 	public CurrentCharacterResp getCurrentCharacter(Long userId) {
 		UserCharacter userCharacter = userCharacterRepository
 			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
+
+		refreshPoopTimeIfNewDate(userCharacter, LocalDate.now(clock));
 
 		return toCurrentCharacterResp(userCharacter, TamagotchiErrorCode.M04_002);
 	}
@@ -220,7 +249,10 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			&& requiredExp != null
 			&& userCharacter.getCurrentExp() >= requiredExp
 			&& userCharacter.getFarewellAvailableAt() != null
-			&& !LocalDateTime.now().isBefore(userCharacter.getFarewellAvailableAt());
+			&& !LocalDateTime.now(clock).isBefore(userCharacter.getFarewellAvailableAt());
+		LocalDateTime now = LocalDateTime.now(clock);
+		LocalDate today = now.toLocalDate();
+		boolean poop = isPoopActive(userCharacter, now, today);
 
 		return new CurrentCharacterResp(
 			character.getCharacterId(),
@@ -233,8 +265,21 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			canEvolve,
 			canFarewell,
 			userCharacter.getEquipedItemsId(),
-			userCharacter.getUserCharacterId()
+			userCharacter.getUserCharacterId(),
+			poop
 		);
+	}
+
+	private void refreshPoopTimeIfNewDate(UserCharacter userCharacter, LocalDate today) {
+		if (today.equals(userCharacter.getPoopTimeDate())) {
+			return;
+		}
+		userCharacter.refreshPoopTime(randomPoopTime(), today);
+	}
+
+	private LocalTime randomPoopTime() {
+		int minuteOffset = ThreadLocalRandom.current().nextInt(POOP_TIME_WINDOW_MINUTES);
+		return POOP_TIME_START.plusMinutes(minuteOffset);
 	}
 
 	@Override
@@ -340,7 +385,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			afterStage.name(),
 			userCharacter.getCurrentExp(),
 			nextCharacter.getRequiredExp(),
-			buildAnimationUrl(beforeStage, afterStage),
+			EVOLUTION_ANIMATION_URL,
 			nextCharacter.getThumbnailUrl(),
 			Instant.now().toString()
 		);
@@ -363,16 +408,6 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		if (!unlocksToSave.isEmpty()) {
 			characterUnlockRepository.saveAll(unlocksToSave);
 		}
-	}
-
-	private String buildAnimationUrl(
-		com.doitdo.domain.tamagotchi.entity.Character.Stage beforeStage,
-		com.doitdo.domain.tamagotchi.entity.Character.Stage afterStage
-	) {
-		return "https://cdn.example.com/tamagotchi/animations/"
-			+ beforeStage.name().toLowerCase()
-			+ "-to-"
-			+ afterStage.name().toLowerCase();
 	}
 
 	@Override
@@ -431,29 +466,113 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			adultUserCharacter.getUserCharacterId(),
 			true,
 			eggCharacter.getStage().name(),
-			buildAnimationUrl(
-				com.doitdo.domain.tamagotchi.entity.Character.Stage.ADULT,
-				com.doitdo.domain.tamagotchi.entity.Character.Stage.EGG
-			)
+			INDEPENDENCE_ANIMATION_URL
 		);
 	}
 
 	@Override
-	@Transactional(readOnly = true)
-	public CharacterActionUrlResp getMyCharacterActionUrl(Long userId, String actionType) {
+	@Transactional
+	public CharacterActionUrlResp getMyCharacterActionUrl(Long userId, CharacterActionType actionType) {
 		UserCharacter userCharacter = userCharacterRepository
 			.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId)
 			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
 
-		List<com.doitdo.domain.tamagotchi.entity.CharacterAction> actions = characterActionRepository
-			.findAllByCharacterIdAndActionType(userCharacter.getCharacterId(), actionType);
-		if (actions.isEmpty()) {
-			throw new CustomException(TamagotchiErrorCode.M09_002);
-		}
-		com.doitdo.domain.tamagotchi.entity.CharacterAction action =
-			actions.get(ThreadLocalRandom.current().nextInt(actions.size()));
+		LocalDateTime now = LocalDateTime.now(clock);
+		LocalDate today = LocalDate.now(clock);
 
-		return new CharacterActionUrlResp(action.getActionUrl());
+		if (actionType == CharacterActionType.POOP) {
+			UserCharacter lockedUserCharacter = userCharacterRepository.findActiveByUserIdForUpdate(userId)
+				.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
+			int earnedAmount = clearPoop(userId, lockedUserCharacter, now, today);
+			return new CharacterActionUrlResp(
+				findRandomActionUrl(userCharacter.getCharacterId(), actionType).orElse(null),
+				earnedAmount,
+				findCurrentBalance(userId)
+			);
+		}
+
+		String actionUrl = findRandomActionUrl(userCharacter.getCharacterId(), actionType)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M09_002));
+		if (actionType == CharacterActionType.EYE) {
+			return new CharacterActionUrlResp(
+				actionUrl,
+				0,
+				findCurrentBalance(userId)
+			);
+		}
+
+		UserCharacter lockedUserCharacter = userCharacterRepository.findActiveByUserIdForUpdate(userId)
+			.orElseThrow(() -> new CustomException(TamagotchiErrorCode.M04_002));
+		lockedUserCharacter.resetDailyTouchIfNewDate(today);
+
+		int earnedAmount = 0;
+		if (canEarnTouchCredit(lockedUserCharacter, now)) {
+			earnedAmount = creditEarnService.tryEarn(
+				userId,
+				WalletEarnSource.PET_TOUCH,
+				PET_TOUCH_CREDIT,
+				lockedUserCharacter.getCharacterId(),
+				false
+			);
+			if (earnedAmount > 0) {
+				lockedUserCharacter.recordTouch(now, today);
+			}
+		}
+
+		return new CharacterActionUrlResp(
+			actionUrl,
+			earnedAmount,
+			findCurrentBalance(userId)
+		);
+	}
+
+	private Optional<String> findRandomActionUrl(Long characterId, CharacterActionType actionType) {
+		List<com.doitdo.domain.tamagotchi.entity.CharacterAction> actions = characterActionRepository
+			.findAllByCharacterIdAndActionType(characterId, actionType.name());
+		if (actions.isEmpty()) {
+			return Optional.empty();
+		}
+		return Optional.of(actions.get(ThreadLocalRandom.current().nextInt(actions.size())).getActionUrl());
+	}
+
+	private int clearPoop(
+		Long userId,
+		UserCharacter userCharacter,
+		LocalDateTime now,
+		LocalDate today
+	) {
+		if (!today.equals(userCharacter.getPoopTimeDate()) || !isPoopActive(userCharacter, now, today)) {
+			throw new CustomException(TamagotchiErrorCode.M09_004);
+		}
+
+		int earnedAmount = creditEarnService.tryEarn(
+			userId,
+			WalletEarnSource.POOP_CLEAR,
+			POOP_CLEAR_REWARD,
+			userCharacter.getCharacterId(),
+			true
+		);
+		userCharacter.markPoopCleared(today);
+		cacheEvictHelper.evictTamagotchiCurrentAfterCommit(userId);
+		return earnedAmount;
+	}
+
+	private boolean canEarnTouchCredit(UserCharacter userCharacter, LocalDateTime now) {
+		return userCharacter.getDailyTouchCount() < PET_TOUCH_DAILY_LIMIT
+			&& (userCharacter.getLastTouchedAt() == null
+				|| !now.isBefore(userCharacter.getLastTouchedAt().plusHours(PET_TOUCH_COOLDOWN_HOURS)));
+	}
+
+	private boolean isPoopActive(UserCharacter userCharacter, LocalDateTime now, LocalDate today) {
+		return userCharacter.getPoopTime() != null
+			&& !now.toLocalTime().isBefore(userCharacter.getPoopTime())
+			&& !today.equals(userCharacter.getPoopClearedDate());
+	}
+
+	private int findCurrentBalance(Long userId) {
+		return userWalletRepository.findByUserId(userId)
+			.map(UserWallet::getBalance)
+			.orElse(0);
 	}
 
 	private com.doitdo.domain.tamagotchi.entity.Character randomEggCharacter(TamagotchiErrorCode errorCode) {

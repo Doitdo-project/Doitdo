@@ -21,6 +21,7 @@ import 'package:doitdo/presentation/pages/tamagochi/character_hatch_page.dart';
 import 'package:doitdo/presentation/pages/tamagochi/character_naming_page.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_page.dart';
 import 'package:doitdo/presentation/pages/todo/todo_page.dart';
+import 'package:doitdo/presentation/pages/tutorial/tutorial_page.dart';
 import 'package:doitdo/presentation/widgets/shell/doitdo_shell.dart';
 
 /// 앱 라우트 경로 상수.
@@ -48,6 +49,7 @@ class AppRoutes {
   static const String notification = '/setting/notification';
   static const String bugReport = '/setting/bug-report';
   static const String notifications = '/todo/notifications';
+  static const String tutorial = '/tutorial';
 }
 
 /// 탭별 중첩 네비게이터가 각자의 스택을 보존하도록 NavigatorKey 분리.
@@ -104,14 +106,16 @@ final GoRouter appRouter = GoRouter(
     final raw = state.uri.toString();
     final path = state.uri.path;
     if (raw.startsWith('doitdo://widget') || path.startsWith('/widget')) {
-      return AppRoutes.splash;
+      return '${AppRoutes.splash}?from=widget';
     }
     return null;
   },
   routes: [
     GoRoute(
       path: AppRoutes.splash,
-      builder: (context, state) => const SplashPage(),
+      builder: (context, state) => SplashPage(
+        fromWidget: state.uri.queryParameters['from'] == 'widget',
+      ),
     ),
 
     // 홈스크린 위젯에서 진입(`doitdo://widget/open`) 시 받는 라우트.
@@ -119,13 +123,15 @@ final GoRouter appRouter = GoRouter(
     // 메인/로그인 화면으로 분기되는 기존 부팅 흐름을 그대로 재사용한다.
     GoRoute(
       path: '/widget/open',
-      redirect: (context, state) => AppRoutes.splash,
+      redirect: (context, state) => '${AppRoutes.splash}?from=widget',
     ),
 
     // 인증 플로우 (탭 셸 바깥)
     GoRoute(
       path: AppRoutes.welcome,
-      builder: (context, state) => const WelcomePage(),
+      // splash → welcome 도 트랜지션 제거. (login/register 등 후속은 일반 전환 유지)
+      pageBuilder: (context, state) =>
+          const NoTransitionPage(child: WelcomePage()),
     ),
     GoRoute(
       path: AppRoutes.login,
@@ -141,7 +147,24 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: AppRoutes.resetPassword,
-      builder: (context, state) => const ResetPasswordPage(),
+      // FindPasswordPage 의 인증번호 검증 단계에서 발급된 1회용 resetToken 을
+      // extra 로 전달받는다. 직접 진입(예: 딥링크)으로 extra 가 없는 경우는
+      // 토큰이 없어서 의미가 없으므로 비밀번호 찾기 시작 화면으로 되돌린다.
+      redirect: (context, state) {
+        if (state.extra is! String) return AppRoutes.findPassword;
+        return null;
+      },
+      builder: (context, state) =>
+          ResetPasswordPage(resetToken: state.extra as String),
+    ),
+
+    // 튜토리얼 (첫 진입 시 메인 탭 진입 전 1회 표시).
+    // next 쿼리 파라미터로 완료 후 이동할 탭을 전달한다.
+    GoRoute(
+      path: AppRoutes.tutorial,
+      builder: (context, state) => TutorialPage(
+        next: state.uri.queryParameters['next'] ?? AppRoutes.tamagochi,
+      ),
     ),
 
     // 온보딩 (첫 로그인 — 인증 직후 진입, 메인 탭 이전).
@@ -156,10 +179,15 @@ final GoRouter appRouter = GoRouter(
     ),
 
     // 메인 탭 셸. 각 브랜치가 고유의 네비게이션 스택을 가진다.
+    //
+    // pageBuilder 로 [NoTransitionPage] 를 반환해 splash → 메인 탭 진입 시 기본
+    // 페이지 트랜지션(슬라이드/페이드 ~300ms) 을 없앤다. splash 종료 후 흰 화면이
+    // 한 번 비치고 들어오는 인상을 제거 — 데이터/이미지가 prime 으로 이미 준비된
+    // 상태라 트랜지션 없이 곧장 노출하는 게 더 자연스럽다.
     StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) {
-        return DoitdoShell(navigationShell: navigationShell);
-      },
+      pageBuilder: (context, state, navigationShell) => NoTransitionPage(
+        child: DoitdoShell(navigationShell: navigationShell),
+      ),
       branches: [
         StatefulShellBranch(
           navigatorKey: _todoNavigatorKey,

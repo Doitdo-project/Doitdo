@@ -13,6 +13,7 @@ public record TodoDetailResp(
 		String title,
 		String content,
 		String category,
+		String colorHex,
 		TodoType type,
 		Integer priority,
 		String alertTime,
@@ -21,15 +22,29 @@ public record TodoDetailResp(
 		List<String> daysOfWeek,
 		TodoStatus status,
 		LocalDateTime updatedAt,
-		int snoozedDays
+		Long masterTodoId,
+		Long recurrenceGroupId,
+		LocalDate occurrenceDate,
+		int snoozedDays,
+		List<LocalDate> excludedDates
 ) {
 
-	public static TodoDetailResp from(Todo todo, String categoryName, int snoozedDays) {
+	public static TodoDetailResp from(Todo todo, String categoryName, String colorHex, int snoozedDays) {
+		return from(todo, categoryName, colorHex, snoozedDays, List.of());
+	}
+
+	public static TodoDetailResp from(
+			Todo todo,
+			String categoryName,
+			String colorHex,
+			int snoozedDays,
+			List<LocalDate> excludedDates) {
 		return new TodoDetailResp(
 				todo.getTodoId(),
 				todo.getTitle(),
 				todo.getContent(),
 				categoryName,
+				colorHex,
 				todo.getType(),
 				todo.getPriority(),
 				todo.getAlertTime(),
@@ -41,7 +56,11 @@ public record TodoDetailResp(
 						.toList(),
 				todo.getStatus(),
 				todo.getUpdatedAt(),
-				snoozedDays
+				todo.getMasterTodoId(),
+				todo.getRecurrenceGroupId(),
+				todo.getMasterTodoId() != null ? todo.getStartDate() : null,
+				snoozedDays,
+				excludedDates
 		);
 	}
 }

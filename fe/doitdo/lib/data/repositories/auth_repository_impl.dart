@@ -11,6 +11,9 @@ import 'package:doitdo/core/widget_sync/widget_sync_service.dart';
 import 'package:doitdo/data/datasources/auth_api.dart';
 import 'package:doitdo/data/datasources/auth_local_data_source.dart';
 import 'package:doitdo/data/models/login_request_dto.dart';
+import 'package:doitdo/data/models/password_reset_confirm_request_dto.dart';
+import 'package:doitdo/data/models/password_reset_request_dto.dart';
+import 'package:doitdo/data/models/password_reset_verify_request_dto.dart';
 import 'package:doitdo/data/models/refresh_request_dto.dart';
 import 'package:doitdo/data/models/signup_request_dto.dart';
 import 'package:doitdo/data/models/social_login_request_dto.dart';
@@ -299,6 +302,45 @@ class AuthRepositoryImpl extends BaseRepository implements AuthRepository {
 
   // 이메일/닉네임 중복체크는 UserRepository 가 담당. AuthRepository 는
   // 순수한 인증/세션 관리에만 집중한다.
+
+  // ── 비밀번호 재설정 ─────────────────────────────────────────────
+
+  @override
+  Future<void> requestPasswordResetCode(String email) {
+    return safeApiCallNoData(
+      () => authApi.requestPasswordReset(
+        PasswordResetRequestDto(email: email),
+      ),
+    );
+  }
+
+  @override
+  Future<String> verifyPasswordResetCode({
+    required String email,
+    required String code,
+  }) async {
+    final dto = await safeApiCall(
+      () => authApi.verifyPasswordResetCode(
+        PasswordResetVerifyRequestDto(email: email, code: code),
+      ),
+    );
+    return dto.resetToken;
+  }
+
+  @override
+  Future<void> confirmPasswordReset({
+    required String resetToken,
+    required String newPassword,
+  }) {
+    return safeApiCallNoData(
+      () => authApi.confirmPasswordReset(
+        PasswordResetConfirmRequestDto(
+          resetToken: resetToken,
+          newPassword: newPassword,
+        ),
+      ),
+    );
+  }
 
   /// 위젯이 백그라운드에서 우리 API 를 직접 호출하도록 토큰 + base URL 을 공유 영역에 저장.
   /// 실패는 무시 — 위젯이 안 떠 있어도 본 인증 흐름은 정상 진행되어야 한다.

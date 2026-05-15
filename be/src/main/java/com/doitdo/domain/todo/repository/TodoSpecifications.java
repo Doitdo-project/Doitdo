@@ -71,12 +71,16 @@ public final class TodoSpecifications {
 		return (root, query, cb) -> cb.equal(root.get("status"), status);
 	}
 
-	/** categoryId 필터: null 이면 no-op */
-	public static Specification<Todo> byCategoryId(Long categoryId) {
-		if (categoryId == null) {
+	/**
+	 * 카테고리 이름 스냅샷 기반 필터. null/blank 이면 no-op.
+	 * 카테고리 삭제 후에도 todo 에 남은 categoryName 스냅샷과 매칭되며,
+	 * 동일 이름의 카테고리를 다시 만들면 옛 todo 들도 자연스럽게 잡힌다 (의도된 동작).
+	 */
+	public static Specification<Todo> byCategoryName(String categoryName) {
+		if (categoryName == null || categoryName.isBlank()) {
 			return (root, query, cb) -> cb.conjunction();
 		}
-		return (root, query, cb) -> cb.equal(root.get("categoryId"), categoryId);
+		return (root, query, cb) -> cb.equal(root.get("categoryName"), categoryName);
 	}
 
 	/** type 필터: null 이면 no-op */

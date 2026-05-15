@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
+import 'package:doitdo/data/models/category_dto.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
@@ -15,16 +16,15 @@ import 'package:doitdo/presentation/pages/todo/widgets/todo_date_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_time_sheet.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_dialog.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
-import 'package:doitdo/data/models/todo_detail_response_dto.dart';
-import 'package:doitdo/presentation/pages/todo/todo_detail_provider.dart';
+import 'package:doitdo/presentation/widgets/common/character_mascot_image.dart';
 
 enum _Step { main, datePicker, categoryPicker, alertPicker }
 
 class TodoDetailSheet extends ConsumerStatefulWidget {
-  const TodoDetailSheet({super.key, required this.todoId, required this.isSomeday});
+  const TodoDetailSheet({super.key, required this.todo, required this.isSomeday});
 
-  final String todoId;
-  final bool   isSomeday;
+  final Todo todo;
+  final bool isSomeday;
 
   @override
   ConsumerState<TodoDetailSheet> createState() => _TodoDetailSheetState();
@@ -34,14 +34,12 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
   _Step _step        = _Step.main;
   bool  _initialized = false;
   bool  _isDone      = false;
-  bool  _textDirty   = false;
 
   final _titleController = TextEditingController();
   final _memoController  = TextEditingController();
   final _titleFocusNode  = FocusNode();
   final _memoFocusNode   = FocusNode();
   String         _selectedCategory   = '기타';
-  int?           _selectedCategoryId;
   TimeOfDay      _selectedTime       = const TimeOfDay(hour: 12, minute: 0);
   bool           _alarmEnabled       = false;
   TodoDateResult _dateResult         = const TodoDateResult(type: TodoDateType.someday);
@@ -52,8 +50,29 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
     super.initState();
     _titleController.addListener(_markDirty);
     _memoController.addListener(_markDirty);
-    _titleFocusNode.addListener(_onFocusChange);
-    _memoFocusNode.addListener(_onFocusChange);
+    _initFromTodo(widget.todo);
+  }
+
+  void _initFromTodo(Todo todo) {
+    _titleController.text = todo.title;
+    _memoController.text  = todo.memo ?? '';
+    _selectedCategory     = todo.category.name;
+    _isDone               = todo.isDone;
+    _wasTitleEmpty        = todo.title.trim().isEmpty;
+    if (todo.alarmTime != null) {
+      _selectedTime = todo.alarmTime!;
+      _alarmEnabled = todo.alarmEnabled;
+    }
+    _dateResult = TodoDateResult(
+      type:            todo.dateType,
+      date:            todo.date,
+      rangeStart:      todo.rangeStart,
+      rangeEnd:        todo.rangeEnd,
+      repeatStartDate: todo.repeatStartDate,
+      repeatEndDate:   todo.repeatEndDate,
+      repeatDays:      todo.repeatDays,
+    );
+    _initialized = true;
   }
 
   @override
@@ -66,9 +85,6 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
   }
 
   void _markDirty() {
-    if (_initialized) _textDirty = true;
-    // 제목 empty/non-empty 전이 시 확인 버튼 색을 갱신.
-    // 빈 제목으로는 저장 불가 정책이라 disable 신호가 즉시 반영되어야 한다.
     final isEmpty = _titleController.text.trim().isEmpty;
     if (isEmpty != _wasTitleEmpty) {
       _wasTitleEmpty = isEmpty;
@@ -78,75 +94,9 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
 
   bool _wasTitleEmpty = true;
 
-  // 제목/메모 포커스가 둘 다 빠졌을 때 자동 저장
-  void _onFocusChange() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      // 빈 제목이면 자동 저장 트리거하지 않음 — 확인 버튼 회색 정책과 일관.
-      // SnackBar 가 시트에 가려지는 문제로 안내도 불가능하므로 silent skip.
-      // dirty flag 도 그대로 유지 → 이후 사용자가 제목을 다시 채우고 포커스 빠지면 저장 발동.
-      if (_titleController.text.trim().isEmpty) return;
-      if (!_titleFocusNode.hasFocus && !_memoFocusNode.hasFocus &&
-          _textDirty && _initialized && !_isDone) {
-        _textDirty = false;
-        unawaited(_onSave(context, _isDone));
-      }
-    });
-  }
-
   void _goToStep(_Step next) {
     FocusScope.of(context).unfocus();
     setState(() => _step = next);
-  }
-
-  void _initEditFields(TodoDetailResponseDto detailDto) {
-    _titleController.text = detailDto.title;
-    _memoController.text  = detailDto.content ?? '';
-    _selectedCategory     = detailDto.category ?? '기타';
-    _selectedCategoryId   = detailDto.categoryId;
-
-    if (detailDto.alarmTime != null) {
-      final parts = detailDto.alarmTime!.split(':');
-      _selectedTime = TimeOfDay(
-        hour:   int.parse(parts[0]),
-        minute: int.parse(parts[1]),
-      );
-      _alarmEnabled = true;
-    } else {
-      _selectedTime = const TimeOfDay(hour: 12, minute: 0);
-      _alarmEnabled = false;
-    }
-
-    final sDate = detailDto.startDate != null ? DateTime.tryParse(detailDto.startDate!) : null;
-    final eDate = detailDto.endDate   != null ? DateTime.tryParse(detailDto.endDate!)   : null;
-
-    List<int>? restoredDays;
-    if (detailDto.type == 'RECURRING') {
-      if (detailDto.daysOfWeek != null && detailDto.daysOfWeek!.isNotEmpty) {
-        const codeToIndex = {'SUN': 0, 'MON': 1, 'TUE': 2, 'WED': 3, 'THU': 4, 'FRI': 5, 'SAT': 6};
-        restoredDays = (detailDto.daysOfWeek as List<String>)
-            .map((cd) => codeToIndex[cd.toUpperCase()])
-            .whereType<int>()
-            .toList();
-      } else if (sDate != null) {
-        final fw = sDate.weekday;
-        restoredDays = [fw == 7 ? 0 : fw];
-      }
-    }
-
-    _dateResult = TodoDateResult(
-      type: detailDto.type == 'PERIOD'
-          ? TodoDateType.range
-          : (detailDto.type == 'RECURRING'
-          ? TodoDateType.repeat
-          : (detailDto.type == 'SOMEDAY' ? TodoDateType.someday : TodoDateType.normal)),
-      date:            sDate,
-      rangeStart:      detailDto.type == 'PERIOD'    ? sDate : null,
-      rangeEnd:        detailDto.type == 'PERIOD'    ? eDate : null,
-      repeatStartDate: detailDto.type == 'RECURRING' ? sDate : null,
-      repeatEndDate:   detailDto.type == 'RECURRING' ? eDate : null,
-      repeatDays:      restoredDays,
-    );
   }
 
   String _formatTime(TimeOfDay t) {
@@ -171,10 +121,9 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
     try {
       final r       = _dateResult;
       final updated = Todo(
-        id:              widget.todoId,
+        id:              widget.todo.id,
         title:           title,
         category:        TodoCategory.fromName(_selectedCategory),
-        categoryId:      _selectedCategoryId,
         isDone:          isDone,
         memo:            _memoController.text.trim().isEmpty ? null : _memoController.text.trim(),
         alarmTime:       _alarmEnabled ? _selectedTime : null,
@@ -194,9 +143,6 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
           : await vm.updateTodo(updated);
 
       await vm.fetchTodos();
-      await vm.fetchCalendarData();
-
-      if (mounted) ref.invalidate(todoDetailProvider(widget.todoId));
     } catch (e) {
       await vm.fetchTodos();
       if (context.mounted) {
@@ -222,15 +168,9 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
       return;
     }
 
-    // _textDirty 를 먼저 false 로 — unfocus 로 인한 focus listener 가 중복 저장하지 않도록
-    final wasDirty = _textDirty;
-    _textDirty = false;
     FocusScope.of(context).unfocus();
     final nav = Navigator.of(context, rootNavigator: true);
-
-    if (wasDirty) {
-      await _onSave(context, _isDone);
-    }
+    await _onSave(context, _isDone);
     if (mounted) nav.pop();
   }
 
@@ -308,7 +248,6 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                 _dateResult = result;
                 _step       = _Step.main;
               });
-              unawaited(_onSave(context, _isDone));
             },
             onBack: () => _goToStep(_Step.main),
           ),
@@ -321,11 +260,9 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
             embedded:         true,
             onConfirm: (result) {
               setState(() {
-                _selectedCategory   = result.categoryName;
-                _selectedCategoryId = result.categoryId;
-                _step               = _Step.main;
+                _selectedCategory = result.categoryName;
+                _step             = _Step.main;
               });
-              unawaited(_onSave(context, _isDone));
             },
             onBack: () => _goToStep(_Step.main),
           ),
@@ -343,7 +280,6 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                 _alarmEnabled = result.enabled;
                 _step         = _Step.main;
               });
-              unawaited(_onSave(context, _isDone));
             },
             onBack: () => _goToStep(_Step.main),
           ),
@@ -355,48 +291,14 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
   Widget _buildMainStep(DoitdoColors c) {
     final categories = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
     Color getCategoryColor(String name) {
+      if (widget.todo.colorHex != null) return hexToColor(widget.todo.colorHex!);
       try {
         return categories.firstWhere((cat) => cat.categoryName == name).color;
       } catch (_) {
         return AppColors.category1;
       }
     }
-
-    // 초기화 완료 후 — detailAsync 를 더 이상 구독하지 않고 로컬 상태만 사용
-    if (_initialized) return _buildForm(c, getCategoryColor);
-
-    // 초기 데이터 로드 대기
-    final detailAsync = ref.watch(todoDetailProvider(widget.todoId));
-    return detailAsync.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: AppColors.calendarPoint),
-      ),
-      error: (err, _) => Center(
-        child: Text('상세 정보를 불러오지 못했습니다.\n$err',
-            style: AppTextStyles.bodyMedium),
-      ),
-      data: (detailDto) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          final allLocal = [
-            ...ref.read(todoViewModelProvider).allTodos,
-            ...ref.read(todoViewModelProvider).allSomedayTodos,
-          ];
-          final match = allLocal.where((t) => t.id == widget.todoId);
-          setState(() {
-            _initEditFields(detailDto);
-            _isDone      = match.isNotEmpty
-                ? match.first.isDone
-                : detailDto.status == 'DONE';
-            _wasTitleEmpty = _titleController.text.trim().isEmpty;
-            _initialized = true;
-          });
-        });
-        return const Center(
-          child: CircularProgressIndicator(color: AppColors.calendarPoint),
-        );
-      },
-    );
+    return _buildForm(c, getCategoryColor);
   }
 
   Widget _buildForm(DoitdoColors c, Color Function(String) getCategoryColor) {
@@ -432,8 +334,8 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                       Navigator.of(context, rootNavigator: true).pop();
                     }
                     widget.isSomeday
-                        ? vm.deleteSomedayTodo(widget.todoId)
-                        : vm.deleteTodo(widget.todoId);
+                        ? vm.deleteSomedayTodo(widget.todo.id)
+                        : vm.deleteTodo(widget.todo.id);
                   }
                 },
                 behavior: HitTestBehavior.opaque,
@@ -667,8 +569,7 @@ class _MascotBubble extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Image.asset('assets/images/Dooit.png',
-            width: 30, height: 30, filterQuality: FilterQuality.high),
+        const CharacterMascotImage(size: 36),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

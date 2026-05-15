@@ -12,11 +12,13 @@ import java.util.Set;
 public record CalendarItemResp(
 		Long todoId,
 		Long masterTodoId,
+		Long recurrenceGroupId,
 		LocalDate occurrenceDate,
 		boolean isVirtual,
 		String title,
 		String content,
 		String category,
+		String colorHex,
 		TodoType type,
 		Integer priority,
 		LocalDate startDate,
@@ -31,6 +33,7 @@ public record CalendarItemResp(
 			Todo todo,
 			Long masterTodoId,
 			String categoryName,
+			String colorHex,
 			TodoType responseType,
 			Set<DayOfWeek> responseDaysOfWeek,
 			int snoozedDays) {
@@ -38,11 +41,13 @@ public record CalendarItemResp(
 		return new CalendarItemResp(
 				todo.getTodoId(),
 				masterTodoId,
+				todo.getRecurrenceGroupId(),
 				occurrenceDate,
 				false,
 				todo.getTitle(),
 				todo.getContent(),
 				categoryName,
+				colorHex,
 				responseType,
 				todo.getPriority(),
 				todo.getStartDate(),
@@ -54,15 +59,17 @@ public record CalendarItemResp(
 		);
 	}
 
-	public static CalendarItemResp fromVirtual(Todo master, String categoryName, LocalDate occurrenceDate) {
+	public static CalendarItemResp fromVirtual(Todo master, String categoryName, String colorHex, LocalDate occurrenceDate) {
 		return new CalendarItemResp(
 				null,
 				master.getTodoId(),
+				master.getRecurrenceGroupId(),
 				occurrenceDate,
 				true,
 				master.getTitle(),
 				master.getContent(),
 				categoryName,
+				colorHex,
 				master.getType(),
 				master.getPriority(),
 				occurrenceDate,

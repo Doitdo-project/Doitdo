@@ -39,7 +39,10 @@ class AccountPage extends ConsumerWidget {
         data: (success) {
           if (success != true) return;
           if (!context.mounted) return;
-          context.go(AppRoutes.welcome);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!context.mounted) return;
+            context.go(AppRoutes.welcome);
+          });
         },
         error: (error, _) {
           if (!context.mounted) return;

@@ -1,7 +1,7 @@
 name: doitdo
 description: "다마고치를 키우는 TODO 앱"
 publish_to: 'none'
-version: 1.0.1+2
+version: 1.1.0+3
 
 environment:
   sdk: ^3.10.8
@@ -87,6 +87,12 @@ dependencies:
   # 위젯 자체 UI 는 SwiftUI(iOS)/RemoteViews(Android) 로 별도 작성. 본 패키지는 데이터 다리 + 갱신 트리거 역할만.
   # iOS App Group ID: group.com.d107.doitdo (Apple Developer Console + Xcode 양쪽 capability 등록 필요)
   home_widget: ^0.7.0
+  visibility_detector: ^0.4.0+2
+
+  # 네트워크 이미지 디스크 캐시 + 다운샘플링.
+  # 다마고치 캐릭터 thumbnailUrl / 방 가구·배경 url 등 자주 재진입하는 이미지를
+  # 메모리 + 디스크 모두에 캐시해 두번째 진입부터 즉시 그려지도록 한다.
+  cached_network_image: ^3.4.1
 
 dev_dependencies:
   flutter_test:
@@ -123,6 +129,7 @@ flutter:
     - assets/icons/
     - assets/animations/
     - assets/animations/eye/
+    - assets/animations/idle/
     - assets/mock_api/
     - assets/seeds/
     - .env

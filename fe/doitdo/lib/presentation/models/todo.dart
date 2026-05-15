@@ -54,7 +54,8 @@ class Todo {
     required this.id,
     required this.title,
     required this.category,
-    this.categoryId, // ✏️ 추가: 서버와 통신할 진짜 카테고리 ID
+    this.categoryId,
+    this.colorHex,
     required this.isDone,
     this.memo,
     this.alarmTime,
@@ -73,7 +74,8 @@ class Todo {
   final String id;
   final String title;
   final TodoCategory category;
-  final int? categoryId; // ✏️ 추가
+  final int? categoryId;
+  final String? colorHex;
   final bool isDone;
   final String? memo;
   final TimeOfDay? alarmTime;
@@ -130,7 +132,8 @@ class Todo {
     String? id,
     String? title,
     TodoCategory? category,
-    int? categoryId, // ✏️ 추가
+    int? categoryId,
+    String? colorHex,
     bool? isDone,
     String? memo,
     TimeOfDay? alarmTime,
@@ -149,7 +152,8 @@ class Todo {
       id: id ?? this.id,
       title: title ?? this.title,
       category: category ?? this.category,
-      categoryId: categoryId ?? this.categoryId, // ✏️ 추가
+      categoryId: categoryId ?? this.categoryId,
+      colorHex: colorHex ?? this.colorHex,
       isDone: isDone ?? this.isDone,
       memo: memo ?? this.memo,
       alarmTime: alarmTime ?? this.alarmTime,

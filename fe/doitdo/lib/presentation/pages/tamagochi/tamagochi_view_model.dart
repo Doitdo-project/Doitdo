@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -47,9 +48,10 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
   /// 동작:
   ///   1. 즉시 state 의 [TamagochiState.speechBubble] 을 랜덤 메시지로 갱신
   ///      (네트워크보다 먼저 사용자에게 반응을 보여준다).
-  ///   2. 백그라운드에서 `GET /api/characters/me/actions/IDLE` 호출.
+  ///   2. 백그라운드에서 `POST /api/characters/me/actions/IDLE` 호출.
   ///      응답으로 받은 gif URL 을 [actionUrl] 에 잠깐 세팅 → 평상시 EYE gif 위에
-  ///      덮어 그려 인터랙션 피드백. 실패해도 말풍선은 그대로 유지.
+  ///      덮어 그려 인터랙션 피드백. 실패해도 말풍선은 그대로 유지. earnedAmount
+  ///      > 0 이면 [CharacterTapGain] 시그널로 floating "+N" 도 함께 발화.
   ///
   /// 평상시(EYE) 는 로컬 에셋(`assets/gif/eye/{characterId}.gif`) 으로 처리하므로
   /// 이 함수에서 EYE 를 호출하지 않는다 — 매 탭마다 서버에 핑 보내는 비용 회피 +
@@ -58,37 +60,82 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
   ///
   /// [remainingTodayTodos] 는 "오늘의 할 일" 미완료 개수. 0 이면 칭찬 풀,
   /// 1 이상이면 잔여 todo 풀이 메시지 후보에 추가된다.
-  void onCharacterTap({required int remainingTodayTodos}) {
+  ///
+  /// [tapOrigin] 은 사용자가 탭한 글로벌 좌표. 응답에서 earnedAmount > 0 이면
+  /// 이 좌표를 가진 [CharacterTapGain] 시그널을 발화 — 페이지가 받아 floating
+  /// "+N" 위젯을 띄운다.
+  void onCharacterTap({
+    required int remainingTodayTodos,
+    required Offset tapOrigin,
+  }) {
     final message = _pickSpeechBubble(remainingTodayTodos);
     state = state.copyWith(speechBubble: message);
 
     if (_tapping) return;
     _tapping = true;
-    _triggerActionAsync(CharacterAction.idle)
+    _triggerActionAsync(CharacterAction.idle, tapOrigin: tapOrigin)
         .whenComplete(() => _tapping = false);
   }
 
-  Future<void> _triggerActionAsync(CharacterAction action) async {
+  /// 다음 [CharacterTapGain.tick] 값. action 응답마다 단조증가시켜 같은 amount
+  /// 라도 위젯 key 가 바뀌어 floating 인스턴스가 재생성되게 한다.
+  int _gainTick = 0;
+
+  /// 똥 청소 in-flight 여부. 빠른 연타로 같은 POOP 핑이 중복 발사되는 걸 막는다.
+  bool _cleaningPoop = false;
+
+  /// 방 안 똥을 탭했을 때 호출. `POST /api/characters/me/actions/POOP` 를 날려
+  /// BE 가 위생 상태를 false 로 토글하게 하고, 응답의 [earnedAmount] 가 > 0 이면
+  /// 다른 액션과 동일하게 [tapOrigin] (손가락 글로벌 좌표) 에서 floating "+N" 발화.
+  /// 페이지는 별도 brush.gif 오버레이를 2초 띄우는 UX 만 따로 관리한다.
+  Future<void> cleanupPoop({required Offset tapOrigin}) async {
+    if (_cleaningPoop) return;
+    _cleaningPoop = true;
     try {
-      final url = await _characterRepository.triggerAction(action);
+      await _triggerActionAsync(CharacterAction.poop, tapOrigin: tapOrigin);
+    } finally {
+      _cleaningPoop = false;
+    }
+  }
+
+  Future<void> _triggerActionAsync(
+    CharacterAction action, {
+    required Offset tapOrigin,
+  }) async {
+    try {
+      final result = await _characterRepository.triggerAction(action);
       if (!mounted) return;
-      if (url.isEmpty) return;
-      // gif 를 ImageCache 에 먼저 적재 → state 를 바꿔 위젯이 mount 될 때
-      // Image.network 가 즉시 첫 프레임을 그려 빈 영역(깜빡임) 이 안 생긴다.
-      await _precacheNetworkImage(url);
-      if (!mounted) return;
-      // 같은 url 이 다시 와도 위젯 key 가 바뀌면 gif 가 처음부터 재생된다.
-      state = state.copyWith(
-        actionUrl: url,
-        actionTick: state.actionTick + 1,
-      );
-      // 응답 도착 시점부터 2초 카운트 — 재탭/새 응답이 오면 새 타이머로 교체된다.
-      _revertTimer?.cancel();
-      _revertTimer = Timer(_actionDuration, () {
+      final url = result.url;
+      // 코인 보상은 gif 응답 유무와 독립적으로 처리 — 빈 url 이라도 earnedAmount
+      // 가 있으면 floating 시그널은 띄운다.
+      if (url.isNotEmpty) {
+        // gif 를 ImageCache 에 먼저 적재 → state 를 바꿔 위젯이 mount 될 때
+        // Image.network 가 즉시 첫 프레임을 그려 빈 영역(깜빡임) 이 안 생긴다.
+        await _precacheNetworkImage(url);
         if (!mounted) return;
-        if (state.actionUrl == null) return;
-        state = state.copyWith(clearActionUrl: true);
-      });
+        // 같은 url 이 다시 와도 위젯 key 가 바뀌면 gif 가 처음부터 재생된다.
+        state = state.copyWith(
+          actionUrl: url,
+          actionTick: state.actionTick + 1,
+        );
+        // 응답 도착 시점부터 2초 카운트 — 재탭/새 응답이 오면 새 타이머로 교체된다.
+        _revertTimer?.cancel();
+        _revertTimer = Timer(_actionDuration, () {
+          if (!mounted) return;
+          if (state.actionUrl == null) return;
+          state = state.copyWith(clearActionUrl: true);
+        });
+      }
+      if (result.earnedAmount > 0) {
+        _gainTick += 1;
+        state = state.copyWith(
+          lastGain: CharacterTapGain(
+            amount: result.earnedAmount,
+            origin: tapOrigin,
+            tick: _gainTick,
+          ),
+        );
+      }
     } catch (e, st) {
       // 인터랙션 핑이라 실패해도 사용자 알림은 안 띄운다 — 무한 스팸 방지 +
       // 화면이 멀쩡히 동작하는데 에러만 뜨는 어색함을 피하려는 의도.
@@ -102,10 +149,15 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
 
   /// [precacheImage] 를 BuildContext 없이 호출하기 위한 헬퍼.
   /// 첫 프레임 디코드까지 끝나면 resolve, 실패해도 그냥 통과시켜 후속 swap 을
-  /// 막지 않는다(그 경우 Image.network 가 직접 로드하므로 결과적으로 동일).
+  /// 막지 않는다(그 경우 CachedNetworkImage 가 직접 로드하므로 결과적으로 동일).
+  ///
+  /// 실제 표시에 [CachedNetworkImage] 를 쓰므로, 사전 디코드도 같은 provider
+  /// ([CachedNetworkImageProvider]) 로 해야 동일 캐시 키에 적재된다. `NetworkImage`
+  /// 를 쓰면 키가 달라 precache 가 무효가 된다.
   Future<void> _precacheNetworkImage(String url) async {
     final completer = Completer<void>();
-    final stream = NetworkImage(url).resolve(ImageConfiguration.empty);
+    final stream =
+        CachedNetworkImageProvider(url).resolve(ImageConfiguration.empty);
     late ImageStreamListener listener;
     listener = ImageStreamListener(
       (_, _) {

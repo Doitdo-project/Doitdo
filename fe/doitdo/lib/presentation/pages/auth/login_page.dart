@@ -73,7 +73,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           if (user == null) return;
           if (!mounted) return;
           // 온보딩(생년월일/약관) 미완료 사용자는 메인 탭이 아니라 온보딩 단계로 보낸다.
-          context.go(resolvePostAuthDestination(ref, user));
+          // addPostFrameCallback: GoRouter 가 Navigator 를 잠근 상태에서 중복 push
+          // 가 발생하지 않도록 현재 프레임 처리 완료 후 이동.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            context.go(resolvePostAuthDestination(ref, user));
+          });
         },
         error: (error, _) {
           if (!mounted) return;
@@ -96,9 +101,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     // (2) 그 안에서 ref.watch / ref.listen 이 정상 동작하도록 한다.
     // (Builder 안의 ref.listen 은 ConsumerStatefulElement 의 debugDoingBuild
     //  체크에 걸려 assertion fail.)
-    return Theme(
-      data: AppTheme.light,
-      child: Consumer(builder: (context, ref, _) => _buildBody(context, ref)),
+    //
+    // PopScope — `/find-password` 의 소셜 안내 카드 CTA 가 `context.go(/login)`
+    // 으로 진입할 때 스택이 [login] 만 남아 시스템 back 이 앱을 종료한다.
+    // 인증 흐름은 무조건 welcome 으로 회귀하도록 안전망을 둔다. 정상 push 진입엔
+    // canPop=true 라 기본 동작 그대로.
+    final canPop = Navigator.canPop(context);
+    return PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (!mounted) return;
+        context.go(AppRoutes.welcome);
+      },
+      child: Theme(
+        data: AppTheme.light,
+        child:
+            Consumer(builder: (context, ref, _) => _buildBody(context, ref)),
+      ),
     );
   }
 
@@ -124,44 +144,52 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         child: SafeArea(
           child: Column(
             children: [
-              const InlineBackBar(label: '로그인'),
+              InlineBackBar(
+                label: '로그인',
+                fallback: () => context.go(AppRoutes.welcome),
+              ),
               Expanded(
                 child: SingleChildScrollView(
                   padding: EdgeInsets.symmetric(horizontal: 28.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(height: 12.h),
-                      // 로고 + 작은 캐릭터를 같은 라인에 묶어 시각적 무게를 줄임.
-                      Center(
-                        child: Image.asset(
-                          'assets/images/doitdo__login_2.png',
-                          height: 72.h,
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.none,
+                  // AutofillGroup — iOS Keychain / Android Autofill Framework 가
+                  // 아이디/비밀번호 한 쌍을 인식하고 자동완성 + 저장 제안을 띄우도록.
+                  child: AutofillGroup(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SizedBox(height: 12.h),
+                        // 로고 + 작은 캐릭터를 같은 라인에 묶어 시각적 무게를 줄임.
+                        Center(
+                          child: Image.asset(
+                            'assets/images/doitdo__login_2.png',
+                            height: 72.h,
+                            fit: BoxFit.contain,
+                            filterQuality: FilterQuality.none,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 8.h),
-                      Center(
-                        child: Image.asset(
-                          'assets/images/doitdo__login_3.png',
-                          height: 28.h,
-                          fit: BoxFit.contain,
+                        SizedBox(height: 8.h),
+                        Center(
+                          child: Image.asset(
+                            'assets/images/doitdo__login_3.png',
+                            height: 28.h,
+                            fit: BoxFit.contain,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 28.h),
-                      AuthTextField(
-                        controller: _userIdCtrl,
-                        hint: '아이디',
-                        textInputAction: TextInputAction.next,
-                      ),
-                      AuthTextField(
-                        controller: _passwordCtrl,
-                        hint: '비밀번호',
-                        obscureText: true,
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: (_) => _submit(),
-                      ),
+                        SizedBox(height: 28.h),
+                        AuthTextField(
+                          controller: _userIdCtrl,
+                          hint: '아이디',
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.username],
+                        ),
+                        AuthTextField(
+                          controller: _passwordCtrl,
+                          hint: '비밀번호',
+                          obscureText: true,
+                          textInputAction: TextInputAction.done,
+                          autofillHints: const [AutofillHints.password],
+                          onSubmitted: (_) => _submit(),
+                        ),
 
                       // 인라인 에러 메시지 — 아이디/비번 불일치 등.
                       if (inlineError != null && isCredentialError) ...[
@@ -222,6 +250,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ),
                       SizedBox(height: 24.h),
                     ],
+                  ),
                   ),
                 ),
               ),

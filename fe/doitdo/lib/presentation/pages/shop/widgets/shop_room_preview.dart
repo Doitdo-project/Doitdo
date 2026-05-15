@@ -5,207 +5,152 @@ import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/pages/shop/shop_state.dart';
+import 'package:doitdo/presentation/widgets/common/room_furniture_slots.dart';
+
+/// 미리보기에선 캐릭터가 없어 가구가 박스 상단으로 떠보이는 인상을 준다. 슬롯
+/// 정의를 건드리지 않고, 가구별로 캔버스 height 의 이 비율만큼 y 좌표를 아래로
+/// 시프트해 분포를 하단으로 모은다(`top` 슬롯은 `+`, `bottom` 슬롯은 `-`). 단
+/// 박스 최상단 라인을 형성하는 창문/시계는 [_buildItem] 에서 제외 — 그쪽이
+/// 내려오면 다른 가구와의 상하 균형이 깨진다. 시각 보정용이라 값은 디자인 감으로
+/// 튜닝.
+const double _kPreviewYNudgeRatio = 0.05;
 
 /// 상점 상단의 "방 미리보기" 영역.
 ///
-/// 실제 가구 에셋이 들어오기 전 단계라, 카테고리별 Material 아이콘으로
-/// "벽(상단) — 바닥(하단 체커 패턴)" 구도를 흉내낸 플레이스홀더.
-/// 벽지/타일은 배경에 톤만 입히고, 나머지는 작은 카드로 표시한다.
+/// 다마고치 홈의 [RoomLayer] 와 동일한 슬롯 시스템 ([kRoomFurnitureSlots]) 을
+/// 사용해 같은 구도를 작은 카드 안에 그대로 축소해서 보여준다.
+/// 베이스 — `BACKGROUND` 카테고리 아이템을 `BoxFit.cover` 로 깔고, 그 위에 가구.
+/// 배경/가구 이미지가 비어있거나 로드 실패 시 카테고리 accent 톤으로 폴백.
+///
+/// 박스 AR 은 [computeRoomFrameAspect] 로 **홈 캐릭터 카드의 외곽 박스 AR 과 동일**
+/// 하게 잠근다 — 슬롯/캔버스 AR 만 맞추면 박스 안에서 캔버스가 차지하는 영역이
+/// 양쪽이 달라(홈은 상단 띠, 미리보기는 풀 채움) 가구의 박스 외곽 대비 위치가
+/// 어긋나 보인다. 외곽 AR 까지 통일하면 캔버스 fit 결과(상단 띠 비율 포함) 가
+/// 동일해 양쪽이 같은 구도로 보이게 된다. 박스 절대 크기는 부모 padding 만큼
+/// 작아진다.
 class ShopRoomPreview extends StatelessWidget {
   const ShopRoomPreview({super.key, required this.items});
 
   /// 방에 표시할 아이템들. 호출자가 placed + 미리보기 토글을 합성해서 넘긴다.
   final List<ShopItem> items;
 
-  static const _wallCategories = {
-    ShopCategory.window,
-    ShopCategory.clock,
-    ShopCategory.tv,
-  };
-  static const _floorCategories = {
-    ShopCategory.bed,
-    ShopCategory.desk,
-    ShopCategory.plant,
-    ShopCategory.carpet,
-    ShopCategory.closet,
-    ShopCategory.etc,
-  };
-
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final background = items
+        .where(
+          (it) =>
+              it.category == ShopCategory.background && it.imageUrl.isNotEmpty,
+        )
+        .firstOrNull;
+    final furniture = items
+        .where(
+          (it) =>
+              it.category != ShopCategory.background && it.imageUrl.isNotEmpty,
+        )
+        .toList(growable: false);
 
-    final wallpaper = _findFirst(ShopCategory.wallpaper);
-    final tile = _findFirst(ShopCategory.tile);
-    final wallItems = items.where((it) => _wallCategories.contains(it.category));
-    final floorItems = items.where((it) => _floorCategories.contains(it.category));
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20.r),
-      child: Container(
-        height: 180.h,
-        decoration: BoxDecoration(
-          color: colors.streakCardBg,
-          border: Border.all(color: colors.border),
-          borderRadius: BorderRadius.circular(20.r),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              flex: 5,
-              child: _Wall(
-                wallpaper: wallpaper,
-                items: wallItems.toList(growable: false),
-              ),
-            ),
-            Expanded(
-              flex: 4,
-              child: _Floor(
-                tile: tile,
-                items: floorItems.toList(growable: false),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  ShopItem? _findFirst(ShopCategory category) {
-    for (final it in items) {
-      if (it.category == category) return it;
-    }
-    return null;
-  }
-}
-
-class _Wall extends StatelessWidget {
-  const _Wall({required this.wallpaper, required this.items});
-
-  final ShopItem? wallpaper;
-  final List<ShopItem> items;
-
-  @override
-  Widget build(BuildContext context) {
-    // 배치된 벽지가 있으면 톤을 살짝 입혀 "벽지 적용된 느낌" 만 표시.
-    final tint = wallpaper == null
-        ? AppColors.streakBg
-        : Color.alphaBlend(
-            _categoryAccent(wallpaper!.category).withValues(alpha: 0.18),
-            AppColors.streakBg,
-          );
-
-    return Container(
-      color: tint,
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      alignment: Alignment.centerLeft,
-      child: Row(
-        children: [
-          for (final it in items) ...[
-            _PlacedChip(item: it, onWall: true),
-            SizedBox(width: 10.w),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _Floor extends StatelessWidget {
-  const _Floor({required this.tile, required this.items});
-
-  final ShopItem? tile;
-  final List<ShopItem> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned.fill(child: CustomPaint(painter: _CheckerPainter(tile: tile))),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              for (final it in items) _PlacedChip(item: it, onWall: false),
-            ],
+    return AspectRatio(
+      aspectRatio: computeRoomFrameAspect(context),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20.r),
+        child: Container(
+          decoration: BoxDecoration(
+            color: colors.streakCardBg,
+            border: Border.all(color: colors.border),
+            borderRadius: BorderRadius.circular(20.r),
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // 박스가 홈 카드와 같은 외곽 AR 이라 캔버스도 홈과 같은 비율로 박스
+              // 상단에 띠를 남기며 fit 된다 — 박스 안에서 가구가 그려지는 좌표계가
+              // 홈과 완전히 같아진다.
+              final canvas = computeRoomCanvasLayout(
+                parentWidth: constraints.maxWidth,
+                parentHeight: constraints.maxHeight,
+                aspect: kRoomCanvasAspect,
+              );
+              return Stack(
+                children: [
+                  if (background != null)
+                    Positioned.fill(
+                      // 같은 카테고리(BG) 안에서 imageUrl 만 바뀔 때 Image 위젯이
+                      // 새로 만들어지지 않도록 안정 key 지정. gaplessPlayback 으로
+                      // 새 이미지 디코드 전까지 직전 프레임 유지 → 빈 박스 노출 방지.
+                      child: Image.network(
+                        background.imageUrl,
+                        key: const ValueKey('shop-preview-bg'),
+                        fit: BoxFit.cover,
+                        alignment: Alignment.center,
+                        gaplessPlayback: true,
+                        filterQuality: FilterQuality.medium,
+                        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                      ),
+                    ),
+                  Positioned(
+                    left: canvas.offsetX,
+                    top: canvas.offsetY,
+                    width: canvas.width,
+                    height: canvas.height,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        for (final item in furniture)
+                          _buildItem(item, canvas.width, canvas.height),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
-      ],
+      ),
     );
   }
-}
 
-class _CheckerPainter extends CustomPainter {
-  _CheckerPainter({required this.tile});
-
-  final ShopItem? tile;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const cell = 18.0;
-    final base = tile == null
-        ? const Color(0xFFE9D7BF)
-        : Color.alphaBlend(
-            _categoryAccent(tile!.category).withValues(alpha: 0.25),
-            const Color(0xFFE9D7BF),
-          );
-    final dark = Color.alphaBlend(Colors.black.withValues(alpha: 0.06), base);
-
-    final basePaint = Paint()..color = base;
-    final darkPaint = Paint()..color = dark;
-    canvas.drawRect(Offset.zero & size, basePaint);
-
-    final cols = (size.width / cell).ceil();
-    final rows = (size.height / cell).ceil();
-    for (var r = 0; r < rows; r++) {
-      for (var c = 0; c < cols; c++) {
-        if ((r + c).isOdd) continue;
-        canvas.drawRect(
-          Rect.fromLTWH(c * cell, r * cell, cell, cell),
-          darkPaint,
-        );
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _CheckerPainter oldDelegate) =>
-      oldDelegate.tile?.id != tile?.id;
-}
-
-class _PlacedChip extends StatelessWidget {
-  const _PlacedChip({required this.item, required this.onWall});
-
-  final ShopItem item;
-  final bool onWall;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildItem(ShopItem item, double w, double h) {
+    final slot =
+        kRoomFurnitureSlots[item.category] ?? kRoomFurnitureFallbackSlot;
     final accent = _categoryAccent(item.category);
-    final size = onWall ? 32.w : 40.w;
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: accent.withValues(alpha: 0.4)),
+    // 미리보기 캐릭터 부재로 가구가 박스 상단부로 떠보이는 인상을 보정 — 가구
+    // 별로 y 비율을 [_kPreviewYNudgeRatio] 만큼 아래로 시프트한다. 단 창문 /
+    // 시계는 박스 최상단 라인을 형성하는 가구라 시프트하면 박스 가운데로 내려와
+    // 다른 가구와 상하 균형이 무너지므로 제외.
+    final isPinnedToTop =
+        item.category == ShopCategory.window ||
+        item.category == ShopCategory.clock;
+    final yNudge = isPinnedToTop ? 0.0 : _kPreviewYNudgeRatio;
+    // 카테고리별로 안정된 key — 같은 카테고리 슬롯 안에서 가구만 교체될 때
+    // Image 위젯이 remount 되어 디코드를 다시 하는 일이 없도록 한다.
+    // gaplessPlayback 으로 새 imageUrl 디코드가 끝나기 직전까지 프레임을 유지해
+    // 빈 자리를 보이지 않게 한다.
+    return Positioned(
+      key: ValueKey('shop-preview-slot-${item.category.name}'),
+      left: slot.left == null ? null : slot.left! * w,
+      right: slot.right == null ? null : slot.right! * w,
+      top: slot.top == null ? null : (slot.top! + yNudge) * h,
+      bottom: slot.bottom == null ? null : (slot.bottom! - yNudge) * h,
+      width: slot.width * w,
+      height: slot.height * h,
+      child: Image.network(
+        item.imageUrl,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.medium,
+        gaplessPlayback: true,
+        errorBuilder: (_, _, _) =>
+            Icon(item.category.icon, color: accent, size: 24.sp),
       ),
-      child: Icon(item.category.icon, size: size * 0.6, color: accent),
     );
   }
 }
 
 /// 더미 일러스트가 들어오기 전까지 카테고리별 톤을 분리해서 보여주기 위한 색.
-/// 실제 에셋이 들어오면 이 함수와 _PlacedChip 은 통째로 이미지로 교체된다.
+/// 카드/다이얼로그/룸 미리보기 폴백 아이콘 컬러로 공유된다.
 Color _categoryAccent(ShopCategory category) {
   switch (category) {
-    case ShopCategory.wallpaper:
+    case ShopCategory.background:
       return const Color(0xFFB69BD8);
-    case ShopCategory.tile:
-      return const Color(0xFFC9A47A);
     case ShopCategory.bed:
       return const Color(0xFFE48BA0);
     case ShopCategory.desk:
@@ -218,10 +163,8 @@ Color _categoryAccent(ShopCategory category) {
       return const Color(0xFF5A6470);
     case ShopCategory.plant:
       return const Color(0xFF6FA86F);
-    case ShopCategory.carpet:
+    case ShopCategory.rug:
       return const Color(0xFFD08AA0);
-    case ShopCategory.closet:
-      return const Color(0xFF8B7E66);
     case ShopCategory.etc:
       return AppColors.shopText;
   }
@@ -236,17 +179,21 @@ class ShopRoomPreviewEmpty extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Container(
-      height: 180.h,
-      decoration: BoxDecoration(
-        color: colors.streakCardBg,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: colors.border),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        '아직 배치된 가구가 없어요',
-        style: AppTextStyles.bodySmall.copyWith(color: colors.textHint),
+    // 빈 상태도 채워진 상태와 동일한 AR — 배치 직후 [ShopRoomPreview] 로 교체될 때
+    // 박스 크기가 흔들리지 않도록.
+    return AspectRatio(
+      aspectRatio: computeRoomFrameAspect(context),
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.streakCardBg,
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(color: colors.border),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          '아직 배치된 가구가 없어요',
+          style: AppTextStyles.bodySmall.copyWith(color: colors.textHint),
+        ),
       ),
     );
   }

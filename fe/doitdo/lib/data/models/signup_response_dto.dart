@@ -44,6 +44,8 @@ class SignUpResponseDto {
       );
 
   /// 로그인 직후 주입될 예정이라면 UserDto 로 변환해도 된다.
+  /// `dailyAttendanceClaimed` 는 SignUp 응답에 없으므로 [UserDto.fromJson] 폴백과
+  /// 동일하게 true(알림 안 띄움) 로 둔다 — 곧 로그인 응답으로 덮어쓴다.
   UserDto toDto() => UserDto(
         userId: userId,
         username: username,
@@ -51,5 +53,6 @@ class SignUpResponseDto {
         hasPassword: true,
         birthDateRegistered: birthDateRegistered,
         agreementsAccepted: agreementsAccepted,
+        dailyAttendanceClaimed: true,
       );
 }

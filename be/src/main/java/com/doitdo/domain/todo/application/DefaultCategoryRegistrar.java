@@ -31,7 +31,7 @@ public class DefaultCategoryRegistrar {
 	private final CategoryRepository categoryRepository;
 
 	public void registerFor(Long userId) {
-		Palette defaultPalette = paletteRepository.findFirstByOrderByPaletteIdAsc()
+		Palette defaultPalette = paletteRepository.findFirstByOrderByDisplayOrderAsc()
 				.orElseThrow(() -> new CustomException(CommonErrorCode.INTERNAL_SERVER_ERROR,
 						"기본 팔레트가 초기화되지 않았습니다."));
 

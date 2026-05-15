@@ -6,15 +6,18 @@ import com.doitdo.domain.todo.api.dto.resp.CalendarItemResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoCalendarResp;
 import com.doitdo.domain.todo.application.RecurrenceService;
 import com.doitdo.domain.todo.entity.Category;
+import com.doitdo.domain.todo.entity.PaletteColor;
 import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.entity.Todo.TodoType;
 import com.doitdo.domain.todo.repository.CategoryRepository;
+import com.doitdo.domain.todo.repository.PaletteColorRepository;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository.SnoozeCountProjection;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository.SnoozeOriginProjection;
 import com.doitdo.domain.todo.repository.TodoRepository;
 import com.doitdo.domain.todo.repository.TodoSpecifications;
 import com.doitdo.global.exception.CustomException;
+import com.doitdo.global.exception.ErrorCode;
 import com.doitdo.global.exception.TodoErrorCode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -34,7 +37,6 @@ import org.springframework.data.domain.Sort.Order;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 @Slf4j
 @Service
@@ -43,6 +45,7 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 
 	private final TodoRepository todoRepository;
 	private final CategoryRepository categoryRepository;
+	private final PaletteColorRepository paletteColorRepository;
 	private final SnoozeHistoryRepository snoozeHistoryRepository;
 
 	@Override
@@ -50,14 +53,9 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 	public TodoCalendarResp calendar(Long userId, TodoCalendarReq req) {
 		validateCalendarRange(req);
 
-		Long categoryId = resolveCategoryId(userId, req.category());
-		if (StringUtils.hasText(req.category()) && categoryId == null) {
-			return new TodoCalendarResp(List.of());
-		}
-
 		Specification<Todo> baseSpec = TodoSpecifications.ownerAndActive(userId)
 				.and(TodoSpecifications.overlappingRange(req.from(), req.to()))
-				.and(TodoSpecifications.byCategoryId(categoryId));
+				.and(TodoSpecifications.byCategoryName(req.category()));
 
 		List<Todo> overlappingTodos = todoRepository.findAll(
 				baseSpec,
@@ -71,7 +69,8 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 				.filter(todo -> todo.getType() != TodoType.RECURRING)
 				.toList();
 
-		Map<Long, String> categoryNameById = buildCategoryNameMap(overlappingTodos);
+		Map<String, Integer> activeColorByName = buildActiveCategoryColorIdByName(userId);
+		Map<Integer, String> hexByColorId = buildPaletteHexByColorId();
 		Map<Long, Integer> snoozeCountByTodoId = buildSnoozeCountMap(actualTodos);
 		Map<Long, LocalDate> originalOccurrenceByTodoId = buildOriginalOccurrenceMap(actualTodos);
 		Map<Long, Todo> mastersById = recurringMasters.stream()
@@ -80,6 +79,10 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 				.collect(Collectors.groupingBy(Todo::getTitle));
 
 		Map<Long, Set<LocalDate>> actualizedOccurrencesByMasterId = new HashMap<>();
+		loadRecurringInstanceMarkers(userId, req, recurringMasters)
+				.forEach(marker -> actualizedOccurrencesByMasterId
+						.computeIfAbsent(marker.getMasterTodoId(), ignored -> new java.util.HashSet<>())
+						.add(marker.getStartDate()));
 		List<CalendarItemResp> items = new ArrayList<>();
 
 		for (Todo actualTodo : actualTodos) {
@@ -92,10 +95,13 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 				actualizedOccurrencesByMasterId.get(matchedMaster.getTodoId()).add(actualTodo.getStartDate());
 			}
 
+			String colorHex = resolveColorHex(actualTodo.getCategoryName(), actualTodo.getCategoryColorId(),
+					activeColorByName, hexByColorId);
 			CalendarItemResp item = toActualCalendarItem(
 					actualTodo,
 					matchedMaster,
-					actualTodo.getCategoryId() != null ? categoryNameById.get(actualTodo.getCategoryId()) : null,
+					actualTodo.getCategoryName(),
+					colorHex,
 					snoozeCountByTodoId.getOrDefault(actualTodo.getTodoId(), 0)
 			);
 			if (matchesCalendarFilters(item, req)) {
@@ -110,9 +116,12 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 					continue;
 				}
 
+				String colorHex = resolveColorHex(master.getCategoryName(), master.getCategoryColorId(),
+						activeColorByName, hexByColorId);
 				CalendarItemResp item = CalendarItemResp.fromVirtual(
 						master,
-						master.getCategoryId() != null ? categoryNameById.get(master.getCategoryId()) : null,
+						master.getCategoryName(),
+						colorHex,
 						occurrenceDate
 				);
 				if (matchesCalendarFilters(item, req)) {
@@ -133,7 +142,29 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 		if (todo.getType() != TodoType.RECURRING) {
 			return todo;
 		}
-		return materializeRecurringInstance(userId, todo, req);
+		LocalDate occurrenceDate = req != null ? req.occurrenceDate() : null;
+		return materializeRecurringOccurrence(userId, todo, occurrenceDate, TodoErrorCode.T05_004);
+	}
+
+	@Override
+	public Todo materializeRecurringOccurrence(Long userId, Todo master, LocalDate occurrenceDate) {
+		return materializeRecurringOccurrence(userId, master, occurrenceDate, TodoErrorCode.T03_004);
+	}
+
+	private Todo materializeRecurringOccurrence(
+			Long userId,
+			Todo master,
+			LocalDate occurrenceDate,
+			ErrorCode invalidOccurrenceErrorCode) {
+		if (occurrenceDate == null || !isOccurrenceOfMaster(master, occurrenceDate)) {
+			throw new CustomException(invalidOccurrenceErrorCode);
+		}
+
+		return todoRepository.findByUserIdAndMasterTodoIdAndStartDateAndIsDeletedFalse(
+						userId,
+						master.getTodoId(),
+						occurrenceDate)
+				.orElseGet(() -> saveRecurringInstanceIdempotently(master, occurrenceDate));
 	}
 
 	private void validateCalendarRange(TodoCalendarReq req) {
@@ -142,25 +173,32 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 		}
 	}
 
-	private Long resolveCategoryId(Long userId, String categoryName) {
-		if (!StringUtils.hasText(categoryName)) {
-			return null;
-		}
-		return categoryRepository.findByCategoryNameAndUserId(categoryName, userId)
-				.map(Category::getCategoryId)
-				.orElse(null);
+	private Map<String, Integer> buildActiveCategoryColorIdByName(Long userId) {
+		return categoryRepository.findAllByUserIdOrderByCategoryIdAsc(userId).stream()
+				.collect(Collectors.toMap(Category::getCategoryName, Category::getColorId, (a, b) -> a));
 	}
 
-	private Map<Long, String> buildCategoryNameMap(List<Todo> todos) {
-		Set<Long> categoryIds = todos.stream()
-				.map(Todo::getCategoryId)
-				.filter(id -> id != null)
-				.collect(Collectors.toSet());
+	private Map<Integer, String> buildPaletteHexByColorId() {
+		return paletteColorRepository.findAll().stream()
+				.collect(Collectors.toMap(PaletteColor::getColorId, PaletteColor::getColor));
+	}
 
-		return categoryIds.isEmpty()
-				? Map.of()
-				: categoryRepository.findAllById(categoryIds).stream()
-						.collect(Collectors.toMap(Category::getCategoryId, Category::getCategoryName));
+	private static String resolveColorHex(
+			String categoryName,
+			Integer snapshotColorId,
+			Map<String, Integer> activeColorIdByName,
+			Map<Integer, String> hexByColorId) {
+		if (categoryName == null) {
+			return null;
+		}
+		Integer colorId = activeColorIdByName.get(categoryName);
+		if (colorId == null) {
+			colorId = snapshotColorId;
+		}
+		if (colorId == null) {
+			return null;
+		}
+		return hexByColorId.get(colorId);
 	}
 
 	private Map<Long, Integer> buildSnoozeCountMap(List<Todo> todos) {
@@ -191,11 +229,26 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 						));
 	}
 
-	private CalendarItemResp toActualCalendarItem(Todo actualTodo, Todo matchedMaster, String categoryName, int snoozedDays) {
+	private List<Todo> loadRecurringInstanceMarkers(Long userId, TodoCalendarReq req, List<Todo> recurringMasters) {
+		List<Long> masterIds = recurringMasters.stream()
+				.map(Todo::getTodoId)
+				.toList();
+
+		return masterIds.isEmpty()
+				? List.of()
+				: todoRepository.findRecurringInstanceMarkers(userId, masterIds, req.from(), req.to());
+	}
+
+	private CalendarItemResp toActualCalendarItem(
+			Todo actualTodo,
+			Todo matchedMaster,
+			String categoryName,
+			String colorHex,
+			int snoozedDays) {
 		TodoType responseType = matchedMaster != null ? TodoType.RECURRING : actualTodo.getType();
 		Set<DayOfWeek> responseDaysOfWeek = matchedMaster != null ? matchedMaster.getDaysOfWeek() : actualTodo.getDaysOfWeek();
 		Long masterTodoId = matchedMaster != null ? matchedMaster.getTodoId() : null;
-		return CalendarItemResp.fromActual(actualTodo, masterTodoId, categoryName, responseType, responseDaysOfWeek, snoozedDays);
+		return CalendarItemResp.fromActual(actualTodo, masterTodoId, categoryName, colorHex, responseType, responseDaysOfWeek, snoozedDays);
 	}
 
 	private Todo findMatchingRecurringMaster(
@@ -245,19 +298,6 @@ public class RecurrenceServiceImpl implements RecurrenceService {
 
 	private LocalDate calendarSortDate(CalendarItemResp item) {
 		return item.occurrenceDate() != null ? item.occurrenceDate() : item.startDate();
-	}
-
-	private Todo materializeRecurringInstance(Long userId, Todo master, TodoSnoozeReq req) {
-		LocalDate occurrenceDate = req != null ? req.occurrenceDate() : null;
-		if (occurrenceDate == null || !isOccurrenceOfMaster(master, occurrenceDate)) {
-			throw new CustomException(TodoErrorCode.T05_004);
-		}
-
-		return todoRepository.findByUserIdAndMasterTodoIdAndStartDateAndIsDeletedFalse(
-						userId,
-						master.getTodoId(),
-						occurrenceDate)
-				.orElseGet(() -> saveRecurringInstanceIdempotently(master, occurrenceDate));
 	}
 
 	private Todo saveRecurringInstanceIdempotently(Todo master, LocalDate occurrenceDate) {

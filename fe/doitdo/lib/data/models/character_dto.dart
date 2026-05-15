@@ -14,7 +14,8 @@ import 'package:doitdo/domain/entities/character.dart';
 ///   "canEvolve": false,     // BABY/TEEN 에서 currentExp >= requiredExp
 ///   "canFarewell": false,   // ADULT 에서 currentExp >= requiredExp
 ///   "equippedUserItemId": 0,
-///   "userCharacterId": 0
+///   "userCharacterId": 0,
+///   "poop": false           // 위생 상태 — true 면 방 안에 똥이 노출됨
 /// }
 /// ```
 class CharacterDto {
@@ -29,6 +30,7 @@ class CharacterDto {
     required this.canEvolve,
     required this.canFarewell,
     required this.userCharacterId,
+    required this.poop,
     this.equippedUserItemId,
   });
 
@@ -42,6 +44,10 @@ class CharacterDto {
   final bool canEvolve;
   final bool canFarewell;
   final int userCharacterId;
+
+  /// 방 안에 똥이 있는지. true 면 캐릭터 카드에 `poop.png` 가 표시된다.
+  /// BE 가 점진 배포 중이라 누락 시 false 폴백 — 잘못된 똥 노출보다 누락이 안전.
+  final bool poop;
 
   /// 아직 아이템을 장착하지 않은 상태(0 또는 null)면 null 로 정규화.
   final int? equippedUserItemId;
@@ -59,6 +65,7 @@ class CharacterDto {
       canEvolve: (json['canEvolve'] as bool?) ?? false,
       canFarewell: (json['canFarewell'] as bool?) ?? false,
       userCharacterId: (json['userCharacterId'] as num?)?.toInt() ?? 0,
+      poop: (json['poop'] as bool?) ?? false,
       equippedUserItemId: rawEquipped is num && rawEquipped.toInt() != 0
           ? rawEquipped.toInt()
           : null,
@@ -78,5 +85,6 @@ class CharacterDto {
         canEvolve: canEvolve,
         canFarewell: canFarewell,
         equippedUserItemId: equippedUserItemId,
+        poop: poop,
       );
 }

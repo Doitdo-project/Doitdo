@@ -21,10 +21,17 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.FarewellResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.HatchCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.UpdateCharacterNameResp;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
+import com.doitdo.domain.tamagotchi.entity.CharacterActionType;
 import com.doitdo.global.api.response.GlobalApiResponse;
 import com.doitdo.global.swagger.ApiErrorCodes;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
@@ -112,11 +119,34 @@ public class TamagotchiController {
 		return GlobalApiResponse.ok(tamagotchiService.approveIndependence(userDetails.getUserId(), request.approved()));
 	}
 
-	@Operation(summary = "캐릭터 액션 URL 조회", description = "현재 사용자의 활성 캐릭터에서 액션 타입에 해당하는 URL을 조회한다.")
-	@ApiErrorCodes({"M04-002", "M09-001", "M09-002", "M09-003"})
-	@GetMapping("/me/actions/{actionType}")
+	@Operation(summary = "캐릭터 액션 실행", description = "현재 사용자의 활성 캐릭터에서 액션 타입에 해당하는 URL을 조회하고 액션별 보상을 처리한다.")
+	@ApiErrorCodes({"M04-002", "M09-001", "M09-002", "M09-004", "M09-003"})
+	@ApiResponses(@ApiResponse(
+		responseCode = "200",
+		description = "성공 - POOP 호출 예시",
+		content = @Content(
+			mediaType = "application/json",
+			examples = @ExampleObject(
+				name = "POOP 성공",
+				value = """
+					{
+					  "status": 200,
+					  "message": "OK",
+					  "data": {
+					    "actionUrl": null,
+					    "earnedAmount": 50,
+					    "balanceAfter": 1234
+					  }
+					}
+					"""
+			)
+		)
+	))
+	@PostMapping("/me/actions/{actionType}")
 	public GlobalApiResponse<CharacterActionUrlResp> getMyCharacterActionUrl(
-		@PathVariable String actionType,
+		@PathVariable
+		@Parameter(description = "캐릭터 액션 타입", example = "POOP", schema = @Schema(implementation = CharacterActionType.class))
+		CharacterActionType actionType,
 		@AuthenticationPrincipal CustomUserDetails userDetails
 	) {
 		return GlobalApiResponse.ok(tamagotchiService.getMyCharacterActionUrl(userDetails.getUserId(), actionType));

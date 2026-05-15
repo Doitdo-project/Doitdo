@@ -1,6 +1,7 @@
 import 'package:doitdo/core/network/base_repository.dart';
 import 'package:doitdo/data/datasources/character_api.dart';
 import 'package:doitdo/domain/entities/character.dart';
+import 'package:doitdo/domain/entities/evolution.dart';
 import 'package:doitdo/domain/repositories/character_repository.dart';
 import 'package:doitdo/presentation/models/collection_entry.dart';
 
@@ -28,13 +29,17 @@ class CharacterRepositoryImpl extends BaseRepository
       ).then((dto) => dto.toEntity());
 
   @override
-  Future<void> evolveCharacter(int userCharacterId) =>
-      safeApiCall(() => _api.evolveCharacter(userCharacterId));
+  Future<Evolution> evolveCharacter(int userCharacterId) =>
+      safeApiCall(() => _api.evolveCharacter(userCharacterId))
+          .then((dto) => dto.toEntity());
 
   @override
-  Future<String> triggerAction(CharacterAction action) =>
-      safeApiCall(() => _api.triggerCharacterAction(action.serverValue))
-          .then((dto) => dto.actionUrl);
+  Future<({String url, int earnedAmount})> triggerAction(
+    CharacterAction action,
+  ) =>
+      safeApiCall(() => _api.triggerCharacterAction(action.serverValue)).then(
+        (dto) => (url: dto.actionUrl, earnedAmount: dto.earnedAmount),
+      );
 
   @override
   Future<List<CollectionEntry>> getEncyclopedia() => safeApiCall(

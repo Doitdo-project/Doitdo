@@ -10,8 +10,11 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/notification/notification_view_model.dart';
-import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart'; // ✅ 추가
+import 'package:doitdo/data/models/category_dto.dart';
+import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
+import 'package:doitdo/presentation/pages/todo/todo_add_notifier.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
+import 'package:doitdo/presentation/widgets/common/character_mascot_image.dart';
 import 'package:doitdo/presentation/widgets/common/todo_item_card.dart';
 import 'package:doitdo/presentation/providers/home_scroll_provider.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
@@ -201,7 +204,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
     showModalBottomSheet(
       context: context, isScrollControlled: true,
       backgroundColor: Colors.transparent, useRootNavigator: true,
-      builder: (_) => TodoDetailSheet(todoId: todo.id, isSomeday: isSomeday),
+      builder: (_) => TodoDetailSheet(todo: todo, isSomeday: isSomeday),
     );
   }
 
@@ -215,20 +218,25 @@ class _TodoPageState extends ConsumerState<TodoPage> {
     ref.listen(calendarTodayTriggerProvider, (prev, next) {
       if (prev != null && next > prev) _jumpToToday();
     });
+    ref.listen<AsyncValue<void>>(todoAddNotifierProvider, (_, next) {
+      next.whenOrNull(
+        error: (_, __) => ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('할 일 저장에 실패했어요. 다시 시도해주세요.')),
+        ),
+      );
+    });
 
     final state  = ref.watch(todoViewModelProvider);
     final vm     = ref.read(todoViewModelProvider.notifier);
     final colors = context.colors;
 
-    // ✅ 서버 카테고리 목록 구독 (실제 colorId 기반 색상 사용)
     final categoryList = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
-
-    // ✅ 카테고리 이름으로 실제 Color를 찾는 헬퍼
-    Color getDotColor(String categoryName) {
+    Color getDotColor(Todo t) {
       try {
-        return categoryList.firstWhere((c) => c.categoryName == categoryName).color;
+        return categoryList.firstWhere((c) => c.categoryName == t.category.name).color;
       } catch (_) {
-        return AppColors.category1; // detail sheet와 동일한 fallback
+        if (t.colorHex != null) return hexToColor(t.colorHex!);
+        return AppColors.category1;
       }
     }
 
@@ -341,8 +349,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                   ),
 
                   TableCalendar(
-                    // ✅ 카테고리 목록이 로드되면 마커를 강제로 다시 렌더링
-                    key: ValueKey(categoryList.map((c) => '${c.categoryName}:${c.color.value}').join()),
+                    key: const ValueKey('calendar'),
                     firstDay: DateTime.utc(2020, 1, 1),
                     lastDay: DateTime.utc(2030, 12, 31),
                     focusedDay: state.focusedDay,
@@ -418,14 +425,22 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                         }
                         if (todos.isEmpty) return const SizedBox.shrink();
 
-                        // ✅ 2. 카테고리별로 DOT 중복 제거 (같은 카테고리는 1개만)
+                        // ✅ 2. 카테고리별 개수 집계 후 많은 순 정렬, 카테고리당 1개 DOT
+                        final countByCategory = <String, int>{};
+                        for (final t in todos) {
+                          countByCategory[t.category.name] = (countByCategory[t.category.name] ?? 0) + 1;
+                        }
+                        final sortedTodos = todos.toList()
+                          ..sort((a, b) => (countByCategory[b.category.name] ?? 0)
+                              .compareTo(countByCategory[a.category.name] ?? 0));
                         final seen = <String>{};
-                        final uniqueTodos = todos.where((t) {
-                          final name = t.category.name;
-                          if (seen.contains(name)) return false;
-                          seen.add(name);
-                          return true;
-                        }).take(6).toList();
+                        final uniqueTodos = <Todo>[];
+                        for (final t in sortedTodos) {
+                          if (seen.add(t.category.name)) {
+                            uniqueTodos.add(t);
+                            if (uniqueTodos.length >= 6) break;
+                          }
+                        }
 
                         final row1 = uniqueTodos.take(3).toList();
                         final row2 = uniqueTodos.length > 3 ? uniqueTodos.sublist(3) : <Todo>[];
@@ -439,7 +454,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                             // 좌우로 1픽셀씩 마진을 줍니다. (점 사이 간격은 여전히 2픽셀이 됩니다)
                             margin: const EdgeInsets.symmetric(horizontal: 1),
                             decoration: BoxDecoration(
-                              color: getDotColor(t.category.name)
+                              color: getDotColor(t)
                                   .withOpacity(isOutside ? 0.3 : 1.0),
                               shape: BoxShape.circle,
                             ),
@@ -495,7 +510,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Image.asset('assets/images/Dooit.png', width: 26, height: 26, filterQuality: FilterQuality.high),
+                const CharacterMascotImage(size: 36),
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -540,7 +555,11 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                     onReorderToday: vm.reorderTodo,
                     onReorderSomeday: vm.reorderSomedayTodo,
                     onMoveToSomeday: vm.moveToSomeday,
-                    onMoveToToday: vm.moveToToday,
+                    onMoveToToday: (id, {targetIndex = -1}) => vm.moveToToday(
+                      id,
+                      targetIndex: targetIndex,
+                      targetDate: state.selectedDay,
+                    ),
                     onSnooze: vm.snoozeTodo,
                     onAddToday: () => _openAddSheet(context, state.selectedDay ?? DateTime.now()),
                     onAddSomeday: () => _openAddSheet(context, null),
@@ -822,7 +841,7 @@ class _SectionHeader extends StatelessWidget {
     // ✅ 상단 패딩을 크게 해서 오늘 섹션 마지막 아이템과 헤더 사이
     // 드롭 감지 영역을 충분히 확보 (off-by-one 방지)
     return Padding(
-      padding: const EdgeInsets.only(top: 28, bottom: 8),
+      padding: const EdgeInsets.only(top: 16, bottom: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

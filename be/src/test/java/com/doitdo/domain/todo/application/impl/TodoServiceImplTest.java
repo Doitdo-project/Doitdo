@@ -6,12 +6,15 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.argThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.doitdo.domain.streak.application.UserStreakService;
 import com.doitdo.domain.todo.api.dto.req.TodoCreateReq;
 import com.doitdo.domain.todo.api.dto.req.TodoListReq;
 import com.doitdo.domain.todo.api.dto.req.TodoPriorityChangeReq;
+import com.doitdo.domain.todo.api.dto.req.TodoStatusChangeReq;
 import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoListResp;
@@ -19,25 +22,31 @@ import com.doitdo.domain.todo.application.RecurrenceService;
 import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.entity.Todo.TodoStatus;
 import com.doitdo.domain.todo.entity.Todo.TodoType;
+import com.doitdo.domain.todo.event.TodoCompletedEvent;
 import com.doitdo.domain.todo.repository.CategoryRepository;
+import com.doitdo.domain.todo.repository.PaletteColorRepository;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository;
 import com.doitdo.domain.todo.repository.TodoListQueryRepository;
 import com.doitdo.domain.todo.repository.TodoRepository;
+import com.doitdo.domain.todo.repository.TodoRepository.ExcludedDateProjection;
 import com.doitdo.domain.todo.repository.projection.TodoListRow;
 import com.doitdo.global.cache.CacheEvictHelper;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TodoErrorCode;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class TodoServiceImplTest {
@@ -50,6 +59,9 @@ class TodoServiceImplTest {
 
 	@Mock
 	private CategoryRepository categoryRepository;
+
+	@Mock
+	private PaletteColorRepository paletteColorRepository;
 
 	@Mock
 	private SnoozeHistoryRepository snoozeHistoryRepository;
@@ -74,6 +86,7 @@ class TodoServiceImplTest {
 				todoRepository,
 				todoListQueryRepository,
 				categoryRepository,
+				paletteColorRepository,
 				snoozeHistoryRepository,
 				recurrenceService,
 				userStreakService,
@@ -90,6 +103,7 @@ class TodoServiceImplTest {
 				"todo",
 				"memo",
 				"work",
+				null,
 				TodoType.NORMAL,
 				1,
 				"09:00",
@@ -98,6 +112,8 @@ class TodoServiceImplTest {
 				"WED,MON",
 				TodoStatus.TODO,
 				LocalDateTime.parse("2026-05-06T10:00:00"),
+				null,
+				null,
 				2L);
 		given(todoListQueryRepository.findListRows(
 				eq(1L),
@@ -117,8 +133,119 @@ class TodoServiceImplTest {
 		TodoDetailResp item = resp.items().getFirst();
 		assertThat(item.category()).isEqualTo("work");
 		assertThat(item.daysOfWeek()).containsExactly("MON", "WED");
+		assertThat(item.masterTodoId()).isNull();
+		assertThat(item.recurrenceGroupId()).isNull();
+		assertThat(item.occurrenceDate()).isNull();
 		assertThat(item.snoozedDays()).isEqualTo(2);
-		verifyNoInteractions(todoRepository, categoryRepository, snoozeHistoryRepository);
+		assertThat(item.excludedDates()).isEmpty();
+		// list 는 NORMAL TODO 에 대해 todoRepository / snoozeHistoryRepository 와는
+		// 상호작용하지 않아야 함 (N+1 회피).
+		// categoryRepository 와 paletteColorRepository 는 활성 카테고리·색상 맵 빌드를 위해
+		// 한 번씩 호출되므로 verifyNoInteractions 대상에서 제외한다.
+		verifyNoInteractions(todoRepository, snoozeHistoryRepository);
+	}
+
+	@Test
+	void listIncludesExcludedDatesForRecurringMasters() {
+		LocalDate baseDate = LocalDate.parse("2026-05-06");
+		TodoListReq req = new TodoListReq("today", null, null, null, baseDate, null, null);
+		TodoListRow row = new TodoListRow(
+				10L,
+				"repeat",
+				"memo",
+				"work",
+				null,
+				TodoType.RECURRING,
+				1,
+				"09:00",
+				baseDate,
+				null,
+				"WED,MON",
+				TodoStatus.TODO,
+				LocalDateTime.parse("2026-05-06T10:00:00"),
+				null,
+				10L,
+				2L);
+		given(todoListQueryRepository.findListRows(
+				eq(1L),
+				eq("today"),
+				isNull(),
+				isNull(),
+				isNull(),
+				eq(baseDate),
+				any(LocalDate.class),
+				isNull(),
+				isNull()))
+				.willReturn(List.of(row));
+		given(todoRepository.findExcludedDatesByMasterTodoIds(1L, List.of(10L)))
+				.willReturn(List.of(excludedDate(10L, LocalDate.parse("2026-05-14"))));
+
+		TodoListResp resp = service.list(1L, req);
+
+		assertThat(resp.items()).hasSize(1);
+		TodoDetailResp item = resp.items().getFirst();
+		assertThat(item.category()).isEqualTo("work");
+		assertThat(item.daysOfWeek()).containsExactly("MON", "WED");
+		assertThat(item.snoozedDays()).isEqualTo(2);
+		assertThat(item.excludedDates()).containsExactly(LocalDate.parse("2026-05-14"));
+		assertThat(item.recurrenceGroupId()).isEqualTo(10L);
+		verifyNoInteractions(snoozeHistoryRepository);
+	}
+
+	@Test
+	void listIncludesMasterTodoIdAndOccurrenceDateForRecurringInstances() {
+		LocalDate baseDate = LocalDate.parse("2026-05-21");
+		TodoListReq req = new TodoListReq("all", null, null, null, baseDate, null, null);
+		TodoListRow row = new TodoListRow(
+				25L,
+				"override",
+				"memo",
+				"work",
+				null,
+				TodoType.NORMAL,
+				1,
+				"12:10",
+				baseDate,
+				null,
+				null,
+				TodoStatus.TODO,
+				LocalDateTime.parse("2026-05-21T10:00:00"),
+				10L,
+				10L,
+				0L);
+		given(todoListQueryRepository.findListRows(
+				eq(1L),
+				eq("all"),
+				isNull(),
+				isNull(),
+				isNull(),
+				eq(baseDate),
+				any(LocalDate.class),
+				isNull(),
+				isNull()))
+				.willReturn(List.of(row));
+
+		TodoListResp resp = service.list(1L, req);
+
+		TodoDetailResp item = resp.items().getFirst();
+		assertThat(item.masterTodoId()).isEqualTo(10L);
+		assertThat(item.recurrenceGroupId()).isEqualTo(10L);
+		assertThat(item.occurrenceDate()).isEqualTo(baseDate);
+		assertThat(item.alertTime()).isEqualTo("12:10");
+	}
+
+	@Test
+	void detailIncludesExcludedDatesForRecurringMaster() {
+		Todo master = recurringMaster();
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+		given(snoozeHistoryRepository.countByTodoId(10L)).willReturn(0L);
+		given(todoRepository.findExcludedDatesByMasterTodoIds(1L, List.of(10L)))
+				.willReturn(List.of(excludedDate(10L, LocalDate.parse("2026-05-14"))));
+
+		TodoDetailResp resp = service.detail(1L, 10L);
+
+		assertThat(resp.excludedDates()).containsExactly(LocalDate.parse("2026-05-14"));
+		assertThat(resp.recurrenceGroupId()).isEqualTo(10L);
 	}
 
 	@Test
@@ -157,6 +284,52 @@ class TodoServiceImplTest {
 				.isInstanceOf(CustomException.class)
 				.satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
 						.isEqualTo(TodoErrorCode.TODO_RECURRING_START_DATE_DAY_MISMATCH));
+	}
+
+	@Test
+	void createRecurringAssignsOwnTodoIdAsRecurrenceGroupId() {
+		AtomicReference<Todo> saved = new AtomicReference<>();
+		given(todoRepository.findMaxPriorityForNonSomeday(1L)).willReturn(0);
+		given(todoRepository.save(any(Todo.class))).willAnswer(invocation -> {
+			Todo todo = invocation.getArgument(0);
+			ReflectionTestUtils.setField(todo, "todoId", 10L);
+			saved.set(todo);
+			return todo;
+		});
+
+		service.create(1L, new TodoCreateReq(
+				"repeat",
+				null,
+				null,
+				TodoType.RECURRING,
+				LocalDate.parse("2026-05-01"),
+				LocalDate.parse("2026-05-30"),
+				Set.of("FRI"),
+				null,
+				null));
+
+		assertThat(saved.get().getRecurrenceGroupId()).isEqualTo(10L);
+	}
+
+	@Test
+	void createWithoutPriorityAppendsAfterExistingNonSomedayTodos() {
+		given(todoRepository.findMaxPriorityForNonSomeday(1L)).willReturn(2);
+		given(todoRepository.save(any(Todo.class))).willAnswer(invocation -> invocation.getArgument(0));
+		TodoCreateReq req = new TodoCreateReq(
+				"new",
+				null,
+				null,
+				TodoType.NORMAL,
+				LocalDate.parse("2026-04-20"),
+				null,
+				null,
+				null,
+				null);
+
+		TodoDetailResp resp = service.create(1L, req);
+
+		assertThat(resp.priority()).isEqualTo(3);
+		verify(todoRepository).save(argThat(todo -> todo.getPriority() == 3));
 	}
 
 	@Test
@@ -285,6 +458,271 @@ class TodoServiceImplTest {
 		assertThat(a.getPriority()).isEqualTo(1);
 	}
 
+	@Test
+	void changeStatusToDoneMarksFirstCompletedDateBeforePublishingEvent() {
+		Todo todo = normalTodo("09:00");
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+		given(snoozeHistoryRepository.countByTodoId(1L)).willReturn(0L);
+
+		LocalDate before = LocalDate.now(java.time.ZoneId.of("Asia/Seoul"));
+		service.changeStatus(1L, 1L, new TodoStatusChangeReq(TodoStatus.DONE));
+		LocalDate after = LocalDate.now(java.time.ZoneId.of("Asia/Seoul"));
+
+		assertThat(todo.getStatus()).isEqualTo(TodoStatus.DONE);
+		assertThat(todo.getFirstCompletedDate()).isIn(before, after);
+		verify(userStreakService).recordActivity(1L);
+		verify(eventPublisher).publishEvent(any(TodoCompletedEvent.class));
+	}
+
+	@Test
+	void changeStatusForRecurringMaterializesOccurrenceAndMarksOnlyInstanceDone() {
+		Todo master = recurringMaster();
+		Todo instance = recurringInstance(master, LocalDate.parse("2026-05-12"));
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+		given(recurrenceService.materializeRecurringOccurrence(1L, master, LocalDate.parse("2026-05-12")))
+				.willReturn(instance);
+		given(snoozeHistoryRepository.countByTodoId(25L)).willReturn(0L);
+
+		TodoDetailResp resp = service.changeStatus(
+				1L,
+				10L,
+				new TodoStatusChangeReq(TodoStatus.DONE, LocalDate.parse("2026-05-12")));
+
+		assertThat(master.getStatus()).isEqualTo(TodoStatus.TODO);
+		assertThat(instance.getStatus()).isEqualTo(TodoStatus.DONE);
+		assertThat(resp.todoId()).isEqualTo(25L);
+		verify(userStreakService).recordActivity(1L);
+		verify(eventPublisher).publishEvent(any(TodoCompletedEvent.class));
+	}
+
+	@Test
+	void changeStatusForRecurringRequiresOccurrenceDate() {
+		Todo master = recurringMaster();
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+
+		assertThatThrownBy(() -> service.changeStatus(1L, 10L, new TodoStatusChangeReq(TodoStatus.DONE)))
+				.isInstanceOf(CustomException.class)
+				.satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
+						.isEqualTo(TodoErrorCode.T03_004));
+
+		verifyNoInteractions(recurrenceService, userStreakService, eventPublisher);
+	}
+
+	@Test
+	void deleteRecurringOnlyMaterializesOccurrenceAndSoftDeletesOnlyInstance() {
+		Todo master = recurringMaster();
+		Todo instance = recurringInstance(master, LocalDate.parse("2026-05-12"));
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+		given(recurrenceService.materializeRecurringOccurrence(1L, master, LocalDate.parse("2026-05-12")))
+				.willReturn(instance);
+
+		service.delete(1L, 10L, "only", LocalDate.parse("2026-05-12"));
+
+		assertThat(master.getIsDeleted()).isFalse();
+		assertThat(instance.getIsDeleted()).isTrue();
+		verify(cacheEvictHelper).evictUserTodosAfterCommit(1L);
+		verify(cacheEvictHelper).evictTodoItemAfterCommit(1L, 10L);
+		verify(cacheEvictHelper).evictTodoItemAfterCommit(1L, 25L);
+	}
+
+	@Test
+	void deleteRecurringFromCutsMasterAndSoftDeletesFutureInstances() {
+		Todo master = recurringMaster();
+		Todo future = recurringInstance(master, LocalDate.parse("2026-05-19"));
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+		given(todoRepository.findRecurringMastersOverlappingFromDate(1L, 10L, LocalDate.parse("2026-05-12")))
+				.willReturn(List.of(master));
+		given(todoRepository.findMaterializedInstancesByMasterTodoIdInFromDate(
+				1L,
+				List.of(10L),
+				LocalDate.parse("2026-05-12")))
+				.willReturn(List.of(future));
+
+		service.delete(1L, 10L, "from", LocalDate.parse("2026-05-12"));
+
+		assertThat(master.getEndDate()).isEqualTo(LocalDate.parse("2026-05-11"));
+		assertThat(future.getIsDeleted()).isTrue();
+		verify(cacheEvictHelper).evictUserTodosAfterCommit(1L);
+		verify(cacheEvictHelper).evictTodoItemAfterCommit(1L, 10L);
+	}
+
+	@Test
+	void updateRecurringOnlyMaterializesOccurrenceAndUpdatesOnlyInstance() {
+		Todo master = recurringMaster();
+		Todo instance = recurringInstance(master, LocalDate.parse("2026-05-12"));
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+		given(recurrenceService.materializeRecurringOccurrence(1L, master, LocalDate.parse("2026-05-12")))
+				.willReturn(instance);
+		given(snoozeHistoryRepository.countByTodoId(25L)).willReturn(0L);
+
+		TodoDetailResp resp = service.update(
+				1L,
+				10L,
+				new TodoUpdateReq("하루만 수정", "메모", null, null, null, null, null, null, false),
+				"only",
+				LocalDate.parse("2026-05-12"));
+
+		assertThat(master.getTitle()).isEqualTo("repeat");
+		assertThat(instance.getTitle()).isEqualTo("하루만 수정");
+		assertThat(instance.getContent()).isEqualTo("메모");
+		assertThat(resp.todoId()).isEqualTo(25L);
+	}
+
+	@Test
+	void updateRecurringOnlyKeepsMaterializedInstanceNormalWhenRequestTypeIsRecurring() {
+		Todo master = recurringMaster();
+		Todo instance = recurringInstance(master, LocalDate.parse("2026-05-12"));
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+		given(recurrenceService.materializeRecurringOccurrence(1L, master, LocalDate.parse("2026-05-12")))
+				.willReturn(instance);
+		given(snoozeHistoryRepository.countByTodoId(25L)).willReturn(0L);
+
+		TodoDetailResp resp = service.update(
+				1L,
+				10L,
+				new TodoUpdateReq("하루만 수정", "메모", null, TodoType.RECURRING,
+						LocalDate.parse("2026-05-12"), null, Set.of("TUE"), "12:15", false),
+				"only",
+				LocalDate.parse("2026-05-12"));
+
+		assertThat(instance.getType()).isEqualTo(TodoType.NORMAL);
+		assertThat(instance.getAlertTime()).isEqualTo("12:15");
+		assertThat(resp.type()).isEqualTo(TodoType.NORMAL);
+		assertThat(resp.alertTime()).isEqualTo("12:15");
+	}
+
+	@Test
+	void updateRecurringFromCutsMasterDeletesFutureInstancesAndCreatesNewMaster() {
+		Todo master = recurringMaster();
+		Todo future = recurringInstance(master, LocalDate.parse("2026-05-19"));
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+		given(todoRepository.findRecurringMastersOverlappingFromDate(1L, 10L, LocalDate.parse("2026-05-12")))
+				.willReturn(List.of(master));
+		given(todoRepository.findMaterializedInstancesByMasterTodoIdInFromDate(
+				1L,
+				List.of(10L),
+				LocalDate.parse("2026-05-12")))
+				.willReturn(List.of(future));
+		given(todoRepository.save(any(Todo.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+		TodoDetailResp resp = service.update(
+				1L,
+				10L,
+				new TodoUpdateReq("이후 수정", "새 메모", null, null, null, null, Set.of("TUE"), null, false),
+				"from",
+				LocalDate.parse("2026-05-12"));
+
+		assertThat(master.getEndDate()).isEqualTo(LocalDate.parse("2026-05-11"));
+		assertThat(future.getIsDeleted()).isTrue();
+		verify(todoRepository).save(argThat(newMaster ->
+				newMaster.getType() == TodoType.RECURRING
+						&& newMaster.getTitle().equals("이후 수정")
+						&& newMaster.getStartDate().equals(LocalDate.parse("2026-05-12"))
+						&& newMaster.getPriority().equals(master.getPriority())));
+		assertThat(resp.title()).isEqualTo("이후 수정");
+	}
+
+	@Test
+	void updateRecurringFromAllowsCutDateThatMatchesNewDaysOfWeek() {
+		Todo master = recurringMaster();
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+		given(todoRepository.findRecurringMastersOverlappingFromDate(1L, 10L, LocalDate.parse("2026-05-14")))
+				.willReturn(List.of(master));
+		given(todoRepository.findMaterializedInstancesByMasterTodoIdInFromDate(
+				1L,
+				List.of(10L),
+				LocalDate.parse("2026-05-14")))
+				.willReturn(List.of());
+		given(todoRepository.save(any(Todo.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+		TodoDetailResp resp = service.update(
+				1L,
+				10L,
+				new TodoUpdateReq("요일 변경", "새 메모", null, null, null, null, Set.of("THU"), null, false),
+				"from",
+				LocalDate.parse("2026-05-14"));
+
+		assertThat(master.getEndDate()).isEqualTo(LocalDate.parse("2026-05-13"));
+		verify(todoRepository).save(argThat(newMaster ->
+				newMaster.getStartDate().equals(LocalDate.parse("2026-05-14"))
+						&& newMaster.getDaysOfWeek().contains(java.time.DayOfWeek.THURSDAY)));
+		assertThat(resp.title()).isEqualTo("요일 변경");
+	}
+
+	@Test
+	void updateRecurringFromCutsOverlappingGroupSegments() {
+		Todo task2 = recurringSegment(20L, "task2", LocalDate.parse("2026-05-10"), LocalDate.parse("2026-05-19"));
+		Todo task3 = recurringSegment(30L, "task3", LocalDate.parse("2026-05-20"), LocalDate.parse("2026-05-30"));
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(20L)).willReturn(Optional.of(task2));
+		given(todoRepository.findRecurringMastersOverlappingFromDate(1L, 10L, LocalDate.parse("2026-05-15")))
+				.willReturn(List.of(task2, task3));
+		given(todoRepository.findMaterializedInstancesByMasterTodoIdInFromDate(
+				1L,
+				List.of(20L, 30L),
+				LocalDate.parse("2026-05-15")))
+				.willReturn(List.of());
+		given(todoRepository.save(any(Todo.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+		service.update(
+				1L,
+				20L,
+				new TodoUpdateReq("task4", null, null, null, null, null, Set.of("FRI"), null, false),
+				"from",
+				LocalDate.parse("2026-05-15"));
+
+		assertThat(task2.getEndDate()).isEqualTo(LocalDate.parse("2026-05-14"));
+		assertThat(task3.getIsDeleted()).isTrue();
+		verify(todoRepository).save(argThat(newMaster ->
+				newMaster.getTitle().equals("task4")
+						&& newMaster.getStartDate().equals(LocalDate.parse("2026-05-15"))
+						&& newMaster.getEndDate().equals(LocalDate.parse("2026-05-30"))
+						&& newMaster.getRecurrenceGroupId().equals(10L)));
+	}
+
+	@Test
+	void deleteRecurringFromCutsOverlappingGroupSegments() {
+		Todo task2 = recurringSegment(20L, "task2", LocalDate.parse("2026-05-10"), LocalDate.parse("2026-05-19"));
+		Todo task3 = recurringSegment(30L, "task3", LocalDate.parse("2026-05-20"), LocalDate.parse("2026-05-30"));
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(20L)).willReturn(Optional.of(task2));
+		given(todoRepository.findRecurringMastersOverlappingFromDate(1L, 10L, LocalDate.parse("2026-05-15")))
+				.willReturn(List.of(task2, task3));
+		given(todoRepository.findMaterializedInstancesByMasterTodoIdInFromDate(
+				1L,
+				List.of(20L, 30L),
+				LocalDate.parse("2026-05-15")))
+				.willReturn(List.of());
+
+		service.delete(1L, 20L, "from", LocalDate.parse("2026-05-15"));
+
+		assertThat(task2.getEndDate()).isEqualTo(LocalDate.parse("2026-05-14"));
+		assertThat(task3.getIsDeleted()).isTrue();
+	}
+
+	@Test
+	void updateRecurringFromDeletesFutureMaterializedInstancesAcrossGroup() {
+		Todo task2 = recurringSegment(20L, "task2", LocalDate.parse("2026-05-10"), LocalDate.parse("2026-05-19"));
+		Todo task3 = recurringSegment(30L, "task3", LocalDate.parse("2026-05-20"), LocalDate.parse("2026-05-30"));
+		Todo instance = recurringInstance(task3, LocalDate.parse("2026-05-22"));
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(20L)).willReturn(Optional.of(task2));
+		given(todoRepository.findRecurringMastersOverlappingFromDate(1L, 10L, LocalDate.parse("2026-05-15")))
+				.willReturn(List.of(task2, task3));
+		given(todoRepository.findMaterializedInstancesByMasterTodoIdInFromDate(
+				1L,
+				List.of(20L, 30L),
+				LocalDate.parse("2026-05-15")))
+				.willReturn(List.of(instance));
+		given(todoRepository.save(any(Todo.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+		service.update(
+				1L,
+				20L,
+				new TodoUpdateReq("task4", null, null, null, null, null, Set.of("FRI"), null, false),
+				"from",
+				LocalDate.parse("2026-05-15"));
+
+		assertThat(instance.getIsDeleted()).isTrue();
+	}
+
 	private Todo normalTodo(String alertTime) {
 		return Todo.builder()
 				.todoId(1L)
@@ -295,6 +733,54 @@ class TodoServiceImplTest {
 				.priority(1)
 				.alertTime(alertTime)
 				.startDate(LocalDate.parse("2026-04-20"))
+				.isDeleted(false)
+				.expGranted(false)
+				.build();
+	}
+
+	private Todo recurringMaster() {
+		return Todo.builder()
+				.todoId(10L)
+				.userId(1L)
+				.title("repeat")
+				.type(TodoType.RECURRING)
+				.status(TodoStatus.TODO)
+				.priority(1)
+				.startDate(LocalDate.parse("2026-05-01"))
+				.recurrenceGroupId(10L)
+				.daysOfWeekRaw("TUE")
+				.isDeleted(false)
+				.expGranted(false)
+				.build();
+	}
+
+	private Todo recurringSegment(Long todoId, String title, LocalDate startDate, LocalDate endDate) {
+		return Todo.builder()
+				.todoId(todoId)
+				.userId(1L)
+				.title(title)
+				.type(TodoType.RECURRING)
+				.status(TodoStatus.TODO)
+				.priority(1)
+				.startDate(startDate)
+				.endDate(endDate)
+				.recurrenceGroupId(10L)
+				.daysOfWeekRaw("FRI")
+				.isDeleted(false)
+				.expGranted(false)
+				.build();
+	}
+
+	private Todo recurringInstance(Todo master, LocalDate occurrenceDate) {
+		return Todo.builder()
+				.todoId(25L)
+				.userId(master.getUserId())
+				.title(master.getTitle())
+				.type(TodoType.NORMAL)
+				.status(TodoStatus.TODO)
+				.priority(master.getPriority())
+				.startDate(occurrenceDate)
+				.masterTodoId(master.getTodoId())
 				.isDeleted(false)
 				.expGranted(false)
 				.build();
@@ -327,5 +813,19 @@ class TodoServiceImplTest {
 				.isDeleted(false)
 				.expGranted(false)
 				.build();
+	}
+
+	private ExcludedDateProjection excludedDate(Long masterTodoId, LocalDate occurrenceDate) {
+		return new ExcludedDateProjection() {
+			@Override
+			public Long getMasterTodoId() {
+				return masterTodoId;
+			}
+
+			@Override
+			public LocalDate getOccurrenceDate() {
+				return occurrenceDate;
+			}
+		};
 	}
 }

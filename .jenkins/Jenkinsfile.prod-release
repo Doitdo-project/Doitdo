@@ -73,9 +73,7 @@ pipeline {
                             set -eu
                             cd /home/ubuntu/app
                             chmod 600 env/prod.env secrets/apple-signin-key.p8
-                            sudo docker compose build app
-                            sudo docker rm -f doitdo-app || true
-                            sudo docker compose up -d --no-deps app
+                            sudo ./deploy-bluegreen.sh
                             sudo docker compose ps
                         '
                     '''
@@ -90,13 +88,19 @@ pipeline {
                         set -eu
                         ssh -i "$PROD_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PROD_SSH_USER}@${PROD_HOST}" '
                             set -eu
+                            ACTIVE_PORT="$(grep -E "^[[:space:]]*proxy_pass[[:space:]]+http://127\\.0\\.0\\.1:808[02];" /etc/nginx/sites-available/default | head -n 1 | grep -oE "808[02]")"
+                            if [ -z "$ACTIVE_PORT" ]; then
+                                echo "Active app port not found"
+                                exit 1
+                            fi
+
                             for i in $(seq 1 20); do
-                                if curl -fsS http://127.0.0.1:8080/hello > /dev/null; then
+                                if curl -fsS "http://127.0.0.1:${ACTIVE_PORT}/hello" > /dev/null; then
                                     exit 0
                                 fi
                                 sleep 2
                             done
-                            echo "Local health check failed"
+                            echo "Local active app health check failed"
                             exit 1
                         '
 
@@ -113,6 +117,33 @@ pipeline {
             }
         }
 
+        stage('Stop Inactive Production App') {
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: env.PROD_SSH_CREDENTIALS, keyFileVariable: 'PROD_SSH_KEY')]) {
+                    sh '''
+                        set -eu
+                        ssh -i "$PROD_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PROD_SSH_USER}@${PROD_HOST}" '
+                            set -eu
+                            ACTIVE_PORT="$(grep -E "^[[:space:]]*proxy_pass[[:space:]]+http://127\\.0\\.0\\.1:808[02];" /etc/nginx/sites-available/default | head -n 1 | grep -oE "808[02]")"
+                            case "$ACTIVE_PORT" in
+                                8082)
+                                    sudo docker stop doitdo-app || true
+                                    ;;
+                                8080)
+                                    sudo docker stop doitdo-app-green || true
+                                    ;;
+                                *)
+                                    echo "Active app port not found for inactive stop"
+                                    exit 1
+                                    ;;
+                            esac
+                            sudo docker ps --format "table {{.Names}}\\t{{.Ports}}\\t{{.Status}}" | grep -E "NAMES|doitdo-app" || true
+                        '
+                    '''
+                }
+            }
+        }
+
         stage('Pull Source On Production') {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: env.PROD_SSH_CREDENTIALS, keyFileVariable: 'PROD_SSH_KEY')]) {
@@ -121,8 +152,8 @@ pipeline {
                         ssh -i "$PROD_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${PROD_SSH_USER}@${PROD_HOST}" '
                             set -eu
                             cd /home/ubuntu/doitdo-git/S14P31D107
-                            git pull --ff-only origin main
-                            git status --short
+                            git pull --ff-only origin main || echo "git pull skipped: source sync failed"
+                            git status --short || echo "git status skipped: source status check failed"
                         '
                     '''
                 }

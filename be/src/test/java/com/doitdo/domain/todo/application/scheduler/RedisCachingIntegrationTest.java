@@ -116,20 +116,16 @@ class RedisCachingIntegrationTest {
 	}
 
 	@Test
-	void cacheHitForHomeQueriesDoesNotIssueSqlOnSecondCall() {
+	void cacheHitForCacheableHomeQueriesDoesNotIssueSqlOnSecondCall() {
 		Long userId = createUser("home");
 		saveTodo(userId, "today", TodoType.NORMAL, LocalDate.now(SEOUL), null);
 		saveTodo(userId, "someday", TodoType.SOMEDAY, null, null);
-		saveActiveCharacter(userId, 0);
 
 		todoService.list(userId, todayReq());
 		assertNoSql(() -> todoService.list(userId, todayReq()));
 
 		todoService.list(userId, somedayReq());
 		assertNoSql(() -> todoService.list(userId, somedayReq()));
-
-		tamagotchiService.getCurrentCharacter(userId);
-		assertNoSql(() -> tamagotchiService.getCurrentCharacter(userId));
 	}
 
 	@Test
@@ -225,9 +221,10 @@ class RedisCachingIntegrationTest {
 		todoService.list(userId, todayReq());
 		categoryService.delete(userId, work.getCategoryId());
 		assertThat(categoryNames(categoryService.list(userId))).doesNotContain("work-new");
+		// 정책: 카테고리 삭제 후에도 todo 에는 카테고리 이름 스냅샷이 그대로 잔여.
 		assertThat(todoService.list(userId, todayReq()).items())
 				.extracting(item -> item.category())
-				.containsNull();
+				.containsExactly("work-new");
 	}
 
 	@Test
@@ -280,9 +277,14 @@ class RedisCachingIntegrationTest {
 	}
 
 	private Todo saveTodo(Long userId, String title, TodoType type, LocalDate startDate, Long categoryId) {
+		Category category = categoryId == null
+				? null
+				: categoryRepository.findById(categoryId).orElse(null);
 		return todoRepository.saveAndFlush(Todo.create(
 				userId,
 				categoryId,
+				category != null ? category.getCategoryName() : null,
+				category != null ? category.getColorId() : null,
 				title,
 				null,
 				type,
@@ -296,6 +298,8 @@ class RedisCachingIntegrationTest {
 	private void saveRecurringMaster(Long userId, String title, LocalDate startDate) {
 		todoRepository.saveAndFlush(Todo.create(
 				userId,
+				null,
+				null,
 				null,
 				title,
 				null,
@@ -312,7 +316,7 @@ class RedisCachingIntegrationTest {
 				.species("SLIME")
 				.name("slime")
 				.stage(Character.Stage.BABY)
-				.requiredExp(100)
+				.requiredExp(75)
 				.thumbnailUrl("https://cdn.example.com/slime.png")
 				.build());
 		userCharacterRepository.saveAndFlush(UserCharacter.builder()
