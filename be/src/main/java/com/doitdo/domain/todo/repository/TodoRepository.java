@@ -44,6 +44,34 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 			LocalDate startDate);
 
 	@Query("""
+			SELECT t FROM Todo t
+			WHERE t.userId = :userId
+			  AND t.recurrenceGroupId = :recurrenceGroupId
+			  AND t.isDeleted = false
+			  AND t.type = com.doitdo.domain.todo.entity.Todo.TodoType.RECURRING
+			  AND (t.endDate IS NULL OR t.endDate >= :occurrenceDate)
+			ORDER BY t.startDate ASC, t.todoId ASC
+			""")
+	List<Todo> findRecurringMastersOverlappingFromDate(
+			@Param("userId") Long userId,
+			@Param("recurrenceGroupId") Long recurrenceGroupId,
+			@Param("occurrenceDate") LocalDate occurrenceDate);
+
+	@Query("""
+			SELECT t FROM Todo t
+			WHERE t.userId = :userId
+			  AND t.masterTodoId IN :masterTodoIds
+			  AND t.startDate >= :occurrenceDate
+			  AND t.isDeleted = false
+			  AND t.type = com.doitdo.domain.todo.entity.Todo.TodoType.NORMAL
+			ORDER BY t.startDate ASC, t.todoId ASC
+			""")
+	List<Todo> findMaterializedInstancesByMasterTodoIdInFromDate(
+			@Param("userId") Long userId,
+			@Param("masterTodoIds") List<Long> masterTodoIds,
+			@Param("occurrenceDate") LocalDate occurrenceDate);
+
+	@Query("""
 			SELECT t.masterTodoId AS masterTodoId, t.startDate AS occurrenceDate
 			FROM Todo t
 			WHERE t.userId = :userId

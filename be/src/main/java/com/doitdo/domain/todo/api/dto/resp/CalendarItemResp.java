@@ -12,6 +12,7 @@ import java.util.Set;
 public record CalendarItemResp(
 		Long todoId,
 		Long masterTodoId,
+		Long recurrenceGroupId,
 		LocalDate occurrenceDate,
 		boolean isVirtual,
 		String title,
@@ -40,6 +41,7 @@ public record CalendarItemResp(
 		return new CalendarItemResp(
 				todo.getTodoId(),
 				masterTodoId,
+				todo.getRecurrenceGroupId(),
 				occurrenceDate,
 				false,
 				todo.getTitle(),
@@ -61,6 +63,7 @@ public record CalendarItemResp(
 		return new CalendarItemResp(
 				null,
 				master.getTodoId(),
+				master.getRecurrenceGroupId(),
 				occurrenceDate,
 				true,
 				master.getTitle(),

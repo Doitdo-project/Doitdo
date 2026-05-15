@@ -127,6 +127,7 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `status` | `TodoStatus` | TODO / IN_PROGRESS / DONE |
 | `updatedAt` | `LocalDateTime` | |
 | `masterTodoId` | `Long` | nullable. 반복 마스터에서 파생된 NORMAL 인스턴스면 원본 RECURRING 마스터 ID |
+| `recurrenceGroupId` | `Long` | nullable. 같은 반복 흐름에서 파생된 RECURRING 마스터/인스턴스 그룹 ID |
 | `occurrenceDate` | `LocalDate` | nullable. 반복 파생 NORMAL 인스턴스면 해당 발생일. 일반 TODO / RECURRING 마스터는 null |
 | `snoozedDays` | `int` | 이 TODO 를 미룬 누적 횟수. `snooze_history` 테이블 COUNT 파생 (todos DDL 변경 없음) |
 | `excludedDates` | `List<LocalDate>` | RECURRING 마스터에서 `scope=only` 로 삭제된 occurrence 날짜 목록. RECURRING 이 아니면 `[]` |
@@ -202,6 +203,7 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 |---|---|---|
 | `todoId` | `Long` | 실체 TODO ID. 가상 인스턴스는 `null` |
 | `masterTodoId` | `Long` | RECURRING 마스터 ID. 일반 NORMAL/PERIOD 는 `null` |
+| `recurrenceGroupId` | `Long` | nullable. 같은 반복 흐름에서 파생된 RECURRING 마스터/인스턴스 그룹 ID |
 | `occurrenceDate` | `LocalDate` | RECURRING 발생일. 일반 NORMAL/PERIOD 는 `null` |
 | `isVirtual` | `boolean` | DB row 없는 가상 인스턴스 여부 |
 | `title` | `String` | |

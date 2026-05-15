@@ -109,6 +109,9 @@ public class Todo extends BaseTimeEntity {
 	@Column(name = "master_todo_id")
 	private Long masterTodoId;
 
+	@Column(name = "recurrence_group_id")
+	private Long recurrenceGroupId;
+
 	@Column(name = "days_of_week", length = 27)
 	private String daysOfWeekRaw;
 
@@ -154,6 +157,16 @@ public class Todo extends BaseTimeEntity {
 
 	public void changeEndDate(LocalDate endDate) {
 		this.endDate = endDate;
+	}
+
+	public void assignRecurrenceGroupId(Long recurrenceGroupId) {
+		this.recurrenceGroupId = recurrenceGroupId;
+	}
+
+	public void assignOwnRecurrenceGroupIdIfAbsent() {
+		if (this.recurrenceGroupId == null) {
+			this.recurrenceGroupId = this.todoId;
+		}
 	}
 
 	public void clearAlertTime() {
@@ -239,6 +252,7 @@ public class Todo extends BaseTimeEntity {
 				.startDate(type == TodoType.SOMEDAY ? null : startDate)
 				.endDate(endDate)
 				.masterTodoId(null)
+				.recurrenceGroupId(null)
 				.daysOfWeekRaw(toRawDaysOfWeek(daysOfWeek))
 				.isDeleted(false)
 				.expGranted(false)
@@ -260,6 +274,7 @@ public class Todo extends BaseTimeEntity {
 				.startDate(occurrenceDate)
 				.endDate(null)
 				.masterTodoId(master.getTodoId())
+				.recurrenceGroupId(master.getRecurrenceGroupId())
 				.daysOfWeekRaw(null)
 				.isDeleted(false)
 				.expGranted(false)

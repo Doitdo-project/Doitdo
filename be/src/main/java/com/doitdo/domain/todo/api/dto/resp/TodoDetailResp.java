@@ -23,6 +23,7 @@ public record TodoDetailResp(
 		TodoStatus status,
 		LocalDateTime updatedAt,
 		Long masterTodoId,
+		Long recurrenceGroupId,
 		LocalDate occurrenceDate,
 		int snoozedDays,
 		List<LocalDate> excludedDates
@@ -56,6 +57,7 @@ public record TodoDetailResp(
 				todo.getStatus(),
 				todo.getUpdatedAt(),
 				todo.getMasterTodoId(),
+				todo.getRecurrenceGroupId(),
 				todo.getMasterTodoId() != null ? todo.getStartDate() : null,
 				snoozedDays,
 				excludedDates
