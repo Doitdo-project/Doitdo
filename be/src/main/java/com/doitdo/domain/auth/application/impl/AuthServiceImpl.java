@@ -217,8 +217,14 @@ public class AuthServiceImpl implements AuthService {
 	/**
 	 * 비밀번호 재설정 요청 — 6자리 OTP 발송.
 	 *
-	 * <p>이메일이 미가입이거나 소셜 가입자(password null)·탈퇴 사용자면 OTP 발급/메일 발송 없이 조용히 종료한다.
-	 * 호출자 응답은 항상 200 OK — 이메일/계정 존재 여부 및 가입 경로 노출 방지 (enumeration attack 차단).
+	 * <p>응답 정책:
+	 * <ul>
+	 *   <li>일반 가입자 → 200 OK + 메일 발송</li>
+	 *   <li>미가입 이메일·탈퇴 사용자 → 200 OK + 발송 없음 (enumeration 방어)</li>
+	 *   <li>소셜 가입자(password=null) → <b>409 A04-006</b> + 안내 메시지 (UX 우선,
+	 *       "왜 메일이 안 오나요" 문의 방지). 소셜 가입자 enumeration 은 일부 노출되지만
+	 *       모바일 앱 + 한국 사용자 UX 컨벤션 우선.</li>
+	 * </ul>
 	 *
 	 * <p>같은 이메일에 OTP 가 이미 존재하면 새 OTP 로 덮어쓴다 (재요청 = 무효화 + 재발급).
 	 */
@@ -230,8 +236,8 @@ public class AuthServiceImpl implements AuthService {
 				return;
 			}
 			if (user.getPassword() == null) {
-				log.info("event=PASSWORD_RESET_SKIPPED reason=SOCIAL_ACCOUNT userId={}", user.getUserId());
-				return;
+				log.info("event=PASSWORD_RESET_REJECTED reason=SOCIAL_ACCOUNT userId={}", user.getUserId());
+				throw new CustomException(AuthErrorCode.A04_006);
 			}
 
 			String code = generateOtpCode();
