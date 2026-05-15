@@ -48,6 +48,12 @@ jwt:
   access-token-expiration: 1800000
   refresh-token-expiration: 1209600000
 
+auth:
+  user-cache:
+    provider: ${AUTH_USER_CACHE_PROVIDER:caffeine}
+    ttl: ${AUTH_USER_CACHE_TTL:60s}
+    max-size: ${AUTH_USER_CACHE_MAX_SIZE:10000}
+
 google:
   oauth:
     client-id: ${GOOGLE_OAUTH_CLIENT_ID:}

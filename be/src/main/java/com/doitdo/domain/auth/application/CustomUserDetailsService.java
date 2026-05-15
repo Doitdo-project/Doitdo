@@ -1,5 +1,7 @@
 package com.doitdo.domain.auth.application;
 
+import com.doitdo.domain.auth.application.cache.AuthUserCacheService;
+import com.doitdo.domain.auth.application.cache.AuthUserSnapshot;
 import com.doitdo.domain.user.entity.User;
 import com.doitdo.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CustomUserDetailsService implements UserDetailsService {
 
 	private final UserRepository userRepository;
+	private final AuthUserCacheService authUserCacheService;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -23,10 +26,8 @@ public class CustomUserDetailsService implements UserDetailsService {
 		return new CustomUserDetails(user);
 	}
 
-	@Transactional(readOnly = true)
 	public UserDetails loadUserById(Long userId) {
-		User user = userRepository.findById(userId)
-				.orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다. userId=" + userId));
-		return new CustomUserDetails(user);
+		AuthUserSnapshot snapshot = authUserCacheService.loadById(userId);
+		return new CustomUserDetails(snapshot.toUser());
 	}
 }

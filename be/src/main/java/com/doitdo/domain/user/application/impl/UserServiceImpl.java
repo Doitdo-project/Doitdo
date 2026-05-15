@@ -1,5 +1,6 @@
 package com.doitdo.domain.user.application.impl;
 
+import com.doitdo.domain.auth.application.cache.AuthUserCacheEvictHelper;
 import com.doitdo.domain.auth.entity.AutoProvider;
 import com.doitdo.domain.auth.entity.OAuthProvider;
 import com.doitdo.domain.auth.repository.AutoProviderRepository;
@@ -71,6 +72,7 @@ public class UserServiceImpl implements UserService {
 	private final PasswordEncoder passwordEncoder;
 	private final AppleOAuthClient appleOAuthClient;
 	private final UserHardDeleteService userHardDeleteService;
+	private final AuthUserCacheEvictHelper authUserCacheEvictHelper;
 
 	@Value("${app.terms.version}")
 	private String appTermsVersion;
@@ -137,6 +139,7 @@ public class UserServiceImpl implements UserService {
 
 		// 보안: 기존 refresh token 전부 무효화 → 재로그인 강제
 		refreshTokenRepository.deleteByUserId(userId);
+		authUserCacheEvictHelper.evictAfterCommit(userId);
 	}
 
 	@Override
@@ -189,6 +192,7 @@ public class UserServiceImpl implements UserService {
 		//       dirty-checking 만으로는 변경이 flush 되지 않으므로 saveAndFlush 로 merge + 즉시 flush.
 		user.withdraw();
 		userRepository.saveAndFlush(user);
+		authUserCacheEvictHelper.evictAfterCommit(userId);
 	}
 
 	/**
@@ -213,6 +217,7 @@ public class UserServiceImpl implements UserService {
 
 		user.registerBirthDate(birthDate);
 		userRepository.saveAndFlush(user);
+		authUserCacheEvictHelper.evictAfterCommit(userId);
 		return UserInfoResp.from(user, isAttendanceClaimedToday(userId));
 	}
 
@@ -235,6 +240,7 @@ public class UserServiceImpl implements UserService {
 		LocalDateTime now = LocalDateTime.now();
 		user.registerAgreements(now, req.marketingAgreed(), appTermsVersion);
 		userRepository.saveAndFlush(user);
+		authUserCacheEvictHelper.evictAfterCommit(userId);
 		return UserInfoResp.from(user, isAttendanceClaimedToday(userId));
 	}
 
