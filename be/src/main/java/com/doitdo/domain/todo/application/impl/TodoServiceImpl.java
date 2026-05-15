@@ -268,7 +268,13 @@ public class TodoServiceImpl implements TodoService {
 		Long categoryId = null;
 		String categoryName = null;
 		Integer categoryColorId = null;
-		if (StringUtils.hasText(req.category())) {
+		if (req.categoryId() != null) {
+			Category category = categoryRepository.findByCategoryIdAndUserId(req.categoryId(), userId)
+					.orElseThrow(() -> new CustomException(TodoErrorCode.T06_003));
+			categoryId = category.getCategoryId();
+			categoryName = category.getCategoryName();
+			categoryColorId = category.getColorId();
+		} else if (StringUtils.hasText(req.category())) {
 			Category category = categoryRepository.findByCategoryNameAndUserId(req.category(), userId)
 					.orElseThrow(() -> new CustomException(TodoErrorCode.T06_003));
 			categoryId = category.getCategoryId();
@@ -391,7 +397,13 @@ public class TodoServiceImpl implements TodoService {
 		Long categoryId = todo.getCategoryId();
 		String categoryName = todo.getCategoryName();
 		Integer categoryColorId = todo.getCategoryColorId();
-		if (req.category() != null && StringUtils.hasText(req.category())) {
+		if (req.categoryId() != null) {
+			Category category = categoryRepository.findByCategoryIdAndUserId(req.categoryId(), userId)
+					.orElseThrow(() -> new CustomException(TodoErrorCode.T04_005));
+			categoryId = category.getCategoryId();
+			categoryName = category.getCategoryName();
+			categoryColorId = category.getColorId();
+		} else if (req.category() != null && StringUtils.hasText(req.category())) {
 			Category category = categoryRepository.findByCategoryNameAndUserId(req.category(), userId)
 					.orElseThrow(() -> new CustomException(TodoErrorCode.T04_005));
 			categoryId = category.getCategoryId();
@@ -488,6 +500,7 @@ public class TodoServiceImpl implements TodoService {
 				req.title(),
 				req.content(),
 				req.category(),
+				req.categoryId(),
 				TodoType.NORMAL,
 				req.startDate(),
 				req.endDate(),
