@@ -19,6 +19,7 @@ public record TodoListRow(
 		String daysOfWeekRaw,
 		TodoStatus status,
 		LocalDateTime updatedAt,
+		Long masterTodoId,
 		long snoozeCount
 ) {
 }

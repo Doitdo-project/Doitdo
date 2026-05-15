@@ -144,6 +144,8 @@ public class TodoServiceImpl implements TodoService {
 				toDaysOfWeekCodes(row.daysOfWeekRaw()),
 				row.status(),
 				row.updatedAt(),
+				row.masterTodoId(),
+				row.masterTodoId() != null ? row.startDate() : null,
 				(int) row.snoozeCount(),
 				row.type() == TodoType.RECURRING ? excludedDates : List.of()
 		);

@@ -109,6 +109,7 @@ class TodoServiceImplTest {
 				"WED,MON",
 				TodoStatus.TODO,
 				LocalDateTime.parse("2026-05-06T10:00:00"),
+				null,
 				2L);
 		given(todoListQueryRepository.findListRows(
 				eq(1L),
@@ -128,6 +129,8 @@ class TodoServiceImplTest {
 		TodoDetailResp item = resp.items().getFirst();
 		assertThat(item.category()).isEqualTo("work");
 		assertThat(item.daysOfWeek()).containsExactly("MON", "WED");
+		assertThat(item.masterTodoId()).isNull();
+		assertThat(item.occurrenceDate()).isNull();
 		assertThat(item.snoozedDays()).isEqualTo(2);
 		assertThat(item.excludedDates()).isEmpty();
 		// list 는 NORMAL TODO 에 대해 todoRepository / snoozeHistoryRepository 와는
@@ -155,6 +158,7 @@ class TodoServiceImplTest {
 				"WED,MON",
 				TodoStatus.TODO,
 				LocalDateTime.parse("2026-05-06T10:00:00"),
+				null,
 				2L);
 		given(todoListQueryRepository.findListRows(
 				eq(1L),
@@ -179,6 +183,46 @@ class TodoServiceImplTest {
 		assertThat(item.snoozedDays()).isEqualTo(2);
 		assertThat(item.excludedDates()).containsExactly(LocalDate.parse("2026-05-14"));
 		verifyNoInteractions(snoozeHistoryRepository);
+	}
+
+	@Test
+	void listIncludesMasterTodoIdAndOccurrenceDateForRecurringInstances() {
+		LocalDate baseDate = LocalDate.parse("2026-05-21");
+		TodoListReq req = new TodoListReq("all", null, null, null, baseDate, null, null);
+		TodoListRow row = new TodoListRow(
+				25L,
+				"override",
+				"memo",
+				"work",
+				null,
+				TodoType.NORMAL,
+				1,
+				"12:10",
+				baseDate,
+				null,
+				null,
+				TodoStatus.TODO,
+				LocalDateTime.parse("2026-05-21T10:00:00"),
+				10L,
+				0L);
+		given(todoListQueryRepository.findListRows(
+				eq(1L),
+				eq("all"),
+				isNull(),
+				isNull(),
+				isNull(),
+				eq(baseDate),
+				any(LocalDate.class),
+				isNull(),
+				isNull()))
+				.willReturn(List.of(row));
+
+		TodoListResp resp = service.list(1L, req);
+
+		TodoDetailResp item = resp.items().getFirst();
+		assertThat(item.masterTodoId()).isEqualTo(10L);
+		assertThat(item.occurrenceDate()).isEqualTo(baseDate);
+		assertThat(item.alertTime()).isEqualTo("12:10");
 	}
 
 	@Test
