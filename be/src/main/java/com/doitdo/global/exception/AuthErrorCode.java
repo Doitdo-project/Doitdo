@@ -40,7 +40,8 @@ public enum AuthErrorCode implements ErrorCode {
 	A04_002("A04-002", HttpStatus.UNPROCESSABLE_ENTITY, "필수 파라미터 누락 (email/code 또는 resetToken/newPassword)"),
 	A04_003("A04-003", HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류"),
 	A04_004("A04-004", HttpStatus.GONE, "인증번호가 일치하지 않습니다."),
-	A04_005("A04-005", HttpStatus.GONE, "인증번호 시도 횟수를 초과했습니다. 처음부터 다시 요청해주세요.");
+	A04_005("A04-005", HttpStatus.GONE, "인증번호 시도 횟수를 초과했습니다. 처음부터 다시 요청해주세요."),
+	A04_006("A04-006", HttpStatus.CONFLICT, "소셜 계정(카카오/구글/애플)으로 가입된 이메일입니다. 해당 서비스로 로그인해주세요.");
 
 	private final String code;
 	private final HttpStatus httpStatus;

@@ -77,8 +77,9 @@ public class AuthController {
 
 	@Operation(
 			summary = "비밀번호 재설정 요청",
-			description = "이메일로 6자리 인증번호(OTP)를 발송. 미가입/소셜 가입자도 동일하게 200 OK 응답(정보 노출 방지)."
+			description = "이메일로 6자리 인증번호(OTP)를 발송. 미가입자는 200 OK(정보 노출 방지), 소셜 가입자는 409 A04-006."
 	)
+	@ApiErrorCodes({"A04-006"})
 	@PostMapping("/password/reset-request")
 	public GlobalApiResponse<Void> requestPasswordReset(@Valid @RequestBody PasswordResetRequestReq req) {
 		authService.requestPasswordReset(req);
