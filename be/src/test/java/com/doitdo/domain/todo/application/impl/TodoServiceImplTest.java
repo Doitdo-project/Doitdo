@@ -592,91 +592,69 @@ class TodoServiceImplTest {
 	}
 
 	@Test
-	void updateRecurringFromCutsMasterDeletesFutureInstancesAndCreatesNewMaster() {
+	void updateRecurringFromUpdatesMasterAndPendingMaterializedInstancesWithoutNewMaster() {
 		Todo master = recurringMaster();
-		Todo future = recurringInstance(master, LocalDate.parse("2026-05-19"));
+		ReflectionTestUtils.setField(master, "startDate", LocalDate.parse("2026-05-05"));
+		Todo pending = recurringInstance(master, LocalDate.parse("2026-05-19"));
 		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
-		given(todoRepository.findRecurringMastersOverlappingFromDate(1L, 10L, LocalDate.parse("2026-05-12")))
-				.willReturn(List.of(master));
-		given(todoRepository.findMaterializedInstancesByMasterTodoIdInFromDate(
-				1L,
-				List.of(10L),
-				LocalDate.parse("2026-05-12")))
-				.willReturn(List.of(future));
-		given(todoRepository.save(any(Todo.class))).willAnswer(invocation -> invocation.getArgument(0));
+		given(todoRepository.findAllByUserIdAndMasterTodoIdAndIsDeletedFalse(1L, 10L))
+				.willReturn(List.of(pending));
 
 		TodoDetailResp resp = service.update(
 				1L,
 				10L,
-				new TodoUpdateReq("이후 수정", "새 메모", null, null, null, null, Set.of("TUE"), null, false),
+				new TodoUpdateReq("일괄 수정", "새 메모", null, null, null, null, null, "12:15", false),
 				"from",
 				LocalDate.parse("2026-05-12"));
 
-		assertThat(master.getEndDate()).isEqualTo(LocalDate.parse("2026-05-11"));
-		assertThat(future.getIsDeleted()).isTrue();
-		verify(todoRepository).save(argThat(newMaster ->
-				newMaster.getType() == TodoType.RECURRING
-						&& newMaster.getTitle().equals("이후 수정")
-						&& newMaster.getStartDate().equals(LocalDate.parse("2026-05-12"))
-						&& newMaster.getPriority().equals(master.getPriority())));
-		assertThat(resp.title()).isEqualTo("이후 수정");
+		assertThat(master.getTitle()).isEqualTo("일괄 수정");
+		assertThat(master.getEndDate()).isNull();
+		assertThat(pending.getTitle()).isEqualTo("일괄 수정");
+		assertThat(pending.getContent()).isEqualTo("새 메모");
+		assertThat(pending.getAlertTime()).isEqualTo("12:15");
+		assertThat(pending.getStartDate()).isEqualTo(LocalDate.parse("2026-05-19"));
+		verify(todoRepository, org.mockito.Mockito.never()).save(any(Todo.class));
+		assertThat(resp.title()).isEqualTo("일괄 수정");
 	}
 
 	@Test
-	void updateRecurringFromAllowsCutDateThatMatchesNewDaysOfWeek() {
+	void updateRecurringFromSkipsDoneMaterializedInstances() {
 		Todo master = recurringMaster();
+		ReflectionTestUtils.setField(master, "startDate", LocalDate.parse("2026-05-05"));
+		Todo pending = recurringInstance(master, LocalDate.parse("2026-05-12"));
+		Todo done = recurringInstance(master, LocalDate.parse("2026-05-19"));
+		ReflectionTestUtils.setField(done, "todoId", 26L);
+		done.changeStatus(TodoStatus.DONE);
 		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
-		given(todoRepository.findRecurringMastersOverlappingFromDate(1L, 10L, LocalDate.parse("2026-05-14")))
-				.willReturn(List.of(master));
-		given(todoRepository.findMaterializedInstancesByMasterTodoIdInFromDate(
-				1L,
-				List.of(10L),
-				LocalDate.parse("2026-05-14")))
-				.willReturn(List.of());
-		given(todoRepository.save(any(Todo.class))).willAnswer(invocation -> invocation.getArgument(0));
-
-		TodoDetailResp resp = service.update(
-				1L,
-				10L,
-				new TodoUpdateReq("요일 변경", "새 메모", null, null, null, null, Set.of("THU"), null, false),
-				"from",
-				LocalDate.parse("2026-05-14"));
-
-		assertThat(master.getEndDate()).isEqualTo(LocalDate.parse("2026-05-13"));
-		verify(todoRepository).save(argThat(newMaster ->
-				newMaster.getStartDate().equals(LocalDate.parse("2026-05-14"))
-						&& newMaster.getDaysOfWeek().contains(java.time.DayOfWeek.THURSDAY)));
-		assertThat(resp.title()).isEqualTo("요일 변경");
-	}
-
-	@Test
-	void updateRecurringFromCutsOverlappingGroupSegments() {
-		Todo task2 = recurringSegment(20L, "task2", LocalDate.parse("2026-05-10"), LocalDate.parse("2026-05-19"));
-		Todo task3 = recurringSegment(30L, "task3", LocalDate.parse("2026-05-20"), LocalDate.parse("2026-05-30"));
-		given(todoRepository.findByTodoIdAndIsDeletedFalse(20L)).willReturn(Optional.of(task2));
-		given(todoRepository.findRecurringMastersOverlappingFromDate(1L, 10L, LocalDate.parse("2026-05-15")))
-				.willReturn(List.of(task2, task3));
-		given(todoRepository.findMaterializedInstancesByMasterTodoIdInFromDate(
-				1L,
-				List.of(20L, 30L),
-				LocalDate.parse("2026-05-15")))
-				.willReturn(List.of());
-		given(todoRepository.save(any(Todo.class))).willAnswer(invocation -> invocation.getArgument(0));
+		given(todoRepository.findAllByUserIdAndMasterTodoIdAndIsDeletedFalse(1L, 10L))
+				.willReturn(List.of(pending, done));
 
 		service.update(
 				1L,
-				20L,
-				new TodoUpdateReq("task4", null, null, null, null, null, Set.of("FRI"), null, false),
+				10L,
+				new TodoUpdateReq("일괄 수정", "새 메모", null, null, null, null, null, null, false),
 				"from",
 				LocalDate.parse("2026-05-15"));
 
-		assertThat(task2.getEndDate()).isEqualTo(LocalDate.parse("2026-05-14"));
-		assertThat(task3.getIsDeleted()).isTrue();
-		verify(todoRepository).save(argThat(newMaster ->
-				newMaster.getTitle().equals("task4")
-						&& newMaster.getStartDate().equals(LocalDate.parse("2026-05-15"))
-						&& newMaster.getEndDate().equals(LocalDate.parse("2026-05-30"))
-						&& newMaster.getRecurrenceGroupId().equals(10L)));
+		assertThat(pending.getTitle()).isEqualTo("일괄 수정");
+		assertThat(done.getTitle()).isEqualTo("repeat");
+	}
+
+	@Test
+	void updateRecurringWithoutScopeAlsoUpdatesPendingMaterializedInstances() {
+		Todo master = recurringMaster();
+		ReflectionTestUtils.setField(master, "startDate", LocalDate.parse("2026-05-05"));
+		Todo pending = recurringInstance(master, LocalDate.parse("2026-05-12"));
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+		given(todoRepository.findAllByUserIdAndMasterTodoIdAndIsDeletedFalse(1L, 10L))
+				.willReturn(List.of(pending));
+
+		service.update(
+				1L,
+				10L,
+				new TodoUpdateReq("일괄 수정", null, null, null, null, null, null, null, false));
+
+		assertThat(pending.getTitle()).isEqualTo("일괄 수정");
 	}
 
 	@Test
@@ -696,31 +674,6 @@ class TodoServiceImplTest {
 
 		assertThat(task2.getEndDate()).isEqualTo(LocalDate.parse("2026-05-14"));
 		assertThat(task3.getIsDeleted()).isTrue();
-	}
-
-	@Test
-	void updateRecurringFromDeletesFutureMaterializedInstancesAcrossGroup() {
-		Todo task2 = recurringSegment(20L, "task2", LocalDate.parse("2026-05-10"), LocalDate.parse("2026-05-19"));
-		Todo task3 = recurringSegment(30L, "task3", LocalDate.parse("2026-05-20"), LocalDate.parse("2026-05-30"));
-		Todo instance = recurringInstance(task3, LocalDate.parse("2026-05-22"));
-		given(todoRepository.findByTodoIdAndIsDeletedFalse(20L)).willReturn(Optional.of(task2));
-		given(todoRepository.findRecurringMastersOverlappingFromDate(1L, 10L, LocalDate.parse("2026-05-15")))
-				.willReturn(List.of(task2, task3));
-		given(todoRepository.findMaterializedInstancesByMasterTodoIdInFromDate(
-				1L,
-				List.of(20L, 30L),
-				LocalDate.parse("2026-05-15")))
-				.willReturn(List.of(instance));
-		given(todoRepository.save(any(Todo.class))).willAnswer(invocation -> invocation.getArgument(0));
-
-		service.update(
-				1L,
-				20L,
-				new TodoUpdateReq("task4", null, null, null, null, null, Set.of("FRI"), null, false),
-				"from",
-				LocalDate.parse("2026-05-15"));
-
-		assertThat(instance.getIsDeleted()).isTrue();
 	}
 
 	private Todo normalTodo(String alertTime) {

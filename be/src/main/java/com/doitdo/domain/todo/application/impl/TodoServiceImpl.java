@@ -375,9 +375,8 @@ public class TodoServiceImpl implements TodoService {
 			return updateSingleTodo(userId, instance, normalizeRecurringOnlyUpdateReq(req), todoId);
 		}
 
-		if (todo.getType() == TodoType.RECURRING && isFromScope(scope)) {
-			validateCutDateOfMaster(todo, occurrenceDate);
-			return updateRecurringFrom(userId, todo, req, occurrenceDate);
+		if (todo.getType() == TodoType.RECURRING) {
+			return updateRecurringBatch(userId, todo, req, todoId);
 		}
 
 		return updateSingleTodo(userId, todo, req, todoId);
@@ -435,59 +434,17 @@ public class TodoServiceImpl implements TodoService {
 		return withExcludedDates(userId, todo, todo.getCategoryName(), colorHex, count);
 	}
 
-	private TodoDetailResp updateRecurringFrom(Long userId, Todo master, TodoUpdateReq req, LocalDate occurrenceDate) {
-		if (master.getStatus() == TodoStatus.IN_PROGRESS || master.getStatus() == TodoStatus.DONE) {
-			throw new CustomException(TodoErrorCode.T04_004);
-		}
+	private TodoDetailResp updateRecurringBatch(Long userId, Todo master, TodoUpdateReq req, Long requestedTodoId) {
+		TodoDetailResp resp = updateSingleTodo(userId, master, req, requestedTodoId);
 
-		LocalDate originalEndDate = master.getEndDate();
-		List<Todo> affectedMasters = findRecurringMastersOverlappingFromDate(userId, master, occurrenceDate);
-		LocalDate groupEndDate = findLatestEndDate(affectedMasters, originalEndDate);
-		cutOrDeleteRecurringMastersFromDate(affectedMasters, occurrenceDate);
-		softDeleteMaterializedInstancesFromDate(userId, affectedMasters, occurrenceDate);
-
-		Long categoryId = master.getCategoryId();
-		String categoryName = master.getCategoryName();
-		Integer categoryColorId = master.getCategoryColorId();
-		if (req.category() != null && StringUtils.hasText(req.category())) {
-			Category category = categoryRepository.findByCategoryNameAndUserId(req.category(), userId)
-					.orElseThrow(() -> new CustomException(TodoErrorCode.T04_005));
-			categoryId = category.getCategoryId();
-			categoryName = category.getCategoryName();
-			categoryColorId = category.getColorId();
-		}
-
-		Set<DayOfWeek> daysOfWeek = req.daysOfWeek() != null ? parseDaysOfWeek(req.daysOfWeek()) : master.getDaysOfWeek();
-		validateRecurringDays(TodoType.RECURRING, occurrenceDate, daysOfWeek);
-		String alertTime = Boolean.TRUE.equals(req.clearAlertTime())
-				? null
-				: req.alertTime() != null ? req.alertTime() : master.getAlertTime();
-		Todo newMaster = Todo.create(
-				userId,
-				categoryId,
-				categoryName,
-				categoryColorId,
-				req.title() != null ? req.title() : master.getTitle(),
-				req.content(),
-				TodoType.RECURRING,
-				master.getPriority(),
-				alertTime,
-				occurrenceDate,
-				req.endDate() != null ? req.endDate() : groupEndDate,
-				daysOfWeek);
-		newMaster.assignRecurrenceGroupId(resolveRecurrenceGroupId(master));
-		newMaster = todoRepository.save(newMaster);
-
-		log.info("event=TODO_RECURRING_FROM_UPDATED userId={} oldMasterTodoId={} newMasterTodoId={} occurrenceDate={}",
-				userId, master.getTodoId(), newMaster.getTodoId(), occurrenceDate);
-		cacheEvictHelper.evictUserTodosAfterCommit(userId);
-		cacheEvictHelper.evictTodoItemAfterCommit(userId, master.getTodoId());
-		if (newMaster.getTodoId() != null) {
-			cacheEvictHelper.evictTodoItemAfterCommit(userId, newMaster.getTodoId());
-		}
-
-		String colorHex = resolveColorHexForTodo(userId, newMaster);
-		return withExcludedDates(userId, newMaster, newMaster.getCategoryName(), colorHex, 0);
+		todoRepository.findAllByUserIdAndMasterTodoIdAndIsDeletedFalse(userId, master.getTodoId()).stream()
+				.filter(instance -> instance.getStatus() != TodoStatus.DONE)
+				.forEach(instance -> {
+					instance.applyRecurringMasterSnapshot(master);
+					cacheEvictHelper.evictTodoItemAfterCommit(userId, instance.getTodoId());
+				});
+		log.info("event=TODO_RECURRING_BATCH_UPDATED userId={} masterTodoId={}", userId, master.getTodoId());
+		return resp;
 	}
 
 	private Long resolveRecurrenceGroupId(Todo master) {
@@ -500,16 +457,6 @@ public class TodoServiceImpl implements TodoService {
 				resolveRecurrenceGroupId(master),
 				occurrenceDate);
 		return masters == null || masters.isEmpty() ? List.of(master) : masters;
-	}
-
-	private LocalDate findLatestEndDate(List<Todo> masters, LocalDate fallbackEndDate) {
-		if (masters.stream().anyMatch(item -> item.getEndDate() == null)) {
-			return null;
-		}
-		return masters.stream()
-				.map(Todo::getEndDate)
-				.max(LocalDate::compareTo)
-				.orElse(fallbackEndDate);
 	}
 
 	private void cutOrDeleteRecurringMastersFromDate(List<Todo> masters, LocalDate occurrenceDate) {
