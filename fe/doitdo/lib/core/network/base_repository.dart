@@ -20,6 +20,7 @@ abstract class BaseRepository {
         throw ServerException(
           response.message,
           statusCode: response.status,
+          code: response.code,
         );
       }
       final data = response.data;
@@ -27,6 +28,7 @@ abstract class BaseRepository {
         throw ServerException(
           '필요한 정보를 가져오지 못했어요. 잠시 후 다시 시도해 주세요.',
           statusCode: response.status,
+          code: response.code,
         );
       }
       return data;
@@ -76,6 +78,7 @@ abstract class BaseRepository {
         throw ServerException(
           response.message,
           statusCode: response.status,
+          code: response.code,
         );
       }
     } on DioException catch (e) {
