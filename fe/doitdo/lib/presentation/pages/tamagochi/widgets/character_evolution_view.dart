@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import 'package:doitdo/domain/entities/evolution.dart';
@@ -91,11 +92,20 @@ class _CharacterEvolutionViewState extends State<CharacterEvolutionView> {
     super.initState();
     _schedule();
     // reveal 시점에 즉시 표시되도록 새 캐릭터 이미지를 미리 캐시한다.
+    // CachedNetworkImage 가 표시에 사용되므로 같은 provider 로 워밍해야 캐시 적중.
+    // animation gif 도 함께 워밍 — animation 단계에 진입했을 때 디코드 지연으로
+    // 깜빡이는 걸 방지.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final url = widget.evolution.characterImageUrl;
-      if (url.isNotEmpty) {
-        precacheImage(NetworkImage(url), context);
+      final characterUrl = widget.evolution.characterImageUrl;
+      if (characterUrl.isNotEmpty) {
+        precacheImage(CachedNetworkImageProvider(characterUrl), context)
+            .catchError((_) {});
+      }
+      final animationUrl = widget.evolution.animationUrl;
+      if (animationUrl.isNotEmpty) {
+        precacheImage(CachedNetworkImageProvider(animationUrl), context)
+            .catchError((_) {});
       }
     });
   }
@@ -213,11 +223,14 @@ class _CharacterEvolutionViewState extends State<CharacterEvolutionView> {
                 height: gifSize,
                 child: widget.evolution.animationUrl.isEmpty
                     ? const SizedBox.shrink()
-                    : Image.network(
-                        widget.evolution.animationUrl,
+                    : CachedNetworkImage(
+                        imageUrl: widget.evolution.animationUrl,
                         fit: BoxFit.contain,
                         filterQuality: FilterQuality.medium,
-                        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                        fadeInDuration: Duration.zero,
+                        fadeOutDuration: Duration.zero,
+                        placeholder: (_, _) => const SizedBox.shrink(),
+                        errorWidget: (_, _, _) => const SizedBox.shrink(),
                       ),
               ),
             ),
@@ -269,12 +282,15 @@ class _SilhouetteImage extends StatelessWidget {
 
     final emptyBox = SizedBox(height: size);
     final networkFallback = hasNetwork
-        ? Image.network(
-            imageUrl,
+        ? CachedNetworkImage(
+            imageUrl: imageUrl,
             height: size,
             fit: BoxFit.contain,
             filterQuality: FilterQuality.medium,
-            errorBuilder: (_, _, _) => emptyBox,
+            fadeInDuration: Duration.zero,
+            fadeOutDuration: Duration.zero,
+            placeholder: (_, _) => emptyBox,
+            errorWidget: (_, _, _) => emptyBox,
           )
         : emptyBox;
 
@@ -315,12 +331,15 @@ class _AfterCharacterImage extends StatelessWidget {
     final emptyBox = SizedBox(height: size);
     final networkFallback = fallbackImageUrl.isEmpty
         ? emptyBox
-        : Image.network(
-            fallbackImageUrl,
+        : CachedNetworkImage(
+            imageUrl: fallbackImageUrl,
             height: size,
             fit: BoxFit.contain,
             filterQuality: FilterQuality.medium,
-            errorBuilder: (_, _, _) => emptyBox,
+            fadeInDuration: Duration.zero,
+            fadeOutDuration: Duration.zero,
+            placeholder: (_, _) => emptyBox,
+            errorWidget: (_, _, _) => emptyBox,
           );
 
     if (id == null) return networkFallback;

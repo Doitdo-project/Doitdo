@@ -192,6 +192,10 @@ class CharacterCard extends StatelessWidget {
                 bottom: floorInset,
                 child: _WalkingSlot(
                   enableWalk: _shouldWalk,
+                  // 진화 진입 시점에는 walking 좌표가 아닌 가운데에서 연출이
+                  // 시작되어야 자연스럽다. 액션(탭) 은 그 자리에서 반응해야
+                  // 하므로 false 유지.
+                  snapToCenterOnDisable: evolution != null,
                   onCharacterTap: _isGrown ? onCharacterTap : null,
                   bubble: _speechText != null
                       ? Transform.translate(
@@ -294,7 +298,12 @@ class CharacterCard extends StatelessWidget {
     final isAction = overrideUrl != null && overrideUrl.isNotEmpty;
     final imageUrl = isAction ? overrideUrl : c.thumbnailUrl;
     return _GrownCharacter(
-      key: ValueKey('grown-$imageUrl-${c.characterId}-${state.actionTick}'),
+      // key 는 슬롯 단위로 stable 하게 유지 — 캐릭터 종(species) 변경(진화) 시
+      // 에도 같은 widget instance 가 prop diff 로 처리하도록 한다. CachedNetworkImage
+      // 의 useOldImageOnUrlChange 가 효과를 발휘해 새 PNG 디코드 끝날 때까지
+      // 이전 캐릭터 이미지가 그대로 painted 상태로 남아 진화 직후 invisible
+      // 윈도우가 안 생긴다 (key 가 바뀌면 새 instance 라 이전 frame 유지 불가).
+      key: const ValueKey('grown'),
       thumbnailUrl: imageUrl,
       eyeGifCharacterId: isAction ? null : c.characterId,
       imageHeight: 80.h,
@@ -438,12 +447,10 @@ class _SpeechBubbleTailPainter extends CustomPainter {
 
 /// 캐릭터 thumbnailUrl / 액션 gif 를 위한 캐시 + 다운샘플 wrapper.
 ///
-/// `Image.network` 은 디스크 캐시가 없어 앱 재진입마다 새로 다운로드 → 첫 표시까지
-/// 수백 ms 지연이 누적된다. `CachedNetworkImage` 로 디스크 캐시 + `memCacheHeight`
-/// 로 디코드 사이즈를 표시 크기 근처로 잡아 메모리/디코드 시간도 줄인다.
-///
-/// 캐시 hit 시 페이드 인 애니메이션은 제거 — 즉시 그려져야 캐릭터 카드가
-/// 끊김없이 채워진다.
+/// `useOldImageOnUrlChange: true` 로 url 이 바뀌어도 새 이미지가 디코드 완료될
+/// 때까지 이전 frame 을 유지 — 액션 gif 시작/종료, 진화 캐릭터 변경 등 모든
+/// url 전환에서 빈 placeholder 가 한 frame 깜빡이는 것을 막는다.
+/// `_GrownCharacter` 가 stable key 라 같은 instance 를 유지하므로 이 효과가 살아있다.
 class _CachedCharacterImage extends StatelessWidget {
   const _CachedCharacterImage({required this.url, required this.height});
 
@@ -461,6 +468,7 @@ class _CachedCharacterImage extends StatelessWidget {
       memCacheHeight: 320,
       fadeInDuration: Duration.zero,
       fadeOutDuration: Duration.zero,
+      useOldImageOnUrlChange: true,
       placeholder: (_, _) => const SizedBox.shrink(),
       errorWidget: (_, _, _) => const _CharacterPlaceholder(),
     );
@@ -682,8 +690,12 @@ class _GrownCharacterState extends State<_GrownCharacter> {
         _blinkAsset = null;
       } else {
         // 정지/액션 진입 — idling 이 1~2초로 짧아 평상시 간격(2~4초) 으론 blink 가
-        // 한 번도 안 발화되고 walking 으로 돌아가는 일이 생긴다. 첫 발화는 즉시.
-        _scheduleNextBlink(immediate: true);
+        // 한 번도 안 발화되고 walking 으로 돌아가는 일이 생긴다. 빠르게는 발화.
+        // 단, 0ms (=즉시) 면 base 가 walking gif → PNG 로 visibility 토글되는
+        // 직후라 PNG 디코드/paint 가 한 frame 늦으면 그 사이에 eye gif 만 떠
+        // 있는 시점이 생기거나, walking gif 마지막 frame 위에 eye gif 가 덮여
+        // 두 캐릭터가 잠깐 겹쳐 보인다. ~200ms 의 안전 마진을 둔다.
+        _scheduleNextBlink(initialDelay: const Duration(milliseconds: 200));
       }
     }
   }
@@ -707,7 +719,12 @@ class _GrownCharacterState extends State<_GrownCharacter> {
           .catchError((_) {}); // 변형이 없을 수 있어 실패는 무시.
     }
     if (widget.thumbnailUrl.isNotEmpty) {
-      precacheImage(NetworkImage(widget.thumbnailUrl), context)
+      // 표시는 CachedNetworkImage(= CachedNetworkImageProvider) 를 쓰므로
+      // 같은 provider 로 워밍해야 캐시 적중. memCacheHeight 다운샘플은
+      // CachedNetworkImage 가 내부적으로 ResizeImage 로 처리하므로 precache 도
+      // 동일 형태가 매칭되긴 하지만, ResizeImage 를 명시하면 추가 디코드 단계가
+      // 끼어 첫 표시가 오히려 늦어지는 경우가 있어 raw provider 만 워밍한다.
+      precacheImage(CachedNetworkImageProvider(widget.thumbnailUrl), context)
           .catchError((_) {});
     }
     // 보행 중 base 로 쓰는 캐릭터별 idle gif. walking ↔ idling swap 시 디코드
@@ -719,13 +736,11 @@ class _GrownCharacterState extends State<_GrownCharacter> {
     }
   }
 
-  void _scheduleNextBlink({bool immediate = false}) {
+  void _scheduleNextBlink({Duration? initialDelay}) {
     if (widget.eyeGifCharacterId == null) return;
-    // idling 진입 직후엔 짧은 정지 구간(1~2초) 안에 blink 가 꼭 한 번은 보이도록
-    // 다음 frame 에 즉시 발화. 평상시 후속 스케줄은 _intervalMin~_intervalMax 간격.
-    final delay = immediate
-        ? Duration.zero
-        : _randomDuration(_intervalMin, _intervalMax);
+    // 호출측이 [initialDelay] 를 주면 그 시간 후 첫 발화. 평상시 후속 스케줄은
+    // _intervalMin~_intervalMax 간격.
+    final delay = initialDelay ?? _randomDuration(_intervalMin, _intervalMax);
     _scheduleTimer = Timer(delay, _startBlink);
   }
 
@@ -763,32 +778,34 @@ class _GrownCharacterState extends State<_GrownCharacter> {
     final blinkAsset = widget.isWalking ? null : _blinkAsset;
 
     // walking: 캐릭터별 idle gif (`assets/animations/idle/$id.gif`). 일부 캐릭터는
-    // 아직 idle gif 가 없을 수 있어 PNG 로 폴백 — 그 경우 좌우상하 이동 + sin bob
-    // 만으로 움직임을 표현.
+    // 아직 idle gif 가 없을 수 있어 PNG 로 폴백.
     // idling/액션: 캐릭터별 PNG (또는 호출측에서 넣은 액션 gif URL).
-    final Widget base;
-    if (widget.isWalking && id != null) {
-      base = Image.asset(
-        'assets/animations/idle/$id.gif',
-        height: widget.imageHeight,
-        fit: BoxFit.contain,
-        filterQuality: FilterQuality.medium,
-        gaplessPlayback: true,
-        errorBuilder: (_, _, _) => widget.thumbnailUrl.isEmpty
-            ? const _CharacterPlaceholder()
-            : _CachedCharacterImage(
-                url: widget.thumbnailUrl,
-                height: widget.imageHeight,
-              ),
-      );
-    } else {
-      base = widget.thumbnailUrl.isEmpty
-          ? const _CharacterPlaceholder()
-          : _CachedCharacterImage(
-              url: widget.thumbnailUrl,
-              height: widget.imageHeight,
-            );
-    }
+    //
+    // 두 base 모두 항상 트리에 두고 Visibility 로 토글한다 — 같은 widget type
+    // 으로 강제 swap 하면 type-mismatch (Image.asset / CachedNetworkImage) 으로
+    // element 가 mount/unmount 되어 1 frame 비는 케이스가 생긴다.
+    // CachedNetworkImage 쪽은 useOldImageOnUrlChange 로 url 변경 (PNG ↔ 액션
+    // gif, 진화로 캐릭터 변경 등) 시 이전 frame 을 유지해 매끄럽게 swap.
+    final hasIdleGif = id != null;
+    final showWalking = widget.isWalking && hasIdleGif;
+    final walkingBase = !hasIdleGif
+        ? const SizedBox.shrink()
+        : Image.asset(
+            'assets/animations/idle/$id.gif',
+            height: widget.imageHeight,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.medium,
+            gaplessPlayback: true,
+            // idle gif 가 없는 캐릭터는 빈 자리. idleBase 가 옆에서 항상 켜져
+            // 있으니 Visibility 가 그쪽으로 흐르도록 useFallback 로직은 두지 않음.
+            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          );
+    final idleBase = widget.thumbnailUrl.isEmpty
+        ? const _CharacterPlaceholder()
+        : _CachedCharacterImage(
+            url: widget.thumbnailUrl,
+            height: widget.imageHeight,
+          );
 
     Widget? blinkOverlay;
     if (id != null && blinkAsset != null) {
@@ -827,7 +844,20 @@ class _GrownCharacterState extends State<_GrownCharacter> {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            base,
+            // walking gif. maintainState/maintainAnimation 으로 inactive 동안에도
+            // ImageStream 을 살려두어 visibility 토글 순간 즉시 paint 된다.
+            Visibility(
+              visible: showWalking,
+              maintainState: true,
+              maintainAnimation: true,
+              child: walkingBase,
+            ),
+            Visibility(
+              visible: !showWalking,
+              maintainState: true,
+              maintainAnimation: true,
+              child: idleBase,
+            ),
             ?blinkOverlay,
           ],
         ),
@@ -861,6 +891,7 @@ class _WalkingSlot extends StatefulWidget {
     required this.characterBuilder,
     this.bubble,
     this.onCharacterTap,
+    this.snapToCenterOnDisable = false,
   });
 
   /// true 면 캐릭터가 방 안을 자유 보행. false 면 transform 없이 가운데 고정.
@@ -873,6 +904,12 @@ class _WalkingSlot extends StatefulWidget {
 
   /// 캐릭터 본체 탭 콜백. 인자는 글로벌 좌표(손가락 위치). null 이면 탭 영역 자체가 비활성.
   final ValueChanged<Offset>? onCharacterTap;
+
+  /// [enableWalk] 가 false 로 전환될 때 현재 walking 위치를 고정(기본) 하지 않고
+  /// 가운데(0,0) 로 즉시 snap 한다. 진화 연출처럼 캐릭터가 늘 카드 중앙에서
+  /// 시작해야 자연스러운 케이스에 사용. 액션(탭) 처럼 그 자리에서 반응해야 하는
+  /// 케이스는 false 로 둔다.
+  final bool snapToCenterOnDisable;
 
   @override
   State<_WalkingSlot> createState() => _WalkingSlotState();
@@ -975,9 +1012,17 @@ class _WalkingSlotState extends State<_WalkingSlot>
         _phase = _WalkPhase.idling;
       }
     } else {
-      // 액션 진입(또는 알/진화 등). 현재 위치 박고 stop + phase=idling — _GrownCharacter
-      // 가 base 를 액션 gif (= thumbnailUrl) 로 그리도록 신호를 준다.
-      _snapshotCurrentPosition();
+      // 액션/진화/알 등 진입. 호출측이 [snapToCenterOnDisable] 를 켰으면 (진화)
+      // 가운데로 즉시 snap — 진화 연출이 walking 좌표에서 시작되어 어색하게
+      // 보이는 걸 막는다. 액션 처럼 그 자리에서 반응해야 하는 케이스는 false 라
+      // 기존처럼 snapshotCurrentPosition 으로 walking 위치를 고정.
+      if (widget.snapToCenterOnDisable) {
+        _walkFrom = Offset.zero;
+        _walkTo = Offset.zero;
+        _facingLeft = false;
+      } else {
+        _snapshotCurrentPosition();
+      }
       _walkController.stop();
       _cancelIdleTimer();
       _phase = _WalkPhase.idling;
