@@ -145,6 +145,7 @@ public class TodoServiceImpl implements TodoService {
 				row.status(),
 				row.updatedAt(),
 				row.masterTodoId(),
+				row.recurrenceGroupId(),
 				row.masterTodoId() != null ? row.startDate() : null,
 				(int) row.snoozeCount(),
 				row.type() == TodoType.RECURRING ? excludedDates : List.of()
@@ -282,6 +283,9 @@ public class TodoServiceImpl implements TodoService {
 						req.title(), req.content(),
 						type, priority, req.alertTime(), startDate, req.endDate(), daysOfWeek)
 		);
+		if (todo.getType() == TodoType.RECURRING) {
+			todo.assignOwnRecurrenceGroupIdIfAbsent();
+		}
 
 		log.info("event=TODO_CREATED userId={} todoId={}", userId, todo.getTodoId());
 		cacheEvictHelper.evictUserTodosAfterCommit(userId);
@@ -330,12 +334,9 @@ public class TodoServiceImpl implements TodoService {
 
 		if (todo.getType() == TodoType.RECURRING && isFromScope(scope)) {
 			validateOccurrenceOfMaster(todo, occurrenceDate);
-			todo.changeEndDate(occurrenceDate.minusDays(1));
-			todoRepository.findAllByUserIdAndMasterTodoIdAndStartDateGreaterThanEqualAndIsDeletedFalse(
-							userId,
-							todo.getTodoId(),
-							occurrenceDate)
-					.forEach(Todo::softDelete);
+			List<Todo> affectedMasters = findRecurringMastersOverlappingFromDate(userId, todo, occurrenceDate);
+			cutOrDeleteRecurringMastersFromDate(affectedMasters, occurrenceDate);
+			softDeleteMaterializedInstancesFromDate(userId, affectedMasters, occurrenceDate);
 			log.info("event=TODO_RECURRING_FROM_DELETED userId={} masterTodoId={} occurrenceDate={}",
 					userId, todo.getTodoId(), occurrenceDate);
 			cacheEvictHelper.evictUserTodosAfterCommit(userId);
@@ -440,12 +441,10 @@ public class TodoServiceImpl implements TodoService {
 		}
 
 		LocalDate originalEndDate = master.getEndDate();
-		master.changeEndDate(occurrenceDate.minusDays(1));
-		todoRepository.findAllByUserIdAndMasterTodoIdAndStartDateGreaterThanEqualAndIsDeletedFalse(
-						userId,
-						master.getTodoId(),
-						occurrenceDate)
-				.forEach(Todo::softDelete);
+		List<Todo> affectedMasters = findRecurringMastersOverlappingFromDate(userId, master, occurrenceDate);
+		LocalDate groupEndDate = findLatestEndDate(affectedMasters, originalEndDate);
+		cutOrDeleteRecurringMastersFromDate(affectedMasters, occurrenceDate);
+		softDeleteMaterializedInstancesFromDate(userId, affectedMasters, occurrenceDate);
 
 		Long categoryId = master.getCategoryId();
 		String categoryName = master.getCategoryName();
@@ -463,7 +462,7 @@ public class TodoServiceImpl implements TodoService {
 		String alertTime = Boolean.TRUE.equals(req.clearAlertTime())
 				? null
 				: req.alertTime() != null ? req.alertTime() : master.getAlertTime();
-		Todo newMaster = todoRepository.save(Todo.create(
+		Todo newMaster = Todo.create(
 				userId,
 				categoryId,
 				categoryName,
@@ -474,8 +473,10 @@ public class TodoServiceImpl implements TodoService {
 				master.getPriority(),
 				alertTime,
 				occurrenceDate,
-				req.endDate() != null ? req.endDate() : originalEndDate,
-				daysOfWeek));
+				req.endDate() != null ? req.endDate() : groupEndDate,
+				daysOfWeek);
+		newMaster.assignRecurrenceGroupId(resolveRecurrenceGroupId(master));
+		newMaster = todoRepository.save(newMaster);
 
 		log.info("event=TODO_RECURRING_FROM_UPDATED userId={} oldMasterTodoId={} newMasterTodoId={} occurrenceDate={}",
 				userId, master.getTodoId(), newMaster.getTodoId(), occurrenceDate);
@@ -487,6 +488,49 @@ public class TodoServiceImpl implements TodoService {
 
 		String colorHex = resolveColorHexForTodo(userId, newMaster);
 		return withExcludedDates(userId, newMaster, newMaster.getCategoryName(), colorHex, 0);
+	}
+
+	private Long resolveRecurrenceGroupId(Todo master) {
+		return master.getRecurrenceGroupId() != null ? master.getRecurrenceGroupId() : master.getTodoId();
+	}
+
+	private List<Todo> findRecurringMastersOverlappingFromDate(Long userId, Todo master, LocalDate occurrenceDate) {
+		List<Todo> masters = todoRepository.findRecurringMastersOverlappingFromDate(
+				userId,
+				resolveRecurrenceGroupId(master),
+				occurrenceDate);
+		return masters == null || masters.isEmpty() ? List.of(master) : masters;
+	}
+
+	private LocalDate findLatestEndDate(List<Todo> masters, LocalDate fallbackEndDate) {
+		if (masters.stream().anyMatch(item -> item.getEndDate() == null)) {
+			return null;
+		}
+		return masters.stream()
+				.map(Todo::getEndDate)
+				.max(LocalDate::compareTo)
+				.orElse(fallbackEndDate);
+	}
+
+	private void cutOrDeleteRecurringMastersFromDate(List<Todo> masters, LocalDate occurrenceDate) {
+		for (Todo affected : masters) {
+			if (affected.getStartDate().isBefore(occurrenceDate)) {
+				affected.changeEndDate(occurrenceDate.minusDays(1));
+			} else {
+				affected.softDelete();
+			}
+		}
+	}
+
+	private void softDeleteMaterializedInstancesFromDate(Long userId, List<Todo> masters, LocalDate occurrenceDate) {
+		List<Long> masterIds = masters.stream()
+				.map(Todo::getTodoId)
+				.toList();
+		if (masterIds.isEmpty()) {
+			return;
+		}
+		todoRepository.findMaterializedInstancesByMasterTodoIdInFromDate(userId, masterIds, occurrenceDate)
+				.forEach(Todo::softDelete);
 	}
 
 	private TodoUpdateReq normalizeRecurringOnlyUpdateReq(TodoUpdateReq req) {
