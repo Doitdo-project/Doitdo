@@ -126,6 +126,8 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `daysOfWeek` | `String` | nullable. RECURRING 타입만 채워짐. 요일 CSV (예: `"MON,WED,FRI"`) |
 | `status` | `TodoStatus` | TODO / IN_PROGRESS / DONE |
 | `updatedAt` | `LocalDateTime` | |
+| `masterTodoId` | `Long` | nullable. 반복 마스터에서 파생된 NORMAL 인스턴스면 원본 RECURRING 마스터 ID |
+| `occurrenceDate` | `LocalDate` | nullable. 반복 파생 NORMAL 인스턴스면 해당 발생일. 일반 TODO / RECURRING 마스터는 null |
 | `snoozedDays` | `int` | 이 TODO 를 미룬 누적 횟수. `snooze_history` 테이블 COUNT 파생 (todos DDL 변경 없음) |
 | `excludedDates` | `List<LocalDate>` | RECURRING 마스터에서 `scope=only` 로 삭제된 occurrence 날짜 목록. RECURRING 이 아니면 `[]` |
 
