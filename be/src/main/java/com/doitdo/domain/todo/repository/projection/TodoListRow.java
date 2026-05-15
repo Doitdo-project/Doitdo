@@ -20,6 +20,7 @@ public record TodoListRow(
 		TodoStatus status,
 		LocalDateTime updatedAt,
 		Long masterTodoId,
+		Long recurrenceGroupId,
 		long snoozeCount
 ) {
 }
