@@ -33,6 +33,7 @@ public class TodoListQueryRepository {
 				t.daysOfWeekRaw,
 				t.status,
 				t.updatedAt,
+				t.masterTodoId,
 				COUNT(sh.snoozeHistoryId)
 			)
 			""";
@@ -51,7 +52,8 @@ public class TodoListQueryRepository {
 				t.endDate,
 				t.daysOfWeekRaw,
 				t.status,
-				t.updatedAt
+				t.updatedAt,
+				t.masterTodoId
 			""";
 
 	@PersistenceContext

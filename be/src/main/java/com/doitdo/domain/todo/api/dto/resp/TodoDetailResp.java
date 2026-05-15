@@ -22,6 +22,8 @@ public record TodoDetailResp(
 		List<String> daysOfWeek,
 		TodoStatus status,
 		LocalDateTime updatedAt,
+		Long masterTodoId,
+		LocalDate occurrenceDate,
 		int snoozedDays,
 		List<LocalDate> excludedDates
 ) {
@@ -53,6 +55,8 @@ public record TodoDetailResp(
 						.toList(),
 				todo.getStatus(),
 				todo.getUpdatedAt(),
+				todo.getMasterTodoId(),
+				todo.getMasterTodoId() != null ? todo.getStartDate() : null,
 				snoozedDays,
 				excludedDates
 		);
