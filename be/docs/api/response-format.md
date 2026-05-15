@@ -157,6 +157,7 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 
 RECURRING 마스터 수정은 기존 마스터 TODO 를 직접 수정한다. 이미 실체화된 NORMAL 파생 인스턴스는 `status != DONE` 인 항목만 마스터의 제목/내용/카테고리/알림 스냅샷으로 갱신하고, `DONE` 인 항목은 완료 당시 기록 보존을 위해 수정하지 않는다.
 기존 `scope=from` 의 "기존 마스터 종료 + 새 마스터 생성" 동작은 2026-05-15 기준 폐기됐다.
+TODO 생성/수정 Request body 의 카테고리 입력은 `categoryId`(Long) 와 `category`(String 이름)를 모두 지원하며, 둘 다 전달되면 `categoryId` 가 우선한다.
 
 ### 카테고리 스냅샷 정책 (2026-05-12 도입)
 
