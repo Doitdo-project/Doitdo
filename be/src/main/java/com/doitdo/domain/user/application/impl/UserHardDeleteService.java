@@ -1,5 +1,6 @@
 package com.doitdo.domain.user.application.impl;
 
+import com.doitdo.domain.auth.application.cache.AuthUserCacheEvictHelper;
 import com.doitdo.domain.auth.entity.OAuthProvider;
 import com.doitdo.domain.auth.repository.AutoProviderRepository;
 import com.doitdo.domain.auth.repository.RefreshTokenRepository;
@@ -57,6 +58,7 @@ public class UserHardDeleteService {
     private final UserSettingRepository userSettingRepository;
     private final CharacterUnlockRepository characterUnlockRepository;
     private final AppleOAuthClient appleOAuthClient;
+    private final AuthUserCacheEvictHelper authUserCacheEvictHelper;
 
     /**
      * 만 14세 미만 사용자 hard delete (독립 트랜잭션 커밋).
@@ -88,6 +90,7 @@ public class UserHardDeleteService {
         characterUnlockRepository.deleteAllByUserId(userId);
 
         userRepository.deleteById(userId);
+        authUserCacheEvictHelper.evictAfterCommit(userId);
     }
 
     private void revokeAppleTokensIfPresent(Long userId) {
