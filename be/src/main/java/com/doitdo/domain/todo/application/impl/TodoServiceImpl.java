@@ -404,7 +404,10 @@ public class TodoServiceImpl implements TodoService {
 		LocalDate finalStartDate = normalizeStartDate(finalType, req.startDate() != null ? req.startDate() : todo.getStartDate());
 		Set<DayOfWeek> finalDaysOfWeek = requestedDaysOfWeek != null ? requestedDaysOfWeek : todo.getDaysOfWeek();
 		validateStartDate(finalType, finalStartDate, false);
-		validateRecurringDays(finalType, finalStartDate, finalDaysOfWeek);
+		LocalDate recurringValidationStartDate = todo.getType() == TodoType.RECURRING && req.startDate() == null
+				? null
+				: finalStartDate;
+		validateRecurringDays(finalType, recurringValidationStartDate, finalDaysOfWeek);
 
 		todo.update(
 				req.title(),
