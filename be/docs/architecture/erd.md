@@ -27,6 +27,8 @@
 | user_wallets | [tables/user_wallets.png](../imgs/tables/user_wallets.png) |
 | users | [tables/users.png](../imgs/tables/users.png) |
 | wallet_earn_logs | 신규 테이블 (2026-05-07) |
+| notices | 신규 테이블 (2026-05-15) |
+| notice_dismissals | 신규 테이블 (2026-05-15) |
 
 ## 도메인 ↔ 테이블 매핑
 
@@ -41,8 +43,16 @@
 | `notification` | device_tokens |
 | `setting` | user_settings |
 | `bugreport` | bug_reports |
+| `notice` | notices, notice_dismissals |
 
 신규 테이블/도메인이 생기면 이 표를 갱신한다.
+
+## notice 도메인 추가 테이블 (공지사항)
+
+| 테이블 | 주요 컬럼 | 비고 |
+|---|---|---|
+| `notices` | `notice_id`, `title`, `content`, `is_active`, `started_at`, `ended_at`, `created_at`, `updated_at` | DB 직접 등록 대상. 활성 공지 중 최신 1개를 초기 팝업 후보로 사용 |
+| `notice_dismissals` | `notice_dismissal_id`, `user_id`, `notice_id`, `created_at`, `updated_at` | 사용자별 "이 공지사항 다시 안보기" 기록. `(user_id, notice_id)` unique |
 
 ## todo 도메인 변경 컬럼
 

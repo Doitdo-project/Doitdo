@@ -26,7 +26,7 @@ public interface ErrorCode {
 
 예: `A00-001` (auth / 로그인 카테고리 / 1번)
 
-## 3. 도메인 enum (10개)
+## 3. 도메인 enum (11개)
 
 | Enum | 접두 letter | 도메인 |
 |---|---|---|
@@ -40,6 +40,7 @@ public interface ErrorCode {
 | `NotificationErrorCode` | `N` | notification |
 | `SettingErrorCode` | `C` | setting |
 | `BugReportErrorCode` | `B` | bugreport |
+| `NoticeErrorCode` | `O` | notice |
 
 각 enum 의 실제 값 (코드/status/메시지) 은 enum 파일 자체가 SSOT.
 
@@ -110,7 +111,7 @@ public interface ErrorCode {
 
 위치: `com.doitdo.global.exception.ErrorCodeRegistry`
 
-부팅 시점에 위 9개 enum 을 모두 모아 `Map<String, ErrorCode>` 로 인덱싱한다. **중복 코드가 있으면 부팅 실패** (조기 발견).
+부팅 시점에 위 enum 을 모두 모아 `Map<String, ErrorCode>` 로 인덱싱한다. **중복 코드가 있으면 부팅 실패** (조기 발견).
 
 API:
 
@@ -243,6 +244,14 @@ A04 그룹은 OTP 6자리 인증번호 흐름에서 사용한다:
 | `B00_001` | `B00-001` | 500 | 버그 신고 처리 중 서버 오류 |
 
 > MVP 단계에서 비즈니스 검증 에러(`G00-006` 자동 부착)로 충분. Rate Limit(`B00-003` 429) 등은 후속 이슈에서 추가.
+
+### `NoticeErrorCode` 신규 enum (notice, 2026-05)
+
+접두 letter `O`. `ErrorCodeRegistry.SOURCES` 에 등록됨.
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `O00_001` | `O00-001` | 404 | 공지사항을 찾을 수 없음 |
 
 ## 5. 새 코드 추가 절차
 

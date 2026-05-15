@@ -34,7 +34,7 @@ domain/{domain}/
 
 ## 등록된 도메인
 
-`auth, user, todo, tamagotchi, inventory, shop, notification, setting, bugreport`
+`auth, user, todo, tamagotchi, inventory, shop, notification, setting, bugreport, notice`
 
 (노션 「엔드포인트」 카테고리 직역. 검색 기능은 `todo` 도메인 내부에서 처리.)
 
@@ -62,12 +62,12 @@ global/
  │   ├ SecurityConfig.java
  │   ├ JpaAuditingConfig.java
  │   ├ PasswordEncoderConfig.java
- │   └ OpenApiConfig.java                # springdoc-openapi 메타 + 11개 그룹 (auth, user, todo, tamagotchi, streak, inventory, shop, notification, setting, bugreport, global)
+ │   └ OpenApiConfig.java                # springdoc-openapi 메타 + 12개 그룹 (auth, user, todo, tamagotchi, streak, inventory, shop, notification, setting, bugreport, notice, global)
  ├ entity/
  │   └ BaseTimeEntity.java               # 공통 Auditing (createdAt/updatedAt)
  ├ exception/
  │   ├ ErrorCode.java                    # 인터페이스
- │   ├ ErrorCodeRegistry.java            # 10개 도메인 enum 정적 인덱스
+ │   ├ ErrorCodeRegistry.java            # 11개 도메인 enum 정적 인덱스
  │   ├ CommonErrorCode.java              # G/G99
  │   ├ AuthErrorCode.java                # A
  │   ├ UserErrorCode.java                # U
@@ -78,6 +78,7 @@ global/
  │   ├ NotificationErrorCode.java        # N
  │   ├ SettingErrorCode.java             # C
  │   ├ BugReportErrorCode.java           # B
+ │   ├ NoticeErrorCode.java              # O
  │   ├ CustomException.java
  │   └ GlobalExceptionHandler.java
  ├ swagger/                              # be/feat/swagger 머지 후 등장
@@ -290,6 +291,24 @@ UNIQUE 제약 `uk_todos_user_master_date (user_id, master_todo_id, start_date)` 
 | Migration SQL | `docs/ops/migrations/2026-04-bug-report.sql` | 수동 실행 필요 |
 
 `BugReportErrorCode` (`B` 접두, `global/exception/`) — `ErrorCodeRegistry.SOURCES` 에 등록.
+
+## notice 도메인 구현 파일
+
+| 종류 | 경로 | 비고 |
+|---|---|---|
+| Controller | `domain/notice/api/controller/NoticeController.java` | 초기 팝업/목록/상세/다시 안보기 엔드포인트 |
+| Response DTO | `domain/notice/api/dto/resp/NoticePopupResp.java` | `show`, `notice` — 초기 진입 모달 판단 |
+| Response DTO | `domain/notice/api/dto/resp/NoticeListResp.java` | `items[]` 래퍼 |
+| Response DTO | `domain/notice/api/dto/resp/NoticeResp.java` | 공지 단일 응답 |
+| Application interface | `domain/notice/application/NoticeService.java` | 공지 조회/다시 안보기 인터페이스 |
+| Application impl | `domain/notice/application/impl/NoticeServiceImpl.java` | 활성 기간 필터, 최신 공지, 사용자별 dismiss 처리 |
+| Entity | `domain/notice/entity/Notice.java` | `notices` 테이블 매핑 |
+| Entity | `domain/notice/entity/NoticeDismissal.java` | `notice_dismissals` 테이블 매핑, `(user_id, notice_id)` unique |
+| Repository | `domain/notice/repository/NoticeRepository.java` | 활성 공지 최신/목록/상세 조회 |
+| Repository | `domain/notice/repository/NoticeDismissalRepository.java` | 사용자별 dismiss 존재 여부 조회 |
+| Migration SQL | `docs/ops/migrations/2026-05-15-notice.sql` | 공지/다시 안보기 테이블 수동 실행 필요 |
+
+`NoticeErrorCode` (`O` 접두, `global/exception/`) — `ErrorCodeRegistry.SOURCES` 에 등록.
 
 ## 네이밍/엔티티 규칙
 

@@ -7,7 +7,7 @@
 - 의존성: `springdoc-openapi-starter-webmvc-ui:2.7.0` (`be/build.gradle`)
 - 활성 프로파일: **`dev` / `local` 한정** (운영 보안)
 - 설정 위치: `com.doitdo.global.config.OpenApiConfig`
-- 11개 그룹: `auth`, `user`, `todo`, `tamagotchi`, `streak`, `inventory`, `shop`, `notification`, `setting`, `bugreport`, `global`
+- 12개 그룹: `auth`, `user`, `todo`, `tamagotchi`, `streak`, `inventory`, `shop`, `notification`, `setting`, `bugreport`, `notice`, `global`
 - 인증: JWT BearerAuth (Swagger UI 의 Authorize 버튼)
 - UI: <http://localhost:8080/swagger-ui.html> (부팅 후)
 
@@ -114,6 +114,43 @@
 | 에러 | `S03-001`, `S03-002`, `S03-003`, `S03-011`, `S00-001` |
 
 프론트의 "바로 배치하기"는 테마 구매 API 성공 후 테마 일괄 배치 API를 추가 호출한다. 이미 풀세트를 보유한 경우 구매 API를 건너뛰고 배치 API만 호출한다.
+
+### 공지사항 API (2026-05-15)
+
+`GET /api/notices/latest-popup`:
+
+| 항목 | 내용 |
+|---|---|
+| 인증 | 필요 |
+| 성공 응답 | `GlobalApiResponse<NoticePopupResp>` |
+| 처리 | 활성 공지 중 최신 1개를 조회하고, 현재 사용자가 다시 안보기 한 공지면 `show=false` 반환 |
+| 공지 없음 | `show=false`, `notice=null` |
+
+`GET /api/notices`:
+
+| 항목 | 내용 |
+|---|---|
+| 인증 | 필요 |
+| 성공 응답 | `GlobalApiResponse<NoticeListResp>` |
+| 처리 | 활성 공지사항 목록을 최신순으로 반환 |
+
+`GET /api/notices/{noticeId}`:
+
+| 항목 | 내용 |
+|---|---|
+| 인증 | 필요 |
+| 성공 응답 | `GlobalApiResponse<NoticeResp>` |
+| 에러 | `O00-001` |
+
+`POST /api/notices/{noticeId}/dismiss`:
+
+| 항목 | 내용 |
+|---|---|
+| 인증 | 필요 |
+| 요청 body | 없음 |
+| 성공 응답 | 204 `GlobalApiResponse<Void>` |
+| 처리 | `(user_id, notice_id)` 기준으로 다시 안보기 저장. 이미 저장된 경우도 성공 처리 |
+| 에러 | `O00-001` |
 
 ## 2. 컨트롤러 작성 템플릿 (복붙 가능)
 

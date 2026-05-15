@@ -257,7 +257,29 @@ enum 에는 있지만 해당 캐릭터의 `character_actions` row 가 없는 액
 
 `canClaim` 은 현재 연속 달성 일수가 7의 배수이고, 같은 `currentStreakStartDate` / `currentStreakCount` 로 보상 수령 기록이 없을 때만 `true` 다.
 
-## 11. 관련 문서
+## 11. `NoticePopupResp` / `NoticeResp` 필드
+
+`GET /api/notices/latest-popup` 응답:
+
+| 필드 | 타입 | 비고 |
+|---|---|---|
+| `show` | `boolean` | 초기 진입 공지 모달 표시 여부 |
+| `notice` | `NoticeResp` | `show=false` 이면 `null` |
+
+`NoticeResp` 필드:
+
+| 필드 | 타입 | 비고 |
+|---|---|---|
+| `noticeId` | `Long` | 공지사항 ID |
+| `title` | `String` | 제목 |
+| `content` | `String` | 본문 |
+| `startedAt` | `LocalDateTime` | 노출 시작 시각, nullable |
+| `endedAt` | `LocalDateTime` | 노출 종료 시각, nullable |
+| `createdAt` | `LocalDateTime` | 등록 시각 |
+
+`GET /api/notices` 는 `NoticeListResp.items[]` 로 `NoticeResp` 목록을 반환한다.
+
+## 12. 관련 문서
 
 - 에러 코드 정의/네이밍: [`error-codes.md`](error-codes.md)
 - Swagger 문서화: [`swagger.md`](swagger.md)

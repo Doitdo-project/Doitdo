@@ -113,6 +113,14 @@ public class OpenApiConfig {
     }
 
     @Bean
+    public GroupedOpenApi notice() {
+        return GroupedOpenApi.builder()
+            .group("notice")
+            .packagesToScan("com.doitdo.domain.notice.api.controller")
+            .build();
+    }
+
+    @Bean
     public GroupedOpenApi global() {
         return GroupedOpenApi.builder()
             .group("global")
