@@ -11,7 +11,7 @@ import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/domain/entities/user.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/navigation/post_auth_destination.dart';
-import 'package:doitdo/presentation/pages/auth/widgets/auth_pill_button.dart';
+import 'package:doitdo/presentation/widgets/common/doitdo_primary_button.dart';
 import 'package:doitdo/presentation/pages/onboarding/onboarding_view_model.dart';
 
 /// 첫 로그인 시 노출되는 온보딩 2단계 — 약관 동의.
@@ -185,7 +185,7 @@ class OnboardingAgreementsPage extends ConsumerWidget {
             // ── CTA ──
             Padding(
               padding: EdgeInsets.fromLTRB(24.w, 12.h, 24.w, 16.h),
-              child: AuthPillButton(
+              child: DoitdoPrimaryButton(
                 label: isLoading ? '저장 중…' : '동의하고 시작하기',
                 onPressed: (form.canSubmit && !isLoading)
                     ? () {
