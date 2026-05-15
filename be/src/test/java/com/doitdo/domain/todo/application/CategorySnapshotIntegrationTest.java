@@ -195,7 +195,7 @@ class CategorySnapshotIntegrationTest {
 	private void createTodo(String title, String categoryName) {
 		LocalDate today = LocalDate.now(SEOUL);
 		todoService.create(userId, new TodoCreateReq(
-				title, null, categoryName, TodoType.NORMAL, today, null, null, null, null));
+				title, null, categoryName, null, TodoType.NORMAL, today, null, null, null, null));
 	}
 
 	private TodoListReq todayReq() {

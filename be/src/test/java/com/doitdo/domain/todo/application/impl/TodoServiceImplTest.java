@@ -19,6 +19,7 @@ import com.doitdo.domain.todo.api.dto.req.TodoUpdateReq;
 import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.api.dto.resp.TodoListResp;
 import com.doitdo.domain.todo.application.RecurrenceService;
+import com.doitdo.domain.todo.entity.Category;
 import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.entity.Todo.TodoStatus;
 import com.doitdo.domain.todo.entity.Todo.TodoType;
@@ -254,6 +255,7 @@ class TodoServiceImplTest {
 				"repeat",
 				null,
 				null,
+				null,
 				TodoType.RECURRING,
 				LocalDate.parse("2026-04-20"),
 				null,
@@ -271,6 +273,7 @@ class TodoServiceImplTest {
 	void createRecurringRequiresStartDateDayToBeIncludedInDaysOfWeek() {
 		TodoCreateReq req = new TodoCreateReq(
 				"repeat",
+				null,
 				null,
 				null,
 				TodoType.RECURRING,
@@ -301,6 +304,7 @@ class TodoServiceImplTest {
 				"repeat",
 				null,
 				null,
+				null,
 				TodoType.RECURRING,
 				LocalDate.parse("2026-05-01"),
 				LocalDate.parse("2026-05-30"),
@@ -317,6 +321,7 @@ class TodoServiceImplTest {
 		given(todoRepository.save(any(Todo.class))).willAnswer(invocation -> invocation.getArgument(0));
 		TodoCreateReq req = new TodoCreateReq(
 				"new",
+				null,
 				null,
 				null,
 				TodoType.NORMAL,
@@ -346,6 +351,7 @@ class TodoServiceImplTest {
 				null,
 				null,
 				null,
+				null,
 				"20:00",
 				false);
 
@@ -362,6 +368,7 @@ class TodoServiceImplTest {
 		given(snoozeHistoryRepository.countByTodoId(1L)).willReturn(0L);
 
 		TodoUpdateReq req = new TodoUpdateReq(
+				null,
 				null,
 				null,
 				null,
@@ -393,6 +400,7 @@ class TodoServiceImplTest {
 				null,
 				null,
 				null,
+				null,
 				null);
 
 		TodoDetailResp resp = service.update(1L, 1L, req);
@@ -416,12 +424,46 @@ class TodoServiceImplTest {
 				null,
 				null,
 				null,
+				null,
 				null);
 
 		TodoDetailResp resp = service.update(1L, 1L, req);
 
 		assertThat(resp.content()).isEqualTo("새 메모");
 		assertThat(todo.getContent()).isEqualTo("새 메모");
+	}
+
+	@Test
+	void updateWithCategoryIdSwapsCategoryFields() {
+		Todo todo = normalTodo("09:00");
+		Category home = category(4L, "집안일", 3);
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+		given(categoryRepository.findByCategoryIdAndUserId(4L, 1L)).willReturn(Optional.of(home));
+		given(categoryRepository.findByCategoryNameAndUserId("집안일", 1L)).willReturn(Optional.of(home));
+		given(snoozeHistoryRepository.countByTodoId(1L)).willReturn(0L);
+
+		TodoDetailResp resp = service.update(1L, 1L,
+				new TodoUpdateReq(null, null, null, 4L, null, null, null, null, null, false));
+
+		assertThat(resp.category()).isEqualTo("집안일");
+		assertThat(todo.getCategoryId()).isEqualTo(4L);
+		assertThat(todo.getCategoryName()).isEqualTo("집안일");
+		assertThat(todo.getCategoryColorId()).isEqualTo(3);
+	}
+
+	@Test
+	void updateWithBothCategoryAndCategoryIdCategoryIdWins() {
+		Todo todo = normalTodo("09:00");
+		Category home = category(4L, "집안일", 3);
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+		given(categoryRepository.findByCategoryIdAndUserId(4L, 1L)).willReturn(Optional.of(home));
+		given(categoryRepository.findByCategoryNameAndUserId("집안일", 1L)).willReturn(Optional.of(home));
+		given(snoozeHistoryRepository.countByTodoId(1L)).willReturn(0L);
+
+		service.update(1L, 1L,
+				new TodoUpdateReq(null, null, "기타", 4L, null, null, null, null, null, false));
+
+		assertThat(todo.getCategoryName()).isEqualTo("집안일");
 	}
 
 	@Test
@@ -558,7 +600,7 @@ class TodoServiceImplTest {
 		TodoDetailResp resp = service.update(
 				1L,
 				10L,
-				new TodoUpdateReq("하루만 수정", "메모", null, null, null, null, null, null, false),
+				new TodoUpdateReq("하루만 수정", "메모", null, null, null, null, null, null, null, false),
 				"only",
 				LocalDate.parse("2026-05-12"));
 
@@ -580,7 +622,7 @@ class TodoServiceImplTest {
 		TodoDetailResp resp = service.update(
 				1L,
 				10L,
-				new TodoUpdateReq("하루만 수정", "메모", null, TodoType.RECURRING,
+				new TodoUpdateReq("하루만 수정", "메모", null, null, TodoType.RECURRING,
 						LocalDate.parse("2026-05-12"), null, Set.of("TUE"), "12:15", false),
 				"only",
 				LocalDate.parse("2026-05-12"));
@@ -603,7 +645,7 @@ class TodoServiceImplTest {
 		TodoDetailResp resp = service.update(
 				1L,
 				10L,
-				new TodoUpdateReq("일괄 수정", "새 메모", null, null, null, null, null, "12:15", false),
+				new TodoUpdateReq("일괄 수정", "새 메모", null, null, null, null, null, null, "12:15", false),
 				"from",
 				LocalDate.parse("2026-05-12"));
 
@@ -615,6 +657,29 @@ class TodoServiceImplTest {
 		assertThat(pending.getStartDate()).isEqualTo(LocalDate.parse("2026-05-19"));
 		verify(todoRepository, org.mockito.Mockito.never()).save(any(Todo.class));
 		assertThat(resp.title()).isEqualTo("일괄 수정");
+	}
+
+	@Test
+	void updateRecurringBatchWithCategoryIdPropagatesToInstances() {
+		Todo master = recurringMaster();
+		Todo pending = recurringInstance(master, LocalDate.parse("2026-05-19"));
+		Category home = category(4L, "집안일", 3);
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+		given(categoryRepository.findByCategoryIdAndUserId(4L, 1L)).willReturn(Optional.of(home));
+		given(categoryRepository.findByCategoryNameAndUserId("집안일", 1L)).willReturn(Optional.of(home));
+		given(todoRepository.findAllByUserIdAndMasterTodoIdAndIsDeletedFalse(1L, 10L))
+				.willReturn(List.of(pending));
+
+		TodoDetailResp resp = service.update(
+				1L,
+				10L,
+				new TodoUpdateReq(null, null, null, 4L, null, null, null, null, null, false));
+
+		assertThat(resp.category()).isEqualTo("집안일");
+		assertThat(master.getCategoryId()).isEqualTo(4L);
+		assertThat(pending.getCategoryId()).isEqualTo(4L);
+		assertThat(pending.getCategoryName()).isEqualTo("집안일");
+		assertThat(pending.getCategoryColorId()).isEqualTo(3);
 	}
 
 	@Test
@@ -632,7 +697,7 @@ class TodoServiceImplTest {
 		service.update(
 				1L,
 				10L,
-				new TodoUpdateReq("일괄 수정", "새 메모", null, null, null, null, null, null, false),
+				new TodoUpdateReq("일괄 수정", "새 메모", null, null, null, null, null, null, null, false),
 				"from",
 				LocalDate.parse("2026-05-15"));
 
@@ -652,7 +717,7 @@ class TodoServiceImplTest {
 		service.update(
 				1L,
 				10L,
-				new TodoUpdateReq("일괄 수정", null, null, null, null, null, null, null, false));
+				new TodoUpdateReq("일괄 수정", null, null, null, null, null, null, null, null, false));
 
 		assertThat(pending.getTitle()).isEqualTo("일괄 수정");
 	}
@@ -669,7 +734,7 @@ class TodoServiceImplTest {
 		service.update(
 				1L,
 				10L,
-				new TodoUpdateReq(null, null, null, null, null, null, Set.of("WED", "THU", "FRI"), null, false));
+				new TodoUpdateReq(null, null, null, null, null, null, null, Set.of("WED", "THU", "FRI"), null, false));
 
 		assertThat(master.getStartDate()).isEqualTo(LocalDate.parse("2026-05-04"));
 		assertThat(master.getDaysOfWeek()).containsExactlyInAnyOrder(
@@ -786,6 +851,15 @@ class TodoServiceImplTest {
 				.startDate(LocalDate.parse("2026-04-20"))
 				.isDeleted(false)
 				.expGranted(false)
+				.build();
+	}
+
+	private Category category(Long categoryId, String categoryName, Integer colorId) {
+		return Category.builder()
+				.categoryId(categoryId)
+				.userId(1L)
+				.categoryName(categoryName)
+				.colorId(colorId)
 				.build();
 	}
 

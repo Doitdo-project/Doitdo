@@ -19,6 +19,7 @@ class TodoReqValidationTest {
 				"a".repeat(21),
 				"b".repeat(101),
 				null,
+				null,
 				TodoType.NORMAL,
 				LocalDate.now(),
 				null,
@@ -37,6 +38,7 @@ class TodoReqValidationTest {
 		TodoUpdateReq req = new TodoUpdateReq(
 				"a".repeat(21),
 				"b".repeat(101),
+				null,
 				null,
 				null,
 				null,
