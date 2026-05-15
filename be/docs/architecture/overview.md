@@ -64,7 +64,7 @@ com.doitdo
 ## 응답/에러 표준
 
 - 모든 응답: `GlobalApiResponse<T>` ([`../api/response-format.md`](../api/response-format.md))
-- 에러 코드: 10개 도메인 enum + `ErrorCodeRegistry` 인덱스 ([`../api/error-codes.md`](../api/error-codes.md))
+- 에러 코드: 11개 도메인 enum + `ErrorCodeRegistry` 인덱스 ([`../api/error-codes.md`](../api/error-codes.md))
 - 컨트롤러 작성: [`../api/swagger.md`](../api/swagger.md)
 
 ## 알림 플로우
