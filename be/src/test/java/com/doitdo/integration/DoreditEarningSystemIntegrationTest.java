@@ -198,7 +198,9 @@ class DoreditEarningSystemIntegrationTest {
         assertThat(second.earnedAmount()).isZero();
         assertThat(second.actionUrl()).isNotBlank();
 
-        resetLastTouchedAt(uc.getUserCharacterId(), 2);
+        // 경계값(정확히 2시간)은 DB NOW()와 애플리케이션 now 사이 정밀도 차이로 흔들릴 수 있어
+        // cooldown 이 충분히 지난 상태를 검증한다.
+        resetLastTouchedAt(uc.getUserCharacterId(), 3);
         CharacterActionUrlResp third = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
         assertThat(third.earnedAmount()).isEqualTo(50);
     }
