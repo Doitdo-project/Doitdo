@@ -22,6 +22,8 @@
 
 ### 반복 TODO 수정/삭제 scope
 
+TODO 생성/수정 Request body 의 카테고리는 `categoryId` 또는 `category`(이름)를 지원한다. 둘 다 있으면 `categoryId` 가 우선한다.
+
 `DELETE /api/todos/{todoId}`:
 
 | Query | 의미 |

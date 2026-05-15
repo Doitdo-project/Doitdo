@@ -139,12 +139,12 @@ class RedisCachingIntegrationTest {
 
 		todoService.list(userId, todayReq());
 		todoService.create(userId, new TodoCreateReq(
-				"created", null, null, TodoType.NORMAL, LocalDate.now(SEOUL), null, null, 1, null));
+				"created", null, null, null, TodoType.NORMAL, LocalDate.now(SEOUL), null, null, 1, null));
 		assertThat(titles(todoService.list(userId, todayReq()))).contains("created");
 
 		todoService.list(userId, todayReq());
 		todoService.update(userId, updateTodoId, new TodoUpdateReq(
-				"update-after", null, null, null, null, null, null, null, false));
+				"update-after", null, null, null, null, null, null, null, null, false));
 		assertThat(titles(todoService.list(userId, todayReq()))).contains("update-after").doesNotContain("update-before");
 
 		todoService.detail(userId, priorityTodoId);
@@ -174,7 +174,7 @@ class RedisCachingIntegrationTest {
 
 		todoService.list(userB, todayReq());
 		todoService.create(userA, new TodoCreateReq(
-				"a-new", null, null, TodoType.NORMAL, LocalDate.now(SEOUL), null, null, 1, null));
+				"a-new", null, null, null, TodoType.NORMAL, LocalDate.now(SEOUL), null, null, 1, null));
 
 		AtomicReference<TodoListResp> userBResp = new AtomicReference<>();
 		assertNoSql(() -> userBResp.set(todoService.list(userB, todayReq())));

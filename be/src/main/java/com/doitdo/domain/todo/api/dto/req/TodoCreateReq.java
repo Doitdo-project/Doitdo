@@ -18,6 +18,8 @@ public record TodoCreateReq(
 
 		String category,
 
+		Long categoryId,
+
 		TodoType type,
 
 		LocalDate startDate,
