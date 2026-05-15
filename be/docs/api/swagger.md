@@ -35,13 +35,13 @@
 
 | Query | 의미 |
 |---|---|
-| 없음 | 기존 단건 수정 |
+| 없음 | 기존 단건 수정. RECURRING 마스터면 일괄수정 |
 | `scope=only&occurrenceDate=YYYY-MM-DD` | 해당 occurrence만 NORMAL 인스턴스로 실체화 후 수정 |
-| `scope=from&occurrenceDate=YYYY-MM-DD` | 기존 RECURRING 마스터를 전날 종료하고, 수정 내용으로 새 RECURRING 마스터 생성 |
+| `scope=from&occurrenceDate=YYYY-MM-DD` | 2026-05-15 변경: 새 마스터 생성 없이 기존 RECURRING 마스터 일괄수정 |
 
-`scope=only/from` 은 `todoId` 가 RECURRING 마스터일 때 `occurrenceDate` 가 필수다.
+`scope=only` 은 `todoId` 가 RECURRING 마스터일 때 `occurrenceDate` 가 필수다.
 `scope=only` 의 `occurrenceDate` 는 마스터 반복 규칙에 포함된 날짜여야 한다.
-`scope=from` 수정의 `occurrenceDate` 는 기존 마스터 기간 안의 기준일이며, 변경 후 `daysOfWeek` 에 포함되어야 한다.
+RECURRING 마스터 수정은 기존 마스터 TODO 를 직접 수정하고, 이미 실체화된 NORMAL 파생 인스턴스 중 `status != DONE` 인 항목만 제목/내용/카테고리/알림 스냅샷을 갱신한다. `DONE` 항목은 완료 당시 기록 보존을 위해 수정하지 않는다.
 
 ### 출석 보상 자동 적립 (2026-05-13 Stage 5)
 

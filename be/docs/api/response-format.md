@@ -151,12 +151,12 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 
 | Query | 응답 대상 | 비고 |
 |---|---|---|
-| 없음 | 수정된 기존 TODO | 기존 단건 수정 |
+| 없음 | 수정된 기존 TODO | RECURRING 마스터면 일괄수정 |
 | `scope=only&occurrenceDate=YYYY-MM-DD` | 수정된 NORMAL 인스턴스 | 해당 occurrence만 실체화 후 수정 |
-| `scope=from&occurrenceDate=YYYY-MM-DD` | 새 RECURRING 마스터 | 기존 마스터를 전날 종료하고 수정 내용으로 새 마스터 생성 |
+| `scope=from&occurrenceDate=YYYY-MM-DD` | 수정된 RECURRING 마스터 | 2026-05-15 변경: 새 마스터를 만들지 않고 일괄수정으로 처리 |
 
-`scope=from` 수정 응답의 `todoId` 는 새 마스터 ID 다. FE는 이후 같은 반복 흐름을 조작할 때 이 새 `todoId`를 사용해야 한다.
-`scope=from` 수정의 `occurrenceDate` 는 기존 마스터 기간 안의 기준일이며, 변경 후 `daysOfWeek` 에 포함되어야 한다.
+RECURRING 마스터 수정은 기존 마스터 TODO 를 직접 수정한다. 이미 실체화된 NORMAL 파생 인스턴스는 `status != DONE` 인 항목만 마스터의 제목/내용/카테고리/알림 스냅샷으로 갱신하고, `DONE` 인 항목은 완료 당시 기록 보존을 위해 수정하지 않는다.
+기존 `scope=from` 의 "기존 마스터 종료 + 새 마스터 생성" 동작은 2026-05-15 기준 폐기됐다.
 
 ### 카테고리 스냅샷 정책 (2026-05-12 도입)
 
