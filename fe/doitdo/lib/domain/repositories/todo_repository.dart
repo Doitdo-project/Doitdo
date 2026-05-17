@@ -16,7 +16,12 @@ abstract class TodoRepository {
       });
 
   // [추가] TODO 수정 (T04)
-  Future<TodoUpdateResponseDto> updateTodo(String id, TodoUpdateRequestDto request);
+  Future<TodoUpdateResponseDto> updateTodo(
+    String id,
+    TodoUpdateRequestDto request, {
+    String? scope,
+    DateTime? occurrenceDate,
+  });
 
   // [추가] T08: 캘린더 조회 (기간 필수, 나머지는 선택 필터)
   Future<TodoCalendarResponseDto> getCalendarTodos({
@@ -33,7 +38,7 @@ abstract class TodoRepository {
   Future<TodoDetailResponseDto> getTodoDetail(String id);
 
   // TODO 삭제
-  Future<void> deleteTodo(String id, {String? scope});
+  Future<void> deleteTodo(String id, {String? scope, DateTime? occurrenceDate});
 
   // 우선순위 변경
   Future<void> updateTodoPriority(String todoId, int priority);

@@ -11,6 +11,7 @@ import 'package:doitdo/data/models/category_dto.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
+import 'package:doitdo/presentation/providers/app_data_providers.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_category_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_date_sheet.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_time_sheet.dart';
@@ -40,6 +41,7 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
   final _titleFocusNode  = FocusNode();
   final _memoFocusNode   = FocusNode();
   String         _selectedCategory   = '기타';
+  int?           _selectedCategoryId;
   TimeOfDay      _selectedTime       = const TimeOfDay(hour: 12, minute: 0);
   bool           _alarmEnabled       = false;
   TodoDateResult _dateResult         = const TodoDateResult(type: TodoDateType.someday);
@@ -51,13 +53,18 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
     _titleController.addListener(_markDirty);
     _memoController.addListener(_markDirty);
     _initFromTodo(widget.todo);
+    if (widget.todo.dateType == TodoDateType.repeat &&
+        (widget.todo.repeatDays == null || widget.todo.repeatDays!.isEmpty)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _fetchRepeatDays());
+    }
   }
 
   void _initFromTodo(Todo todo) {
-    _titleController.text = todo.title;
-    _memoController.text  = todo.memo ?? '';
-    _selectedCategory     = todo.category.name;
-    _isDone               = todo.isDone;
+    _titleController.text  = todo.title;
+    _memoController.text   = todo.memo ?? '';
+    _selectedCategory      = todo.category.name;
+    _selectedCategoryId    = todo.categoryId;
+    _isDone                = todo.isDone;
     _wasTitleEmpty        = todo.title.trim().isEmpty;
     if (todo.alarmTime != null) {
       _selectedTime = todo.alarmTime!;
@@ -68,7 +75,9 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
       date:            todo.date,
       rangeStart:      todo.rangeStart,
       rangeEnd:        todo.rangeEnd,
-      repeatStartDate: todo.repeatStartDate,
+      // fetchTodos 에서 repeatStartDate 를 매핑하지 않으므로 date 로 폴백.
+      // TodoDateSheet 의 _repeatStartDate 초기값도 동일하게 동작함.
+      repeatStartDate: todo.repeatStartDate ?? todo.date,
       repeatEndDate:   todo.repeatEndDate,
       repeatDays:      todo.repeatDays,
     );
@@ -94,6 +103,38 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
 
   bool _wasTitleEmpty = true;
 
+  /// list API 가 daysOfWeek:[] 를 반환하는 경우 detail API 로 실제 요일을 가져온다.
+  Future<void> _fetchRepeatDays() async {
+    if (!mounted) return;
+    try {
+      final detail = await ref
+          .read(todoRepositoryProvider)
+          .getTodoDetail(widget.todo.id);
+      if (!mounted) return;
+      final days = _parseDaysOfWeek(detail.daysOfWeek);
+      if (days == null || days.isEmpty) return;
+      setState(() {
+        _dateResult = TodoDateResult(
+          type:            _dateResult.type,
+          date:            _dateResult.date,
+          rangeStart:      _dateResult.rangeStart,
+          rangeEnd:        _dateResult.rangeEnd,
+          repeatStartDate: _dateResult.repeatStartDate,
+          repeatEndDate:   _dateResult.repeatEndDate,
+          repeatType:      _dateResult.repeatType,
+          repeatDays:      days,
+        );
+      });
+      ref.read(todoViewModelProvider.notifier).patchRepeatDays(widget.todo.id, days);
+    } catch (_) {}
+  }
+
+  static List<int>? _parseDaysOfWeek(List<String>? days) {
+    if (days == null || days.isEmpty) return null;
+    const map = {'SUN': 0, 'MON': 1, 'TUE': 2, 'WED': 3, 'THU': 4, 'FRI': 5, 'SAT': 6};
+    return days.map((d) => map[d]).whereType<int>().toList();
+  }
+
   void _goToStep(_Step next) {
     FocusScope.of(context).unfocus();
     setState(() => _step = next);
@@ -107,7 +148,7 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
     return '$period $display:$m';
   }
 
-  Future<void> _onSave(BuildContext context, bool isDone) async {
+  Future<void> _onSave(BuildContext context, bool isDone, {String? scope}) async {
     if (_isLoading) return;
 
     final title = _titleController.text.trim();
@@ -119,11 +160,26 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
     final vm = ref.read(todoViewModelProvider.notifier);
 
     try {
-      final r       = _dateResult;
+      final r = _dateResult;
+
+      // _selectedCategoryId: 사용자가 카테고리를 명시적으로 선택했을 때 CategoryResp.categoryId.
+      // null 이면 categories 목록에서 이름 기준으로 fallback.
+      int? resolvedCategoryId = _selectedCategoryId;
+      if (resolvedCategoryId == null) {
+        final cats = ref.read(categoryViewModelProvider).valueOrNull ?? [];
+        for (final cat in cats) {
+          if (cat.categoryName == _selectedCategory) {
+            resolvedCategoryId = cat.categoryId;
+            break;
+          }
+        }
+      }
+
       final updated = Todo(
         id:              widget.todo.id,
         title:           title,
         category:        TodoCategory.fromName(_selectedCategory),
+        categoryId:      resolvedCategoryId,
         isDone:          isDone,
         memo:            _memoController.text.trim().isEmpty ? null : _memoController.text.trim(),
         alarmTime:       _alarmEnabled ? _selectedTime : null,
@@ -138,9 +194,14 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
         repeatDays:      r.repeatDays,
       );
 
-      widget.isSomeday
-          ? await vm.updateSomedayTodo(updated)
-          : await vm.updateTodo(updated);
+      if (widget.isSomeday) {
+        await vm.updateSomedayTodo(updated);
+      } else {
+        final occurrenceDate = scope != null
+            ? ref.read(todoViewModelProvider).selectedDay
+            : null;
+        await vm.updateTodo(updated, scope: scope, occurrenceDate: occurrenceDate);
+      }
 
       await vm.fetchTodos();
     } catch (e) {
@@ -162,6 +223,9 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
     }
   }
 
+  // _repeatSettingsChanged() 는 BE MR !300 정책 변경(반복 수정 = 전체 수정)으로
+  // scope 선택 다이얼로그가 사라져 사용처가 없어 제거됨.
+
   Future<void> _onConfirm(BuildContext context) async {
     if (_isDone) {
       Navigator.of(context, rootNavigator: true).pop();
@@ -169,9 +233,89 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
     }
 
     FocusScope.of(context).unfocus();
+
+    // 반복 todo 수정 정책 변경 (BE MR !300):
+    //   - 모든 반복 todo 수정은 "전체 수정" 으로 통일
+    //   - BE 가 마스터를 직접 수정하고, 미완료(NORMAL≠DONE) 파생 인스턴스에도
+    //     title/content/category/alertTime 을 자동 반영. DONE 은 히스토리 보존.
+    //   - 분할(새 마스터 생성) 자체가 일어나지 않으므로 scope 선택 다이얼로그 불필요.
     final nav = Navigator.of(context, rootNavigator: true);
     await _onSave(context, _isDone);
     if (mounted) nav.pop();
+  }
+
+  /// 반복 일정 삭제 다이얼로그 — 체크박스 토글로 scope 결정.
+  ///
+  /// - 체크 X (default): scope=only → 해당 날짜의 occurrence 만 삭제
+  /// - 체크 O:           scope=from → 해당 날짜 이후의 반복 일정 모두 삭제
+  ///
+  /// 수정 흐름에서는 더 이상 사용 안 함 (BE MR !300 정책상 수정은 항상 전체 수정).
+  Future<String?> _showRepeatActionDialog(BuildContext context) {
+    final completer = Completer<String?>();
+    bool applyAll = false;
+    final c = context.colors;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (_, setDialogState) => DoitdoDialog(
+          title: '할 일 삭제',
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () => setDialogState(() => applyAll = !applyAll),
+                behavior: HitTestBehavior.opaque,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: applyAll ? AppColors.calendarPoint : Colors.transparent,
+                        border: Border.all(
+                          color: applyAll ? AppColors.calendarPoint : c.border,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: applyAll
+                          ? const Icon(Icons.check, size: 12, color: Colors.white)
+                          : null,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      '이 일정과 이후 반복 일정 모두 삭제',
+                      style: AppTextStyles.bodyMedium.copyWith(color: c.textPrimary),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+          confirmLabel: '삭제',
+          cancelLabel: '취소',
+          onCancel: () {
+            Navigator.of(dialogCtx).pop();
+            completer.complete(null);
+          },
+          onConfirm: () {
+            Navigator.of(dialogCtx).pop();
+            completer.complete(applyAll ? 'from' : 'only');
+          },
+        ),
+      ),
+    ).then((_) {
+      if (!completer.isCompleted) completer.complete(null);
+    });
+
+    return completer.future;
   }
 
   @override
@@ -240,9 +384,10 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
         return KeyedSubtree(
           key:   const ValueKey('date'),
           child: TodoDateSheet(
-            initialDate:   _dateResult.date ?? DateTime.now(),
-            initialResult: _dateResult,
-            embedded:      true,
+            initialDate:    _dateResult.date ?? DateTime.now(),
+            initialResult:  _dateResult,
+            embedded:       true,
+            lockedToRepeat: widget.todo.dateType == TodoDateType.repeat,
             onConfirm: (result) {
               setState(() {
                 _dateResult = result;
@@ -260,8 +405,9 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
             embedded:         true,
             onConfirm: (result) {
               setState(() {
-                _selectedCategory = result.categoryName;
-                _step             = _Step.main;
+                _selectedCategory   = result.categoryName;
+                _selectedCategoryId = result.categoryId;
+                _step               = _Step.main;
               });
             },
             onBack: () => _goToStep(_Step.main),
@@ -291,10 +437,10 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
   Widget _buildMainStep(DoitdoColors c) {
     final categories = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
     Color getCategoryColor(String name) {
-      if (widget.todo.colorHex != null) return hexToColor(widget.todo.colorHex!);
       try {
         return categories.firstWhere((cat) => cat.categoryName == name).color;
       } catch (_) {
+        if (widget.todo.colorHex != null) return hexToColor(widget.todo.colorHex!);
         return AppColors.category1;
       }
     }
@@ -322,6 +468,37 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
               const Spacer(),
               GestureDetector(
                 onTap: () async {
+                  // 완료된 투두는 삭제 불가
+                  if (widget.todo.isDone) {
+                    await showDoitdoDialog(
+                      context:      context,
+                      title:        '삭제 불가',
+                      message:      '완료된 할 일은 삭제할 수 없어요',
+                      confirmLabel: '확인',
+                    );
+                    return;
+                  }
+
+                  // 반복 todo 삭제: 체크박스 다이얼로그
+                  //   - 체크 X (default): scope=only → 해당 날짜만 삭제
+                  //   - 체크 O:           scope=from → 해당 날짜 이후 모두 삭제
+                  if (widget.todo.dateType == TodoDateType.repeat && !widget.isSomeday) {
+                    final scope = await _showRepeatActionDialog(context);
+                    if (scope == null || !mounted) return;
+                    final occurrenceDate =
+                        ref.read(todoViewModelProvider).selectedDay;
+                    if (context.mounted) {
+                      Navigator.of(context, rootNavigator: true).pop();
+                    }
+                    vm.deleteTodo(
+                      widget.todo.id,
+                      scope: scope,
+                      occurrenceDate: occurrenceDate,
+                    );
+                    return;
+                  }
+
+                  // 일반 todo 삭제
                   final confirmed = await showDoitdoDialog(
                     context:      context,
                     title:        '할 일 삭제',
@@ -329,21 +506,21 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                     confirmLabel: '삭제',
                     cancelLabel:  '취소',
                   );
-                  if (confirmed == true && mounted) {
-                    if (context.mounted) {
-                      Navigator.of(context, rootNavigator: true).pop();
-                    }
-                    widget.isSomeday
-                        ? vm.deleteSomedayTodo(widget.todo.id)
-                        : vm.deleteTodo(widget.todo.id);
+                  if (confirmed != true || !mounted) return;
+
+                  if (context.mounted) {
+                    Navigator.of(context, rootNavigator: true).pop();
                   }
+                  widget.isSomeday
+                      ? vm.deleteSomedayTodo(widget.todo.id)
+                      : vm.deleteTodo(widget.todo.id);
                 },
                 behavior: HitTestBehavior.opaque,
                 child: Padding(
                   padding: const EdgeInsets.only(left: 8, top: 8, bottom: 8),
                   child: Text('삭제',
                       style: AppTextStyles.labelMedium
-                          .copyWith(color: c.textSecondary)),
+                          .copyWith(color: widget.todo.isDone ? c.textHint : c.textSecondary)),
                 ),
               ),
             ],
@@ -357,7 +534,6 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
               focusNode:  _titleFocusNode,
               readOnly:   _isDone,
               style: AppTextStyles.titleLarge.copyWith(
-                fontFamily:      'GmarketSansMedium',
                 fontWeight:      FontWeight.w500,
                 color:           _isDone ? c.textHint : c.textPrimary,
                 decoration:      _isDone ? TextDecoration.lineThrough : null,
@@ -366,7 +542,6 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
               decoration: InputDecoration(
                 hintText:  '할 일을 입력해주세요.',
                 hintStyle: AppTextStyles.titleLarge.copyWith(
-                  fontFamily: 'GmarketSansMedium',
                   fontWeight: FontWeight.w500,
                   color:      const Color(0xFFD6D3D1),
                 ),

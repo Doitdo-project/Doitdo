@@ -312,14 +312,12 @@ class _TodoAddSheetState extends ConsumerState<TodoAddSheet> {
                   focusNode:  _titleFocusNode,
                   maxLength: 20,
                   style: AppTextStyles.titleLarge.copyWith(
-                    fontFamily: 'GmarketSansMedium',
                     fontWeight: FontWeight.w500,
                     color: c.textPrimary,
                   ),
                   decoration: InputDecoration(
                     hintText: '할 일을 입력해주세요.',
                     hintStyle: AppTextStyles.titleLarge.copyWith(
-                      fontFamily: 'GmarketSansMedium',
                       fontWeight: FontWeight.w500,
                       color: const Color(0xFFD6D3D1),
                     ),

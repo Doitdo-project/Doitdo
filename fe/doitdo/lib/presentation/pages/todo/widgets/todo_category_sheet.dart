@@ -298,17 +298,19 @@ class _PrevButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: onTap ?? () => Navigator.of(context).pop(),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.loginBtnOff,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        padding: const EdgeInsets.symmetric(vertical: 12),
+    return SizedBox(
+      height: 48,
+      child: ElevatedButton(
+        onPressed: onTap ?? () => Navigator.of(context).pop(),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.loginBtnOff,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: Text('이전', style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)),
       ),
-      child: Text('이전', style: AppTextStyles.bodyMedium.copyWith(color: Colors.white)),
     );
   }
 }
