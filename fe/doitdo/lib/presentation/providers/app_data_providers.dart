@@ -25,18 +25,21 @@ import 'package:doitdo/data/repositories/todo_repository_impl.dart';
 import 'package:doitdo/domain/repositories/todo_repository.dart';
 import 'package:doitdo/data/datasources/category_api.dart';
 import 'package:doitdo/data/datasources/character_api.dart';
+import 'package:doitdo/data/datasources/notice_api.dart';
 import 'package:doitdo/data/datasources/notification_api.dart';
 import 'package:doitdo/data/datasources/setting_api.dart';
 import 'package:doitdo/data/datasources/shop_api.dart';
 import 'package:doitdo/data/datasources/streak_api.dart';
 import 'package:doitdo/data/repositories/category_repository_impl.dart';
 import 'package:doitdo/data/repositories/character_repository_impl.dart';
+import 'package:doitdo/data/repositories/notice_repository_impl.dart';
 import 'package:doitdo/data/repositories/notification_repository_impl.dart';
 import 'package:doitdo/data/repositories/setting_repository_impl.dart';
 import 'package:doitdo/data/repositories/shop_repository_impl.dart';
 import 'package:doitdo/data/repositories/streak_repository_impl.dart';
 import 'package:doitdo/domain/repositories/category_repository.dart';
 import 'package:doitdo/domain/repositories/character_repository.dart';
+import 'package:doitdo/domain/repositories/notice_repository.dart';
 import 'package:doitdo/domain/repositories/notification_repository.dart';
 import 'package:doitdo/domain/repositories/setting_repository.dart';
 import 'package:doitdo/domain/repositories/shop_repository.dart';
@@ -169,6 +172,15 @@ final notificationApiProvider = Provider<NotificationApi>(
 
 final notificationRepositoryProvider = Provider<NotificationRepository>(
   (ref) => NotificationRepositoryImpl(ref.watch(notificationApiProvider)),
+);
+
+// ─── Notice: retrofit API → Repository ─────────────────────────
+final noticeApiProvider = Provider<NoticeApi>(
+  (ref) => NoticeApi(ref.watch(dioProvider)),
+);
+
+final noticeRepositoryProvider = Provider<NoticeRepository>(
+  (ref) => NoticeRepositoryImpl(ref.watch(noticeApiProvider)),
 );
 
 // ─── Streak: retrofit API → Repository ─────────────────────────
