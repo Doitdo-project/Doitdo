@@ -19,6 +19,19 @@ class TodoDetailResponseDto with _$TodoDetailResponseDto {
     String? endDate,
     List<String>? daysOfWeek, // ✏️ period → daysOfWeek (서버 변경 반영)
     @JsonKey(name: 'alertTime') String? alarmTime,
+    // BE MR !281: scope=only 로 삭제된 RECURRING occurrence 날짜 배열.
+    // RECURRING 마스터: ["2026-05-14", ...] (오름차순), 그 외 타입: 항상 [].
+    @Default(<String>[]) List<String> excludedDates,
+    // NORMAL 파생 인스턴스(scope=only 수정/완료): 원본 마스터 ID.
+    // RECURRING 마스터 / 그 외 타입은 null.
+    int? masterTodoId,
+    // 같은 반복 흐름임을 식별하는 group id.
+    // - RECURRING 마스터: 자기 todoId (group head)
+    // - scope=from 으로 잘려나간 새 RECURRING 마스터: 원본 마스터의 group_id 상속
+    // - scope=only 로 materialize 된 NORMAL 인스턴스: 마스터의 group_id 상속
+    // - 일반 NORMAL/PERIOD/SOMEDAY: null
+    // - 백필 안 된 레거시 RECURRING: null (자연 폴백)
+    int? recurrenceGroupId,
   }) = _TodoDetailResponseDto;
 
   factory TodoDetailResponseDto.fromJson(Map<String, dynamic> json) =>

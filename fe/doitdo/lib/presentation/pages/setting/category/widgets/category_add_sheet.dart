@@ -232,31 +232,28 @@ class _ColorPickerBox extends ConsumerWidget {
           if (currentIndex < 0) currentIndex = 0;
           final currentPalette = palettes[currentIndex];
 
-          // 전역 colorId 매핑: baseId = 이전 팔레트들의 색상 수 합 + 1 (1-based).
-          int baseId = 1;
-          for (int i = 0; i < currentIndex; i++) {
-            baseId += palettes[i].colors.length;
-          }
-
-          return _buildColorGrid(currentPalette.colors, baseId, colors);
+          // BE 가 직접 내려준 colorId 를 그대로 사용 — 추측 계산 불필요.
+          // (이전엔 displayOrder 누적으로 baseId 를 추정했으나, BE MR
+          //  `be/fix/palette-resp-color-id` 로 PaletteColorResp.colorId 가 응답에
+          //  포함되어 그 가정이 필요 없어짐.)
+          return _buildColorGrid(currentPalette.colors, colors);
         },
       ),
     );
   }
 
   Widget _buildColorGrid(
-    List<String> hexColors,
-    int baseColorId,
+    List<PaletteColorResp> paletteColors,
     DoitdoColors colors,
   ) {
     const int cols = 4;
-    final rows = (hexColors.length / cols).ceil();
+    final rows = (paletteColors.length / cols).ceil();
 
     return Column(
       children: List.generate(rows, (rowIdx) {
         final start = rowIdx * cols;
-        final end = (start + cols).clamp(0, hexColors.length);
-        final rowItems = hexColors.sublist(start, end);
+        final end = (start + cols).clamp(0, paletteColors.length);
+        final rowItems = paletteColors.sublist(start, end);
 
         return Padding(
           padding:
@@ -264,9 +261,9 @@ class _ColorPickerBox extends ConsumerWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              ...rowItems.asMap().entries.map((entry) {
-                final colorId = baseColorId + start + entry.key;
-                final color = hexToColor(entry.value);
+              ...rowItems.map((pc) {
+                final colorId = pc.colorId;
+                final color = hexToColor(pc.color);
                 final isUsed = disabledColorIds.contains(colorId);
                 return _ColorCircle(
                   color: color,

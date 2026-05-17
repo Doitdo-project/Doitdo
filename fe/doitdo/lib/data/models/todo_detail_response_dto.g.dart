@@ -24,6 +24,13 @@ _$TodoDetailResponseDtoImpl _$$TodoDetailResponseDtoImplFromJson(
       ?.map((e) => e as String)
       .toList(),
   alarmTime: json['alertTime'] as String?,
+  excludedDates:
+      (json['excludedDates'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const <String>[],
+  masterTodoId: (json['masterTodoId'] as num?)?.toInt(),
+  recurrenceGroupId: (json['recurrenceGroupId'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$$TodoDetailResponseDtoImplToJson(
@@ -42,4 +49,7 @@ Map<String, dynamic> _$$TodoDetailResponseDtoImplToJson(
   'endDate': instance.endDate,
   'daysOfWeek': instance.daysOfWeek,
   'alertTime': instance.alarmTime,
+  'excludedDates': instance.excludedDates,
+  'masterTodoId': instance.masterTodoId,
+  'recurrenceGroupId': instance.recurrenceGroupId,
 };

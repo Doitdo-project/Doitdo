@@ -34,8 +34,10 @@ abstract class TodoApi {
   @PATCH('/api/todos/{todoId}')
   Future<ApiResponse<TodoUpdateResponseDto>> updateTodo(
       @Path('todoId') int todoId,
-      @Body() TodoUpdateRequestDto request,
-      );
+      @Body() TodoUpdateRequestDto request, {
+      @Query('scope') String? scope,
+      @Query('occurrenceDate') String? occurrenceDate,
+      });
 
   // [수정] /todos -> /api/todos 로 변경
   @GET('/api/todos/calendar')
@@ -69,8 +71,9 @@ abstract class TodoApi {
   @DELETE('/api/todos/{todoId}')
   Future<void> deleteTodo(
       @Path('todoId') int todoId,
-      @Query('scope') String? scope,
-      );
+      @Query('scope') String? scope, {
+      @Query('occurrenceDate') String? occurrenceDate,
+      });
 
   // TODO 우선순위 변경
   @PATCH('/api/todos/{todoId}/priority')

@@ -114,7 +114,7 @@ class _PaletteSelectorSheetState
                     ],
                   ),
                   const SizedBox(height: 24),
-                  _PalettePreviewGrid(hexColors: current.colors),
+                  _PalettePreviewGrid(colors: current.colors),
                 ],
               ),
             );
@@ -187,19 +187,19 @@ class _ChevronButton extends StatelessWidget {
 
 /// 시트 안의 색 미리보기 — 탭 불가, 단순 표시용.
 class _PalettePreviewGrid extends StatelessWidget {
-  const _PalettePreviewGrid({required this.hexColors});
+  const _PalettePreviewGrid({required this.colors});
 
-  final List<String> hexColors;
+  final List<PaletteColorResp> colors;
 
   @override
   Widget build(BuildContext context) {
     const int cols = 4;
-    final rows = (hexColors.length / cols).ceil();
+    final rows = (colors.length / cols).ceil();
     return Column(
       children: List.generate(rows, (rowIdx) {
         final start = rowIdx * cols;
-        final end = (start + cols).clamp(0, hexColors.length);
-        final rowItems = hexColors.sublist(start, end);
+        final end = (start + cols).clamp(0, colors.length);
+        final rowItems = colors.sublist(start, end);
         return Padding(
           padding:
               rowIdx > 0 ? const EdgeInsets.only(top: 14) : EdgeInsets.zero,
@@ -207,12 +207,12 @@ class _PalettePreviewGrid extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               ...rowItems.map(
-                (hex) => Container(
+                (pc) => Container(
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: hexToColor(hex),
+                    color: hexToColor(pc.color),
                   ),
                 ),
               ),

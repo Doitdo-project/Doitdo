@@ -12,8 +12,10 @@ import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/notification/notification_view_model.dart';
 import 'package:doitdo/data/models/category_dto.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
+import 'package:doitdo/presentation/pages/setting/notice/notice_popup_launcher.dart';
 import 'package:doitdo/presentation/pages/todo/todo_add_notifier.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
+import 'package:doitdo/presentation/providers/default_screen_provider.dart';
 import 'package:doitdo/presentation/widgets/common/character_mascot_image.dart';
 import 'package:doitdo/presentation/widgets/common/todo_item_card.dart';
 import 'package:doitdo/presentation/providers/home_scroll_provider.dart';
@@ -30,6 +32,17 @@ class TodoPage extends ConsumerStatefulWidget {
 
 class _TodoPageState extends ConsumerState<TodoPage> {
   final _todoScrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    // 사용자의 기본 화면이 "캘린더(TodoPage)" 일 때만 세션 1회 공지 팝업 시도.
+    // post-frame 으로 미뤄 첫 build 가 끝난 다음에 띄움 (Riverpod 안전).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      maybeShowNoticePopup(context, ref, forScreen: DefaultScreen.calendar);
+    });
+  }
 
   @override
   void dispose() {
@@ -330,7 +343,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                                                   fontSize: 8,
                                                   fontWeight: FontWeight.w700,
                                                   color: Colors.white,
-                                                  fontFamily: 'GmarketSansMedium',
+                                                  // fontFamily 미명시 — ThemeData 따라감
                                                 ),
                                               ),
                                             ),

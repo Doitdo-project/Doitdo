@@ -37,7 +37,19 @@ mixin _$TodoDetailResponseDto {
   List<String>? get daysOfWeek =>
       throw _privateConstructorUsedError; // ✏️ period → daysOfWeek (서버 변경 반영)
   @JsonKey(name: 'alertTime')
-  String? get alarmTime => throw _privateConstructorUsedError;
+  String? get alarmTime => throw _privateConstructorUsedError; // BE MR !281: scope=only 로 삭제된 RECURRING occurrence 날짜 배열.
+  // RECURRING 마스터: ["2026-05-14", ...] (오름차순), 그 외 타입: 항상 [].
+  List<String> get excludedDates =>
+      throw _privateConstructorUsedError; // NORMAL 파생 인스턴스(scope=only 수정/완료): 원본 마스터 ID.
+  // RECURRING 마스터 / 그 외 타입은 null.
+  int? get masterTodoId =>
+      throw _privateConstructorUsedError; // 같은 반복 흐름임을 식별하는 group id.
+  // - RECURRING 마스터: 자기 todoId (group head)
+  // - scope=from 으로 잘려나간 새 RECURRING 마스터: 원본 마스터의 group_id 상속
+  // - scope=only 로 materialize 된 NORMAL 인스턴스: 마스터의 group_id 상속
+  // - 일반 NORMAL/PERIOD/SOMEDAY: null
+  // - 백필 안 된 레거시 RECURRING: null (자연 폴백)
+  int? get recurrenceGroupId => throw _privateConstructorUsedError;
 
   /// Serializes this TodoDetailResponseDto to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -70,6 +82,9 @@ abstract class $TodoDetailResponseDtoCopyWith<$Res> {
     String? endDate,
     List<String>? daysOfWeek,
     @JsonKey(name: 'alertTime') String? alarmTime,
+    List<String> excludedDates,
+    int? masterTodoId,
+    int? recurrenceGroupId,
   });
 }
 
@@ -104,6 +119,9 @@ class _$TodoDetailResponseDtoCopyWithImpl<
     Object? endDate = freezed,
     Object? daysOfWeek = freezed,
     Object? alarmTime = freezed,
+    Object? excludedDates = null,
+    Object? masterTodoId = freezed,
+    Object? recurrenceGroupId = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -159,6 +177,18 @@ class _$TodoDetailResponseDtoCopyWithImpl<
                 ? _value.alarmTime
                 : alarmTime // ignore: cast_nullable_to_non_nullable
                       as String?,
+            excludedDates: null == excludedDates
+                ? _value.excludedDates
+                : excludedDates // ignore: cast_nullable_to_non_nullable
+                      as List<String>,
+            masterTodoId: freezed == masterTodoId
+                ? _value.masterTodoId
+                : masterTodoId // ignore: cast_nullable_to_non_nullable
+                      as int?,
+            recurrenceGroupId: freezed == recurrenceGroupId
+                ? _value.recurrenceGroupId
+                : recurrenceGroupId // ignore: cast_nullable_to_non_nullable
+                      as int?,
           )
           as $Val,
     );
@@ -188,6 +218,9 @@ abstract class _$$TodoDetailResponseDtoImplCopyWith<$Res>
     String? endDate,
     List<String>? daysOfWeek,
     @JsonKey(name: 'alertTime') String? alarmTime,
+    List<String> excludedDates,
+    int? masterTodoId,
+    int? recurrenceGroupId,
   });
 }
 
@@ -219,6 +252,9 @@ class __$$TodoDetailResponseDtoImplCopyWithImpl<$Res>
     Object? endDate = freezed,
     Object? daysOfWeek = freezed,
     Object? alarmTime = freezed,
+    Object? excludedDates = null,
+    Object? masterTodoId = freezed,
+    Object? recurrenceGroupId = freezed,
   }) {
     return _then(
       _$TodoDetailResponseDtoImpl(
@@ -274,6 +310,18 @@ class __$$TodoDetailResponseDtoImplCopyWithImpl<$Res>
             ? _value.alarmTime
             : alarmTime // ignore: cast_nullable_to_non_nullable
                   as String?,
+        excludedDates: null == excludedDates
+            ? _value._excludedDates
+            : excludedDates // ignore: cast_nullable_to_non_nullable
+                  as List<String>,
+        masterTodoId: freezed == masterTodoId
+            ? _value.masterTodoId
+            : masterTodoId // ignore: cast_nullable_to_non_nullable
+                  as int?,
+        recurrenceGroupId: freezed == recurrenceGroupId
+            ? _value.recurrenceGroupId
+            : recurrenceGroupId // ignore: cast_nullable_to_non_nullable
+                  as int?,
       ),
     );
   }
@@ -296,7 +344,11 @@ class _$TodoDetailResponseDtoImpl implements _TodoDetailResponseDto {
     this.endDate,
     final List<String>? daysOfWeek,
     @JsonKey(name: 'alertTime') this.alarmTime,
-  }) : _daysOfWeek = daysOfWeek;
+    final List<String> excludedDates = const <String>[],
+    this.masterTodoId,
+    this.recurrenceGroupId,
+  }) : _daysOfWeek = daysOfWeek,
+       _excludedDates = excludedDates;
 
   factory _$TodoDetailResponseDtoImpl.fromJson(Map<String, dynamic> json) =>
       _$$TodoDetailResponseDtoImplFromJson(json);
@@ -338,10 +390,35 @@ class _$TodoDetailResponseDtoImpl implements _TodoDetailResponseDto {
   @override
   @JsonKey(name: 'alertTime')
   final String? alarmTime;
+  // BE MR !281: scope=only 로 삭제된 RECURRING occurrence 날짜 배열.
+  // RECURRING 마스터: ["2026-05-14", ...] (오름차순), 그 외 타입: 항상 [].
+  final List<String> _excludedDates;
+  // BE MR !281: scope=only 로 삭제된 RECURRING occurrence 날짜 배열.
+  // RECURRING 마스터: ["2026-05-14", ...] (오름차순), 그 외 타입: 항상 [].
+  @override
+  @JsonKey()
+  List<String> get excludedDates {
+    if (_excludedDates is EqualUnmodifiableListView) return _excludedDates;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_excludedDates);
+  }
+
+  // NORMAL 파생 인스턴스(scope=only 수정/완료): 원본 마스터 ID.
+  // RECURRING 마스터 / 그 외 타입은 null.
+  @override
+  final int? masterTodoId;
+  // 같은 반복 흐름임을 식별하는 group id.
+  // - RECURRING 마스터: 자기 todoId (group head)
+  // - scope=from 으로 잘려나간 새 RECURRING 마스터: 원본 마스터의 group_id 상속
+  // - scope=only 로 materialize 된 NORMAL 인스턴스: 마스터의 group_id 상속
+  // - 일반 NORMAL/PERIOD/SOMEDAY: null
+  // - 백필 안 된 레거시 RECURRING: null (자연 폴백)
+  @override
+  final int? recurrenceGroupId;
 
   @override
   String toString() {
-    return 'TodoDetailResponseDto(todoId: $todoId, title: $title, content: $content, status: $status, category: $category, colorHex: $colorHex, categoryId: $categoryId, type: $type, priority: $priority, startDate: $startDate, endDate: $endDate, daysOfWeek: $daysOfWeek, alarmTime: $alarmTime)';
+    return 'TodoDetailResponseDto(todoId: $todoId, title: $title, content: $content, status: $status, category: $category, colorHex: $colorHex, categoryId: $categoryId, type: $type, priority: $priority, startDate: $startDate, endDate: $endDate, daysOfWeek: $daysOfWeek, alarmTime: $alarmTime, excludedDates: $excludedDates, masterTodoId: $masterTodoId, recurrenceGroupId: $recurrenceGroupId)';
   }
 
   @override
@@ -370,7 +447,15 @@ class _$TodoDetailResponseDtoImpl implements _TodoDetailResponseDto {
               _daysOfWeek,
             ) &&
             (identical(other.alarmTime, alarmTime) ||
-                other.alarmTime == alarmTime));
+                other.alarmTime == alarmTime) &&
+            const DeepCollectionEquality().equals(
+              other._excludedDates,
+              _excludedDates,
+            ) &&
+            (identical(other.masterTodoId, masterTodoId) ||
+                other.masterTodoId == masterTodoId) &&
+            (identical(other.recurrenceGroupId, recurrenceGroupId) ||
+                other.recurrenceGroupId == recurrenceGroupId));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -390,6 +475,9 @@ class _$TodoDetailResponseDtoImpl implements _TodoDetailResponseDto {
     endDate,
     const DeepCollectionEquality().hash(_daysOfWeek),
     alarmTime,
+    const DeepCollectionEquality().hash(_excludedDates),
+    masterTodoId,
+    recurrenceGroupId,
   );
 
   /// Create a copy of TodoDetailResponseDto
@@ -425,6 +513,9 @@ abstract class _TodoDetailResponseDto implements TodoDetailResponseDto {
     final String? endDate,
     final List<String>? daysOfWeek,
     @JsonKey(name: 'alertTime') final String? alarmTime,
+    final List<String> excludedDates,
+    final int? masterTodoId,
+    final int? recurrenceGroupId,
   }) = _$TodoDetailResponseDtoImpl;
 
   factory _TodoDetailResponseDto.fromJson(Map<String, dynamic> json) =
@@ -456,7 +547,20 @@ abstract class _TodoDetailResponseDto implements TodoDetailResponseDto {
   List<String>? get daysOfWeek; // ✏️ period → daysOfWeek (서버 변경 반영)
   @override
   @JsonKey(name: 'alertTime')
-  String? get alarmTime;
+  String? get alarmTime; // BE MR !281: scope=only 로 삭제된 RECURRING occurrence 날짜 배열.
+  // RECURRING 마스터: ["2026-05-14", ...] (오름차순), 그 외 타입: 항상 [].
+  @override
+  List<String> get excludedDates; // NORMAL 파생 인스턴스(scope=only 수정/완료): 원본 마스터 ID.
+  // RECURRING 마스터 / 그 외 타입은 null.
+  @override
+  int? get masterTodoId; // 같은 반복 흐름임을 식별하는 group id.
+  // - RECURRING 마스터: 자기 todoId (group head)
+  // - scope=from 으로 잘려나간 새 RECURRING 마스터: 원본 마스터의 group_id 상속
+  // - scope=only 로 materialize 된 NORMAL 인스턴스: 마스터의 group_id 상속
+  // - 일반 NORMAL/PERIOD/SOMEDAY: null
+  // - 백필 안 된 레거시 RECURRING: null (자연 폴백)
+  @override
+  int? get recurrenceGroupId;
 
   /// Create a copy of TodoDetailResponseDto
   /// with the given fields replaced by the non-null parameter values.

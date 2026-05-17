@@ -129,17 +129,17 @@ class TodoRepositoryImpl extends BaseRepository implements TodoRepository {
 
   // ✅ [최종 수정] T04: TODO 수정 실제 구현
   @override
-  Future<TodoUpdateResponseDto> updateTodo(String id, TodoUpdateRequestDto request) async {
-    // 1. String ID를 int로 변환
+  Future<TodoUpdateResponseDto> updateTodo(
+    String id,
+    TodoUpdateRequestDto request, {
+    String? scope,
+    DateTime? occurrenceDate,
+  }) async {
     final intId = int.tryParse(id) ?? 0;
-
-    // 2. safeApiCall의 결과를 변수에 담습니다.
-    // 이때 response의 타입은 TodoUpdateResponseDto가 됩니다 (ApiResponse.data가 추출됨).
+    final occStr = occurrenceDate?.toIso8601String().split('T')[0];
     final response = await safeApiCall(
-          () => _todoApi.updateTodo(intId, request),
+      () => _todoApi.updateTodo(intId, request, scope: scope, occurrenceDate: occStr),
     );
-
-    // 3. TodoUpdateResponseDto 객체를 그대로 반환합니다.
     return response;
   }
 
@@ -179,12 +179,13 @@ class TodoRepositoryImpl extends BaseRepository implements TodoRepository {
 
   // TODO 삭제 구현
   @override
-  Future<void> deleteTodo(String id, {String? scope}) async {
+  Future<void> deleteTodo(String id, {String? scope, DateTime? occurrenceDate}) async {
     final intId = int.tryParse(id) ?? 0;
+    final occStr = occurrenceDate?.toIso8601String().split('T')[0];
     try {
-      await _todoApi.deleteTodo(intId, scope);
+      await _todoApi.deleteTodo(intId, scope, occurrenceDate: occStr);
     } catch (e) {
-      print('삭제 통신 에러: $e'); // 에러가 나면 로그만 찍기
+      print('삭제 통신 에러: $e');
     }
   }
 

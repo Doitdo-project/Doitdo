@@ -16,6 +16,9 @@ class TodoState {
   // _updateDisplayedTodos 가 done 필터에도 불구하고 이 항목들을 list 에 유지한다.
   final Set<String> fadingTodoIds;
   final bool pageAnimationEnabled;
+  // scope=only 로 삭제된 반복 발생 날짜. 키: "${todoId}_${yyyy-MM-dd}".
+  // fetchTodos 로 마스터가 다시 내려와도 해당 날짜에는 표시하지 않는다.
+  final Set<String> excludedOccurrences;
 
   TodoState({
     this.allTodos = const [],
@@ -29,6 +32,7 @@ class TodoState {
     this.kEvents = const {},
     this.fadingTodoIds = const {},
     this.pageAnimationEnabled = true,
+    this.excludedOccurrences = const {},
   }) : focusedDay = focusedDay ?? DateTime.now();
 
   TodoState copyWith({
@@ -43,6 +47,7 @@ class TodoState {
     Map<DateTime, List<Todo>>? kEvents,
     Set<String>? fadingTodoIds,
     bool? pageAnimationEnabled,
+    Set<String>? excludedOccurrences,
   }) {
     return TodoState(
       allTodos: allTodos ?? this.allTodos,
@@ -56,6 +61,7 @@ class TodoState {
       kEvents: kEvents ?? this.kEvents,
       fadingTodoIds: fadingTodoIds ?? this.fadingTodoIds,
       pageAnimationEnabled: pageAnimationEnabled ?? this.pageAnimationEnabled,
+      excludedOccurrences: excludedOccurrences ?? this.excludedOccurrences,
     );
   }
 }

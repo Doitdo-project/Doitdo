@@ -69,6 +69,7 @@ class Todo {
     this.repeatEndDate,
     this.period,
     this.repeatDays,
+    this.recurrenceGroupId,
   });
 
   final String id;
@@ -89,6 +90,18 @@ class Todo {
   final DateTime? repeatEndDate;
   final int? period;
   final List<int>? repeatDays;
+
+  /// 같은 반복 흐름임을 식별하는 group id (서버 발급).
+  ///
+  /// scope=from 으로 잘려 새 마스터가 생기더라도, 둘 다 같은 recurrenceGroupId 를
+  /// 가져 사용자 입장에서 "하나의 시리즈" 로 묶어 표현/조작할 수 있다.
+  /// 예: 시리즈 전체 삭제, 시리즈 시각적 구분, 분할된 항목을 같은 todo 의 변경으로 보여주기.
+  ///
+  /// - RECURRING 마스터: 자기 id (group head) 가 들어옴
+  /// - RECURRING 의 NORMAL 파생 인스턴스: 마스터의 groupId 상속
+  /// - 일반 NORMAL/PERIOD/SOMEDAY: null
+  /// - 백필 안 된 레거시 RECURRING: null
+  final int? recurrenceGroupId;
 
   String get dateDisplayText {
     switch (dateType) {
@@ -147,6 +160,7 @@ class Todo {
     DateTime? repeatEndDate,
     int? period,
     List<int>? repeatDays,
+    int? recurrenceGroupId,
   }) {
     return Todo(
       id: id ?? this.id,
@@ -167,6 +181,7 @@ class Todo {
       repeatEndDate: repeatEndDate ?? this.repeatEndDate,
       period: period ?? this.period,
       repeatDays: repeatDays ?? this.repeatDays,
+      recurrenceGroupId: recurrenceGroupId ?? this.recurrenceGroupId,
     );
   }
 }
