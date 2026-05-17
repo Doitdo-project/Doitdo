@@ -134,18 +134,27 @@ flutter:
     - assets/seeds/
     - .env
 
-  # 폰트 파일은 assets/fonts/ 에 아래 파일명과 정확히 일치하도록 배치해야 합니다.
-  # 파일명/family 를 바꿀 때는 lib/core/theme/app_text_styles.dart 의 상수도 함께 수정하세요.
+  # 폰트 family.
+  # - 각 family 안에 weight 메타데이터로 3종(Light/Medium/Bold)을 묶어두면
+  #   TextStyle 에서 fontFamily 만 명시하고 fontWeight 로 자동 선택된다.
+  # - 사용자는 '폰트' 설정에서 GmarketSans <-> Pretendard 를 전환한다
+  #   (font_family_provider + app_theme).
+  # - Pretendard 파일은 assets/fonts/ 에 아래 이름과 정확히 일치하도록 배치.
+  #   다운로드: https://github.com/orioncactus/pretendard/releases
   fonts:
-    - family: GmarketSansLight
+    - family: GmarketSans
       fonts:
         - asset: assets/fonts/GmarketSansLight.ttf
           weight: 300
-    - family: GmarketSansMedium
-      fonts:
         - asset: assets/fonts/GmarketSansMedium.ttf
           weight: 500
-    - family: GmarketSansBold
-      fonts:
         - asset: assets/fonts/GmarketSansBold.ttf
+          weight: 700
+    - family: Pretendard
+      fonts:
+        - asset: assets/fonts/pretendard_light.otf
+          weight: 300
+        - asset: assets/fonts/pretendard_medium.otf
+          weight: 500
+        - asset: assets/fonts/pretendard_bold.otf
           weight: 700

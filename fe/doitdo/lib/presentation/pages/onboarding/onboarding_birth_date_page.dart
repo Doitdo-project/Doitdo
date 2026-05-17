@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/app_theme.dart';
+import 'package:doitdo/presentation/providers/font_family_provider.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/domain/entities/user.dart';
@@ -62,6 +63,10 @@ class _OnboardingBirthDatePageState
   ///
   /// 반환 null 의 의미: 형식 자체가 안 됐거나 (예: 13월), 미래 / 1900년 이전 등
   /// 비현실적인 값. UI 에서 이 결과로 활성/비활성 + 에러 메시지 분기.
+  ///
+  /// 범위: 1900-01-01 ~ 오늘. 카카오/네이버/토스 등 한국 메이저 앱 표준값.
+  /// 만 14세 미만 차단 등 비즈니스 규칙은 서버에서 검증하고 `_handleUnderage`
+  /// 분기로 처리한다.
   DateTime? _parseDate(String raw) {
     final digits = raw.replaceAll(RegExp(r'\D'), '');
     if (digits.length != 8) return null;
@@ -136,7 +141,7 @@ class _OnboardingBirthDatePageState
   @override
   Widget build(BuildContext context) {
     return Theme(
-      data: AppTheme.light,
+      data: AppTheme.light(fontFamily: ref.watch(fontFamilyProvider).family),
       child: Consumer(builder: (context, ref, _) => _buildBody(context, ref)),
     );
   }
@@ -298,7 +303,9 @@ class _BirthDateField extends StatelessWidget {
       textAlign: TextAlign.center,
       cursorColor: colors.primary,
       style: AppTextStyles.titleLarge.copyWith(
-        fontFamily: 'GmarketSansMedium',
+        // fontFamily 는 ThemeData 가 주입 — 사용자 폰트 설정(GmarketSans/Pretendard)
+        // 따라감. fontWeight 만 명시해서 weight 메타데이터로 적절한 ttf/otf 선택.
+        fontWeight: FontWeight.w500,
         fontSize: 32.sp,
         color: accent,
         letterSpacing: 1.5,
@@ -313,7 +320,7 @@ class _BirthDateField extends StatelessWidget {
         contentPadding: EdgeInsets.symmetric(vertical: 12.h),
         hintText: 'YYYY.MM.DD',
         hintStyle: AppTextStyles.titleLarge.copyWith(
-          fontFamily: 'GmarketSansMedium',
+          fontWeight: FontWeight.w500,
           fontSize: 32.sp,
           color: colors.textHint.withValues(alpha: 0.5),
           letterSpacing: 1.5,

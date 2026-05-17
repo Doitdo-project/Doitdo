@@ -7,13 +7,20 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 ///
 /// 실제 앱 컬러는 대부분 `DoitdoColors` ThemeExtension에 담겨 있고,
 /// Material 컴포넌트가 내부적으로 참조하는 `ColorScheme`은 그에 맞게 파생시킨다.
+///
+/// [fontFamily] 는 사용자가 설정에서 고른 폰트 family 이름.
+/// 'GmarketSans' 또는 'Pretendard' 등. AppTextStyles 의 TextStyle 은 fontFamily 를
+/// 비워뒀으므로 이 값이 모든 Text 의 기본 폰트가 된다.
 class AppTheme {
   AppTheme._();
 
-  static ThemeData get light => _build(DoitdoColors.light, Brightness.light);
-  static ThemeData get dark => _build(DoitdoColors.dark, Brightness.dark);
+  static ThemeData light({String fontFamily = 'GmarketSans'}) =>
+      _build(DoitdoColors.light, Brightness.light, fontFamily);
+  static ThemeData dark({String fontFamily = 'GmarketSans'}) =>
+      _build(DoitdoColors.dark, Brightness.dark, fontFamily);
 
-  static ThemeData _build(DoitdoColors colors, Brightness brightness) {
+  static ThemeData _build(
+      DoitdoColors colors, Brightness brightness, String fontFamily) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: colors.primary,
       brightness: brightness,
@@ -28,6 +35,7 @@ class AppTheme {
       brightness: brightness,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: colors.background,
+      fontFamily: fontFamily,
       extensions: <ThemeExtension<dynamic>>[colors],
       textTheme: _textTheme(colors.textPrimary),
       appBarTheme: AppBarTheme(

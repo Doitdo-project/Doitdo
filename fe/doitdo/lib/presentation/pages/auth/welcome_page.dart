@@ -377,6 +377,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart'
 import 'package:doitdo/core/errors/exceptions.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/app_theme.dart';
+import 'package:doitdo/presentation/providers/font_family_provider.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
@@ -445,7 +446,7 @@ class WelcomePage extends ConsumerWidget {
     // 무관하게 라이트 테마로 강제. 토큰 텍스트/위젯이 라이트 값을 받아야
     // 크림 배경 위 가독성이 보장된다.
     return Theme(
-      data: AppTheme.light,
+      data: AppTheme.light(fontFamily: ref.watch(fontFamilyProvider).family),
       child: Scaffold(
         backgroundColor: _bgColor,
         body: SafeArea(
