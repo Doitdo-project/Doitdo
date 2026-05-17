@@ -8,6 +8,7 @@ import 'package:doitdo/core/theme/app_theme.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/providers/current_user_provider.dart';
+import 'package:doitdo/presentation/providers/font_family_provider.dart';
 import 'package:doitdo/presentation/providers/font_scale_provider.dart';
 import 'package:doitdo/presentation/providers/theme_mode_provider.dart';
 import 'package:doitdo/presentation/widgets/shell/doitdo_web_preview_shell.dart';
@@ -62,11 +63,12 @@ class _DoitdoAppState extends ConsumerState<DoitdoApp>
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
     final fontScale = ref.watch(fontScaleProvider);
+    final fontFamily = ref.watch(fontFamilyProvider);
 
     final app = MaterialApp.router(
       title: 'doitdo',
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      theme: AppTheme.light(fontFamily: fontFamily.family),
+      darkTheme: AppTheme.dark(fontFamily: fontFamily.family),
       themeMode: themeMode,
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,

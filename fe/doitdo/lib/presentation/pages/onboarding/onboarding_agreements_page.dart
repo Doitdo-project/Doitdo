@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/app_theme.dart';
+import 'package:doitdo/presentation/providers/font_family_provider.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/domain/entities/user.dart';
@@ -29,7 +30,7 @@ class OnboardingAgreementsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Theme(
-      data: AppTheme.light,
+      data: AppTheme.light(fontFamily: ref.watch(fontFamilyProvider).family),
       child: Consumer(builder: (context, ref, _) => _buildBody(context, ref)),
     );
   }
@@ -216,8 +217,15 @@ class OnboardingAgreementsPage extends ConsumerWidget {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      // 시트가 시스템 인셋(홈 인디케이터/내비게이션 바)을 덮고 화면 끝까지 채우게 한다.
+      // 기본값(false) 이지만 명시 — 다른 곳에서 default 가 바뀌어도 안전.
+      useSafeArea: false,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
+        // 시스템 하단 인셋(홈 인디케이터/내비게이션 바) 높이.
+        // 스크롤 콘텐츠 padding 에 이만큼만 더해서 마지막 줄이 인디케이터에 가리지 않게.
+        // 시트 컨테이너 자체는 화면 끝까지 흰색으로 채워 "회색 빈 영역" 이 안 보이게 한다.
+        final bottomInset = MediaQuery.of(ctx).padding.bottom;
         return DraggableScrollableSheet(
           initialChildSize: 0.7,
           minChildSize: 0.4,
@@ -258,7 +266,14 @@ class OnboardingAgreementsPage extends ConsumerWidget {
                   Expanded(
                     child: SingleChildScrollView(
                       controller: scrollController,
-                      padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 32.h),
+                      // 하단 padding 은 시스템 인셋 + 작은 breathing room 만.
+                      // 기존 32.h 고정값 → 디바이스마다 과한 여백이 보이던 문제 해결.
+                      padding: EdgeInsets.fromLTRB(
+                        20.w,
+                        16.h,
+                        20.w,
+                        bottomInset + 12.h,
+                      ),
                       child: Text(
                         body,
                         style: AppTextStyles.bodyMedium.copyWith(

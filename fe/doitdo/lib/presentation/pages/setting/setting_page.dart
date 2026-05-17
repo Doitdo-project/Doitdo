@@ -8,8 +8,10 @@ import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/setting/widgets/default_screen_sheet.dart';
 import 'package:doitdo/presentation/pages/setting/widgets/theme_mode_sheet.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
+import 'package:doitdo/presentation/pages/setting/widgets/font_family_sheet.dart';
 import 'package:doitdo/presentation/pages/setting/widgets/font_scale_sheet.dart';
 import 'package:doitdo/presentation/providers/default_screen_provider.dart';
+import 'package:doitdo/presentation/providers/font_family_provider.dart';
 import 'package:doitdo/presentation/providers/font_scale_provider.dart';
 import 'package:doitdo/presentation/providers/theme_mode_provider.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_padding_layout.dart';
@@ -31,6 +33,7 @@ class SettingPage extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final defaultScreen = ref.watch(defaultScreenProvider);
     final fontScale = ref.watch(fontScaleProvider);
+    final fontFamily = ref.watch(fontFamilyProvider);
 
     return DoitdoScaffold(
       body: DoitdoPaddingLayout(
@@ -84,11 +87,22 @@ class SettingPage extends ConsumerWidget {
                   trailing: _fontScaleLabel(fontScale),
                   onTap: () => _openFontScaleSheet(context, ref, fontScale),
                 ),
+                _SettingTile(
+                  icon: Icons.font_download_outlined,
+                  label: '폰트',
+                  trailing: fontFamily.label,
+                  onTap: () => _openFontFamilySheet(context, ref, fontFamily),
+                ),
               ],
             ),
             const SizedBox(height: 12),
             _SettingCard(
               children: [
+                _SettingTile(
+                  icon: Icons.campaign_outlined,
+                  label: '공지사항',
+                  onTap: () => context.push(AppRoutes.notice),
+                ),
                 _SettingTile(
                   icon: Icons.play_circle_outline_rounded,
                   label: '튜토리얼 다시 보기',
@@ -148,6 +162,17 @@ Future<void> _openFontScaleSheet(
   );
   if (picked != null && picked != current) {
     await ref.read(fontScaleProvider.notifier).set(picked);
+  }
+}
+
+Future<void> _openFontFamilySheet(
+    BuildContext context, WidgetRef ref, AppFontFamily current) async {
+  final picked = await showFontFamilySheet(
+    context: context,
+    current: current,
+  );
+  if (picked != null && picked != current) {
+    await ref.read(fontFamilyProvider.notifier).set(picked);
   }
 }
 

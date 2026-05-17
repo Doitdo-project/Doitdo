@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:doitdo/core/errors/exceptions.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/app_theme.dart';
+import 'package:doitdo/presentation/providers/font_family_provider.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/domain/entities/user.dart';
@@ -115,7 +116,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         context.go(AppRoutes.welcome);
       },
       child: Theme(
-        data: AppTheme.light,
+        data: AppTheme.light(fontFamily: ref.watch(fontFamilyProvider).family),
         child:
             Consumer(builder: (context, ref, _) => _buildBody(context, ref)),
       ),

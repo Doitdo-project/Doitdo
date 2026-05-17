@@ -8,6 +8,7 @@ import 'package:doitdo/core/errors/exceptions.dart';
 import 'package:doitdo/core/utils/email_validator.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/app_theme.dart';
+import 'package:doitdo/presentation/providers/font_family_provider.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
@@ -210,7 +211,7 @@ class _FindPasswordPageState extends ConsumerState<FindPasswordPage> {
 
     // 인증 화면은 브랜드 크림 톤 기반이라 themeMode 와 무관하게 라이트 강제.
     return Theme(
-      data: AppTheme.light,
+      data: AppTheme.light(fontFamily: ref.watch(fontFamilyProvider).family),
       child: Builder(builder: (context) => _buildBody(context, isLoading)),
     );
   }

@@ -334,8 +334,8 @@ class _SplashPageState extends ConsumerState<SplashPage>
 
                       // 워드마크 "두잇뚜" — fade + 14px slide-up.
                       // 핸드오프 사양: 34px, weight 800, letter-spacing -0.03em (≈ -1.0 on 34).
-                      // Pretendard 800 이 디자인 원본이지만 프로젝트 폰트는 GmarketSans 라
-                      // GmarketSansBold (700) 로 폴백한다.
+                      // fontFamily 미명시 — ThemeData.fontFamily(사용자 선택) 따라감.
+                      // weight 700 으로 weight 메타데이터 기반 자동 선택.
                       AnimatedBuilder(
                         animation: _wordmarkController,
                         builder: (_, __) {
@@ -348,7 +348,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
                               child: const Text(
                                 '두잇뚜',
                                 style: TextStyle(
-                                  fontFamily: 'GmarketSansBold',
+                                  fontWeight: FontWeight.w700,
                                   fontSize: 34,
                                   height: 1.0,
                                   color: _ink,
@@ -374,7 +374,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
                               child: const Text(
                                 '오늘 할 일, 가볍게',
                                 style: TextStyle(
-                                  fontFamily: 'GmarketSansMedium',
+                                  fontWeight: FontWeight.w500,
                                   fontSize: 13,
                                   height: 1.2,
                                   color: _muted,
