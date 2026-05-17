@@ -6,6 +6,7 @@ import 'package:doitdo/presentation/pages/setting/bug_report/bug_report_page.dar
 import 'package:doitdo/presentation/pages/auth/find_password_page.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_page.dart';
 import 'package:doitdo/presentation/pages/notification/notification_page.dart';
+import 'package:doitdo/presentation/pages/setting/notice/notice_list_page.dart';
 import 'package:doitdo/presentation/pages/setting/notification/notification_settings_page.dart';
 import 'package:doitdo/presentation/pages/auth/login_page.dart';
 import 'package:doitdo/presentation/pages/auth/register_page.dart';
@@ -47,6 +48,7 @@ class AppRoutes {
   static const String account = '/setting/account';
   static const String category = '/setting/category';
   static const String notification = '/setting/notification';
+  static const String notice = '/setting/notice';
   static const String bugReport = '/setting/bug-report';
   static const String notifications = '/todo/notifications';
   static const String tutorial = '/tutorial';
@@ -270,6 +272,11 @@ final GoRouter appRouter = GoRouter(
                   path: 'notification',
                   builder: (context, state) =>
                       const NotificationSettingsPage(),
+                ),
+                // '/setting/notice' — 공지사항 목록.
+                GoRoute(
+                  path: 'notice',
+                  builder: (context, state) => const NoticeListPage(),
                 ),
                 // '/setting/bug-report' — 버그 신고.
                 GoRoute(

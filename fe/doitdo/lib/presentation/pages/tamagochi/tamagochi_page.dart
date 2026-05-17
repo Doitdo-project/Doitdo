@@ -16,10 +16,12 @@ import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_view_model.dart';
 import 'package:doitdo/domain/entities/evolution.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/attendance_celebration.dart';
+import 'package:doitdo/presentation/pages/setting/notice/notice_popup_launcher.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/character_card.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/room_layer.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/floating_gain_text.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/status_pill.dart';
+import 'package:doitdo/presentation/providers/default_screen_provider.dart';
 import 'package:doitdo/presentation/pages/todo/todo_state.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/pages/todo/widgets/todo_add_sheet.dart';
@@ -166,6 +168,9 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       if (c != null && c.poop && _poopLeftRatio == null) {
         setState(() => _pickRandomPoopPosition());
       }
+      // 사용자의 기본 화면이 "홈" 일 때만, 세션 1회 공지 팝업 시도.
+      // (다른 기본 화면 사용자나 이미 표시한 세션에서는 함수 내부에서 no-op)
+      maybeShowNoticePopup(context, ref, forScreen: DefaultScreen.home);
     });
   }
 
@@ -578,8 +583,9 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     );
 
     // 오늘 날짜에 해당하는 할 일만 필터. range 타입도 오늘 포함이면 노출.
+    // scope=only 로 오늘 발생분을 삭제한 반복 일정은 excludedOccurrences 로 걸러낸다.
     final todayTodos = todoState.allTodos
-        .where((t) => _isTodayTodo(t, today))
+        .where((t) => _isTodayTodo(t, today, todoState.excludedOccurrences))
         .toList(growable: false);
     final somedayTodos = todoState.allSomedayTodos;
 
@@ -931,7 +937,13 @@ class _PendingFloatingGain {
 
 /// 해당 Todo 가 "오늘의 할 일" 에 포함되는지. 단일 날짜는 동일 일자, 기간은 오늘이
 /// 시작~종료 사이, 반복은 시작일이 오늘 이전이고 종료일이 없거나 오늘 이후면 포함.
-bool _isTodayTodo(Todo todo, DateTime today) {
+/// [excludedOccurrences] 는 scope=only 로 삭제된 반복 발생 키 집합
+/// ("${todoId}_${yyyy-MM-dd}"). 반복 일정에서 오늘이 여기 들어있으면 제외한다.
+bool _isTodayTodo(
+  Todo todo,
+  DateTime today, [
+  Set<String> excludedOccurrences = const {},
+]) {
   bool sameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
   bool onOrBefore(DateTime a, DateTime b) =>
@@ -959,6 +971,12 @@ bool _isTodayTodo(Todo todo, DateTime today) {
       if (start == null) return false;
       if (!onOrBefore(start, today)) return false;
       if (end != null && today.isAfter(end)) return false;
+
+      // ✅ scope=only 로 오늘 발생분이 삭제됐다면 표시 안 함
+      // (캘린더/투두 페이지의 _updateDisplayedTodos / _updateCalendarEvents 와 동일 정책)
+      final todayStr =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      if (excludedOccurrences.contains('${todo.id}_$todayStr')) return false;
 
       // ✅ 오늘이 반복 요일에 해당하는지 체크 (캘린더와 동일한 로직)
       if (todo.repeatDays != null && todo.repeatDays!.isNotEmpty) {
