@@ -64,6 +64,7 @@ public interface TodoRepository extends JpaRepository<Todo, Long>, JpaSpecificat
 			  AND t.startDate >= :occurrenceDate
 			  AND t.isDeleted = false
 			  AND t.type = com.doitdo.domain.todo.entity.Todo.TodoType.NORMAL
+			  AND t.status <> com.doitdo.domain.todo.entity.Todo.TodoStatus.DONE
 			ORDER BY t.startDate ASC, t.todoId ASC
 			""")
 	List<Todo> findMaterializedInstancesByMasterTodoIdInFromDate(

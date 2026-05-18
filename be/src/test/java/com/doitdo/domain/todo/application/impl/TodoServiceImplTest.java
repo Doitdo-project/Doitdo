@@ -568,6 +568,24 @@ class TodoServiceImplTest {
 	}
 
 	@Test
+	void deleteRecurringAllSoftDeletesMasterAndMaterializedInstances() {
+		Todo master = recurringMaster();
+		Todo pending = recurringInstance(master, LocalDate.parse("2026-05-12"));
+		Todo done = recurringInstance(master, LocalDate.parse("2026-05-19"));
+		ReflectionTestUtils.setField(done, "todoId", 26L);
+		done.changeStatus(TodoStatus.DONE);
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+		given(todoRepository.findAllByUserIdAndMasterTodoIdAndIsDeletedFalse(1L, 10L))
+				.willReturn(List.of(pending, done));
+
+		service.delete(1L, 10L, "all");
+
+		assertThat(master.getIsDeleted()).isTrue();
+		assertThat(pending.getIsDeleted()).isTrue();
+		assertThat(done.getIsDeleted()).isTrue();
+	}
+
+	@Test
 	void deleteRecurringFromCutsMasterAndSoftDeletesFutureInstances() {
 		Todo master = recurringMaster();
 		Todo future = recurringInstance(master, LocalDate.parse("2026-05-19"));
@@ -586,6 +604,32 @@ class TodoServiceImplTest {
 		assertThat(future.getIsDeleted()).isTrue();
 		verify(cacheEvictHelper).evictUserTodosAfterCommit(1L);
 		verify(cacheEvictHelper).evictTodoItemAfterCommit(1L, 10L);
+	}
+
+	@Test
+	void deleteRecurringFromSkipsDoneMaterializedInstancesAndDeletesPendingInstances() {
+		Todo master = recurringMaster();
+		ReflectionTestUtils.setField(master, "daysOfWeekRaw", "MON,TUE,WED,THU,FRI,SAT,SUN");
+		ReflectionTestUtils.setField(master, "endDate", LocalDate.parse("2026-05-05"));
+		Todo done = recurringInstance(master, LocalDate.parse("2026-05-03"));
+		ReflectionTestUtils.setField(done, "todoId", 200L);
+		done.changeStatus(TodoStatus.DONE);
+		Todo pending = recurringInstance(master, LocalDate.parse("2026-05-04"));
+		ReflectionTestUtils.setField(pending, "todoId", 201L);
+		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
+		given(todoRepository.findRecurringMastersOverlappingFromDate(1L, 10L, LocalDate.parse("2026-05-01")))
+				.willReturn(List.of(master));
+		given(todoRepository.findMaterializedInstancesByMasterTodoIdInFromDate(
+				1L,
+				List.of(10L),
+				LocalDate.parse("2026-05-01")))
+				.willReturn(List.of(pending));
+
+		service.delete(1L, 10L, "from", LocalDate.parse("2026-05-01"));
+
+		assertThat(master.getIsDeleted()).isTrue();
+		assertThat(done.getIsDeleted()).isFalse();
+		assertThat(pending.getIsDeleted()).isTrue();
 	}
 
 	@Test
