@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'package:doitdo/core/notifications/fcm_service.dart';
+import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
@@ -157,38 +158,46 @@ class _NotificationSettingsPageState
               ],
             ),
           ),
-          data: (setting) => _Body(
-            setting: setting,
-            pushGranted: _osNotificationGranted,
-            onPushTap: _onPushToggleTapped,
-            onDndChanged: (v) => _run(() => vm.setDndEnabled(v)),
-            onDndStartTap: () async {
-              final current = setting.dndStartTime?.toTimeOfDay() ??
-                  const TimeOfDay(hour: 22, minute: 0);
-              final picked = await _pickTime(current);
-              if (picked != null) _run(() => vm.setDndStartTime(picked));
-            },
-            onDndEndTap: () async {
-              final current = setting.dndEndTime?.toTimeOfDay() ??
-                  const TimeOfDay(hour: 7, minute: 0);
-              final picked = await _pickTime(current);
-              if (picked != null) _run(() => vm.setDndEndTime(picked));
-            },
-            onMorningChanged: (v) => _run(() => vm.setMorningEnabled(v)),
-            onMorningTimeTap: () async {
-              final current = setting.morningReminderTime?.toTimeOfDay() ??
-                  const TimeOfDay(hour: 8, minute: 0);
-              final picked = await _pickTime(current);
-              if (picked != null) _run(() => vm.setMorningTime(picked));
-            },
-            onEveningChanged: (v) => _run(() => vm.setEveningEnabled(v)),
-            onEveningTimeTap: () async {
-              final current = setting.eveningReminderTime?.toTimeOfDay() ??
-                  const TimeOfDay(hour: 21, minute: 0);
-              final picked = await _pickTime(current);
-              if (picked != null) _run(() => vm.setEveningTime(picked));
-            },
-          ),
+          data: (setting) {
+            FcmService.setTamagochiNotiEnabled(
+                setting.tamagotchiNotificationEnabled);
+            return _Body(
+              setting: setting,
+              pushGranted: _osNotificationGranted,
+              onPushTap: _onPushToggleTapped,
+              onDndChanged: (v) => _run(() => vm.setDndEnabled(v)),
+              onDndStartTap: () async {
+                final current = setting.dndStartTime?.toTimeOfDay() ??
+                    const TimeOfDay(hour: 22, minute: 0);
+                final picked = await _pickTime(current);
+                if (picked != null) _run(() => vm.setDndStartTime(picked));
+              },
+              onDndEndTap: () async {
+                final current = setting.dndEndTime?.toTimeOfDay() ??
+                    const TimeOfDay(hour: 7, minute: 0);
+                final picked = await _pickTime(current);
+                if (picked != null) _run(() => vm.setDndEndTime(picked));
+              },
+              onMorningChanged: (v) => _run(() => vm.setMorningEnabled(v)),
+              onMorningTimeTap: () async {
+                final current = setting.morningReminderTime?.toTimeOfDay() ??
+                    const TimeOfDay(hour: 8, minute: 0);
+                final picked = await _pickTime(current);
+                if (picked != null) _run(() => vm.setMorningTime(picked));
+              },
+              onEveningChanged: (v) => _run(() => vm.setEveningEnabled(v)),
+              onEveningTimeTap: () async {
+                final current = setting.eveningReminderTime?.toTimeOfDay() ??
+                    const TimeOfDay(hour: 21, minute: 0);
+                final picked = await _pickTime(current);
+                if (picked != null) _run(() => vm.setEveningTime(picked));
+              },
+              onTamagochiNotiChanged: (v) {
+                FcmService.setTamagochiNotiEnabled(v);
+                _run(() => vm.setTamagochiNotiEnabled(v));
+              },
+            );
+          },
         ),
       ),
     );
@@ -208,6 +217,7 @@ class _Body extends StatelessWidget {
     required this.onMorningTimeTap,
     required this.onEveningChanged,
     required this.onEveningTimeTap,
+    required this.onTamagochiNotiChanged,
   });
 
   final UserSettingResp setting;
@@ -220,6 +230,7 @@ class _Body extends StatelessWidget {
   final VoidCallback onMorningTimeTap;
   final ValueChanged<bool> onEveningChanged;
   final VoidCallback onEveningTimeTap;
+  final ValueChanged<bool> onTamagochiNotiChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -316,6 +327,20 @@ class _Body extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(height: 24),
+        // ── 다마고치 ────────────────────────
+        const _SectionLabel('다마고치'),
+        const SizedBox(height: 8),
+        _SettingsCard(
+          child: _ToggleRow(
+            icon: Icons.pets_outlined,
+            title: '다마고치 알림',
+            description: '캐릭터 성장 알림을 받습니다.',
+            value: setting.tamagotchiNotificationEnabled,
+            onChanged: onTamagochiNotiChanged,
+          ),
+        ),
+
         const SizedBox(height: 40),
       ],
     );
