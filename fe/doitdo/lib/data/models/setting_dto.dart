@@ -64,6 +64,7 @@ class UserSettingResp {
     this.morningReminderTime,
     required this.eveningReminderEnabled,
     this.eveningReminderTime,
+    required this.tamagotchiNotificationEnabled,
   });
 
   final bool dndEnabled;
@@ -73,6 +74,7 @@ class UserSettingResp {
   final LocalTimeDto? morningReminderTime;
   final bool eveningReminderEnabled;
   final LocalTimeDto? eveningReminderTime;
+  final bool tamagotchiNotificationEnabled;
 
   factory UserSettingResp.fromJson(Map<String, dynamic> json) {
     LocalTimeDto? _time(String key) {
@@ -89,6 +91,8 @@ class UserSettingResp {
       morningReminderTime: _time('morningReminderTime'),
       eveningReminderEnabled: (json['eveningReminderEnabled'] as bool?) ?? false,
       eveningReminderTime: _time('eveningReminderTime'),
+      tamagotchiNotificationEnabled:
+          (json['tamagotchiNotificationEnabled'] as bool?) ?? false,
     );
   }
 
@@ -101,6 +105,7 @@ class UserSettingResp {
     LocalTimeDto? morningReminderTime,
     bool? eveningReminderEnabled,
     LocalTimeDto? eveningReminderTime,
+    bool? tamagotchiNotificationEnabled,
   }) =>
       UserSettingResp(
         dndEnabled: dndEnabled ?? this.dndEnabled,
@@ -112,5 +117,7 @@ class UserSettingResp {
         eveningReminderEnabled:
             eveningReminderEnabled ?? this.eveningReminderEnabled,
         eveningReminderTime: eveningReminderTime ?? this.eveningReminderTime,
+        tamagotchiNotificationEnabled:
+            tamagotchiNotificationEnabled ?? this.tamagotchiNotificationEnabled,
       );
 }

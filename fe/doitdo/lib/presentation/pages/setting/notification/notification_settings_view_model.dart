@@ -160,6 +160,14 @@ class NotificationSettingsViewModel extends AsyncNotifier<UserSettingResp> {
       {'eveningReminderTime': dto.toJson()},
     );
   }
+
+  Future<void> setTamagochiNotiEnabled(bool v) {
+    final current = state.requireValue;
+    return _patch(
+      current.copyWith(tamagotchiNotificationEnabled: v),
+      {'tamagotchiNotificationEnabled': v},
+    );
+  }
 }
 
 final notificationSettingsViewModelProvider =

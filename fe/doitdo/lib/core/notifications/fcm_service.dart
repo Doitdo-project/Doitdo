@@ -87,11 +87,13 @@ class FcmService {
     }
   }
 
-  static const _blockedTypes = {
-    'TODO_DONE',
-    'TODO_SNOOZED',
-    'TAMAGOTCHI_GROWTH',
-  };
+  static const _blockedTypes = {'TODO_DONE', 'TODO_SNOOZED'};
+
+  static bool _tamagochiNotiEnabled = false;
+
+  static void setTamagochiNotiEnabled(bool v) {
+    _tamagochiNotiEnabled = v;
+  }
 
   static void _handleForeground(RemoteMessage message) {
     final notification = message.notification;
@@ -99,6 +101,7 @@ class FcmService {
 
     final type = message.data['type'] as String?;
     if (type != null && _blockedTypes.contains(type)) return;
+    if (type == 'TAMAGOTCHI_GROWTH' && !_tamagochiNotiEnabled) return;
 
     _local.show(
       notification.hashCode,
