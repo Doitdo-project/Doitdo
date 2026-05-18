@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 
@@ -64,6 +65,99 @@ class _TodoPageState extends ConsumerState<TodoPage> {
     } else if (velocity > 0 && format != CalendarFormat.month) {
       vm.onFormatChanged(CalendarFormat.month);
     }
+  }
+
+  void _showYearMonthPicker(BuildContext context, DateTime focused) {
+    final colors = context.colors;
+    int pickerYear = focused.year;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          return Padding(
+            padding: EdgeInsets.fromLTRB(24.w, 20.h, 24.w, 32.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 년도 선택 row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      onPressed: () => setSheetState(() => pickerYear--),
+                      icon: Icon(Icons.chevron_left, color: colors.textPrimary),
+                    ),
+                    SizedBox(width: 8.w),
+                    Text('$pickerYear년',
+                        style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary)),
+                    SizedBox(width: 8.w),
+                    IconButton(
+                      onPressed: () => setSheetState(() => pickerYear++),
+                      icon: Icon(Icons.chevron_right, color: colors.textPrimary),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12.h),
+                // 월 3×4 그리드
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    childAspectRatio: 1.8,
+                  ),
+                  itemCount: 12,
+                  itemBuilder: (_, i) {
+                    final month = i + 1;
+                    final isSelected = pickerYear == focused.year && month == focused.month;
+                    final isCurrentMonth = pickerYear == DateTime.now().year &&
+                        month == DateTime.now().month;
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        final target = DateTime(pickerYear, month, 1);
+                        ref.read(todoViewModelProvider.notifier)
+                            .onDaySelected(target, target);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.calendarPoint : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8.r),
+                          border: isCurrentMonth && !isSelected
+                              ? Border.all(color: AppColors.calendarPoint, width: 1)
+                              : null,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '$month월',
+                          style: AppTextStyles.labelMedium.copyWith(
+                            color: isSelected
+                                ? Colors.white
+                                : isCurrentMonth
+                                    ? AppColors.calendarPoint
+                                    : colors.textPrimary,
+                            fontWeight: isSelected || isCurrentMonth
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
   void _showFormatDropdown(BuildContext context, CalendarFormat current) {
@@ -280,9 +374,22 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text('${state.focusedDay.month}월',
-                                style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary)),
-                            const SizedBox(width: 12),
+                            GestureDetector(
+                              onTap: () => _showYearMonthPicker(context, state.focusedDay),
+                              behavior: HitTestBehavior.opaque,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    '${state.focusedDay.year}년 ${state.focusedDay.month}월',
+                                    style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Icon(Icons.expand_more, size: 18, color: colors.textPrimary),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 10),
                             GestureDetector(
                               key: _formatBtnKey,
                               onTap: () => _showFormatDropdown(context, state.calendarFormat),
@@ -302,6 +409,19 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                         ),
                         Row(
                           children: [
+                            if (!isToday) ...[
+                              GestureDetector(
+                                onTap: () => vm.resetToToday(),
+                                behavior: HitTestBehavior.opaque,
+                                child: Text(
+                                  '오늘',
+                                  style: AppTextStyles.labelMedium.copyWith(
+                                    color: AppColors.calendarPoint,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                            ],
                             GestureDetector(
                               key: _filterBtnKey,
                               onTap: () => _showFilterMenu(context, state.currentFilter),
