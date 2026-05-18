@@ -173,6 +173,11 @@ public class NotificationServiceImpl implements NotificationService {
 
 	@Override
 	public void sendTamagotchiFarewell(Long userId, Long userCharacterId, String characterName) {
+		if (!isTamagotchiNotificationEnabled(userId)) {
+			log.debug("[farewell-available] tamagotchi notification disabled user={}", userId);
+			return;
+		}
+
 		String title = "독립 준비 완료";
 		String body  = "\"%s\"이(가) 독립할 준비가 되었어요!".formatted(characterName);
 
@@ -185,6 +190,11 @@ public class NotificationServiceImpl implements NotificationService {
 
 	@Override
 	public void sendTamagotchiGrowth(Long userId, Long userCharacterId, String characterName, String afterStage) {
+		if (!isTamagotchiNotificationEnabled(userId)) {
+			log.debug("[tamagotchi-growth] tamagotchi notification disabled user={}", userId);
+			return;
+		}
+
 		String title = "BABY".equals(afterStage) ? "알이 부화했어요!" : "다마고치가 성장했어요!";
 		String body  = "\"%s\"이(가) %s 단계로 성장했어요.".formatted(characterName, afterStage);
 
@@ -231,6 +241,12 @@ public class NotificationServiceImpl implements NotificationService {
 		} catch (Exception ex) {
 			log.warn("[test-notification] fcm failed user={}", userId, ex);
 		}
+	}
+
+	private boolean isTamagotchiNotificationEnabled(Long userId) {
+		return userSettingRepository.findByUserId(userId)
+				.map(setting -> !Boolean.FALSE.equals(setting.getTamagotchiNotificationEnabled()))
+				.orElse(true);
 	}
 
 	private boolean isInDnd(UserSetting s, LocalTime now) {

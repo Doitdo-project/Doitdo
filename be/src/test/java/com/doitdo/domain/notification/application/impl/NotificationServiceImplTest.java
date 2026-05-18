@@ -9,6 +9,7 @@ import static org.mockito.BDDMockito.then;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +24,7 @@ import com.doitdo.domain.notification.entity.Notification;
 import com.doitdo.domain.notification.entity.Notification.NotificationType;
 import com.doitdo.domain.notification.repository.DeviceTokenRepository;
 import com.doitdo.domain.notification.repository.NotificationRepository;
+import com.doitdo.domain.setting.entity.UserSetting;
 import com.doitdo.domain.setting.repository.UserSettingRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -80,6 +82,7 @@ class NotificationServiceImplTest {
 	void sendTamagotchiGrowthUsesHatchTitleWhenAfterStageIsBaby() {
 		NotificationServiceImpl service = new NotificationServiceImpl(
 				notificationRepository, userSettingRepository, deviceTokenRepository, fcmService);
+		given(userSettingRepository.findByUserId(1L)).willReturn(Optional.empty());
 		given(deviceTokenRepository.findAllByUserIdAndIsActiveTrue(1L)).willReturn(List.of());
 
 		service.sendTamagotchiGrowth(1L, 10L, "두잇", "BABY");
@@ -96,6 +99,7 @@ class NotificationServiceImplTest {
 	void sendTamagotchiFarewellSavesReadyMessage() {
 		NotificationServiceImpl service = new NotificationServiceImpl(
 				notificationRepository, userSettingRepository, deviceTokenRepository, fcmService);
+		given(userSettingRepository.findByUserId(1L)).willReturn(Optional.empty());
 		given(deviceTokenRepository.findAllByUserIdAndIsActiveTrue(1L)).willReturn(List.of());
 
 		service.sendTamagotchiFarewell(1L, 10L, "두잇");
@@ -108,6 +112,40 @@ class NotificationServiceImplTest {
 		assertThat(saved.getTitle()).isEqualTo("독립 준비 완료");
 		assertThat(saved.getMessage()).isEqualTo("\"두잇\"이(가) 독립할 준비가 되었어요!");
 		assertThat(saved.getReferenceId()).isEqualTo(10L);
+	}
+
+	@Test
+	void sendTamagotchiGrowthSkipsWhenTamagotchiNotificationDisabled() {
+		NotificationServiceImpl service = new NotificationServiceImpl(
+				notificationRepository, userSettingRepository, deviceTokenRepository, fcmService);
+		UserSetting setting = tamagotchiNotificationDisabledSetting();
+		given(userSettingRepository.findByUserId(1L)).willReturn(Optional.of(setting));
+
+		service.sendTamagotchiGrowth(1L, 10L, "tama", "BABY");
+
+		then(notificationRepository).shouldHaveNoInteractions();
+		then(deviceTokenRepository).shouldHaveNoInteractions();
+		then(fcmService).shouldHaveNoInteractions();
+	}
+
+	@Test
+	void sendTamagotchiFarewellSkipsWhenTamagotchiNotificationDisabled() {
+		NotificationServiceImpl service = new NotificationServiceImpl(
+				notificationRepository, userSettingRepository, deviceTokenRepository, fcmService);
+		UserSetting setting = tamagotchiNotificationDisabledSetting();
+		given(userSettingRepository.findByUserId(1L)).willReturn(Optional.of(setting));
+
+		service.sendTamagotchiFarewell(1L, 10L, "tama");
+
+		then(notificationRepository).shouldHaveNoInteractions();
+		then(deviceTokenRepository).shouldHaveNoInteractions();
+		then(fcmService).shouldHaveNoInteractions();
+	}
+
+	private UserSetting tamagotchiNotificationDisabledSetting() {
+		UserSetting setting = UserSetting.create(1L);
+		setting.update(null, null, null, null, null, null, null, false);
+		return setting;
 	}
 
 	@Test

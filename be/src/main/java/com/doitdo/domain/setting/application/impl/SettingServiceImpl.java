@@ -49,7 +49,8 @@ public class SettingServiceImpl implements SettingService {
 				req.morningReminderEnabled(),
 				req.morningReminderTime(),
 				req.eveningReminderEnabled(),
-				req.eveningReminderTime()
+				req.eveningReminderTime(),
+				req.tamagotchiNotificationEnabled()
 		);
 
 		return UserSettingResp.from(setting);

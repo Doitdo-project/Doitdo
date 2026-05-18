@@ -11,7 +11,8 @@ public record UserSettingResp(
 		Boolean morningReminderEnabled,
 		LocalTime morningReminderTime,
 		Boolean eveningReminderEnabled,
-		LocalTime eveningReminderTime
+		LocalTime eveningReminderTime,
+		Boolean tamagotchiNotificationEnabled
 ) {
 
 	public static UserSettingResp from(UserSetting setting) {
@@ -22,7 +23,8 @@ public record UserSettingResp(
 				setting.getMorningReminderEnabled(),
 				setting.getMorningReminderTime(),
 				setting.getEveningReminderEnabled(),
-				setting.getEveningReminderTime()
+				setting.getEveningReminderTime(),
+				setting.getTamagotchiNotificationEnabled()
 		);
 	}
 }
