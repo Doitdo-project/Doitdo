@@ -43,22 +43,15 @@ class _NoticePopupModal extends ConsumerStatefulWidget {
 
 class _NoticePopupModalState extends ConsumerState<_NoticePopupModal> {
   bool _dontShowAgain = false;
-  bool _submitting = false;
 
-  Future<void> _close() async {
-    if (_submitting) return;
-    if (_dontShowAgain) {
-      setState(() => _submitting = true);
-      try {
-        await ref
-            .read(noticeRepositoryProvider)
-            .dismissNotice(widget.notice.noticeId);
-      } catch (_) {
-        // 실패해도 사용자 흐름은 막지 않음 (다음 진입 시 자동 재시도 가능).
-      }
-    }
-    if (!mounted) return;
+  void _close() {
     Navigator.of(context).pop();
+    if (_dontShowAgain) {
+      ref
+          .read(noticeRepositoryProvider)
+          .dismissNotice(widget.notice.noticeId)
+          .ignore();
+    }
   }
 
   @override
@@ -199,8 +192,8 @@ class _NoticePopupModalState extends ConsumerState<_NoticePopupModal> {
               Padding(
                 padding: EdgeInsets.fromLTRB(20.w, 4.h, 20.w, 20.h),
                 child: DoitdoPrimaryButton(
-                  label: _submitting ? '닫는 중…' : '확인',
-                  onPressed: _submitting ? null : _close,
+                  label: '확인',
+                  onPressed: _close,
                 ),
               ),
             ],
