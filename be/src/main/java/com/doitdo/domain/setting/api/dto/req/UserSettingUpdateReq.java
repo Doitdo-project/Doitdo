@@ -26,6 +26,8 @@ public record UserSettingUpdateReq(
 
 		Boolean eveningReminderEnabled,
 
-		LocalTime eveningReminderTime
+		LocalTime eveningReminderTime,
+
+		Boolean tamagotchiNotificationEnabled
 ) {
 }
