@@ -169,11 +169,81 @@ class PoopMissionIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("Case 6: 자정 경과 후 GET 은 poop_time 을 새 날짜로 Lazy 재결정")
-	void case06_getAfterDateChangesRefreshesPoopTime() throws Exception {
+	@DisplayName("Case 6: 어제 미청소 똥은 자정 경과 후 GET 에도 유지되고 poop=true")
+	void case06_getAfterDateChangesKeepsUnclearedPreviousPoop() throws Exception {
 		Long userId = createUserWithWallet(0);
 		UserCharacter userCharacter = seedActiveCharacter(userId);
-		setPoopSchedule(userCharacter, LocalTime.of(11, 0), today().minusDays(1), today().minusDays(1));
+		LocalDate yesterday = today().minusDays(1);
+		LocalTime yesterdayPoopTime = LocalTime.of(11, 0);
+		setPoopSchedule(userCharacter, yesterdayPoopTime, yesterday, null);
+		setServiceClock(todayAt(9, 0));
+		String token = jwtUtil.generateAccessToken(userId);
+
+		mockMvc.perform(get("/api/characters/me")
+				.header("Authorization", "Bearer " + token))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.poop").value(true));
+
+		UserCharacter saved = userCharacterRepository.findById(userCharacter.getUserCharacterId()).orElseThrow();
+		assertThat(saved.getPoopTimeDate()).isEqualTo(yesterday);
+		assertThat(saved.getPoopTime()).isEqualTo(yesterdayPoopTime);
+	}
+
+	@Test
+	@DisplayName("Case 7(a): 어제 미청소 똥은 다음날 POOP action 1회로 50 적립 후 발생일 기준 클리어")
+	void case07a_previousDayUnclearedPoopClearsOnceNextDay() throws Exception {
+		Long userId = createUserWithWallet(0);
+		UserCharacter userCharacter = seedActiveCharacter(userId);
+		LocalDate yesterday = today().minusDays(1);
+		setPoopSchedule(userCharacter, LocalTime.of(11, 0), yesterday, null);
+		setServiceClock(todayAt(9, 0));
+		String token = jwtUtil.generateAccessToken(userId);
+
+		mockMvc.perform(post("/api/characters/me/actions/POOP")
+				.header("Authorization", "Bearer " + token))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.earnedAmount").value(50))
+			.andExpect(jsonPath("$.data.balanceAfter").value(50));
+
+		UserCharacter saved = userCharacterRepository.findById(userCharacter.getUserCharacterId()).orElseThrow();
+		assertThat(saved.getPoopClearedDate()).isEqualTo(yesterday);
+		assertThat(walletEarnLogsBySource(userId, WalletEarnSource.POOP_CLEAR)).hasSize(1);
+	}
+
+	@Test
+	@DisplayName("Case 7(b): 어제 미청소 똥을 청소한 직후 같은 날 GET 은 새 poop_time 을 결정")
+	void case07b_getAfterClearingPreviousDayPoopSchedulesToday() throws Exception {
+		Long userId = createUserWithWallet(0);
+		UserCharacter userCharacter = seedActiveCharacter(userId);
+		LocalDate yesterday = today().minusDays(1);
+		setPoopSchedule(userCharacter, LocalTime.of(11, 0), yesterday, null);
+		setServiceClock(todayAt(9, 0));
+		String token = jwtUtil.generateAccessToken(userId);
+
+		mockMvc.perform(post("/api/characters/me/actions/POOP")
+				.header("Authorization", "Bearer " + token))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.earnedAmount").value(50));
+
+		mockMvc.perform(get("/api/characters/me")
+				.header("Authorization", "Bearer " + token))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.poop").value(false));
+
+		UserCharacter saved = userCharacterRepository.findById(userCharacter.getUserCharacterId()).orElseThrow();
+		assertThat(saved.getPoopClearedDate()).isEqualTo(yesterday);
+		assertThat(saved.getPoopTimeDate()).isEqualTo(today());
+		assertThat(saved.getPoopTime()).isAfterOrEqualTo(POOP_START);
+		assertThat(saved.getPoopTime()).isBefore(POOP_END);
+	}
+
+	@Test
+	@DisplayName("Case 7(c): 어제 청소 완료 후 자정 경과 GET 은 새 poop_time 을 결정")
+	void case07c_getAfterPreviousDayClearedPoopSchedulesToday() throws Exception {
+		Long userId = createUserWithWallet(0);
+		UserCharacter userCharacter = seedActiveCharacter(userId);
+		LocalDate yesterday = today().minusDays(1);
+		setPoopSchedule(userCharacter, LocalTime.of(11, 0), yesterday, yesterday);
 		setServiceClock(todayAt(9, 0));
 		String token = jwtUtil.generateAccessToken(userId);
 
@@ -189,8 +259,8 @@ class PoopMissionIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("Case 7: POOP_CLEAR 는 PET_TOUCH/TODO_COMPLETION cap 과 무관하게 50 적립")
-	void case07_poopClearBypassesCombinedDailyCap() throws Exception {
+	@DisplayName("Case 8: POOP_CLEAR 는 PET_TOUCH/TODO_COMPLETION cap 과 무관하게 50 적립")
+	void case08_poopClearBypassesCombinedDailyCap() throws Exception {
 		Long userId = createUserWithWallet(0);
 		UserCharacter userCharacter = seedActiveCharacter(userId);
 		setPoopSchedule(userCharacter, LocalTime.of(10, 0), today(), null);
