@@ -294,7 +294,10 @@ class _ActionButton extends StatelessWidget {
                 ? BorderSide(color: colors.border)
                 : BorderSide.none,
           ),
-          textStyle: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w700),
+          textStyle: AppTextStyles.labelLarge.copyWith(
+            fontWeight: FontWeight.w700,
+            fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+          ),
         ),
         child: Text(label),
       ),

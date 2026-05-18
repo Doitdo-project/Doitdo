@@ -341,6 +341,7 @@ class _ConfirmButton extends StatelessWidget {
           ),
           textStyle: AppTextStyles.bodyLarge.copyWith(
             fontWeight: FontWeight.w700,
+            fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
           ),
         ),
         child: Text(canAfford ? '구매하고 바로 배치하기' : '코인이 부족해요'),
@@ -368,7 +369,9 @@ class _PurchaseOnlyButton extends StatelessWidget {
         style: TextButton.styleFrom(
           foregroundColor: colors.textSecondary,
           disabledForegroundColor: colors.textHint,
-          textStyle: AppTextStyles.bodySmall
+          textStyle: AppTextStyles.bodySmall.copyWith(
+            fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+          ),
         ),
         child: const Text('지금 배치하지 않고 구매만 하기'),
       ),

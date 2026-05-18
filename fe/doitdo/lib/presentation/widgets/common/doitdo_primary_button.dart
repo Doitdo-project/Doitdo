@@ -39,7 +39,9 @@ class DoitdoPrimaryButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: AppTextStyles.bodyMedium,
+          textStyle: AppTextStyles.bodyMedium.copyWith(
+            fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+          ),
         ),
         child: Text(label),
       ),

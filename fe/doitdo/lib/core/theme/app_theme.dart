@@ -37,7 +37,7 @@ class AppTheme {
       scaffoldBackgroundColor: colors.background,
       fontFamily: fontFamily,
       extensions: <ThemeExtension<dynamic>>[colors],
-      textTheme: _textTheme(colors.textPrimary),
+      textTheme: _textTheme(colors.textPrimary, fontFamily),
       appBarTheme: AppBarTheme(
         backgroundColor: colors.topBarBg,
         foregroundColor: colors.textPrimary,
@@ -46,6 +46,7 @@ class AppTheme {
         centerTitle: true,
         titleTextStyle: AppTextStyles.titleSmall.copyWith(
           color: colors.textPrimary,
+          fontFamily: fontFamily,
         ),
       ),
       dividerTheme: DividerThemeData(
@@ -57,9 +58,10 @@ class AppTheme {
   }
 
   /// 텍스트 스타일은 `AppTextStyles`의 typography를 유지하되,
-  /// 색상만 테마에 맞게 주입한다.
-  static TextTheme _textTheme(Color textColor) {
-    TextStyle apply(TextStyle s) => s.copyWith(color: textColor);
+  /// 색상과 fontFamily를 테마에 맞게 주입한다.
+  static TextTheme _textTheme(Color textColor, String fontFamily) {
+    TextStyle apply(TextStyle s) =>
+        s.copyWith(color: textColor, fontFamily: fontFamily);
     return TextTheme(
       displayLarge: apply(AppTextStyles.displayLarge),
       titleLarge: apply(AppTextStyles.titleLarge),
