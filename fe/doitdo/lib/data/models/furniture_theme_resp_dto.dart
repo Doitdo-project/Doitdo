@@ -1,3 +1,4 @@
+import 'package:doitdo/data/models/room_resp_dto.dart';
 import 'package:doitdo/domain/entities/furniture_theme.dart';
 
 /// `GET /api/shop/themes` 응답 envelope 내부 `data`.
@@ -15,9 +16,9 @@ class FurnitureThemeListRespDto {
     return FurnitureThemeListRespDto(
       items: raw is List
           ? raw
-              .whereType<Map<String, dynamic>>()
-              .map(FurnitureThemeDto.fromJson)
-              .toList(growable: false)
+                .whereType<Map<String, dynamic>>()
+                .map(FurnitureThemeDto.fromJson)
+                .toList(growable: false)
           : const [],
     );
   }
@@ -62,25 +63,24 @@ class FurnitureThemeDto {
       alreadyOwned: (json['alreadyOwned'] as bool?) ?? false,
       furnitures: rawFurnitures is List
           ? rawFurnitures
-              .whereType<Map<String, dynamic>>()
-              .map(ThemeFurnitureDto.fromJson)
-              .toList(growable: false)
+                .whereType<Map<String, dynamic>>()
+                .map(ThemeFurnitureDto.fromJson)
+                .toList(growable: false)
           : const [],
     );
   }
 
   FurnitureTheme toEntity() => FurnitureTheme(
-        themeCode: themeCode,
-        themeName: themeName,
-        thumbnailUrl: thumbnailUrl,
-        furnitureCount: furnitureCount,
-        ownedCount: ownedCount,
-        totalPrice: totalPrice,
-        purchasePrice: purchasePrice,
-        alreadyOwned: alreadyOwned,
-        furnitures:
-            furnitures.map((e) => e.toEntity()).toList(growable: false),
-      );
+    themeCode: themeCode,
+    themeName: themeName,
+    thumbnailUrl: thumbnailUrl,
+    furnitureCount: furnitureCount,
+    ownedCount: ownedCount,
+    totalPrice: totalPrice,
+    purchasePrice: purchasePrice,
+    alreadyOwned: alreadyOwned,
+    furnitures: furnitures.map((e) => e.toEntity()).toList(growable: false),
+  );
 }
 
 class ThemeFurnitureDto {
@@ -117,13 +117,13 @@ class ThemeFurnitureDto {
   }
 
   ThemeFurniture toEntity() => ThemeFurniture(
-        furnitureId: furnitureId,
-        name: name,
-        category: category,
-        price: price,
-        imageUrl: imageUrl,
-        owned: owned,
-      );
+    furnitureId: furnitureId,
+    name: name,
+    category: category,
+    price: price,
+    imageUrl: imageUrl,
+    owned: owned,
+  );
 }
 
 /// `POST /api/shop/themes/{themeCode}/purchase` 응답 envelope 내부 `data`.
@@ -156,13 +156,13 @@ class ThemePurchaseRespDto {
   }
 
   ThemePurchaseResult toEntity() => ThemePurchaseResult(
-        themeCode: themeCode,
-        themeName: themeName,
-        purchasedCount: purchasedCount,
-        skippedOwnedCount: skippedOwnedCount,
-        totalPaid: totalPaid,
-        balance: balance,
-      );
+    themeCode: themeCode,
+    themeName: themeName,
+    purchasedCount: purchasedCount,
+    skippedOwnedCount: skippedOwnedCount,
+    totalPaid: totalPaid,
+    balance: balance,
+  );
 }
 
 /// `POST /api/users/me/room/themes/{themeCode}/placements` 응답 envelope 내부 `data`.
@@ -175,29 +175,35 @@ class ThemePlacementRespDto {
     required this.themeCode,
     required this.themeName,
     required this.placedCount,
+    required this.items,
   });
 
   final String themeCode;
   final String themeName;
   final int placedCount;
+  final List<RoomFurniturePlacementDto> items;
 
   factory ThemePlacementRespDto.fromJson(Map<String, dynamic> json) {
     final rawItems = json['items'];
-    final placedFromItems =
-        rawItems is List ? rawItems.length : null;
+    final items = rawItems is List
+        ? rawItems
+              .whereType<Map<String, dynamic>>()
+              .map(RoomFurniturePlacementDto.fromJson)
+              .toList(growable: false)
+        : const <RoomFurniturePlacementDto>[];
     return ThemePlacementRespDto(
       themeCode: (json['themeCode'] as String?) ?? '',
       themeName: (json['themeName'] as String?) ?? '',
       // placedCount 가 누락된 응답에서도 items 길이로 폴백.
-      placedCount: (json['placedCount'] as num?)?.toInt() ??
-          placedFromItems ??
-          0,
+      placedCount: (json['placedCount'] as num?)?.toInt() ?? items.length,
+      items: items,
     );
   }
 
   ThemePlacementResult toEntity() => ThemePlacementResult(
-        themeCode: themeCode,
-        themeName: themeName,
-        placedCount: placedCount,
-      );
+    themeCode: themeCode,
+    themeName: themeName,
+    placedCount: placedCount,
+    items: items.map((e) => e.toEntity()).toList(growable: false),
+  );
 }
