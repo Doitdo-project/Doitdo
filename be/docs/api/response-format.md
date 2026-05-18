@@ -141,9 +141,10 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | 없음 | 204 | 해당 row 단건 soft delete |
 | `scope=all` | 204 | RECURRING 마스터면 활성 파생 인스턴스도 함께 soft delete |
 | `scope=only&occurrenceDate=YYYY-MM-DD` | 204 | 해당 occurrence를 NORMAL 인스턴스로 실체화 후 soft delete |
-| `scope=from&occurrenceDate=YYYY-MM-DD` | 204 | 마스터 `endDate`를 `occurrenceDate - 1`로 줄이고 이후 파생 인스턴스 soft delete |
+| `scope=from&occurrenceDate=YYYY-MM-DD` | 204 | 마스터 `endDate`를 `occurrenceDate - 1`로 줄이고, 이후 파생 인스턴스 중 `status != DONE` 인 항목만 soft delete |
 
 `scope=only` 로 삭제된 NORMAL 파생 인스턴스는 `isDeleted=true` 상태로 남아 캘린더 가상 occurrence 생성을 차단한다. 응답에는 포함되지 않는다.
+`scope=from` 삭제는 완료된 NORMAL 파생 인스턴스(`status=DONE`)를 완료 기록으로 보존한다.
 
 ### `PATCH /api/todos/{todoId}` 반복 scope
 
