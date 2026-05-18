@@ -133,7 +133,7 @@ class _Header extends StatelessWidget {
         children: [
           Text(
             '주문서 확인',
-            style: AppTextStyles.titleLarge.copyWith(color: colors.textPrimary),
+            style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
           ),
           Align(
             alignment: Alignment.centerRight,
@@ -175,22 +175,22 @@ class _Thumbnail extends StatelessWidget {
       alignment: Alignment.center,
       child: theme.thumbnailUrl.isEmpty
           ? Icon(
-              Icons.collections_bookmark_outlined,
-              size: 36.sp,
-              color: colors.textHint,
-            )
+        Icons.collections_bookmark_outlined,
+        size: 36.sp,
+        color: colors.textHint,
+      )
           : Image.network(
-              theme.thumbnailUrl,
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: double.infinity,
-              filterQuality: FilterQuality.medium,
-              errorBuilder: (_, _, _) => Icon(
-                Icons.broken_image_outlined,
-                size: 32.sp,
-                color: colors.textHint,
-              ),
-            ),
+        theme.thumbnailUrl,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        filterQuality: FilterQuality.medium,
+        errorBuilder: (_, _, _) => Icon(
+          Icons.broken_image_outlined,
+          size: 32.sp,
+          color: colors.textHint,
+        ),
+      ),
     );
   }
 }
@@ -222,7 +222,8 @@ class _FurnitureList extends StatelessWidget {
     // 4행 이상이면 박스 안에서만 스크롤되도록 높이 제한 — 다이얼로그 전체가
     // 가구 리스트로 꽉 차는 인상을 줄여 결제 카드/CTA 까지 한눈에 들어오게 한다.
     // 4행 미만은 그대로 늘어나도록 height: null 처리.
-    final showScroll = furnitures.length > 4;
+    final showScroll = furnitures.length > 3;
+
     final body = ListView.separated(
       shrinkWrap: true,
       physics: showScroll
@@ -240,8 +241,8 @@ class _FurnitureList extends StatelessWidget {
         border: Border.all(color: colors.border),
       ),
       child: ConstrainedBox(
-        // ≈ 4행(약 40h × 4 + divider) 의 가시 영역. 5번째부터는 안에서만 스크롤.
-        constraints: BoxConstraints(maxHeight: showScroll ? 168.h : double.infinity),
+        // 🛠 기존 168.h 에서 약 3행 크기인 126.h 로 최대 높이 축소!
+        constraints: BoxConstraints(maxHeight: showScroll ? 126.h : double.infinity),
         child: body,
       ),
     );
@@ -287,18 +288,18 @@ class _FurnitureRow extends StatelessWidget {
             child: furniture.owned
                 ? const _OwnedBadge()
                 : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CoinIcon(size: 12.sp),
-                      SizedBox(width: 3.w),
-                      Text(
-                        _formatCoins(furniture.price),
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                    ],
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CoinIcon(size: 12.sp),
+                SizedBox(width: 3.w),
+                Text(
+                  _formatCoins(furniture.price),
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: colors.textSecondary,
                   ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -417,9 +418,8 @@ class _PriceCard extends StatelessWidget {
               SizedBox(width: 6.w),
               Text(
                 _formatCoins(purchasePrice),
-                style: AppTextStyles.titleLarge.copyWith(
+                style: AppTextStyles.titleMedium.copyWith(
                   color: colors.textPrimary,
-                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
@@ -540,8 +540,7 @@ class _PurchaseOnlyButton extends StatelessWidget {
           disabledForegroundColor: colors.textHint,
           textStyle: AppTextStyles.bodySmall.copyWith(
             fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
-          ),
-        ),
+          ),        ),
         child: const Text('지금 배치하지 않고 구매만 하기'),
       ),
     );
