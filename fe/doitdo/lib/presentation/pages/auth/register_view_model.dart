@@ -36,17 +36,17 @@ class RegisterViewModel extends AutoDisposeAsyncNotifier<User?> {
         username: username,
         password: password,
       );
-      // 가입 + 자동 로그인 직후 전역 currentUserProvider 무효화.
-      ref.invalidate(currentUserProvider);
+      // 자동 로그인 응답에 포함된 user를 바로 반영해 추가 GET /api/users/me를 피한다.
+      ref.read(currentUserProvider.notifier).replace(user);
       return user;
     });
   }
 }
 
 final registerViewModelProvider =
-AsyncNotifierProvider.autoDispose<RegisterViewModel, User?>(
-  RegisterViewModel.new,
-);
+    AsyncNotifierProvider.autoDispose<RegisterViewModel, User?>(
+      RegisterViewModel.new,
+    );
 
 // ─── 이메일 중복 체크 ─────────────────────────────────────────────
 
@@ -66,7 +66,7 @@ class EmailAvailabilityViewModel extends AutoDisposeAsyncNotifier<bool?> {
   Future<void> check(String email) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(
-          () => ref.read(userRepositoryProvider).isEmailAvailable(email),
+      () => ref.read(userRepositoryProvider).isEmailAvailable(email),
     );
   }
 
@@ -76,8 +76,10 @@ class EmailAvailabilityViewModel extends AutoDisposeAsyncNotifier<bool?> {
   }
 }
 
-final emailAvailabilityProvider = AsyncNotifierProvider.autoDispose<
-    EmailAvailabilityViewModel, bool?>(EmailAvailabilityViewModel.new);
+final emailAvailabilityProvider =
+    AsyncNotifierProvider.autoDispose<EmailAvailabilityViewModel, bool?>(
+      EmailAvailabilityViewModel.new,
+    );
 
 // ─── 닉네임(username) 중복 체크 ────────────────────────────────────
 
@@ -88,7 +90,7 @@ class UsernameAvailabilityViewModel extends AutoDisposeAsyncNotifier<bool?> {
   Future<void> check(String username) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(
-          () => ref.read(userRepositoryProvider).isUsernameAvailable(username),
+      () => ref.read(userRepositoryProvider).isUsernameAvailable(username),
     );
   }
 
@@ -97,8 +99,10 @@ class UsernameAvailabilityViewModel extends AutoDisposeAsyncNotifier<bool?> {
   }
 }
 
-final usernameAvailabilityProvider = AsyncNotifierProvider.autoDispose<
-    UsernameAvailabilityViewModel, bool?>(UsernameAvailabilityViewModel.new);
+final usernameAvailabilityProvider =
+    AsyncNotifierProvider.autoDispose<UsernameAvailabilityViewModel, bool?>(
+      UsernameAvailabilityViewModel.new,
+    );
 
 /// 회원가입 실패 메시지를 화면 맥락에 맞게 반환.
 ///

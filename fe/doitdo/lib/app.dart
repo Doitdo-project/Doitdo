@@ -53,6 +53,7 @@ class _DoitdoAppState extends ConsumerState<DoitdoApp>
       // 사이 frame 안의 provider refresh 가 unmount 중인 widget(defunct element) 의
       // listener 를 호출해 framework.dart 5340 어설션 → cascade 어설션으로 release
       // 빌드에서 회색 화면이 뜬다.
+      if (!ref.exists(currentUserProvider)) return;
       final user = ref.read(currentUserProvider).valueOrNull;
       if (user == null) return;
       unawaited(ref.read(todoViewModelProvider.notifier).fetchTodos());
@@ -73,9 +74,9 @@ class _DoitdoAppState extends ConsumerState<DoitdoApp>
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
       builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(
-          textScaler: TextScaler.linear(fontScale),
-        ),
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(fontScale)),
         child: child!,
       ),
     );

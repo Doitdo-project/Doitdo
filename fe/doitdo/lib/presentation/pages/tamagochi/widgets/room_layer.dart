@@ -34,7 +34,7 @@ class RoomLayer extends ConsumerWidget {
   static const double characterBottomInset = 70;
 
   /// 똥 크기 (캔버스 비율). 호출측이 brush 와 시각 중심을 맞추는 데도 사용한다.
-  static const double poopSizeRatio = 0.20;
+  static const double poopSizeRatio = 0.10;
 
   /// brush 크기. 똥보다 살짝 작게 — 똥 위에 살짝 좁게 덮이는 인상.
   static const double brushSizeRatio = 0.19;
@@ -161,7 +161,7 @@ class RoomLayer extends ConsumerWidget {
                     //   0.50  = brush 바닥이 똥 중앙 (정중앙 sweep)
                     //   1.00  = brush 바닥이 똥 꼭대기 (위에 떠있는 인상)
                     final brushOffsetX = (poopSizeRatio - brushSizeRatio) / 2;
-                    final brushLiftY = poopSizeRatio * 0.20;
+                    final brushLiftY = poopSizeRatio * 0.05;
                     final brushLeft = poopLeft + brushOffsetX;
                     final brushBottom = poopBottom + brushLiftY;
                     return [
