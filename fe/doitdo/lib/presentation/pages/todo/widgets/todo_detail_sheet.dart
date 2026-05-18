@@ -468,23 +468,24 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
               const Spacer(),
               GestureDetector(
                 onTap: () async {
-                  // 완료된 투두는 삭제 불가
-                  if (widget.todo.isDone) {
-                    await showDoitdoDialog(
-                      context:      context,
-                      title:        '삭제 불가',
-                      message:      '완료된 할 일은 삭제할 수 없어요',
-                      confirmLabel: '확인',
-                    );
-                    return;
-                  }
-
                   // 반복 todo 삭제: 체크박스 다이얼로그
                   //   - 체크 X (default): scope=only → 해당 날짜만 삭제
                   //   - 체크 O:           scope=from → 해당 날짜 이후 모두 삭제
                   if (widget.todo.dateType == TodoDateType.repeat && !widget.isSomeday) {
                     final scope = await _showRepeatActionDialog(context);
                     if (scope == null || !mounted) return;
+
+                    // 완료된 반복 투두는 이후 일정 삭제(from) 불가
+                    if (scope == 'from' && _isDone) {
+                      await showDoitdoDialog(
+                        context:      context,
+                        title:        '삭제 불가',
+                        message:      '완료된 할 일은 이후 일정을 삭제할 수 없어요',
+                        confirmLabel: '확인',
+                      );
+                      return;
+                    }
+
                     final occurrenceDate =
                         ref.read(todoViewModelProvider).selectedDay;
                     if (context.mounted) {
@@ -498,7 +499,7 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                     return;
                   }
 
-                  // 일반 todo 삭제
+                  // 일반 todo 삭제 (완료 여부 무관하게 가능)
                   final confirmed = await showDoitdoDialog(
                     context:      context,
                     title:        '할 일 삭제',
@@ -520,7 +521,7 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                   padding: const EdgeInsets.only(left: 8, top: 8, bottom: 8),
                   child: Text('삭제',
                       style: AppTextStyles.labelMedium
-                          .copyWith(color: widget.todo.isDone ? c.textHint : c.textSecondary)),
+                          .copyWith(color: c.textSecondary)),
                 ),
               ),
             ],
@@ -664,7 +665,9 @@ class _TodoDetailSheetState extends ConsumerState<TodoDetailSheet> {
                     foregroundColor: Colors.white,
                     elevation:       0,
                     shadowColor:     Colors.transparent,
-                    textStyle:       AppTextStyles.bodyMedium,
+                    textStyle:       AppTextStyles.bodyMedium.copyWith(
+                      fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+                    ),
                     shape:           RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                     fixedSize: const Size.fromHeight(48),
