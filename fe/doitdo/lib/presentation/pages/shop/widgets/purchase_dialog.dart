@@ -132,7 +132,7 @@ class _Header extends StatelessWidget {
         children: [
           Text(
             '주문서 확인',
-            style: AppTextStyles.titleLarge.copyWith(color: colors.textPrimary),
+            style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
           ),
           Align(
             alignment: Alignment.centerRight,
@@ -252,9 +252,8 @@ class _PriceCard extends StatelessWidget {
               SizedBox(width: 6.w),
               Text(
                 _formatCoins(price),
-                style: AppTextStyles.titleLarge.copyWith(
+                style: AppTextStyles.titleMedium.copyWith(
                   color: colors.textPrimary,
-                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
