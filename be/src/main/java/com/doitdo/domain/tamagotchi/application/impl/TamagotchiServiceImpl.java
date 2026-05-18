@@ -271,7 +271,13 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 	}
 
 	private void refreshPoopTimeIfNewDate(UserCharacter userCharacter, LocalDate today) {
-		if (today.equals(userCharacter.getPoopTimeDate())) {
+		LocalDate poopTimeDate = userCharacter.getPoopTimeDate();
+		if (today.equals(poopTimeDate)) {
+			return; // 오늘 이미 결정됨
+		}
+		// 직전 발생 똥이 미청소이면 유지 (poop_time_date != poop_cleared_date)
+		if (poopTimeDate != null
+			&& !poopTimeDate.equals(userCharacter.getPoopClearedDate())) {
 			return;
 		}
 		userCharacter.refreshPoopTime(randomPoopTime(), today);
@@ -541,7 +547,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 		LocalDateTime now,
 		LocalDate today
 	) {
-		if (!today.equals(userCharacter.getPoopTimeDate()) || !isPoopActive(userCharacter, now, today)) {
+		if (!isPoopActive(userCharacter, now, today)) {
 			throw new CustomException(TamagotchiErrorCode.M09_004);
 		}
 
@@ -552,7 +558,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			userCharacter.getCharacterId(),
 			true
 		);
-		userCharacter.markPoopCleared(today);
+		userCharacter.markPoopCleared(userCharacter.getPoopTimeDate());
 		cacheEvictHelper.evictTamagotchiCurrentAfterCommit(userId);
 		return earnedAmount;
 	}
@@ -564,9 +570,20 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 	}
 
 	private boolean isPoopActive(UserCharacter userCharacter, LocalDateTime now, LocalDate today) {
-		return userCharacter.getPoopTime() != null
-			&& !now.toLocalTime().isBefore(userCharacter.getPoopTime())
-			&& !today.equals(userCharacter.getPoopClearedDate());
+		LocalDate poopTimeDate = userCharacter.getPoopTimeDate();
+		if (userCharacter.getPoopTime() == null || poopTimeDate == null) {
+			return false;
+		}
+		// 이미 청소된 똥이면 비활성
+		if (poopTimeDate.equals(userCharacter.getPoopClearedDate())) {
+			return false;
+		}
+		// 과거 발생 똥(어제 미청소)은 시각 무관 활성
+		if (poopTimeDate.isBefore(today)) {
+			return true;
+		}
+		// 오늘 발생 똥은 결정된 시각 도달 시 활성
+		return !now.toLocalTime().isBefore(userCharacter.getPoopTime());
 	}
 
 	private int findCurrentBalance(Long userId) {
