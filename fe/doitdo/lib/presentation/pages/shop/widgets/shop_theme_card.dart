@@ -238,7 +238,10 @@ class _ActionButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10.r),
           ),
-          textStyle: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w700),
+          textStyle: AppTextStyles.labelLarge.copyWith(
+            fontWeight: FontWeight.w700,
+            fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+          ),
         ),
         child: Text(label),
       ),

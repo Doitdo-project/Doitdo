@@ -110,6 +110,7 @@ class AuthInlineNotice extends StatelessWidget {
                 ),
                 textStyle: AppTextStyles.bodyMedium.copyWith(
                   fontWeight: FontWeight.w600,
+                  fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
                 ),
               ),
               child: Row(
