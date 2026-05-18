@@ -355,8 +355,8 @@ class _PhoneCardState extends State<_PhoneCard>
                           filterQuality: FilterQuality.high,
                         ),
                         Positioned(
-                          top: 335.0 * imgScale,
-                          right: 40.0 * imgScale,
+                          top: 365.0 * imgScale,
+                          right: 48.0 * imgScale,
                           child: AnimatedBuilder(
                             animation: _pulse,
                             builder: (_, __) => Opacity(
