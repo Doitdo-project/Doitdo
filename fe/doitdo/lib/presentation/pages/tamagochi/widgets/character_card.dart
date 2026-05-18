@@ -15,6 +15,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
+const Set<int> _characterWalkAssetIds = {6, 9, 18};
+const Set<int> _characterWalkIntroAssetIds = {6, 18};
+const Set<int> _characterWalkOutroAssetIds = {6, 18};
+const Duration _characterWalkIntroDuration = Duration(milliseconds: 900);
+const Duration _characterWalkOutroDuration = Duration(milliseconds: 900);
+const Duration _characterWalkOutroBlinkDuration = Duration(seconds: 2);
+
 /// 다마고치 메인 상단의 방 일러스트 카드.
 ///
 /// 캐릭터 단계별 분기:
@@ -151,7 +158,8 @@ class CharacterCard extends StatelessWidget {
           //
           // 청소 phase 2 에서는 [suppressPoop] 로 poop 을 먼저 사라지게 하고
           // brush.gif 만 잠시 더 그려, 빗자루로 똥을 쓸어낸 듯한 흐름을 만든다.
-          final showPoop = character != null &&
+          final showPoop =
+              character != null &&
               !character!.isEgg &&
               character!.poop &&
               !suppressPoop;
@@ -192,6 +200,10 @@ class CharacterCard extends StatelessWidget {
                 bottom: floorInset,
                 child: _WalkingSlot(
                   enableWalk: _shouldWalk,
+                  horizontalOnly: _hasWalkAsset,
+                  reverseMotionFacing: _hasWalkAsset,
+                  walkStartDelay: _walkStartDelay,
+                  walkRestartDelay: _walkRestartDelay,
                   onCharacterTap: _isGrown ? onCharacterTap : null,
                   bubble: _speechText != null
                       ? Transform.translate(
@@ -257,14 +269,35 @@ class CharacterCard extends StatelessWidget {
     return url == null || url.isEmpty;
   }
 
+  bool get _hasWalkAsset {
+    final id = character?.characterId;
+    return id != null && _characterWalkAssetIds.contains(id);
+  }
+
+  Duration get _walkStartDelay {
+    final id = character?.characterId;
+    if (id == null || !_characterWalkIntroAssetIds.contains(id)) {
+      return Duration.zero;
+    }
+    return _characterWalkIntroDuration;
+  }
+
+  Duration get _walkRestartDelay {
+    final id = character?.characterId;
+    if (id == null || !_characterWalkOutroAssetIds.contains(id)) {
+      return Duration.zero;
+    }
+    return _characterWalkOutroDuration + _characterWalkOutroBlinkDuration;
+  }
+
   Widget _buildCharacterSlot(bool isWalking) {
     // 진화 연출 활성화: 일반 캐릭터/알/로딩 분기보다 우선해서 애니메이션 뷰로 대체.
     final ev = evolution;
     if (ev != null) {
       return CharacterEvolutionView(
-        beforeImageUrl: beforeEvolutionImageUrl ?? character?.thumbnailUrl ?? '',
-        beforeCharacterId:
-            beforeEvolutionCharacterId ?? character?.characterId,
+        beforeImageUrl:
+            beforeEvolutionImageUrl ?? character?.thumbnailUrl ?? '',
+        beforeCharacterId: beforeEvolutionCharacterId ?? character?.characterId,
         afterCharacterId: afterEvolutionCharacterId,
         evolution: ev,
         size: 112.h,
@@ -632,13 +665,19 @@ class _GrownCharacterState extends State<_GrownCharacter> {
 
   static const _blinkMin = Duration(milliseconds: 500);
   static const _blinkMax = Duration(milliseconds: 1000);
+  static const _walkOutroBlinkDuration = _characterWalkOutroBlinkDuration;
 
   Timer? _scheduleTimer;
   Timer? _blinkTimer;
+  Timer? _walkIntroTimer;
+  Timer? _walkOutroTimer;
 
   String? _blinkAsset;
   // 매 blink 마다 GIF 위젯이 frame 0 부터 재생되도록 부여하는 키.
   int _blinkTick = 0;
+  bool _showWalkIntro = false;
+  bool _showWalkOutro = false;
+  bool _nextBlinkIsWalkOutro = false;
 
   bool _assetsPrecached = false;
 
@@ -647,7 +686,11 @@ class _GrownCharacterState extends State<_GrownCharacter> {
     super.initState();
     // 시작 시점이 walking 이면 base 가 10.gif 라 blink overlay 는 의미 없음.
     // idling/액션 진입 시 didUpdateWidget 에서 켜진다.
-    if (!widget.isWalking) _scheduleNextBlink();
+    if (widget.isWalking) {
+      _startWalkingMotion();
+    } else {
+      _scheduleNextBlink();
+    }
   }
 
   @override
@@ -664,26 +707,33 @@ class _GrownCharacterState extends State<_GrownCharacter> {
   @override
   void didUpdateWidget(covariant _GrownCharacter old) {
     super.didUpdateWidget(old);
-    final assetChanged = widget.eyeGifCharacterId != old.eyeGifCharacterId ||
+    final assetChanged =
+        widget.eyeGifCharacterId != old.eyeGifCharacterId ||
         widget.thumbnailUrl != old.thumbnailUrl;
     if (assetChanged) {
       _cancelTimers();
       _blinkAsset = null;
+      _showWalkIntro = false;
+      _showWalkOutro = false;
+      _nextBlinkIsWalkOutro = false;
       _assetsPrecached = false;
       _precacheAll();
       _assetsPrecached = true;
-      if (!widget.isWalking) _scheduleNextBlink();
+      if (widget.isWalking) {
+        _startWalkingMotion();
+      } else {
+        _scheduleNextBlink();
+      }
       return;
     }
     if (widget.isWalking != old.isWalking) {
       if (widget.isWalking) {
         // walking 진입 — blink 스케줄러 정지 + 현재 떠있는 blink 도 즉시 내림.
-        _cancelTimers();
-        _blinkAsset = null;
+        _startWalkingMotion();
       } else {
         // 정지/액션 진입 — idling 이 1~2초로 짧아 평상시 간격(2~4초) 으론 blink 가
         // 한 번도 안 발화되고 walking 으로 돌아가는 일이 생긴다. 첫 발화는 즉시.
-        _scheduleNextBlink(immediate: true);
+        _startIdleMotion(fromWalking: old.isWalking);
       }
     }
   }
@@ -697,30 +747,116 @@ class _GrownCharacterState extends State<_GrownCharacter> {
   void _cancelTimers() {
     _scheduleTimer?.cancel();
     _blinkTimer?.cancel();
+    _walkIntroTimer?.cancel();
+    _walkOutroTimer?.cancel();
+  }
+
+  void _cancelBlinkTimers() {
+    _scheduleTimer?.cancel();
+    _blinkTimer?.cancel();
+    _scheduleTimer = null;
+    _blinkTimer = null;
+  }
+
+  void _cancelMotionTimers() {
+    _walkIntroTimer?.cancel();
+    _walkOutroTimer?.cancel();
+    _walkIntroTimer = null;
+    _walkOutroTimer = null;
+  }
+
+  void _startWalkingMotion() {
+    _cancelBlinkTimers();
+    _cancelMotionTimers();
+    _blinkAsset = null;
+    _showWalkOutro = false;
+    _nextBlinkIsWalkOutro = false;
+
+    final id = widget.eyeGifCharacterId;
+    final shouldIntro =
+        id != null &&
+        _characterWalkIntroAssetIds.contains(id) &&
+        _characterWalkAssetIds.contains(id);
+    _showWalkIntro = shouldIntro;
+    if (!shouldIntro) return;
+
+    _walkIntroTimer = Timer(_characterWalkIntroDuration, () {
+      if (!mounted || !widget.isWalking) return;
+      setState(() => _showWalkIntro = false);
+    });
+  }
+
+  void _startIdleMotion({required bool fromWalking}) {
+    _cancelMotionTimers();
+    _blinkAsset = null;
+    _showWalkIntro = false;
+    _nextBlinkIsWalkOutro = false;
+
+    final id = widget.eyeGifCharacterId;
+    final shouldOutro =
+        fromWalking && id != null && _characterWalkOutroAssetIds.contains(id);
+    _showWalkOutro = shouldOutro;
+    if (!shouldOutro) {
+      _scheduleNextBlink(immediate: fromWalking);
+      return;
+    }
+
+    _cancelBlinkTimers();
+    _walkOutroTimer = Timer(_characterWalkOutroDuration, () {
+      if (!mounted || widget.isWalking) return;
+      setState(() => _showWalkOutro = false);
+      _nextBlinkIsWalkOutro = true;
+      _scheduleNextBlink(immediate: true);
+    });
   }
 
   void _precacheAll() {
     final id = widget.eyeGifCharacterId;
     if (id != null) {
       precacheImage(AssetImage('assets/animations/eye/$id.gif'), context);
-      precacheImage(AssetImage('assets/animations/eye/${id}_2.gif'), context)
-          .catchError((_) {}); // 변형이 없을 수 있어 실패는 무시.
+      precacheImage(
+        AssetImage('assets/animations/eye/${id}_2.gif'),
+        context,
+      ).catchError((_) {}); // 변형이 없을 수 있어 실패는 무시.
     }
     if (widget.thumbnailUrl.isNotEmpty) {
-      precacheImage(NetworkImage(widget.thumbnailUrl), context)
-          .catchError((_) {});
+      precacheImage(
+        NetworkImage(widget.thumbnailUrl),
+        context,
+      ).catchError((_) {});
     }
     // 보행 중 base 로 쓰는 캐릭터별 idle gif. walking ↔ idling swap 시 디코드
     // 지연으로 한 frame 비는 걸 막기 위해 미리 디코드. 일부 캐릭터는 idle gif
     // 가 아직 없을 수 있어 실패는 무시.
     if (id != null) {
-      precacheImage(AssetImage('assets/animations/idle/$id.gif'), context)
-          .catchError((_) {});
+      precacheImage(
+        AssetImage('assets/animations/idle/$id.gif'),
+        context,
+      ).catchError((_) {});
+      if (_characterWalkAssetIds.contains(id)) {
+        precacheImage(
+          AssetImage('assets/animations/walk/$id.gif'),
+          context,
+        ).catchError((_) {});
+      }
+      if (_characterWalkIntroAssetIds.contains(id)) {
+        precacheImage(
+          AssetImage('assets/animations/up/$id.gif'),
+          context,
+        ).catchError((_) {});
+      }
+      if (_characterWalkOutroAssetIds.contains(id)) {
+        precacheImage(
+          AssetImage('assets/animations/down/$id.gif'),
+          context,
+        ).catchError((_) {});
+      }
     }
   }
 
   void _scheduleNextBlink({bool immediate = false}) {
     if (widget.eyeGifCharacterId == null) return;
+    if (widget.isWalking || _showWalkOutro) return;
     // idling 진입 직후엔 짧은 정지 구간(1~2초) 안에 blink 가 꼭 한 번은 보이도록
     // 다음 frame 에 즉시 발화. 평상시 후속 스케줄은 _intervalMin~_intervalMax 간격.
     final delay = immediate
@@ -741,7 +877,10 @@ class _GrownCharacterState extends State<_GrownCharacter> {
       _blinkAsset = path;
       _blinkTick++;
     });
-    final duration = _randomDuration(_blinkMin, _blinkMax);
+    final duration = _nextBlinkIsWalkOutro
+        ? _walkOutroBlinkDuration
+        : _randomDuration(_blinkMin, _blinkMax);
+    _nextBlinkIsWalkOutro = false;
     _blinkTimer = Timer(duration, () {
       if (!mounted) return;
       setState(() => _blinkAsset = null);
@@ -760,7 +899,7 @@ class _GrownCharacterState extends State<_GrownCharacter> {
     final id = widget.eyeGifCharacterId;
     // walking 중에는 blink 를 띄우지 않음 — idle gif 위에 다른 캐릭터의 eye gif 가
     // 겹쳐 두 그림이 동시에 보이는 현상을 차단.
-    final blinkAsset = widget.isWalking ? null : _blinkAsset;
+    final blinkAsset = widget.isWalking || _showWalkOutro ? null : _blinkAsset;
 
     // walking: 캐릭터별 idle gif (`assets/animations/idle/$id.gif`). 일부 캐릭터는
     // 아직 idle gif 가 없을 수 있어 PNG 로 폴백 — 그 경우 좌우상하 이동 + sin bob
@@ -768,8 +907,30 @@ class _GrownCharacterState extends State<_GrownCharacter> {
     // idling/액션: 캐릭터별 PNG (또는 호출측에서 넣은 액션 gif URL).
     final Widget base;
     if (widget.isWalking && id != null) {
+      final assetPath =
+          _showWalkIntro && _characterWalkIntroAssetIds.contains(id)
+          ? 'assets/animations/up/$id.gif'
+          : _characterWalkAssetIds.contains(id)
+          ? 'assets/animations/walk/$id.gif'
+          : 'assets/animations/idle/$id.gif';
       base = Image.asset(
-        'assets/animations/idle/$id.gif',
+        assetPath,
+        key: ValueKey('character-motion-$assetPath'),
+        height: widget.imageHeight,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.medium,
+        gaplessPlayback: true,
+        errorBuilder: (_, _, _) => widget.thumbnailUrl.isEmpty
+            ? const _CharacterPlaceholder()
+            : _CachedCharacterImage(
+                url: widget.thumbnailUrl,
+                height: widget.imageHeight,
+              ),
+      );
+    } else if (_showWalkOutro && id != null) {
+      base = Image.asset(
+        'assets/animations/down/$id.gif',
+        key: ValueKey('character-motion-down-$id'),
         height: widget.imageHeight,
         fit: BoxFit.contain,
         filterQuality: FilterQuality.medium,
@@ -826,10 +987,7 @@ class _GrownCharacterState extends State<_GrownCharacter> {
         widthFactor: 1.0,
         child: Stack(
           alignment: Alignment.center,
-          children: [
-            base,
-            ?blinkOverlay,
-          ],
+          children: [base, ?blinkOverlay],
         ),
       ),
     );
@@ -858,6 +1016,10 @@ enum _WalkPhase { walking, idling }
 class _WalkingSlot extends StatefulWidget {
   const _WalkingSlot({
     required this.enableWalk,
+    this.horizontalOnly = false,
+    this.reverseMotionFacing = false,
+    this.walkStartDelay = Duration.zero,
+    this.walkRestartDelay = Duration.zero,
     required this.characterBuilder,
     this.bubble,
     this.onCharacterTap,
@@ -865,6 +1027,10 @@ class _WalkingSlot extends StatefulWidget {
 
   /// true 면 캐릭터가 방 안을 자유 보행. false 면 transform 없이 가운데 고정.
   final bool enableWalk;
+  final bool horizontalOnly;
+  final bool reverseMotionFacing;
+  final Duration walkStartDelay;
+  final Duration walkRestartDelay;
   // 자식 캐릭터 위젯 — 현재 phase 가 walking 인지를 받아 base / blink 표현을
   // 적절히 선택할 수 있게 한다. _GrownCharacter 는 isWalking 으로 분기하고,
   // 알/미수령 등 다른 분기는 그 값을 무시한다.
@@ -893,17 +1059,15 @@ class _WalkingSlotState extends State<_WalkingSlot>
   // 보임. 이전 X 기준 ±이 만큼만 변동 + clamp 으로, 한 방향으로 흘러가다 끝에서
   // 자연스럽게 turn 하는 보행 패턴이 된다.
   static const double _walkXJitter = 40.0;
+  static const double _walkRangeY = 30.0;
+  static const double _walkYJitter = 10.0;
   // 상하 이동 범위(.h). 베이스(0) 기준 -이 만큼 위쪽까지만 — 아래로 가면 카드 바닥선을
   // 넘어 발이 잘릴 수 있어 위쪽 방향으로만 한정.
-  static const double _walkRangeY = 30.0;
   // 한 구간당 Y 가 이전 Y 에서 변화할 수 있는 폭(.h). 매 구간마다 Y 를 0..
   // -_walkRangeY 안에서 새로 뽑으면 위아래로 휙휙 튀어 지그재그처럼 보이기 때문에,
   // 이전 Y 기준 ±이 만큼만 변동하고 결과를 _walkRangeY 안으로 clamp — 천천히 위/
   // 아래로 흘러가는 부드러운 보행 패턴이 된다.
-  static const double _walkYJitter = 10.0;
   // 한 구간 이동 동안의 발걸음 톤 바운스. 메인 이동 위에 살짝 얹는 sin 떨림.
-  static const double _walkBobHeight = 3.0;
-  static const int _walkBobsPerStride = 2;
   // 한 walk 사이클(도착) 후 정지해서 캐릭터별 PNG + blink 를 보여주는 시간 범위.
   // 너무 길면 답답, 너무 짧으면 깜빡임을 못 보고 다시 출발 — 1~2초가 다마고치 톤.
   static const int _idleDurationMinMs = 1000;
@@ -931,10 +1095,12 @@ class _WalkingSlotState extends State<_WalkingSlot>
   // 캐릭터별 PNG base + 간헐 blink. enableWalk=false 면 항상 idling 으로 고정.
   _WalkPhase _phase = _WalkPhase.idling;
   Timer? _idleTimer;
+  Timer? _walkStartDelayTimer;
   // 자유 보행 모드 여부. initState 에서 첫 추첨, 그 후 화면이 hidden→visible
   // (다른 탭/화면에서 돌아오는 시점) 으로 전환될 때마다 [_rerollRoaming] 으로 재추첨.
   // 외부 enableWalk 의 false↔true (액션 사이클) 에는 영향받지 않는다.
   bool _roamingThisSession = false;
+  bool _hasFacingDirection = false;
   // VisibilityDetector 의 첫 콜백은 mount 직후 1 frame 만에 호출되는데, initState
   // 에서 이미 한 번 추첨했으니 이 첫 콜백은 무시한다. 두 번째부터 진짜 화면 전환.
   bool _firstVisibilityCallback = true;
@@ -953,7 +1119,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
     if (widget.enableWalk && _roamingThisSession) {
       _phase = _WalkPhase.walking;
       _pickNextWalkTarget();
-      _walkController.forward();
+      _startWalkController(fromStart: true);
     }
   }
 
@@ -966,11 +1132,12 @@ class _WalkingSlotState extends State<_WalkingSlot>
       // target 으로 walking 재개, 아니면 그대로 idling 유지.
       _cancelTapPauseTimer();
       _cancelIdleTimer();
+      _cancelWalkStartDelayTimer();
       _tapPaused = false;
       if (_roamingThisSession) {
         _phase = _WalkPhase.walking;
         _pickNextWalkTarget();
-        _walkController.forward(from: 0);
+        _startWalkController(fromStart: true);
       } else {
         _phase = _WalkPhase.idling;
       }
@@ -980,6 +1147,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
       _snapshotCurrentPosition();
       _walkController.stop();
       _cancelIdleTimer();
+      _cancelWalkStartDelayTimer();
       _phase = _WalkPhase.idling;
     }
   }
@@ -988,6 +1156,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
   void dispose() {
     _cancelTapPauseTimer();
     _cancelIdleTimer();
+    _cancelWalkStartDelayTimer();
     _walkController.dispose();
     super.dispose();
   }
@@ -1002,11 +1171,37 @@ class _WalkingSlotState extends State<_WalkingSlot>
     _idleTimer = null;
   }
 
+  void _cancelWalkStartDelayTimer() {
+    _walkStartDelayTimer?.cancel();
+    _walkStartDelayTimer = null;
+  }
+
+  void _startWalkController({required bool fromStart}) {
+    _cancelWalkStartDelayTimer();
+    final delay = widget.walkStartDelay;
+    if (delay == Duration.zero) {
+      _walkController.forward(from: fromStart ? 0 : null);
+      return;
+    }
+    if (fromStart) _walkController.value = 0;
+    _walkStartDelayTimer = Timer(delay, () {
+      if (!mounted ||
+          !widget.enableWalk ||
+          !_roamingThisSession ||
+          _phase != _WalkPhase.walking) {
+        return;
+      }
+      _walkController.forward(from: fromStart ? 0 : null);
+    });
+  }
+
   void _snapshotCurrentPosition() {
     final t = _walkController.value;
     final eased = Curves.easeInOut.transform(t);
     final x = _walkFrom.dx + (_walkTo.dx - _walkFrom.dx) * eased;
-    final y = _walkFrom.dy + (_walkTo.dy - _walkFrom.dy) * eased;
+    final y = widget.horizontalOnly
+        ? 0.0
+        : _walkFrom.dy + (_walkTo.dy - _walkFrom.dy) * eased;
     _walkFrom = Offset(x, y);
     _walkTo = _walkFrom;
   }
@@ -1016,12 +1211,27 @@ class _WalkingSlotState extends State<_WalkingSlot>
     // X / Y 모두 이전 위치 기준 ±jitter 변동 후 각자의 범위로 clamp. 매 구간 완전
     // random 으로 뽑으면 위치가 휙휙 튀어 지그재그처럼 보이는 걸 방지 — 한 방향으로
     // 좀 흘러가다 끝에서 clamp 에 막혀 자연스럽게 반대로 turn 하는 보행 패턴.
-    final xJitter = (_rng.nextDouble() * 2 - 1) * _walkXJitter;
-    final dx = (_walkFrom.dx + xJitter).clamp(-_walkRangeX, _walkRangeX);
+    final canMoveLeft = _walkFrom.dx > -_walkRangeX + 8;
+    final canMoveRight = _walkFrom.dx < _walkRangeX - 8;
+    final direction = !canMoveLeft
+        ? 1
+        : !canMoveRight
+        ? -1
+        : _rng.nextBool()
+        ? 1
+        : -1;
+    final step = 24.0 + _rng.nextDouble() * (_walkXJitter - 24.0);
+    final dx = (_walkFrom.dx + direction * step).clamp(
+      -_walkRangeX,
+      _walkRangeX,
+    );
     final yJitter = (_rng.nextDouble() * 2 - 1) * _walkYJitter;
-    final dy = (_walkFrom.dy + yJitter).clamp(-_walkRangeY, 0.0);
+    final dy = widget.horizontalOnly
+        ? 0.0
+        : (_walkFrom.dy + yJitter).clamp(-_walkRangeY, 0.0);
     _walkTo = Offset(dx, dy);
-    _facingLeft = _walkTo.dx < _walkFrom.dx;
+    _facingLeft = direction < 0;
+    _hasFacingDirection = true;
     final spanMs = _walkDurationMaxMs - _walkDurationMinMs;
     final ms = _walkDurationMinMs + _rng.nextInt(spanMs + 1);
     _walkController.duration = Duration(milliseconds: ms);
@@ -1064,6 +1274,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
   void _prepareNextSession() {
     _cancelTapPauseTimer();
     _cancelIdleTimer();
+    _cancelWalkStartDelayTimer();
     _walkController.stop();
     _tapPaused = false;
     // 위치 reset — roaming↔가만히 전환 시 캐릭터가 카드 가운데에서 다시 시작.
@@ -1071,6 +1282,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
     _walkFrom = Offset.zero;
     _walkTo = Offset.zero;
     _facingLeft = false;
+    _hasFacingDirection = false;
     final newRoaming = _rng.nextDouble() < _roamingProbability;
     setState(() {
       _roamingThisSession = newRoaming;
@@ -1089,14 +1301,15 @@ class _WalkingSlotState extends State<_WalkingSlot>
     if (widget.enableWalk &&
         _roamingThisSession &&
         _phase == _WalkPhase.walking) {
-      _walkController.forward(from: 0);
+      _startWalkController(fromStart: true);
     }
   }
 
   void _startIdleTimer() {
     _cancelIdleTimer();
     final spanMs = _idleDurationMaxMs - _idleDurationMinMs;
-    final ms = _idleDurationMinMs + _rng.nextInt(spanMs + 1);
+    final randomMs = _idleDurationMinMs + _rng.nextInt(spanMs + 1);
+    final ms = max(randomMs, widget.walkRestartDelay.inMilliseconds);
     _idleTimer = Timer(Duration(milliseconds: ms), () {
       if (!mounted ||
           !widget.enableWalk ||
@@ -1108,7 +1321,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
         _phase = _WalkPhase.walking;
         _pickNextWalkTarget();
       });
-      _walkController.forward();
+      _startWalkController(fromStart: true);
     });
   }
 
@@ -1126,6 +1339,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
     _snapshotCurrentPosition();
     _walkController.stop();
     _cancelIdleTimer();
+    _cancelWalkStartDelayTimer();
     setState(() {
       _tapPaused = true;
       _phase = _WalkPhase.idling;
@@ -1139,7 +1353,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
           _phase = _WalkPhase.walking;
           _pickNextWalkTarget();
         });
-        _walkController.forward(from: 0);
+        _startWalkController(fromStart: true);
       } else {
         setState(() {});
       }
@@ -1166,18 +1380,21 @@ class _WalkingSlotState extends State<_WalkingSlot>
           );
     // X 반전은 캐릭터 본체에만 적용 — 말풍선까지 함께 뒤집으면 글자가 거울 모드로
     // 보인다. translate(이동) 는 Column 전체에 줘서 말풍선이 캐릭터를 따라가게.
-    final flippedCharacter = Transform(
-      alignment: Alignment.center,
-      transform: Matrix4.identity()
-        ..scaleByDouble(_facingLeft ? -1.0 : 1.0, 1.0, 1.0, 1.0),
+    final shouldMirrorCharacter = !_hasFacingDirection
+        ? false
+        : widget.reverseMotionFacing
+        ? !_facingLeft
+        : _facingLeft;
+    final flippedCharacter = Transform.scale(
+      key: ValueKey(
+        'character-facing-${shouldMirrorCharacter ? 'mirrored' : 'normal'}',
+      ),
+      scaleX: shouldMirrorCharacter ? -1.0 : 1.0,
       child: tapWrapped,
     );
     final column = Column(
       mainAxisSize: MainAxisSize.min,
-      children: [
-        ?bubble,
-        flippedCharacter,
-      ],
+      children: [?bubble, flippedCharacter],
     );
 
     // 위젯 트리 root 는 모드와 무관하게 항상 AnimatedBuilder 로 통일 — column 의
@@ -1194,13 +1411,10 @@ class _WalkingSlotState extends State<_WalkingSlot>
         final t = _walkController.value;
         final eased = Curves.easeInOut.transform(t);
         final dx = (_walkFrom.dx + (_walkTo.dx - _walkFrom.dx) * eased).w;
-        final dy = (_walkFrom.dy + (_walkTo.dy - _walkFrom.dy) * eased).h;
-        final bob =
-            -(sin(t * pi * 2 * _walkBobsPerStride)).abs() * _walkBobHeight.h;
-        return Transform.translate(
-          offset: Offset(dx, dy + bob),
-          child: child,
-        );
+        final dy = widget.horizontalOnly
+            ? 0.0
+            : (_walkFrom.dy + (_walkTo.dy - _walkFrom.dy) * eased).h;
+        return Transform.translate(offset: Offset(dx, dy), child: child);
       },
       child: column,
     );
@@ -1276,18 +1490,12 @@ class _RoomMenuButtonState extends State<_RoomMenuButton> {
                   SizedBox(height: 8.h),
                   _GlassIconBox(
                     onTap: () => _onItemTap(widget.onTapShop),
-                    child: Image.asset(
-                      'assets/images/shop.png',
-                      width: 24.w,
-                    ),
+                    child: Image.asset('assets/images/shop.png', width: 24.w),
                   ),
                   SizedBox(height: 8.h),
                   _GlassIconBox(
                     onTap: () => _onItemTap(widget.onTapCollection),
-                    child: Image.asset(
-                      'assets/images/book.png',
-                      width: 24.w,
-                    ),
+                    child: Image.asset('assets/images/book.png', width: 24.w),
                   ),
                 ],
               ),
