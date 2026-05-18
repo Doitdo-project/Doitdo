@@ -585,7 +585,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     // 오늘 날짜에 해당하는 할 일만 필터. range 타입도 오늘 포함이면 노출.
     // scope=only 로 오늘 발생분을 삭제한 반복 일정은 excludedOccurrences 로 걸러낸다.
     final todayTodos = todoState.allTodos
-        .where((t) => _isTodayTodo(t, today))
+        .where((t) => _isTodayTodo(t, today, todoState.excludedOccurrences))
         .toList(growable: false);
     final somedayTodos = todoState.allSomedayTodos;
 

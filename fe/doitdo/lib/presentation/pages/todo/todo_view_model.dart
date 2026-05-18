@@ -17,6 +17,10 @@ class TodoViewModel extends StateNotifier<TodoState> {
   // ✅ 전역 reorder 락: todo_page/tamagochi_page 두 인스턴스 중복 방지
   bool _isReordering = false;
 
+  // POST 응답 전에 삭제된 로컬 임시 ID 추적.
+  // replaceLocalTodo 시 여기 있으면 실제 서버 ID로 DELETE를 즉시 전송.
+  final Set<String> _pendingDeleteLocalIds = {};
+
   bool tryStartReorder() {
     if (_isReordering) return false;
     _isReordering = true;
@@ -507,6 +511,10 @@ class TodoViewModel extends StateNotifier<TodoState> {
       _updateCalendarEvents(updated);
     }
     _updateDisplayedTodos();
+    // POST 응답 전에 삭제된 경우 → 서버 ID로 즉시 DELETE 전송
+    if (_pendingDeleteLocalIds.remove(localId)) {
+      unawaited(deleteTodo(serverTodo.id));
+    }
   }
 
   /// 낙관적 UI: API 실패 시 로컬 Todo 를 목록에서 제거.
@@ -523,6 +531,8 @@ class TodoViewModel extends StateNotifier<TodoState> {
       _updateCalendarEvents(updated);
     }
     _updateDisplayedTodos();
+    // POST 실패 → pending delete 도 정리
+    _pendingDeleteLocalIds.remove(localId);
   }
 
   /// RECURRING todo 의 repeatDays 를 detail API 응답으로 채운다.
@@ -958,6 +968,11 @@ class TodoViewModel extends StateNotifier<TodoState> {
       );
       _updateCalendarEvents(state.allTodos);
       _updateDisplayedTodos();
+      // 로컬 임시 ID — POST 완료 후 replaceLocalTodo 에서 실제 DELETE 전송
+      if (int.tryParse(id) == null) {
+        _pendingDeleteLocalIds.add(id);
+        return;
+      }
     }
     await AsyncValue.guard(
       () => _repository.deleteTodo(id, scope: scope, occurrenceDate: occurrenceDate),

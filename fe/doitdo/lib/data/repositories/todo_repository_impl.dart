@@ -180,7 +180,8 @@ class TodoRepositoryImpl extends BaseRepository implements TodoRepository {
   // TODO 삭제 구현
   @override
   Future<void> deleteTodo(String id, {String? scope, DateTime? occurrenceDate}) async {
-    final intId = int.tryParse(id) ?? 0;
+    final intId = int.tryParse(id);
+    if (intId == null) return;
     final occStr = occurrenceDate?.toIso8601String().split('T')[0];
     try {
       await _todoApi.deleteTodo(intId, scope, occurrenceDate: occStr);
