@@ -38,15 +38,14 @@ class _SlidableTodoItemCardState extends ConsumerState<SlidableTodoItemCard> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final categoryList = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
-    final badgeColor = widget.todo.colorHex != null
-        ? hexToColor(widget.todo.colorHex!)
-        : (() {
-            try {
-              return categoryList.firstWhere((c) => c.categoryName == widget.todo.category.name).color;
-            } catch (_) {
-              return AppColors.category1;
-            }
-          }());
+    final badgeColor = () {
+      try {
+        return categoryList.firstWhere((c) => c.categoryName == widget.todo.category.name).color;
+      } catch (_) {
+        if (widget.todo.colorHex != null) return hexToColor(widget.todo.colorHex!);
+        return AppColors.category1;
+      }
+    }();
 
     if (widget.onSnooze == null) {
       return GestureDetector(
