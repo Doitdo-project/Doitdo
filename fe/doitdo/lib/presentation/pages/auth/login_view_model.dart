@@ -34,8 +34,8 @@ class LoginViewModel extends AutoDisposeAsyncNotifier<User?> {
         username: username,
         password: password,
       );
-      // 로그인 직후 전역 currentUserProvider 무효화 → 홈 진입 시 최신 프로필 재조회.
-      ref.invalidate(currentUserProvider);
+      // 로그인 응답에 포함된 user를 바로 반영해 추가 GET /api/users/me를 피한다.
+      ref.read(currentUserProvider.notifier).replace(user);
       // 캘린더를 기본화면으로 설정한 경우에도 캐릭터 이미지가 처음부터
       // 표시되도록 로그인 직후 미리 로드. 라우팅을 막지 않는 fire-and-forget.
       unawaited(ref.read(characterViewModelProvider.notifier).load());
@@ -80,6 +80,6 @@ String mapLoginErrorMessage(Object error) {
 }
 
 final loginViewModelProvider =
-AsyncNotifierProvider.autoDispose<LoginViewModel, User?>(
-  LoginViewModel.new,
-);
+    AsyncNotifierProvider.autoDispose<LoginViewModel, User?>(
+      LoginViewModel.new,
+    );

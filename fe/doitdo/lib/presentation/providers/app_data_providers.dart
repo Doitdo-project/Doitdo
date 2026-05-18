@@ -57,17 +57,20 @@ final dioProvider = Provider<Dio>((ref) {
   // Bearer 토큰 주입 + 401 자동 refresh 재시도는 AuthInterceptor 에 일임.
   // refresh 성공 시 위젯 SharedPreferences 도 동기화 — 인터셉터가 갱신한 토큰이
   // 위젯에 전달되지 않으면 위젯이 만료된 refresh token 으로 재시도해 로그인 필요 상태가 됨.
-  dio.interceptors.add(AuthInterceptor(
-    dio: dio,
-    storage: storage,
-    onTokenRefreshed: (access, refresh) {
-      widgetSync.syncAuthTokens(
-        accessToken: access,
-        refreshToken: refresh,
-        apiBaseUrl: AppConfig.apiBaseUrl,
-      );
-    },
-  ));
+  dio.interceptors.insert(
+    0,
+    AuthInterceptor(
+      dio: dio,
+      storage: storage,
+      onTokenRefreshed: (access, refresh) {
+        widgetSync.syncAuthTokens(
+          accessToken: access,
+          refreshToken: refresh,
+          apiBaseUrl: AppConfig.apiBaseUrl,
+        );
+      },
+    ),
+  );
   return dio;
 });
 
@@ -131,11 +134,11 @@ final userRepositoryProvider = Provider<UserRepository>(
 
 // ─── Todo: retrofit API → Repository ───────────────────────────
 final todoApiProvider = Provider<TodoApi>(
-      (ref) => TodoApi(ref.watch(dioProvider)), // 진짜 서버 주소와 토큰이 들어간 dio 적용
+  (ref) => TodoApi(ref.watch(dioProvider)), // 진짜 서버 주소와 토큰이 들어간 dio 적용
 );
 
 final todoRepositoryProvider = Provider<TodoRepository>(
-      (ref) => TodoRepositoryImpl(ref.watch(todoApiProvider)),
+  (ref) => TodoRepositoryImpl(ref.watch(todoApiProvider)),
 );
 
 // ─── Category: retrofit API → Repository ───────────────────────

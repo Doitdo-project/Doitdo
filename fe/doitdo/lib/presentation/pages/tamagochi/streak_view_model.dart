@@ -1,10 +1,9 @@
-import 'package:flutter/scheduler.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:doitdo/core/utils/app_logger.dart';
 import 'package:doitdo/domain/entities/streak.dart';
 import 'package:doitdo/domain/repositories/streak_repository.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// 현재 사용자의 스트릭 상태.
 ///
@@ -19,8 +18,22 @@ class StreakViewModel extends StateNotifier<AsyncValue<Streak>> {
 
   final StreakRepository _repository;
 
-  /// 스트릭 조회. 직전 값을 유지한 채 isLoading 만 켜서 깜빡임을 줄인다.
-  Future<void> load() async {
+  // 진행 중인 API 요청을 추적하기 위한 변수
+  Future<void>? _loadInFlight;
+
+  /// 스트릭 조회. 동시 다발적인 호출을 방지 (In-flight 중복 제거).
+  Future<void> load() {
+    if (_loadInFlight != null) return _loadInFlight!;
+
+    _loadInFlight = _doLoad().whenComplete(() {
+      _loadInFlight = null;
+    });
+
+    return _loadInFlight!;
+  }
+
+  /// 실제 API 통신 및 상태 갱신을 담당하는 내부 메서드
+  Future<void> _doLoad() async {
     state = const AsyncValue<Streak>.loading().copyWithPrevious(state);
     try {
       final streak = await _repository.getStreak();
@@ -56,6 +69,7 @@ class StreakViewModel extends StateNotifier<AsyncValue<Streak>> {
   /// 동시 탭 방지용 in-flight 플래그. true 가 반환됐다고 보상이 지급된 건 아니고,
   /// 호출이 정상 완료됐는지만 의미한다.
   bool _claiming = false;
+
   Future<StreakReward?> claimReward() async {
     if (_claiming) return null;
     _claiming = true;
@@ -77,5 +91,5 @@ class StreakViewModel extends StateNotifier<AsyncValue<Streak>> {
 
 final streakViewModelProvider =
     StateNotifierProvider.autoDispose<StreakViewModel, AsyncValue<Streak>>(
-  (ref) => StreakViewModel(ref.watch(streakRepositoryProvider)),
-);
+      (ref) => StreakViewModel(ref.watch(streakRepositoryProvider)),
+    );

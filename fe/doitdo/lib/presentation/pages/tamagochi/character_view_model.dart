@@ -19,17 +19,24 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
 
   final CharacterRepository _repository;
 
-  /// 현재 캐릭터 조회.
-  ///
-  /// 서버가 "미수령" 상태를 어떤 에러 코드로 내려줄지 명세가 확정되지 않아,
-  /// 여기서는 [ServerException] 전체를 "미수령" 으로 해석한다. 추후 404 코드가
-  /// 확정되면 `e.statusCode == 404` 만 미수령으로 좁히는 게 바람직하다.
-  /// [UnauthorizedException] / 네트워크 타임아웃 등은 진짜 에러로 올린다.
-  ///
-  /// `copyWithPrevious` 로 직전 값을 유지한 채 isLoading 만 true 로 돌리므로,
-  /// UI 는 이전 캐릭터 정보를 계속 표시하면서 위에 작은 로딩 인디케이터만 얹으면
-  /// 된다 (진화/부화/독립 중 chrome 이 통째로 사라지는 깜빡임 방지).
-  Future<void> load() async {
+  // 진행 중인 API 요청을 추적하기 위한 변수
+  Future<void>? _loadInFlight;
+
+  /// 외부에서 호출하는 안전한 load 메서드
+  Future<void> load() {
+    // 이미 진행 중인 요청이 있다면 해당 Future를 그대로 반환하여 중복 호출 방지
+    if (_loadInFlight != null) return _loadInFlight!;
+
+    _loadInFlight = _doLoad().whenComplete(() {
+      // 요청이 완료(성공/실패 무관)되면 in-flight 상태 초기화
+      _loadInFlight = null;
+    });
+
+    return _loadInFlight!;
+  }
+
+  /// 실제 API 통신 및 상태 갱신을 담당하는 내부 메서드
+  Future<void> _doLoad() async {
     state = const AsyncValue<Character?>.loading().copyWithPrevious(state);
     try {
       final character = await _repository.getMyCharacter();
