@@ -161,7 +161,7 @@ class RoomLayer extends ConsumerWidget {
                     //   0.50  = brush 바닥이 똥 중앙 (정중앙 sweep)
                     //   1.00  = brush 바닥이 똥 꼭대기 (위에 떠있는 인상)
                     final brushOffsetX = (poopSizeRatio - brushSizeRatio) / 2;
-                    final brushLiftY = poopSizeRatio * 0.10;
+                    final brushLiftY = poopSizeRatio * 0.05;
                     final brushLeft = poopLeft + brushOffsetX;
                     final brushBottom = poopBottom + brushLiftY;
                     return [
