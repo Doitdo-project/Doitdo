@@ -1,11 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:go_router/go_router.dart';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:doitdo/core/config/app_config.dart';
 import 'package:doitdo/core/errors/exceptions.dart';
@@ -18,6 +13,10 @@ import 'package:doitdo/presentation/pages/tamagochi/my_room_provider.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
 import 'package:doitdo/presentation/providers/current_user_provider.dart';
 import 'package:doitdo/presentation/providers/default_screen_provider.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 
 /// 앱 부팅 직후 잠시 노출되는 스플래시 + **세션 복원 분기 지점**.
 ///
@@ -63,6 +62,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
 
   late final AnimationController _wordmarkController;
   late final AnimationController _taglineController;
+
   // 도트는 (a) 등장 페이드 (b) 무한 펄스 두 단계가 겹쳐있다.
   // 단일 컨트롤러로는 fade-in 표현이 안 돼서(0.4 floor 때문에 항상 보임)
   // appear/pulse 를 분리해 곱한다.
@@ -146,8 +146,9 @@ class _SplashPageState extends ConsumerState<SplashPage>
     // 시작돼 그 시간을 못 썼다. 이제 토큰이 도착하는 즉시 getMe + prime 을
     // 발화 — 사용자가 splash 모션을 보는 사이 대부분의 작업이 완료된다.
     // 반환값 = navigate 할 라우트. context.go 호출만 애니메이션 종료 이후에 한다.
-    final destinationFuture =
-        tokenFuture.then((tokens) => _resolveAuthDestination(tokens));
+    final destinationFuture = tokenFuture.then(
+      (tokens) => _resolveAuthDestination(tokens),
+    );
 
     await Future<void>.delayed(_exitDelay);
     if (!mounted) return;
@@ -170,21 +171,29 @@ class _SplashPageState extends ConsumerState<SplashPage>
   /// (character / room / 이미지 사전 로딩) 은 getMe 결과를 안 쓴다. 즉시
   /// kick-off 해서 getMe 의 ~200ms latency 를 prime 시간으로 흡수.
   Future<String> _resolveAuthDestination(AuthTokens? tokens) async {
-    if (tokens == null) {
-      return AppRoutes.welcome;
-    }
-    unawaited(ref.read(widgetSyncServiceProvider).syncAuthTokens(
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
-          apiBaseUrl: AppConfig.apiBaseUrl,
-        ));
-    // prime 을 getMe 와 동시 시작.
-    unawaited(_primeTamagochiVisuals());
+    if (tokens == null) return AppRoutes.welcome;
+
+    unawaited(
+      ref
+          .read(widgetSyncServiceProvider)
+          .syncAuthTokens(
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            apiBaseUrl: AppConfig.apiBaseUrl,
+          ),
+    );
+
     try {
-      final user = await ref.read(userRepositoryProvider).getMe();
+      // 1. 유저 정보를 먼저 완전히 받아와서 Riverpod 의존성 트리를 안정화시킵니다.
+      final user = await ref.read(currentUserProvider.future);
+      if (user == null) return AppRoutes.welcome;
       if (!mounted) return AppRoutes.welcome;
-      ref.read(currentUserProvider.notifier).replace(user);
+
+      // 2. 유저 정보가 고정된 이후에 프라임(Prime)과 FCM 등록을 진행합니다.
+      // 이렇게 하면 중간에 ViewModel이 파괴(Invalidate)되지 않습니다!
       unawaited(ref.read(fcmTokenRegistrarProvider).register());
+      unawaited(_primeTamagochiVisuals());
+
       return resolvePostAuthDestination(ref, user);
     } on UnauthorizedException {
       return AppRoutes.welcome;
@@ -201,19 +210,27 @@ class _SplashPageState extends ConsumerState<SplashPage>
     if (tokens != null) {
       // 홈스크린 위젯이 별도 프로세스라 secure storage 에 직접 접근 못 함.
       // 앱 부팅 시마다 App Group UserDefaults 를 갱신해줘야 위젯 백그라운드 PATCH 동작.
-      unawaited(ref.read(widgetSyncServiceProvider).syncAuthTokens(
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
-            apiBaseUrl: AppConfig.apiBaseUrl,
-          ));
+      unawaited(
+        ref
+            .read(widgetSyncServiceProvider)
+            .syncAuthTokens(
+              accessToken: tokens.accessToken,
+              refreshToken: tokens.refreshToken,
+              apiBaseUrl: AppConfig.apiBaseUrl,
+            ),
+      );
 
       // 토큰이 있어도 온보딩(생년월일/약관) 미완료면 메인 탭이 아니라 온보딩으로 보낸다.
       // GET /api/users/me 로 최신 플래그를 확인. 네트워크 일시 오류 시엔 사용자의
       // 기본 화면으로 보수적 폴백 — 다음 부팅 때 다시 잡힌다.
       try {
-        final user = await ref.read(userRepositoryProvider).getMe();
+        final user = await ref.read(currentUserProvider.future);
+        if (user == null) {
+          if (!mounted) return;
+          context.go(AppRoutes.welcome);
+          return;
+        }
         if (!mounted) return;
-        ref.read(currentUserProvider.notifier).replace(user);
         // getMe() 성공 = 세션 유효 확인 후 FCM 등록 — 401 없이 안전하게 등록.
         unawaited(ref.read(fcmTokenRegistrarProvider).register());
         // 다마고치 홈 visual 사전 prime — character + room 조회와 이미지 precache 를
@@ -254,16 +271,18 @@ class _SplashPageState extends ConsumerState<SplashPage>
   /// fire-and-forget 으로 호출되며 splash 애니메이션과 병렬 진행.
   Future<void> _primeTamagochiVisuals() async {
     try {
-      final characterFuture =
-          ref.read(characterViewModelProvider.notifier).ensureCharacter();
-      final roomFuture = ref.read(myRoomProvider.future).catchError(
-        (_) => const <RoomFurniturePlacement>[],
-      );
+      final characterFuture = ref
+          .read(characterViewModelProvider.notifier)
+          .ensureCharacter();
+      final roomFuture = ref
+          .read(myRoomProvider.future)
+          .catchError((_) => const <RoomFurniturePlacement>[]);
       await Future.wait<Object?>([characterFuture, roomFuture]);
 
       if (!mounted) return;
       final character = ref.read(characterViewModelProvider).valueOrNull;
-      final room = ref.read(myRoomProvider).valueOrNull ??
+      final room =
+          ref.read(myRoomProvider).valueOrNull ??
           const <RoomFurniturePlacement>[];
       final urls = <String>{
         if (character != null && character.thumbnailUrl.isNotEmpty)
@@ -280,8 +299,9 @@ class _SplashPageState extends ConsumerState<SplashPage>
   /// 단일 URL 을 [CachedNetworkImageProvider] 로 미리 디코드. 실패는 swallow.
   Future<void> _precacheUrl(String url) async {
     final completer = Completer<void>();
-    final stream =
-        CachedNetworkImageProvider(url).resolve(ImageConfiguration.empty);
+    final stream = CachedNetworkImageProvider(
+      url,
+    ).resolve(ImageConfiguration.empty);
     late ImageStreamListener listener;
     listener = ImageStreamListener(
       (_, _) {
@@ -305,133 +325,135 @@ class _SplashPageState extends ConsumerState<SplashPage>
       // splash → app 전환이 자연스럽게 이어진다. 종전엔 두 페이드가 직렬로
       // 일어나 "흰 화면" 이 잠깐 보이는 인상이 있었다.
       body: SafeArea(
-          child: Stack(
-            children: [
-              // ── 정중앙: 로고 + 워드마크 + 태그라인 ──
-              Center(
-                child: Transform.translate(
-                  offset: const Offset(0, _yOffset),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // squircle 모양 — ContinuousRectangleBorder 로 iOS 식 superellipse 클리핑.
-                      // logo.svg 의 자체 라운드 코너(20%) 위에 더 둥근 곡선을 덮어
-                      // 시스템 적응형 아이콘 마스크와 같은 시각으로 보이게 한다.
-                      ClipPath(
-                        clipper: const ShapeBorderClipper(
-                          shape: ContinuousRectangleBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(50)),
-                          ),
-                        ),
-                        child: SvgPicture.asset(
-                          'assets/icons/logo.svg',
-                          width: _logoSize,
-                          height: _logoSize,
-                          fit: BoxFit.cover,
+        child: Stack(
+          children: [
+            // ── 정중앙: 로고 + 워드마크 + 태그라인 ──
+            Center(
+              child: Transform.translate(
+                offset: const Offset(0, _yOffset),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // squircle 모양 — ContinuousRectangleBorder 로 iOS 식 superellipse 클리핑.
+                    // logo.svg 의 자체 라운드 코너(20%) 위에 더 둥근 곡선을 덮어
+                    // 시스템 적응형 아이콘 마스크와 같은 시각으로 보이게 한다.
+                    ClipPath(
+                      clipper: const ShapeBorderClipper(
+                        shape: ContinuousRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(50)),
                         ),
                       ),
-                      const SizedBox(height: 28),
+                      child: SvgPicture.asset(
+                        'assets/icons/logo.svg',
+                        width: _logoSize,
+                        height: _logoSize,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
 
-                      // 워드마크 "두잇뚜" — fade + 14px slide-up.
-                      // 핸드오프 사양: 34px, weight 800, letter-spacing -0.03em (≈ -1.0 on 34).
-                      // fontFamily 미명시 — ThemeData.fontFamily(사용자 선택) 따라감.
-                      // weight 700 으로 weight 메타데이터 기반 자동 선택.
-                      AnimatedBuilder(
-                        animation: _wordmarkController,
-                        builder: (_, __) {
-                          final t = Curves.easeOutCubic
-                              .transform(_wordmarkController.value);
-                          return Opacity(
-                            opacity: t,
-                            child: Transform.translate(
-                              offset: Offset(0, 14 * (1 - t)),
-                              child: const Text(
-                                '두잇뚜',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 34,
-                                  height: 1.0,
-                                  color: _ink,
-                                  letterSpacing: -1.0,
-                                ),
+                    // 워드마크 "두잇뚜" — fade + 14px slide-up.
+                    // 핸드오프 사양: 34px, weight 800, letter-spacing -0.03em (≈ -1.0 on 34).
+                    // fontFamily 미명시 — ThemeData.fontFamily(사용자 선택) 따라감.
+                    // weight 700 으로 weight 메타데이터 기반 자동 선택.
+                    AnimatedBuilder(
+                      animation: _wordmarkController,
+                      builder: (_, __) {
+                        final t = Curves.easeOutCubic.transform(
+                          _wordmarkController.value,
+                        );
+                        return Opacity(
+                          opacity: t,
+                          child: Transform.translate(
+                            offset: Offset(0, 14 * (1 - t)),
+                            child: const Text(
+                              '두잇뚜',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 34,
+                                height: 1.0,
+                                color: _ink,
+                                letterSpacing: -1.0,
                               ),
                             ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 10),
-
-                      // 태그라인 "오늘 할 일, 가볍게" — 같은 fade + slide-up
-                      AnimatedBuilder(
-                        animation: _taglineController,
-                        builder: (_, __) {
-                          final t = Curves.easeOutCubic
-                              .transform(_taglineController.value);
-                          return Opacity(
-                            opacity: t,
-                            child: Transform.translate(
-                              offset: Offset(0, 14 * (1 - t)),
-                              child: const Text(
-                                '오늘 할 일, 가볍게',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 13,
-                                  height: 1.2,
-                                  color: _muted,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // ── 화면 하단 56px: 로딩 도트 3개 (orange 6px, gap 7, 1.2s 펄스) ──
-              // appear (0→1, 300ms) 와 pulse (0..1 무한 반복) 두 컨트롤러를 함께 구독.
-              Positioned(
-                bottom: 56,
-                left: 0,
-                right: 0,
-                child: AnimatedBuilder(
-                  animation: Listenable.merge(
-                    [_dotsAppearController, _dotsPulseController],
-                  ),
-                  builder: (_, __) {
-                    final appear = Curves.easeOut
-                        .transform(_dotsAppearController.value);
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(3, (i) {
-                        // 0.125 phase 시차 — 1.2s 사이클 기준 약 0.15s 차이.
-                        final phase =
-                            (_dotsPulseController.value - i * 0.125 + 1.0) %
-                                1.0;
-                        // 사인 펄스 — 0.4 ~ 1.0 사이.
-                        final pulse =
-                            0.5 + 0.5 * math.sin(2 * math.pi * phase);
-                        final pulseOpacity = 0.4 + 0.6 * pulse;
-                        // 등장 시 0 → pulseOpacity 로 페이드 인.
-                        final opacity = pulseOpacity * appear;
-                        return Container(
-                          width: 6,
-                          height: 6,
-                          margin: const EdgeInsets.symmetric(horizontal: 3.5),
-                          decoration: BoxDecoration(
-                            color: _logoOrange.withValues(alpha: opacity),
-                            shape: BoxShape.circle,
                           ),
                         );
-                      }),
-                    );
-                  },
+                      },
+                    ),
+                    const SizedBox(height: 10),
+
+                    // 태그라인 "오늘 할 일, 가볍게" — 같은 fade + slide-up
+                    AnimatedBuilder(
+                      animation: _taglineController,
+                      builder: (_, __) {
+                        final t = Curves.easeOutCubic.transform(
+                          _taglineController.value,
+                        );
+                        return Opacity(
+                          opacity: t,
+                          child: Transform.translate(
+                            offset: Offset(0, 14 * (1 - t)),
+                            child: const Text(
+                              '오늘 할 일, 가볍게',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 13,
+                                height: 1.2,
+                                color: _muted,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+
+            // ── 화면 하단 56px: 로딩 도트 3개 (orange 6px, gap 7, 1.2s 펄스) ──
+            // appear (0→1, 300ms) 와 pulse (0..1 무한 반복) 두 컨트롤러를 함께 구독.
+            Positioned(
+              bottom: 56,
+              left: 0,
+              right: 0,
+              child: AnimatedBuilder(
+                animation: Listenable.merge([
+                  _dotsAppearController,
+                  _dotsPulseController,
+                ]),
+                builder: (_, __) {
+                  final appear = Curves.easeOut.transform(
+                    _dotsAppearController.value,
+                  );
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(3, (i) {
+                      // 0.125 phase 시차 — 1.2s 사이클 기준 약 0.15s 차이.
+                      final phase =
+                          (_dotsPulseController.value - i * 0.125 + 1.0) % 1.0;
+                      // 사인 펄스 — 0.4 ~ 1.0 사이.
+                      final pulse = 0.5 + 0.5 * math.sin(2 * math.pi * phase);
+                      final pulseOpacity = 0.4 + 0.6 * pulse;
+                      // 등장 시 0 → pulseOpacity 로 페이드 인.
+                      final opacity = pulseOpacity * appear;
+                      return Container(
+                        width: 6,
+                        height: 6,
+                        margin: const EdgeInsets.symmetric(horizontal: 3.5),
+                        decoration: BoxDecoration(
+                          color: _logoOrange.withValues(alpha: opacity),
+                          shape: BoxShape.circle,
+                        ),
+                      );
+                    }),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
+      ),
     );
   }
 }

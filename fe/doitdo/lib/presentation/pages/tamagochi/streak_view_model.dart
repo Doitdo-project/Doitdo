@@ -20,6 +20,7 @@ class StreakViewModel extends StateNotifier<AsyncValue<Streak>> {
 
   // 진행 중인 API 요청을 추적하기 위한 변수
   Future<void>? _loadInFlight;
+  bool _hasLoadedStreak = false;
 
   /// 스트릭 조회. 동시 다발적인 호출을 방지 (In-flight 중복 제거).
   Future<void> load() {
@@ -37,6 +38,7 @@ class StreakViewModel extends StateNotifier<AsyncValue<Streak>> {
     state = const AsyncValue<Streak>.loading().copyWithPrevious(state);
     try {
       final streak = await _repository.getStreak();
+      _hasLoadedStreak = true;
       // autoDispose microtask 가 먼저 돌게 한 frame yield 후 mounted 체크
       // (TodoViewModel 과 동일 사유 — race window 회피).
       await SchedulerBinding.instance.endOfFrame;
@@ -52,9 +54,14 @@ class StreakViewModel extends StateNotifier<AsyncValue<Streak>> {
 
   /// state 를 loading 으로 전환하지 않는 백그라운드 리프레시.
   /// (할 일 완료 직후처럼 holds-its-current-data 가 더 자연스러운 상황용)
-  Future<void> refresh() async {
+  Future<void> refresh({bool force = false}) async {
+    final inFlight = _loadInFlight;
+    if (inFlight != null) return inFlight;
+    if (!force && _hasLoadedStreak && state.valueOrNull != null) return;
+
     try {
       final streak = await _repository.getStreak();
+      _hasLoadedStreak = true;
       await SchedulerBinding.instance.endOfFrame;
       if (!mounted) return;
       state = AsyncValue.data(streak);
@@ -77,7 +84,7 @@ class StreakViewModel extends StateNotifier<AsyncValue<Streak>> {
       final reward = await _repository.claimReward();
       // 보상이 지급됐으면 streakCount 가 갱신됐을 수 있으니 한 번 더 동기화.
       if (reward.rewarded) {
-        await refresh();
+        await refresh(force: true);
       }
       return reward;
     } catch (e, st) {
@@ -90,6 +97,6 @@ class StreakViewModel extends StateNotifier<AsyncValue<Streak>> {
 }
 
 final streakViewModelProvider =
-    StateNotifierProvider.autoDispose<StreakViewModel, AsyncValue<Streak>>(
+    StateNotifierProvider<StreakViewModel, AsyncValue<Streak>>(
       (ref) => StreakViewModel(ref.watch(streakRepositoryProvider)),
     );

@@ -136,8 +136,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
 
   void _pickRandomPoopPosition() {
     const left = RoomLayer.safePoopLeftMin;
-    const leftRange =
-        RoomLayer.safePoopLeftMax - RoomLayer.safePoopLeftMin;
+    const leftRange = RoomLayer.safePoopLeftMax - RoomLayer.safePoopLeftMin;
     const bottom = RoomLayer.safePoopBottomMin;
     const bottomRange =
         RoomLayer.safePoopBottomMax - RoomLayer.safePoopBottomMin;
@@ -199,10 +198,12 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     _attendanceChecked = true;
     // 이미지 디코드 완료까지 기다린 뒤 발화. precache 가 빨리 끝나면 즉시, 첫
     // 진입에서 네트워크가 길어도 자연스럽게 카드 완성 시점과 정렬된다.
-    unawaited(_precacheRoomVisualsThenCelebrate(
-      character: characterAsync.valueOrNull,
-      room: roomAsync.valueOrNull ?? const <RoomFurniturePlacement>[],
-    ));
+    unawaited(
+      _precacheRoomVisualsThenCelebrate(
+        character: characterAsync.valueOrNull,
+        room: roomAsync.valueOrNull ?? const <RoomFurniturePlacement>[],
+      ),
+    );
   }
 
   /// 카드의 캐릭터 thumbnail + 가구 imageUrl 들을 [CachedNetworkImageProvider] 로
@@ -248,8 +249,9 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   /// 단일 URL 디코드. 실패는 무시 — 셀러브레이션은 어차피 띄운다.
   Future<void> _precacheUrl(String url) async {
     final completer = Completer<void>();
-    final stream =
-        CachedNetworkImageProvider(url).resolve(ImageConfiguration.empty);
+    final stream = CachedNetworkImageProvider(
+      url,
+    ).resolve(ImageConfiguration.empty);
     late ImageStreamListener listener;
     listener = ImageStreamListener(
       (_, _) {
@@ -318,7 +320,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       // 미리 풀면 새 character (poop:false) 가 흘러오기 전 한 frame 동안
       // 옛 character.poop=true 가 다시 그려져 똥이 잠깐 깜빡인다.
       setState(() => _cleaningPoop = false);
-      await ref.read(characterViewModelProvider.notifier).refresh();
+      await ref.read(characterViewModelProvider.notifier).refresh(force: true);
       if (!mounted) return;
       setState(() => _suppressLocalPoop = false);
     });
@@ -337,22 +339,26 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   /// 함께 스트릭도 silent refresh — 별도 폴링 없이 한 번이면 충분하다고 가정.
   Future<void> _refreshCharacterAfterTodoDone() async {
     final vm = ref.read(characterViewModelProvider.notifier);
-    final beforeExp =
-        ref.read(characterViewModelProvider).valueOrNull?.currentExp;
+    final beforeExp = ref
+        .read(characterViewModelProvider)
+        .valueOrNull
+        ?.currentExp;
 
     await Future.delayed(const Duration(milliseconds: 200));
     if (!mounted) return;
-    await vm.refresh();
-    unawaited(ref.read(streakViewModelProvider.notifier).refresh());
+    await vm.refresh(force: true);
+    unawaited(ref.read(streakViewModelProvider.notifier).refresh(force: true));
     if (!mounted) return;
 
-    final afterFirst =
-        ref.read(characterViewModelProvider).valueOrNull?.currentExp;
+    final afterFirst = ref
+        .read(characterViewModelProvider)
+        .valueOrNull
+        ?.currentExp;
     if (afterFirst != beforeExp) return;
 
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
-    await vm.refresh();
+    await vm.refresh(force: true);
   }
 
   /// 오늘/언젠가 할 일 섹션의 "추가하기" 버튼이 눌릴 때 띄우는 바텀시트.
@@ -397,14 +403,15 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   /// 성공 시 서버가 다음 알을 자동 배정하므로 ViewModel 이 load() 로 갱신.
   Future<void> _handleFarewellTap() async {
     if (_farewelling) return;
-    final character =
-        ref.read(characterViewModelProvider).valueOrNull;
-    final name =
-        (character == null || character.name.isEmpty) ? '다마고치' : character.name;
+    final character = ref.read(characterViewModelProvider).valueOrNull;
+    final name = (character == null || character.name.isEmpty)
+        ? '다마고치'
+        : character.name;
     final confirmed = await showDoitdoDialog(
       context: context,
       title: '독립 시키기',
-      message: '$name가 떠날 준비가 됐어요.\n'
+      message:
+          '$name가 떠날 준비가 됐어요.\n'
           '배웅하면 되돌릴 수 없고 바로 새 알이 도착해요.',
       confirmLabel: '배웅하기',
       cancelLabel: '취소',
@@ -412,8 +419,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     if (!mounted || confirmed != true) return;
 
     setState(() => _farewelling = true);
-    final ok =
-    await ref.read(characterViewModelProvider.notifier).farewell();
+    final ok = await ref.read(characterViewModelProvider.notifier).farewell();
     if (!mounted) return;
     setState(() => _farewelling = false);
 
@@ -422,7 +428,9 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(ok ? '독립 완료! 새 알이 도착했어요.' : '독립 처리 중 문제가 생겼어요. 다시 시도해주세요.'),
+          content: Text(
+            ok ? '독립 완료! 새 알이 도착했어요.' : '독립 처리 중 문제가 생겼어요. 다시 시도해주세요.',
+          ),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
         ),
@@ -436,15 +444,15 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   /// silhouette 단계에서 쓸 진화 직전 thumbnailUrl 은 evolve 호출 직전에 캡처해둔다.
   Future<void> _handleEvolveTap() async {
     if (_evolving) return;
-    final character =
-        ref.read(characterViewModelProvider).valueOrNull;
+    final character = ref.read(characterViewModelProvider).valueOrNull;
     if (character == null) return;
 
     final name = character.name.isEmpty ? '다마고치' : character.name;
     final confirmed = await showDoitdoDialog(
       context: context,
       title: '진화 시키기',
-      message: '$name가 다음 단계로 진화할 준비가 됐어요.\n'
+      message:
+          '$name가 다음 단계로 진화할 준비가 됐어요.\n'
           '진화하면 모습이 바뀌고 다시 처음부터 자라요.',
       confirmLabel: '진화시키기',
       cancelLabel: '취소',
@@ -491,10 +499,9 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   /// 연출 종료 후 home 으로 복귀할 때 크기/비율 점프가 사라진다.
   Future<void> _onEvolutionAnimationStart() async {
     if (!mounted) return;
-    await ref.read(characterViewModelProvider.notifier).refresh();
+    await ref.read(characterViewModelProvider.notifier).refresh(force: true);
     if (!mounted) return;
-    final newCharacter =
-        ref.read(characterViewModelProvider).valueOrNull;
+    final newCharacter = ref.read(characterViewModelProvider).valueOrNull;
     if (newCharacter == null) return;
     setState(() => _afterEvolutionCharacterId = newCharacter.characterId);
   }
@@ -591,25 +598,30 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
 
     // 캐릭터 fetch 에러 스낵바. 진화 트리거는 더 이상 자동이 아님 — 캐릭터
     // 카드의 액션 뱃지(canEvolve/canFarewell) 탭 → 다이얼로그 흐름으로 대체됨.
-    ref.listen<AsyncValue<Character?>>(characterViewModelProvider,
-            (prev, next) {
-          // 첫 로드(loading→error) 는 dio 의 토큰 refresh / 자동 재시도가 끼어들면서
-          // 잠깐 error 로 빠졌다 곧 회복되는 경우가 많다. 깜빡 떴다 사라지는 스낵바를
-          // 막기 위해, "한 번이라도 데이터를 보여준 적이 있는데 다시 실패" 한 경우
-          // (= data → error regression) 에만 알림. 진짜 영구 실패는 캐릭터 카드의
-          // 빈 상태 UI 가 처리하므로 사용자가 모르고 지나치진 않는다.
-          final wasShowingData =
-              prev != null && prev.hasValue && prev.value != null;
-          if (next.hasError && wasShowingData && mounted) {
-            _showComingSoon(context, '캐릭터 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
-          }
-        });
+    ref.listen<AsyncValue<Character?>>(characterViewModelProvider, (
+      prev,
+      next,
+    ) {
+      // 첫 로드(loading→error) 는 dio 의 토큰 refresh / 자동 재시도가 끼어들면서
+      // 잠깐 error 로 빠졌다 곧 회복되는 경우가 많다. 깜빡 떴다 사라지는 스낵바를
+      // 막기 위해, "한 번이라도 데이터를 보여준 적이 있는데 다시 실패" 한 경우
+      // (= data → error regression) 에만 알림. 진짜 영구 실패는 캐릭터 카드의
+      // 빈 상태 UI 가 처리하므로 사용자가 모르고 지나치진 않는다.
+      final wasShowingData =
+          prev != null && prev.hasValue && prev.value != null;
+      if (next.hasError && wasShowingData && mounted) {
+        _showComingSoon(context, '캐릭터 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
+      }
+    });
 
     // 똥 발생/사라짐에 맞춰 random 위치 재추첨. 똥이 새로 생기는 매 순간마다
     // 안전 구역 안에서 left/bottom 을 새로 뽑아 매번 다른 자리에 떨어지게 한다.
     // 청소 phase 2 ([_suppressLocalPoop]) 동안은 character.poop 이 여전히 true 라
     // listener 가 안 흔들려 위치가 그대로 유지된다 — brush 가 같은 자리에서 마무리.
-    ref.listen<AsyncValue<Character?>>(characterViewModelProvider, (prev, next) {
+    ref.listen<AsyncValue<Character?>>(characterViewModelProvider, (
+      prev,
+      next,
+    ) {
       final wasPoop = prev?.valueOrNull?.poop ?? false;
       final nowPoop = next.valueOrNull?.poop ?? false;
       if (nowPoop && _poopLeftRatio == null) {
@@ -636,8 +648,10 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     ref.listen<AsyncValue<Character?>>(characterViewModelProvider, (_, _) {
       _maybeShowAttendanceCelebration();
     });
-    ref.listen<AsyncValue<List<RoomFurniturePlacement>>>(myRoomProvider,
-        (_, _) {
+    ref.listen<AsyncValue<List<RoomFurniturePlacement>>>(myRoomProvider, (
+      _,
+      _,
+    ) {
       _maybeShowAttendanceCelebration();
     });
 
@@ -648,8 +662,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       final gain = next.lastGain;
       if (gain == null) return;
       if (prev?.lastGain?.tick == gain.tick) return;
-      final box =
-          _overlayKey.currentContext?.findRenderObject() as RenderBox?;
+      final box = _overlayKey.currentContext?.findRenderObject() as RenderBox?;
       if (box == null || !box.attached) return;
       final local = box.globalToLocal(gain.origin);
       setState(() {
@@ -671,6 +684,14 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     // 옛 값을 받을 수 있다. 200ms 먼저 조회해보고 exp 변화가 없으면 500ms 뒤 한 번 더.
     ref.listen<TodoState>(todoViewModelProvider, (prev, next) {
       if (prev == null) return;
+
+      // ✅ [수정 포인트] 초기 로딩 시 데이터가 쏟아져 들어오는 것을 방지
+      // 이전 상태(prev)가 완전히 비어있었다면(초기 렌더링 직후),
+      // 유저의 액션이 아니라 API 첫 응답이므로 무시합니다.
+      if (prev.allTodos.isEmpty && prev.allSomedayTodos.isEmpty) {
+        return;
+      }
+
       final prevDoneIds = {
         ...prev.allTodos.where((t) => t.isDone).map((t) => t.id),
         ...prev.allSomedayTodos.where((t) => t.isDone).map((t) => t.id),
@@ -679,6 +700,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
         ...next.allTodos.where((t) => t.isDone).map((t) => t.id),
         ...next.allSomedayTodos.where((t) => t.isDone).map((t) => t.id),
       };
+
       if (nextDoneIds.difference(prevDoneIds).isNotEmpty) {
         _refreshCharacterAfterTodoDone();
       }
@@ -696,15 +718,15 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: visible
               ? const SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.light,
-            statusBarBrightness: Brightness.dark,
-          )
+                  statusBarColor: Colors.transparent,
+                  statusBarIconBrightness: Brightness.light,
+                  statusBarBrightness: Brightness.dark,
+                )
               : const SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.dark,
-            statusBarBrightness: Brightness.light,
-          ),
+                  statusBarColor: Colors.transparent,
+                  statusBarIconBrightness: Brightness.dark,
+                  statusBarBrightness: Brightness.light,
+                ),
           child: child!,
         );
       },
@@ -759,8 +781,8 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                 topSafePadding: topInset,
                                 onTapShop: () =>
                                     context.push(AppRoutes.tamagochiShop),
-                                onTapCollection: () => context
-                                    .push(AppRoutes.tamagochiCollection),
+                                onTapCollection: () =>
+                                    context.push(AppRoutes.tamagochiCollection),
                                 onEggTap: _handleEggTap,
                                 onPoopTap: _handlePoopTap,
                                 isCleaningPoop: _cleaningPoop,
@@ -772,12 +794,11 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                       .where((t) => !t.isDone)
                                       .length;
                                   ref
-                                      .read(tamagochiViewModelProvider
-                                      .notifier)
+                                      .read(tamagochiViewModelProvider.notifier)
                                       .onCharacterTap(
-                                    remainingTodayTodos: remaining,
-                                    tapOrigin: tapOrigin,
-                                  );
+                                        remainingTodayTodos: remaining,
+                                        tapOrigin: tapOrigin,
+                                      );
                                 },
                               ),
                               if (character != null && !character.isEgg)
@@ -820,7 +841,12 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                               minHeight: constraints.viewportMainAxisExtent,
                             ),
                             child: Padding(
-                              padding: const EdgeInsets.fromLTRB(24, 18, 24, 16),
+                              padding: const EdgeInsets.fromLTRB(
+                                24,
+                                18,
+                                24,
+                                16,
+                              ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
@@ -837,10 +863,14 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                     onMoveToSomeday: todoVm.moveToSomeday,
                                     onMoveToToday: todoVm.moveToToday,
                                     onSnooze: todoVm.snoozeTodo,
-                                    onAddToday: () => _openAddSheet(context, DateTime.now()),
-                                    onAddSomeday: () => _openAddSheet(context, null),
-                                    onTapToday: (todo) => _openDetailSheet(context, todo, false),
-                                    onTapSomeday: (todo) => _openDetailSheet(context, todo, true),
+                                    onAddToday: () =>
+                                        _openAddSheet(context, DateTime.now()),
+                                    onAddSomeday: () =>
+                                        _openAddSheet(context, null),
+                                    onTapToday: (todo) =>
+                                        _openDetailSheet(context, todo, false),
+                                    onTapSomeday: (todo) =>
+                                        _openDetailSheet(context, todo, true),
                                   ),
                                 ],
                               ),
@@ -946,8 +976,7 @@ bool _isTodayTodo(
 ]) {
   bool sameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
-  bool onOrBefore(DateTime a, DateTime b) =>
-      a.isBefore(b) || sameDay(a, b);
+  bool onOrBefore(DateTime a, DateTime b) => a.isBefore(b) || sameDay(a, b);
 
   switch (todo.dateType) {
     case TodoDateType.normal:
@@ -956,7 +985,7 @@ bool _isTodayTodo(
       return false;
 
     case TodoDateType.range:
-    // ✅ fetchTodos에서 시작일은 todo.date에 저장됨 (rangeStart는 null)
+      // ✅ fetchTodos에서 시작일은 todo.date에 저장됨 (rangeStart는 null)
       final start = todo.date ?? todo.rangeStart;
       final end = todo.rangeEnd;
       if (start == null) return false;
@@ -965,7 +994,7 @@ bool _isTodayTodo(
       return onOrBefore(today, end);
 
     case TodoDateType.repeat:
-    // ✅ fetchTodos에서 시작일은 todo.date에 저장됨 (repeatStartDate는 null)
+      // ✅ fetchTodos에서 시작일은 todo.date에 저장됨 (repeatStartDate는 null)
       final start = todo.date ?? todo.repeatStartDate;
       final end = todo.repeatEndDate;
       if (start == null) return false;
@@ -981,7 +1010,7 @@ bool _isTodayTodo(
       // ✅ 오늘이 반복 요일에 해당하는지 체크 (캘린더와 동일한 로직)
       if (todo.repeatDays != null && todo.repeatDays!.isNotEmpty) {
         final flutterWd = today.weekday; // 1=월~6=토, 7=일
-        final appIndex  = flutterWd == 7 ? 0 : flutterWd; // 일요일(7)→0
+        final appIndex = flutterWd == 7 ? 0 : flutterWd; // 일요일(7)→0
         return todo.repeatDays!.contains(appIndex);
       } else {
         // repeatDays 없으면 시작 요일과 일치하는지 폴백
@@ -1069,13 +1098,14 @@ class _CrossSectionTodoList extends ConsumerStatefulWidget {
   final ScrollController? scrollController;
 
   @override
-  ConsumerState<_CrossSectionTodoList> createState() => _CrossSectionTodoListState();
+  ConsumerState<_CrossSectionTodoList> createState() =>
+      _CrossSectionTodoListState();
 }
 
 class _CrossSectionTodoListState extends ConsumerState<_CrossSectionTodoList> {
   Timer? _scrollTimer;
   static const double _scrollThreshold = 100.0; // 상/하단 임계치 px
-  static const double _scrollSpeed = 8.0;        // 스크롤 속도 px/tick
+  static const double _scrollSpeed = 8.0; // 스크롤 속도 px/tick
 
   void _startAutoScroll(double pointerY, double screenHeight) {
     _scrollTimer?.cancel();
@@ -1083,14 +1113,23 @@ class _CrossSectionTodoListState extends ConsumerState<_CrossSectionTodoList> {
     if (sc == null || !sc.hasClients) return;
 
     _scrollTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
-      if (!sc.hasClients) { _scrollTimer?.cancel(); return; }
+      if (!sc.hasClients) {
+        _scrollTimer?.cancel();
+        return;
+      }
       if (pointerY < _scrollThreshold) {
         // 상단 근접 → 위로 스크롤
-        final target = (sc.offset - _scrollSpeed).clamp(0.0, sc.position.maxScrollExtent);
+        final target = (sc.offset - _scrollSpeed).clamp(
+          0.0,
+          sc.position.maxScrollExtent,
+        );
         sc.jumpTo(target);
       } else if (pointerY > screenHeight - _scrollThreshold) {
         // 하단 근접 → 아래로 스크롤
-        final target = (sc.offset + _scrollSpeed).clamp(0.0, sc.position.maxScrollExtent);
+        final target = (sc.offset + _scrollSpeed).clamp(
+          0.0,
+          sc.position.maxScrollExtent,
+        );
         sc.jumpTo(target);
       } else {
         _scrollTimer?.cancel();
@@ -1177,13 +1216,22 @@ class _CrossSectionTodoListState extends ConsumerState<_CrossSectionTodoList> {
         }
       } else if (wasToday && !isToday) {
         // ✅ 오늘 → 언젠가 이동
-        final targetIdx = (newIndex - dividerIndex).clamp(0, widget.somedayTodos.length);
-        widget.onMoveToSomeday(widget.todayTodos[oldIndex].id, targetIndex: targetIdx);
+        final targetIdx = (newIndex - dividerIndex).clamp(
+          0,
+          widget.somedayTodos.length,
+        );
+        widget.onMoveToSomeday(
+          widget.todayTodos[oldIndex].id,
+          targetIndex: targetIdx,
+        );
       } else {
         // ✅ 언젠가 → 오늘 이동
         final somedayOld = oldIndex - dividerIndex - 1;
         final targetIdx = newIndex.clamp(0, widget.todayTodos.length);
-        widget.onMoveToToday(widget.somedayTodos[somedayOld].id, targetIndex: targetIdx);
+        widget.onMoveToToday(
+          widget.somedayTodos[somedayOld].id,
+          targetIndex: targetIdx,
+        );
       }
       _resetReordering();
     }
@@ -1232,13 +1280,21 @@ class _CrossSectionTodoListState extends ConsumerState<_CrossSectionTodoList> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(widget.todayTitle,
-                style: AppTextStyles.titleSmall.copyWith(color: colors.textPrimary)),
+            Text(
+              widget.todayTitle,
+              style: AppTextStyles.titleSmall.copyWith(
+                color: colors.textPrimary,
+              ),
+            ),
             GestureDetector(
               onTap: widget.onAddToday,
               behavior: HitTestBehavior.opaque,
-              child: Text('추가하기',
-                  style: AppTextStyles.labelMedium.copyWith(color: colors.textSecondary)),
+              child: Text(
+                '추가하기',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
             ),
           ],
         ),
@@ -1247,12 +1303,14 @@ class _CrossSectionTodoListState extends ConsumerState<_CrossSectionTodoList> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Center(
-              child: Text('할 일을 추가해보세요!',
-                  style: AppTextStyles.bodySmall.copyWith(color: colors.textHint)),
+              child: Text(
+                '할 일을 추가해보세요!',
+                style: AppTextStyles.bodySmall.copyWith(color: colors.textHint),
+              ),
             ),
           ),
         if (totalCount > 0)
-        // ✅ Listener로 드래그 중 포인터 위치 감지 → 자동 스크롤
+          // ✅ Listener로 드래그 중 포인터 위치 감지 → 자동 스크롤
           Listener(
             onPointerMove: (event) {
               final screenHeight = MediaQuery.of(context).size.height;
@@ -1265,8 +1323,11 @@ class _CrossSectionTodoListState extends ConsumerState<_CrossSectionTodoList> {
               physics: const NeverScrollableScrollPhysics(),
               itemCount: totalCount,
               onReorder: handleReorder,
-              proxyDecorator: (child, index, animation) =>
-                  Material(color: Colors.transparent, elevation: 0, child: child),
+              proxyDecorator: (child, index, animation) => Material(
+                color: Colors.transparent,
+                elevation: 0,
+                child: child,
+              ),
               itemBuilder: buildItem,
             ),
           ),
@@ -1274,8 +1335,10 @@ class _CrossSectionTodoListState extends ConsumerState<_CrossSectionTodoList> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Center(
-              child: Text('할 일을 추가해보세요!',
-                  style: AppTextStyles.bodySmall.copyWith(color: colors.textHint)),
+              child: Text(
+                '할 일을 추가해보세요!',
+                style: AppTextStyles.bodySmall.copyWith(color: colors.textHint),
+              ),
             ),
           ),
       ],
@@ -1306,13 +1369,19 @@ class _SectionHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title,
-              style: AppTextStyles.titleSmall.copyWith(color: colors.textPrimary)),
+          Text(
+            title,
+            style: AppTextStyles.titleSmall.copyWith(color: colors.textPrimary),
+          ),
           GestureDetector(
             onTap: onActionTap,
             behavior: HitTestBehavior.opaque,
-            child: Text(actionLabel,
-                style: AppTextStyles.labelMedium.copyWith(color: colors.textSecondary)),
+            child: Text(
+              actionLabel,
+              style: AppTextStyles.labelMedium.copyWith(
+                color: colors.textSecondary,
+              ),
+            ),
           ),
         ],
       ),

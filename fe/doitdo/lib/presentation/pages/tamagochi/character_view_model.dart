@@ -1,11 +1,10 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:doitdo/core/errors/exceptions.dart';
 import 'package:doitdo/core/utils/app_logger.dart';
 import 'package:doitdo/domain/entities/character.dart';
 import 'package:doitdo/domain/entities/evolution.dart';
 import 'package:doitdo/domain/repositories/character_repository.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// 현재 사용자의 캐릭터 상태.
 ///
@@ -21,14 +20,19 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
 
   // 진행 중인 API 요청을 추적하기 위한 변수
   Future<void>? _loadInFlight;
+  Future<Character?>? _fetchInFlight;
+  bool _hasLoadedCharacter = false;
 
   /// 외부에서 호출하는 안전한 load 메서드
-  Future<void> load() {
-    // 이미 진행 중인 요청이 있다면 해당 Future를 그대로 반환하여 중복 호출 방지
-    if (_loadInFlight != null) return _loadInFlight!;
+  Future<void> load({bool force = false}) {
+    if (!force && _hasLoadedCharacter && state.hasValue) {
+      return Future<void>.value();
+    }
 
-    _loadInFlight = _doLoad().whenComplete(() {
-      // 요청이 완료(성공/실패 무관)되면 in-flight 상태 초기화
+    // force가 아닐 때만 기존 진행 중인 요청을 재사용
+    if (!force && _loadInFlight != null) return _loadInFlight!;
+
+    _loadInFlight = _doLoad(force: force).whenComplete(() {
       _loadInFlight = null;
     });
 
@@ -36,10 +40,10 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
   }
 
   /// 실제 API 통신 및 상태 갱신을 담당하는 내부 메서드
-  Future<void> _doLoad() async {
+  Future<void> _doLoad({bool force = false}) async {
     state = const AsyncValue<Character?>.loading().copyWithPrevious(state);
     try {
-      final character = await _repository.getMyCharacter();
+      final character = await _fetchCharacter(force: force);
       state = AsyncValue.data(character);
     } on ServerException catch (e) {
       appLogger.d('character not yet received (server ${e.statusCode})');
@@ -53,9 +57,11 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
   /// data 로 갱신한다. todo 완료 후 exp 반영 체크처럼 사용자에게 로딩 스피너를
   /// 보일 필요가 없는 백그라운드 리프레시에 사용. 실패 시 기존 상태를 유지하고
   /// 로그만 남긴다.
-  Future<void> refresh() async {
+  Future<void> refresh({bool force = false}) async {
+    if (!force && _hasLoadedCharacter && state.hasValue) return;
+
     try {
-      final character = await _repository.getMyCharacter();
+      final character = await _fetchCharacter(force: force);
       state = AsyncValue.data(character);
     } on ServerException catch (e) {
       appLogger.d('character refresh: server ${e.statusCode} (silent)');
@@ -69,6 +75,7 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
     state = const AsyncValue<Character?>.loading().copyWithPrevious(state);
     try {
       final character = await _repository.receiveEgg();
+      _hasLoadedCharacter = true;
       state = AsyncValue.data(character);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -104,7 +111,7 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
   Future<bool> hatchEgg() async {
     try {
       await _repository.hatchEgg();
-      await load();
+      await load(force: true);
       return true;
     } catch (e, st) {
       appLogger.e('hatch failed', error: e, stackTrace: st);
@@ -120,7 +127,7 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
   Future<bool> renameCharacter(String name) async {
     try {
       await _repository.renameCharacter(name);
-      await load();
+      await load(force: true);
       return true;
     } catch (e, st) {
       appLogger.e('rename failed', error: e, stackTrace: st);
@@ -139,6 +146,7 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
   ///
   /// 실패 시 null 을 반환하고 이전 캐릭터 상태를 유지한다.
   bool _evolving = false;
+
   Future<Evolution?> evolve(int userCharacterId) async {
     if (_evolving) return null;
     _evolving = true;
@@ -157,16 +165,35 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
   Future<bool> farewell() async {
     try {
       await _repository.approveFarewell(approved: true);
-      await load();
+      await load(force: true);
       return true;
     } catch (e, st) {
       appLogger.e('farewell failed', error: e, stackTrace: st);
       return false;
     }
   }
+
+  Future<Character?> _fetchCharacter({bool force = false}) {
+    if (!force) {
+      final inFlight = _fetchInFlight;
+      if (inFlight != null) return inFlight;
+    }
+
+    final future = _repository
+        .getMyCharacter()
+        .then((character) {
+          _hasLoadedCharacter = true;
+          return character;
+        })
+        .whenComplete(() {
+          _fetchInFlight = null;
+        });
+    _fetchInFlight = future;
+    return future;
+  }
 }
 
 final characterViewModelProvider =
     StateNotifierProvider<CharacterViewModel, AsyncValue<Character?>>(
-  (ref) => CharacterViewModel(ref.watch(characterRepositoryProvider)),
-);
+      (ref) => CharacterViewModel(ref.watch(characterRepositoryProvider)),
+    );
