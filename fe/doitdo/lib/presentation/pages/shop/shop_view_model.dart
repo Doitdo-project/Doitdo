@@ -31,7 +31,7 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
 
   @override
   Future<ShopState> build() async {
-    _repo     = ref.watch(shopRepositoryProvider);
+    _repo = ref.watch(shopRepositoryProvider);
     _userRepo = ref.watch(userRepositoryProvider);
 
     // 상점 데이터 + 잔액 + 테마 목록을 병렬로 조회해 첫 진입 레이턴시 최소화.
@@ -40,14 +40,12 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
       _repo.getShopEntry(),
       _repo.listMyFurnitures(),
       _userRepo.getBalance().catchError((_) => 0),
-      _repo.listThemes().catchError(
-        (_) => const <FurnitureTheme>[],
-      ),
+      _repo.listThemes().catchError((_) => const <FurnitureTheme>[]),
     ]);
-    final entry        = results[0] as ShopEntry;
+    final entry = results[0] as ShopEntry;
     final myFurnitures = results[1] as List<UserFurnitureItem>;
-    final coins        = results[2] as int;
-    final themes       = results[3] as List<FurnitureTheme>;
+    final coins = results[2] as int;
+    final themes = results[3] as List<FurnitureTheme>;
 
     return _composeState(
       entry: entry,
@@ -72,16 +70,12 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
     if (s == null || s.selectedTab == tab) return;
     if (tab == ShopTab.theme) {
       // 가구 탭 → 테마 탭: 가구 멀티 미리보기 해제 (방 영역을 테마가 차지).
-      state = AsyncData(s.copyWith(
-        selectedTab: tab,
-        previewingItemIds: const {},
-      ));
+      state = AsyncData(
+        s.copyWith(selectedTab: tab, previewingItemIds: const {}),
+      );
     } else {
       // 테마 탭 → 가구 탭: 테마 미리보기 해제 (방 영역을 가구 미리보기가 차지).
-      state = AsyncData(s.copyWith(
-        selectedTab: tab,
-        clearThemePreview: true,
-      ));
+      state = AsyncData(s.copyWith(selectedTab: tab, clearThemePreview: true));
     }
   }
 
@@ -105,10 +99,9 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
     } else {
       next[item.category] = itemId;
     }
-    state = AsyncData(s.copyWith(
-      previewingItemIds: next,
-      clearThemePreview: true,
-    ));
+    state = AsyncData(
+      s.copyWith(previewingItemIds: next, clearThemePreview: true),
+    );
   }
 
   /// 테마 카드 미리보기 토글. 같은 테마를 한 번 더 탭하면 해제.
@@ -137,11 +130,13 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
       // 테마를 탭했다면 그쪽이 먼저 들어왔을 수 있으므로 valueOrNull 다시 확인.
       final cur = state.valueOrNull;
       if (cur == null) return false;
-      state = AsyncData(cur.copyWith(
-        previewingItemIds: const {},
-        previewingThemeCode: themeCode,
-        themePreviewItems: _placementsToShopItems(placements),
-      ));
+      state = AsyncData(
+        cur.copyWith(
+          previewingItemIds: const {},
+          previewingThemeCode: themeCode,
+          themePreviewItems: _placementsToShopItems(placements),
+        ),
+      );
       return true;
     } catch (e) {
       onFailure?.call(_errorMessage(e));
@@ -202,12 +197,17 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
 
     try {
       final purchase = await _repo.purchaseTheme(themeCode);
-      await _repo.placeTheme(themeCode);
+      final placement = await _repo.placeTheme(themeCode);
+      if (placement.items.isNotEmpty) {
+        await ref.read(myRoomProvider.notifier).replaceWith(placement.items);
+      }
       await _refresh(preserveUi: s, coinsOverride: purchase.balance);
       // myRoomProvider 가 cache-first 라 invalidate 하면 build() 가 캐시(직전
       // 상태) 를 한 번 emit 한 뒤 fresh 를 받아 깜빡임이 생긴다. notifier 의
       // refreshFromNetwork 로 fresh 만 떨어뜨려 변경이 즉시 반영되게 한다.
-      unawaited(ref.read(myRoomProvider.notifier).refreshFromNetwork());
+      if (placement.items.isEmpty) {
+        unawaited(ref.read(myRoomProvider.notifier).refreshFromNetwork());
+      }
       // 적용 후 미리보기 상태는 의미 없음 — 카드 강조도 빠지게 명시적으로 해제.
       final cur = state.valueOrNull;
       if (cur != null) {
@@ -236,12 +236,17 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
     if (theme == null) return false;
 
     try {
-      await _repo.placeTheme(themeCode);
+      final placement = await _repo.placeTheme(themeCode);
+      if (placement.items.isNotEmpty) {
+        await ref.read(myRoomProvider.notifier).replaceWith(placement.items);
+      }
       await _refresh(preserveUi: s);
       // myRoomProvider 가 cache-first 라 invalidate 하면 build() 가 캐시(직전
       // 상태) 를 한 번 emit 한 뒤 fresh 를 받아 깜빡임이 생긴다. notifier 의
       // refreshFromNetwork 로 fresh 만 떨어뜨려 변경이 즉시 반영되게 한다.
-      unawaited(ref.read(myRoomProvider.notifier).refreshFromNetwork());
+      if (placement.items.isEmpty) {
+        unawaited(ref.read(myRoomProvider.notifier).refreshFromNetwork());
+      }
       // 적용 후 미리보기 상태는 의미 없음 — 카드 강조도 빠지게 명시적으로 해제.
       final cur = state.valueOrNull;
       if (cur != null) {
@@ -263,9 +268,9 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
   /// - 백그라운드: 실제 서버 호출
   /// - 실패 시: 원래 상태(s)로 롤백 + [onFailure] 콜백 호출
   Future<bool> purchaseAndPlace(
-      String itemId, {
-        void Function(String message)? onFailure,
-      }) async {
+    String itemId, {
+    void Function(String message)? onFailure,
+  }) async {
     final s = state.valueOrNull;
     if (s == null) return false;
     final item = _findItem(s, itemId);
@@ -275,16 +280,18 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
     //    같은 카테고리에 이미 배치된 아이템이 있다면 BE 가 자동 교체하므로
     //    낙관 업데이트에서도 함께 owned 로 강등 — 안 그러면 _refresh 가 돌아올 때까지
     //    "배치중" 뱃지가 두 카드에 동시에 떠 보인다.
-    state = AsyncData(s.copyWith(
-      coins: s.coins - item.price,
-      items: s.items.map((it) {
-        if (it.id == itemId) return it.copyWith(status: ItemStatus.placed);
-        if (it.category == item.category && it.status == ItemStatus.placed) {
-          return it.copyWith(status: ItemStatus.owned);
-        }
-        return it;
-      }).toList(),
-    ));
+    state = AsyncData(
+      s.copyWith(
+        coins: s.coins - item.price,
+        items: s.items.map((it) {
+          if (it.id == itemId) return it.copyWith(status: ItemStatus.placed);
+          if (it.category == item.category && it.status == ItemStatus.placed) {
+            return it.copyWith(status: ItemStatus.owned);
+          }
+          return it;
+        }).toList(),
+      ),
+    );
 
     // 2. 서버 호출 (백그라운드)
     try {
@@ -310,20 +317,25 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
   /// 낙관 업데이트는 구매 직후 owned 상태로 표시하고 코인을 차감한다.
   /// 실패 시 원래 상태로 롤백 + [onFailure] 콜백 호출 (UX 패턴은 purchaseAndPlace 와 동일).
   Future<bool> purchaseOnly(
-      String itemId, {
-        void Function(String message)? onFailure,
-      }) async {
+    String itemId, {
+    void Function(String message)? onFailure,
+  }) async {
     final s = state.valueOrNull;
     if (s == null) return false;
     final item = _findItem(s, itemId);
     if (item == null || item.status != ItemStatus.notOwned) return false;
 
-    state = AsyncData(s.copyWith(
-      coins: s.coins - item.price,
-      items: s.items.map((it) =>
-        it.id == itemId ? it.copyWith(status: ItemStatus.owned) : it,
-      ).toList(),
-    ));
+    state = AsyncData(
+      s.copyWith(
+        coins: s.coins - item.price,
+        items: s.items
+            .map(
+              (it) =>
+                  it.id == itemId ? it.copyWith(status: ItemStatus.owned) : it,
+            )
+            .toList(),
+      ),
+    );
 
     try {
       final purchase = await _repo.purchaseFurniture(item.furnitureId);
@@ -392,7 +404,7 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
       return '네트워크 연결을 확인해주세요.';
     } else if (e is ServerException) {
       // 서버가 내려준 메시지가 한국어면 그대로 노출, 아니면 공용 문구.
-      final msg = e.message ?? '';
+      final msg = e.message;
       return RegExp(r'[가-힣]').hasMatch(msg)
           ? msg
           : '서버 오류가 발생했어요. 잠시 후 다시 시도해주세요.';
@@ -415,9 +427,7 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
     final results = await Future.wait([
       _repo.getShopEntry(),
       _repo.listMyFurnitures(),
-      _repo.listThemes().catchError(
-        (_) => preserveUi.themes,
-      ),
+      _repo.listThemes().catchError((_) => preserveUi.themes),
     ]);
     final entry = results[0] as ShopEntry;
     final myFurnitures = results[1] as List<UserFurnitureItem>;
@@ -427,17 +437,19 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
     // 백그라운드 처리 중 사용자가 카테고리/탭을 바꿨다면 그쪽을 그대로 유지.
     final currentUi = state.valueOrNull ?? preserveUi;
 
-    state = AsyncData(_composeState(
-      entry: entry,
-      myFurnitures: myFurnitures,
-      coins: coinsOverride ?? currentUi.coins,
-      themes: themes,
-      preserveTab: currentUi.selectedTab,
-      preserveSelected: currentUi.selectedCategory,
-      preservePreviewing: currentUi.previewingItemIds,
-      preserveThemeCode: currentUi.previewingThemeCode,
-      preserveThemeItems: currentUi.themePreviewItems,
-    ));
+    state = AsyncData(
+      _composeState(
+        entry: entry,
+        myFurnitures: myFurnitures,
+        coins: coinsOverride ?? currentUi.coins,
+        themes: themes,
+        preserveTab: currentUi.selectedTab,
+        preserveSelected: currentUi.selectedCategory,
+        preservePreviewing: currentUi.previewingItemIds,
+        preserveThemeCode: currentUi.previewingThemeCode,
+        preserveThemeItems: currentUi.themePreviewItems,
+      ),
+    );
   }
 
   static ShopItem? _findItem(ShopState s, String id) {
@@ -463,15 +475,17 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
     List<RoomFurniturePlacement> placements,
   ) {
     return placements
-        .map((p) => ShopItem(
-              id: 'theme_${p.furnitureId}',
-              furnitureId: p.furnitureId,
-              name: p.name,
-              category: ShopCategory.fromServer(p.category),
-              price: 0,
-              status: ItemStatus.notOwned,
-              imageUrl: p.imageUrl,
-            ))
+        .map(
+          (p) => ShopItem(
+            id: 'theme_${p.furnitureId}',
+            furnitureId: p.furnitureId,
+            name: p.name,
+            category: ShopCategory.fromServer(p.category),
+            price: 0,
+            status: ItemStatus.notOwned,
+            imageUrl: p.imageUrl,
+          ),
+        )
         .toList(growable: false);
   }
 
@@ -503,17 +517,19 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
     for (final f in entry.furnitures) {
       final ufId = ufIdByFurnitureId[f.furnitureId];
       final placementId = ufId != null ? placementIdByUfId[ufId] : null;
-      items.add(ShopItem(
-        id: 'shop_${f.furnitureId}',
-        furnitureId: f.furnitureId,
-        userFurnitureId: ufId,
-        placementId: placementId,
-        name: f.name,
-        category: ShopCategory.fromServer(f.category),
-        price: f.price,
-        status: _mapStatus(f.status),
-        imageUrl: f.thumbnailUrl.isNotEmpty ? f.thumbnailUrl : f.imageUrl,
-      ));
+      items.add(
+        ShopItem(
+          id: 'shop_${f.furnitureId}',
+          furnitureId: f.furnitureId,
+          userFurnitureId: ufId,
+          placementId: placementId,
+          name: f.name,
+          category: ShopCategory.fromServer(f.category),
+          price: f.price,
+          status: _mapStatus(f.status),
+          imageUrl: f.thumbnailUrl.isNotEmpty ? f.thumbnailUrl : f.imageUrl,
+        ),
+      );
     }
 
     // listThemes 응답이 furnitures[].category 를 안 내려주는 상태(BE MR !285)
@@ -524,30 +540,35 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
       for (final f in entry.furnitures) f.furnitureId: f,
     };
     final enrichedThemes = themes
-        .map((t) => FurnitureTheme(
-              themeCode: t.themeCode,
-              themeName: t.themeName,
-              thumbnailUrl: t.thumbnailUrl,
-              furnitureCount: t.furnitureCount,
-              ownedCount: t.ownedCount,
-              totalPrice: t.totalPrice,
-              purchasePrice: t.purchasePrice,
-              alreadyOwned: t.alreadyOwned,
-              furnitures: t.furnitures.map((tf) {
-                final catalog = catalogByFurnitureId[tf.furnitureId];
-                return ThemeFurniture(
-                  furnitureId: tf.furnitureId,
-                  name: tf.name,
-                  category:
-                      tf.category.isNotEmpty ? tf.category : (catalog?.category ?? ''),
-                  price: tf.price,
-                  imageUrl: tf.imageUrl.isNotEmpty
-                      ? tf.imageUrl
-                      : (catalog?.thumbnailUrl ?? catalog?.imageUrl ?? ''),
-                  owned: tf.owned,
-                );
-              }).toList(growable: false),
-            ))
+        .map(
+          (t) => FurnitureTheme(
+            themeCode: t.themeCode,
+            themeName: t.themeName,
+            thumbnailUrl: t.thumbnailUrl,
+            furnitureCount: t.furnitureCount,
+            ownedCount: t.ownedCount,
+            totalPrice: t.totalPrice,
+            purchasePrice: t.purchasePrice,
+            alreadyOwned: t.alreadyOwned,
+            furnitures: t.furnitures
+                .map((tf) {
+                  final catalog = catalogByFurnitureId[tf.furnitureId];
+                  return ThemeFurniture(
+                    furnitureId: tf.furnitureId,
+                    name: tf.name,
+                    category: tf.category.isNotEmpty
+                        ? tf.category
+                        : (catalog?.category ?? ''),
+                    price: tf.price,
+                    imageUrl: tf.imageUrl.isNotEmpty
+                        ? tf.imageUrl
+                        : (catalog?.thumbnailUrl ?? catalog?.imageUrl ?? ''),
+                    owned: tf.owned,
+                  );
+                })
+                .toList(growable: false),
+          ),
+        )
         .toList(growable: false);
 
     return ShopState(
@@ -576,6 +597,6 @@ class ShopViewModel extends AutoDisposeAsyncNotifier<ShopState> {
 }
 
 final shopViewModelProvider =
-AsyncNotifierProvider.autoDispose<ShopViewModel, ShopState>(
-  ShopViewModel.new,
-);
+    AsyncNotifierProvider.autoDispose<ShopViewModel, ShopState>(
+      ShopViewModel.new,
+    );

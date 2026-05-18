@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'package:doitdo/domain/entities/room_placement.dart';
+
 /// 상점에서 선택 가능한 가구 "테마" 한 항목.
 ///
 /// 테마 = 같은 컨셉(가을/벚꽃/사이버 등) 으로 묶인 여러 카테고리의 가구 세트.
@@ -111,9 +113,11 @@ class ThemePlacementResult {
     required this.themeCode,
     required this.themeName,
     required this.placedCount,
+    required this.items,
   });
 
   final String themeCode;
   final String themeName;
   final int placedCount;
+  final List<RoomFurniturePlacement> items;
 }
