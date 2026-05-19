@@ -215,6 +215,8 @@ class TamagotchiServiceImplTest {
 	@Test
 	void getCurrentCharacterReturnsCanFarewellFalseWhenFarewellAvailableAtIsFuture() {
 		TamagotchiServiceImpl service = service();
+		LocalDateTime now = LocalDateTime.of(2026, 5, 19, 15, 0);
+		service.setClock(fixedClock(now));
 		Long userId = 1L;
 		UserCharacter userCharacter = UserCharacter.builder()
 			.userCharacterId(10L)
@@ -224,7 +226,7 @@ class TamagotchiServiceImplTest {
 			.currentExp(125)
 			.isActive(true)
 			.isDeleted(false)
-			.farewellAvailableAt(LocalDateTime.now().plusMinutes(10))
+			.farewellAvailableAt(now.plusMinutes(10))
 			.build();
 		Character adultCharacter = Character.builder()
 			.characterId(4L)
@@ -246,6 +248,8 @@ class TamagotchiServiceImplTest {
 	@Test
 	void getCurrentCharacterReturnsCanFarewellTrueWhenFarewellAvailableAtIsPast() {
 		TamagotchiServiceImpl service = service();
+		LocalDateTime now = LocalDateTime.of(2026, 5, 19, 15, 0);
+		service.setClock(fixedClock(now));
 		Long userId = 1L;
 		UserCharacter userCharacter = UserCharacter.builder()
 			.userCharacterId(10L)
@@ -255,7 +259,7 @@ class TamagotchiServiceImplTest {
 			.currentExp(125)
 			.isActive(true)
 			.isDeleted(false)
-			.farewellAvailableAt(LocalDateTime.now().minusMinutes(1))
+			.farewellAvailableAt(now.minusMinutes(1))
 			.build();
 		Character adultCharacter = Character.builder()
 			.characterId(4L)
@@ -831,6 +835,8 @@ class TamagotchiServiceImplTest {
 	@Test
 	void approveIndependenceUpdatesAdultToEggAndReturnsFarewellResp() {
 		TamagotchiServiceImpl service = service();
+		LocalDateTime now = LocalDateTime.of(2026, 5, 19, 15, 0);
+		service.setClock(fixedClock(now));
 		Long userId = 1L;
 		UserCharacter adultUserCharacter = UserCharacter.builder()
 			.userCharacterId(30L)
@@ -840,7 +846,7 @@ class TamagotchiServiceImplTest {
 			.currentExp(125)
 			.isActive(true)
 			.isDeleted(false)
-			.farewellAvailableAt(LocalDateTime.now().minusMinutes(1))
+			.farewellAvailableAt(now.minusMinutes(1))
 			.build();
 		Character adultCharacter = Character.builder()
 			.characterId(4L)
@@ -916,6 +922,8 @@ class TamagotchiServiceImplTest {
 	@Test
 	void approveIndependenceRejectsWhenFarewellAvailableAtIsFuture() {
 		TamagotchiServiceImpl service = service();
+		LocalDateTime now = LocalDateTime.of(2026, 5, 19, 15, 0);
+		service.setClock(fixedClock(now));
 		Long userId = 1L;
 		UserCharacter adultUserCharacter = UserCharacter.builder()
 			.userCharacterId(30L)
@@ -925,7 +933,7 @@ class TamagotchiServiceImplTest {
 			.currentExp(125)
 			.isActive(true)
 			.isDeleted(false)
-			.farewellAvailableAt(LocalDateTime.now().plusMinutes(10))
+			.farewellAvailableAt(now.plusMinutes(10))
 			.build();
 		Character adultCharacter = Character.builder()
 			.characterId(4L)
