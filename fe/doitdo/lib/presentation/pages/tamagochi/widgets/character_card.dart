@@ -165,6 +165,7 @@ class CharacterCard extends StatelessWidget {
               !suppressPoop;
           final showBrush =
               character != null && !character!.isEgg && isCleaningPoop;
+          final isEgg = character?.isEgg ?? false;
 
           return Stack(
             children: [
@@ -194,27 +195,38 @@ class CharacterCard extends StatelessWidget {
               // 꼬리가 늘 캐릭터 머리를 가리키는 형태가 유지된다. 말풍선 본체의
               // Transform.translate(0, 10.h) 는 그대로 — layout 슬롯은 안 흔들고
               // 렌더링만 살짝 아래로 밀어 캐릭터 머리에 겹치게 하는 시각 트릭이다.
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: floorInset,
-                child: _WalkingSlot(
-                  enableWalk: _shouldWalk,
-                  horizontalOnly: _hasWalkAsset,
-                  reverseMotionFacing: _shouldReverseMotionFacing,
-                  walkStartDelay: _walkStartDelay,
-                  walkRestartDelay: _walkRestartDelay,
-                  onCharacterTap: _isGrown ? onCharacterTap : null,
-                  bubble: _speechText != null
-                      ? Transform.translate(
-                          offset: Offset(0, 10.h),
-                          child: _AutoToggledBubble(text: _speechText!),
-                        )
-                      : null,
-                  characterBuilder: (_, isWalking) =>
-                      _buildCharacterSlot(isWalking),
+              if (isEgg)
+                Positioned.fill(
+                  top: topSafePadding,
+                  child: Center(
+                    child: Transform.translate(
+                      offset: Offset(0, 64.h), // 숫자를 키우면 더 아래로 내려감
+                      child: _buildCharacterSlot(false),
+                    ),
+                  ),
+                )
+              else
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: floorInset,
+                  child: _WalkingSlot(
+                    enableWalk: _shouldWalk,
+                    horizontalOnly: _hasWalkAsset,
+                    reverseMotionFacing: _shouldReverseMotionFacing,
+                    walkStartDelay: _walkStartDelay,
+                    walkRestartDelay: _walkRestartDelay,
+                    onCharacterTap: _isGrown ? onCharacterTap : null,
+                    bubble: _speechText != null
+                        ? Transform.translate(
+                            offset: Offset(0, 10.h),
+                            child: _AutoToggledBubble(text: _speechText!),
+                          )
+                        : null,
+                    characterBuilder: (_, isWalking) =>
+                        _buildCharacterSlot(isWalking),
+                  ),
                 ),
-              ),
 
               // 우측 상단 메뉴 — 캐릭터 수령 이후에만 노출.
               // PixelIconBox 두 개가 늘 떠있어서 뒤에 놓인 가구(TV 등)가 가려지던
@@ -325,7 +337,7 @@ class CharacterCard extends StatelessWidget {
       return const _UnreceivedSlot();
     }
     if (c.isEgg) {
-      return _EggSlot(imageUrl: c.thumbnailUrl, onTap: onEggTap);
+      return _EggSlot(onTap: onEggTap);
     }
     // 평상시 정적 thumbnailUrl(png) + 3-5초 간격 랜덤 깜빡임 (로컬 EYE gif).
     // 탭 후 서버가 내려준 동작 gif (idle 등) 가 있으면 그 url 로 잠시 swap.
@@ -543,50 +555,88 @@ class _UnreceivedSlot extends StatelessWidget {
 /// 슬롯 높이는 [_GrownCharacter] 와 동일한 112.h. 알 이미지는 슬롯 하단에
 /// 붙여 캐릭터 부화 후의 발 위치와 같은 row 에 닿게 하고, "톡톡 두드려보세요"
 /// 힌트는 알 머리 위로 살짝 띄워 말풍선 톤으로 보이게 한다.
-class _EggSlot extends StatelessWidget {
-  const _EggSlot({required this.imageUrl, this.onTap});
+class _EggSlot extends StatefulWidget {
+  const _EggSlot({this.onTap});
 
-  final String imageUrl;
   final VoidCallback? onTap;
 
   @override
+  State<_EggSlot> createState() => _EggSlotState();
+}
+
+class _EggSlotState extends State<_EggSlot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _wiggle;
+  Timer? _wiggleStartTimer;
+  Timer? _wiggleTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _wiggle = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 520),
+    );
+    _wiggleStartTimer = Timer(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
+      _runWiggle();
+      _wiggleTimer = Timer.periodic(
+        const Duration(milliseconds: 2600),
+        (_) => _runWiggle(),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _wiggleStartTimer?.cancel();
+    _wiggleTimer?.cancel();
+    _wiggle.dispose();
+    super.dispose();
+  }
+
+  void _runWiggle() {
+    if (!mounted) return;
+    _wiggle.forward(from: 0);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final disableAnimations = MediaQuery.disableAnimationsOf(context);
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        height: 140.h,
-        child: Stack(
-          clipBehavior: Clip.none,
+        height: 118.h,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Center(
-                child: _EggImage(imageUrl: imageUrl, size: 100.h),
-              ),
+            AnimatedBuilder(
+              animation: _wiggle,
+              builder: (context, child) {
+                if (disableAnimations) return child!;
+                final t = Curves.easeOutCubic.transform(_wiggle.value);
+                final wave = sin(t * pi * 4) * (1 - t);
+                return Transform.translate(
+                  offset: Offset(wave * 4.w, 0),
+                  child: Transform.rotate(angle: wave * 0.06, child: child),
+                );
+              },
+              child: _EggImage(size: 72.h),
             ),
-            Positioned(
-              top: 140.h,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 10.w,
-                    vertical: 3.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.45),
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                  child: Text(
-                    '알을 톡톡 두드려보세요',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: Colors.white,
-                      letterSpacing: 0.5,
-                    ),
+            SizedBox(height: 4.h),
+            Center(
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 3.h),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Text(
+                  '알을 톡톡 두드려보세요',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: Colors.white,
+                    letterSpacing: 0.5,
                   ),
                 ),
               ),
@@ -599,28 +649,18 @@ class _EggSlot extends StatelessWidget {
 }
 
 class _EggImage extends StatelessWidget {
-  const _EggImage({required this.imageUrl, required this.size});
+  const _EggImage({required this.size});
 
-  final String imageUrl;
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl.isEmpty) return _fallback();
-    return CachedNetworkImage(
-      imageUrl: imageUrl,
+    return Image.asset(
+      'assets/images/egg_1.png',
       height: size,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.medium,
-      // 알 이미지는 ~100.h (3x DPI 환산 ≈ 300px). 여유 잡아 400 캡 — 메모리/디코드
-      // 부담을 줄이면서 시각 품질은 유지.
-      memCacheHeight: 400,
-      // 디스크 캐시 적중시엔 페이드 없이 즉시. 첫 다운로드시에도 placeholder 없이
-      // 그대로 빈 자리에서 등장 — 알 상태는 어차피 진입 동선이 짧다.
-      fadeInDuration: Duration.zero,
-      fadeOutDuration: Duration.zero,
-      placeholder: (_, _) => const SizedBox.shrink(),
-      errorWidget: (_, _, _) => _fallback(),
+      errorBuilder: (_, _, _) => _fallback(),
     );
   }
 
