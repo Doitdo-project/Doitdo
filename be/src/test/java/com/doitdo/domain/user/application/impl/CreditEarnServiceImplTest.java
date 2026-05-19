@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
+import com.doitdo.domain.user.application.dto.EarnResult;
 import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.entity.WalletEarnLog;
 import com.doitdo.domain.user.entity.WalletEarnSource;
@@ -59,9 +60,11 @@ class CreditEarnServiceImplTest {
 				any(LocalDateTime.class)
 		)).willReturn(40);
 
-		int earnedAmount = service().tryEarn(userId, WalletEarnSource.PET_TOUCH, 50, 100L, false);
+		EarnResult result = service().tryEarn(userId, WalletEarnSource.PET_TOUCH, 50, 100L, false);
 
-		assertThat(earnedAmount).isEqualTo(50);
+		assertThat(result.earnedAmount()).isEqualTo(50);
+		assertThat(result.balance()).isEqualTo(50);
+		assertThat(result.rewarded()).isTrue();
 		verify(wallet).addBalance(50);
 		ArgumentCaptor<WalletEarnLog> logCaptor = ArgumentCaptor.forClass(WalletEarnLog.class);
 		verify(walletEarnLogRepository).save(logCaptor.capture());
@@ -87,9 +90,11 @@ class CreditEarnServiceImplTest {
 				any(LocalDateTime.class)
 		)).willReturn(100);
 
-		int earnedAmount = service().tryEarn(userId, WalletEarnSource.PET_TOUCH, 50, 100L, false);
+		EarnResult result = service().tryEarn(userId, WalletEarnSource.PET_TOUCH, 50, 100L, false);
 
-		assertThat(earnedAmount).isZero();
+		assertThat(result.earnedAmount()).isZero();
+		assertThat(result.balance()).isZero();
+		assertThat(result.rewarded()).isFalse();
 		verify(wallet, never()).addBalance(anyInt());
 		verify(walletEarnLogRepository, never()).save(any(WalletEarnLog.class));
 	}
@@ -109,9 +114,11 @@ class CreditEarnServiceImplTest {
 				any(LocalDateTime.class)
 		)).willReturn(100);
 
-		int earnedAmount = service().tryEarn(userId, WalletEarnSource.TODO_COMPLETION, 20, 200L, false);
+		EarnResult result = service().tryEarn(userId, WalletEarnSource.TODO_COMPLETION, 20, 200L, false);
 
-		assertThat(earnedAmount).isZero();
+		assertThat(result.earnedAmount()).isZero();
+		assertThat(result.balance()).isZero();
+		assertThat(result.rewarded()).isFalse();
 		verify(wallet, never()).addBalance(anyInt());
 		verify(walletEarnLogRepository, never()).save(any(WalletEarnLog.class));
 	}
@@ -137,10 +144,36 @@ class CreditEarnServiceImplTest {
 				any(LocalDateTime.class)
 		)).willReturn(190);
 
-		int earnedAmount = service().tryEarn(userId, WalletEarnSource.TODO_COMPLETION, 20, 200L, false);
+		EarnResult result = service().tryEarn(userId, WalletEarnSource.TODO_COMPLETION, 20, 200L, false);
 
-		assertThat(earnedAmount).isZero();
+		assertThat(result.earnedAmount()).isZero();
+		assertThat(result.balance()).isZero();
+		assertThat(result.rewarded()).isFalse();
 		verify(wallet, never()).addBalance(anyInt());
+		verify(walletEarnLogRepository, never()).save(any(WalletEarnLog.class));
+	}
+
+	@Test
+	void tryEarn_todoCompletionSameRefAlreadyEarned_returnsZeroWithoutAddingBalance() {
+		Long userId = 1L;
+		UserWallet wallet = spy(UserWallet.builder()
+				.userId(userId)
+				.balance(40)
+				.build());
+		given(userWalletRepository.findByUserIdForUpdate(userId)).willReturn(Optional.of(wallet));
+		given(walletEarnLogRepository.existsByUserIdAndSourceAndRefId(
+				userId,
+				WalletEarnSource.TODO_COMPLETION,
+				200L
+		)).willReturn(true);
+
+		EarnResult result = service().tryEarn(userId, WalletEarnSource.TODO_COMPLETION, 20, 200L, false);
+
+		assertThat(result.earnedAmount()).isZero();
+		assertThat(result.balance()).isEqualTo(40);
+		assertThat(result.rewarded()).isFalse();
+		verify(wallet, never()).addBalance(anyInt());
+		verify(walletEarnLogRepository, never()).sumAmountByUserIdAndSourceAndDate(any(), any(), any(), any());
 		verify(walletEarnLogRepository, never()).save(any(WalletEarnLog.class));
 	}
 
@@ -153,9 +186,11 @@ class CreditEarnServiceImplTest {
 				.build());
 		given(userWalletRepository.findByUserIdForUpdate(userId)).willReturn(Optional.of(wallet));
 
-		int earnedAmount = service().tryEarn(userId, WalletEarnSource.SIGNUP_BONUS, 100, null, true);
+		EarnResult result = service().tryEarn(userId, WalletEarnSource.SIGNUP_BONUS, 100, null, true);
 
-		assertThat(earnedAmount).isEqualTo(100);
+		assertThat(result.earnedAmount()).isEqualTo(100);
+		assertThat(result.balance()).isEqualTo(100);
+		assertThat(result.rewarded()).isTrue();
 		verify(wallet).addBalance(100);
 		verify(walletEarnLogRepository, never()).sumAmountByUserIdAndSourceAndDate(
 				any(), any(), any(), any()
@@ -172,9 +207,11 @@ class CreditEarnServiceImplTest {
 				.build());
 		given(userWalletRepository.findByUserIdForUpdate(userId)).willReturn(Optional.of(wallet));
 
-		int earnedAmount = service().tryEarn(userId, WalletEarnSource.STREAK_7DAY, 500, 50L, true);
+		EarnResult result = service().tryEarn(userId, WalletEarnSource.STREAK_7DAY, 500, 50L, true);
 
-		assertThat(earnedAmount).isEqualTo(500);
+		assertThat(result.earnedAmount()).isEqualTo(500);
+		assertThat(result.balance()).isEqualTo(500);
+		assertThat(result.rewarded()).isTrue();
 		verify(wallet).addBalance(500);
 		verify(walletEarnLogRepository, never()).sumAmountByUserIdAndSourceAndDate(
 				any(), any(), any(), any()

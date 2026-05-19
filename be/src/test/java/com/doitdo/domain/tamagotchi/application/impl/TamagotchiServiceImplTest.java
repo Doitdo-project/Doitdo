@@ -48,6 +48,7 @@ import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterHistoryRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.user.application.CreditEarnService;
+import com.doitdo.domain.user.application.dto.EarnResult;
 import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.entity.User;
@@ -372,7 +373,7 @@ class TamagotchiServiceImplTest {
 		given(characterActionRepository.findAllByCharacterIdAndActionType(9L, "IDLE"))
 			.willReturn(List.of(action));
 		given(creditEarnService.tryEarn(userId, WalletEarnSource.PET_TOUCH, 50, 9L, false))
-			.willReturn(50);
+			.willReturn(new EarnResult(50, 130, true));
 		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet(userId, 130)));
 
 		int earnedSum = 0;
@@ -405,7 +406,7 @@ class TamagotchiServiceImplTest {
 		given(characterActionRepository.findAllByCharacterIdAndActionType(9L, "IDLE"))
 			.willReturn(List.of(idleAction()));
 		given(creditEarnService.tryEarn(userId, WalletEarnSource.PET_TOUCH, 50, 9L, false))
-			.willReturn(50);
+			.willReturn(new EarnResult(50, 110, true));
 		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet(userId, 110)));
 
 		service.setClock(fixedClock(baseTime));
@@ -473,7 +474,7 @@ class TamagotchiServiceImplTest {
 		given(characterActionRepository.findAllByCharacterIdAndActionType(9L, "IDLE"))
 			.willReturn(List.of(idleAction()));
 		given(creditEarnService.tryEarn(userId, WalletEarnSource.PET_TOUCH, 50, 9L, false))
-			.willReturn(50);
+			.willReturn(new EarnResult(50, 140, true));
 		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet(userId, 140)));
 
 		service.setClock(fixedClock(now));

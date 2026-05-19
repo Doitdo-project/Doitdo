@@ -31,6 +31,9 @@ import com.doitdo.domain.todo.repository.TodoListQueryRepository;
 import com.doitdo.domain.todo.repository.TodoRepository;
 import com.doitdo.domain.todo.repository.TodoRepository.ExcludedDateProjection;
 import com.doitdo.domain.todo.repository.projection.TodoListRow;
+import com.doitdo.domain.user.application.CreditEarnService;
+import com.doitdo.domain.user.application.dto.EarnResult;
+import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.global.cache.CacheEvictHelper;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TodoErrorCode;
@@ -74,6 +77,9 @@ class TodoServiceImplTest {
 	private UserStreakService userStreakService;
 
 	@Mock
+	private CreditEarnService creditEarnService;
+
+	@Mock
 	private ApplicationEventPublisher eventPublisher;
 
 	@Mock
@@ -91,6 +97,7 @@ class TodoServiceImplTest {
 				snoozeHistoryRepository,
 				recurrenceService,
 				userStreakService,
+				creditEarnService,
 				eventPublisher,
 				cacheEvictHelper);
 	}
@@ -502,38 +509,51 @@ class TodoServiceImplTest {
 
 	@Test
 	void changeStatusToDoneMarksFirstCompletedDateBeforePublishingEvent() {
-		Todo todo = normalTodo("09:00");
+		Todo todo = normalTodo("09:00", LocalDate.now(java.time.ZoneId.of("Asia/Seoul")));
 		given(todoRepository.findByTodoIdAndIsDeletedFalse(1L)).willReturn(Optional.of(todo));
+		given(creditEarnService.tryEarn(1L, WalletEarnSource.TODO_COMPLETION, 20, 1L, false))
+				.willReturn(new EarnResult(20, 120, true));
 		given(snoozeHistoryRepository.countByTodoId(1L)).willReturn(0L);
 
 		LocalDate before = LocalDate.now(java.time.ZoneId.of("Asia/Seoul"));
-		service.changeStatus(1L, 1L, new TodoStatusChangeReq(TodoStatus.DONE));
+		TodoDetailResp resp = service.changeStatus(1L, 1L, new TodoStatusChangeReq(TodoStatus.DONE));
 		LocalDate after = LocalDate.now(java.time.ZoneId.of("Asia/Seoul"));
 
 		assertThat(todo.getStatus()).isEqualTo(TodoStatus.DONE);
 		assertThat(todo.getFirstCompletedDate()).isIn(before, after);
+		assertThat(resp.earnedCoin()).isEqualTo(20);
+		assertThat(resp.rewarded()).isTrue();
+		assertThat(resp.walletBalance()).isEqualTo(120);
 		verify(userStreakService).recordActivity(1L);
+		verify(creditEarnService).tryEarn(1L, WalletEarnSource.TODO_COMPLETION, 20, 1L, false);
 		verify(eventPublisher).publishEvent(any(TodoCompletedEvent.class));
 	}
 
 	@Test
 	void changeStatusForRecurringMaterializesOccurrenceAndMarksOnlyInstanceDone() {
 		Todo master = recurringMaster();
-		Todo instance = recurringInstance(master, LocalDate.parse("2026-05-12"));
+		LocalDate occurrenceDate = LocalDate.now(java.time.ZoneId.of("Asia/Seoul"));
+		Todo instance = recurringInstance(master, occurrenceDate);
 		given(todoRepository.findByTodoIdAndIsDeletedFalse(10L)).willReturn(Optional.of(master));
-		given(recurrenceService.materializeRecurringOccurrence(1L, master, LocalDate.parse("2026-05-12")))
+		given(recurrenceService.materializeRecurringOccurrence(1L, master, occurrenceDate))
 				.willReturn(instance);
+		given(creditEarnService.tryEarn(1L, WalletEarnSource.TODO_COMPLETION, 20, 25L, false))
+				.willReturn(new EarnResult(20, 220, true));
 		given(snoozeHistoryRepository.countByTodoId(25L)).willReturn(0L);
 
 		TodoDetailResp resp = service.changeStatus(
 				1L,
 				10L,
-				new TodoStatusChangeReq(TodoStatus.DONE, LocalDate.parse("2026-05-12")));
+				new TodoStatusChangeReq(TodoStatus.DONE, occurrenceDate));
 
 		assertThat(master.getStatus()).isEqualTo(TodoStatus.TODO);
 		assertThat(instance.getStatus()).isEqualTo(TodoStatus.DONE);
 		assertThat(resp.todoId()).isEqualTo(25L);
+		assertThat(resp.earnedCoin()).isEqualTo(20);
+		assertThat(resp.rewarded()).isTrue();
+		assertThat(resp.walletBalance()).isEqualTo(220);
 		verify(userStreakService).recordActivity(1L);
+		verify(creditEarnService).tryEarn(1L, WalletEarnSource.TODO_COMPLETION, 20, 25L, false);
 		verify(eventPublisher).publishEvent(any(TodoCompletedEvent.class));
 	}
 
@@ -547,7 +567,7 @@ class TodoServiceImplTest {
 				.satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
 						.isEqualTo(TodoErrorCode.T03_004));
 
-		verifyNoInteractions(recurrenceService, userStreakService, eventPublisher);
+		verifyNoInteractions(recurrenceService, userStreakService, creditEarnService, eventPublisher);
 	}
 
 	@Test
@@ -807,6 +827,10 @@ class TodoServiceImplTest {
 	}
 
 	private Todo normalTodo(String alertTime) {
+		return normalTodo(alertTime, LocalDate.parse("2026-04-20"));
+	}
+
+	private Todo normalTodo(String alertTime, LocalDate startDate) {
 		return Todo.builder()
 				.todoId(1L)
 				.userId(1L)
@@ -815,7 +839,7 @@ class TodoServiceImplTest {
 				.status(TodoStatus.TODO)
 				.priority(1)
 				.alertTime(alertTime)
-				.startDate(LocalDate.parse("2026-04-20"))
+				.startDate(startDate)
 				.isDeleted(false)
 				.expGranted(false)
 				.build();

@@ -27,10 +27,10 @@ import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.todo.application.DefaultCategoryRegistrar;
 import com.doitdo.domain.todo.application.DefaultTodoRegistrar;
-import com.doitdo.domain.user.application.CreditEarnService;
 import com.doitdo.domain.user.api.dto.resp.UserInfoResp;
 import com.doitdo.domain.user.entity.User;
 import com.doitdo.domain.user.entity.UserWallet;
+import com.doitdo.domain.user.entity.WalletEarnLog;
 import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.domain.user.repository.UserWalletRepository;
@@ -68,6 +68,7 @@ public class AuthServiceImpl implements AuthService {
 
 	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 	private static final int RESET_TOKEN_BYTES = 12; // → Base64URL 16자
+	private static final int SIGNUP_BONUS_AMOUNT = 1000;
 
 	private final UserRepository userRepository;
 	private final UserWalletRepository userWalletRepository;
@@ -86,7 +87,6 @@ public class AuthServiceImpl implements AuthService {
 	private final DefaultFurnitureRegistrar defaultFurnitureRegistrar;
 	private final CharacterRepository characterRepository;
 	private final UserCharacterRepository userCharacterRepository;
-	private final CreditEarnService creditEarnService;
 
 	@Value("${jwt.refresh-token-expiration}")
 	private long refreshTokenExpiration;
@@ -116,8 +116,14 @@ public class AuthServiceImpl implements AuthService {
 				encodedPassword,
 				req.username()));
 
-		userWalletRepository.save(UserWallet.createEmpty(user.getUserId()));
-		creditEarnService.tryEarn(user.getUserId(), WalletEarnSource.SIGNUP_BONUS, 1000, null, true);
+		userWalletRepository.save(UserWallet.create(user.getUserId()));
+		walletEarnLogRepository.save(WalletEarnLog.builder()
+				.userId(user.getUserId())
+				.source(WalletEarnSource.SIGNUP_BONUS)
+				.amount(SIGNUP_BONUS_AMOUNT)
+				.refId(null)
+				.earnedAt(LocalDateTime.now(SEOUL))
+				.build());
 		userSettingRepository.save(UserSetting.create(user.getUserId()));
 		userStreakRepository.save(UserStreak.create(user.getUserId()));
 		defaultCategoryRegistrar.registerFor(user.getUserId());

@@ -21,6 +21,7 @@ import com.doitdo.domain.tamagotchi.repository.CharacterActionRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.todo.api.dto.req.TodoStatusChangeReq;
+import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.application.TodoService;
 import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.entity.Todo.TodoStatus;
@@ -57,8 +58,8 @@ import org.springframework.test.context.ActiveProfiles;
  * 뚜레딧 적립 시스템 통합 테스트 (Stage 5).
  *
  * <p>모든 테스트는 @Transactional 을 붙이지 않는다.
- * TodoCompletionCreditListener 가 AFTER_COMMIT 이벤트를 구독하므로,
- * 테스트 메서드 자체가 트랜잭션을 열면 커밋이 일어나지 않아 이벤트가 발행되지 않는다.
+ * TODO 완료 적립은 TodoServiceImpl 에서 직접 호출하지만,
+ * Tamagotchi exp 리스너는 AFTER_COMMIT 이벤트를 구독하므로 테스트 메서드 자체 트랜잭션은 피한다.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -238,13 +239,15 @@ class DoreditEarningSystemIntegrationTest {
     @DisplayName("Case 6: 서로 다른 TODO 5개 완료 → 100 적립, 6번째 TODO → 0")
     void case06_fiveDistinctTodosEarnHundred() throws InterruptedException {
         Long userId = createUserWithWallet("user6@test.com", "user6");
-        // TodoCompletionCreditListener 가 tamagotchi exp 이벤트도 처리하므로
         // UserCharacter 가 없어도 exp 리스너는 no-op (skip) 처리됨. 지갑만 있으면 됨.
 
         // 5개 TODO 생성 & 완료
         for (int i = 0; i < 5; i++) {
             Long todoId = saveTodo(userId, "todo-" + i);
-            todoService.changeStatus(userId, todoId, new TodoStatusChangeReq(TodoStatus.DONE));
+            TodoDetailResp resp = todoService.changeStatus(userId, todoId, new TodoStatusChangeReq(TodoStatus.DONE));
+            assertThat(resp.earnedCoin()).isEqualTo(20);
+            assertThat(resp.rewarded()).isTrue();
+            assertThat(resp.walletBalance()).isEqualTo((i + 1) * 20);
             // AFTER_COMMIT 이벤트가 비동기로 처리되므로 짧게 대기
             Thread.sleep(100);
         }
@@ -256,10 +259,13 @@ class DoreditEarningSystemIntegrationTest {
         // 6번째 TODO: source daily cap 100 도달로 skip
         Long sixthId = saveTodo(userId, "todo-5");
         int balanceBefore = walletBalance(userId);
-        todoService.changeStatus(userId, sixthId, new TodoStatusChangeReq(TodoStatus.DONE));
+        TodoDetailResp sixthResp = todoService.changeStatus(userId, sixthId, new TodoStatusChangeReq(TodoStatus.DONE));
         Thread.sleep(100);
         int balanceAfter = walletBalance(userId);
 
+        assertThat(sixthResp.earnedCoin()).isZero();
+        assertThat(sixthResp.rewarded()).isFalse();
+        assertThat(sixthResp.walletBalance()).isEqualTo(balanceBefore);
         assertThat(balanceAfter - balanceBefore).isZero();
     }
 
@@ -271,12 +277,19 @@ class DoreditEarningSystemIntegrationTest {
 
         for (int i = 0; i < 2; i++) {
             Long todoId = saveTodo(userId, "past-todo-" + i, yesterday);
-            todoService.changeStatus(userId, todoId, new TodoStatusChangeReq(TodoStatus.DONE));
+            TodoDetailResp resp = todoService.changeStatus(userId, todoId, new TodoStatusChangeReq(TodoStatus.DONE));
+            assertThat(resp.earnedCoin()).isZero();
+            assertThat(resp.rewarded()).isFalse();
             Thread.sleep(100);
         }
 
         Long firstTodayTodo = saveTodo(userId, "today-todo-0");
-        todoService.changeStatus(userId, firstTodayTodo, new TodoStatusChangeReq(TodoStatus.DONE));
+        TodoDetailResp firstTodayResp = todoService.changeStatus(
+                userId,
+                firstTodayTodo,
+                new TodoStatusChangeReq(TodoStatus.DONE));
+        assertThat(firstTodayResp.earnedCoin()).isEqualTo(20);
+        assertThat(firstTodayResp.rewarded()).isTrue();
         Thread.sleep(100);
 
         int earnedAfterTwoPastAndOneToday = walletEarnLogsBySource(userId, WalletEarnSource.TODO_COMPLETION).stream()
@@ -305,7 +318,14 @@ class DoreditEarningSystemIntegrationTest {
 
         // 5회 DONE / TODO 반복
         for (int i = 0; i < 5; i++) {
-            todoService.changeStatus(userId, todoId, new TodoStatusChangeReq(TodoStatus.DONE));
+            TodoDetailResp resp = todoService.changeStatus(userId, todoId, new TodoStatusChangeReq(TodoStatus.DONE));
+            if (i == 0) {
+                assertThat(resp.earnedCoin()).isEqualTo(20);
+                assertThat(resp.rewarded()).isTrue();
+            } else {
+                assertThat(resp.earnedCoin()).isZero();
+                assertThat(resp.rewarded()).isFalse();
+            }
             Thread.sleep(100);
             todoService.changeStatus(userId, todoId, new TodoStatusChangeReq(TodoStatus.TODO));
         }
@@ -358,8 +378,11 @@ class DoreditEarningSystemIntegrationTest {
         // combined=200 → 추가 TODO 적립 시도 → 0
         Long extraTodo = saveTodo(userId, "cap-todo-extra");
         int balanceBefore = walletBalance(userId);
-        todoService.changeStatus(userId, extraTodo, new TodoStatusChangeReq(TodoStatus.DONE));
+        TodoDetailResp extraResp = todoService.changeStatus(userId, extraTodo, new TodoStatusChangeReq(TodoStatus.DONE));
         Thread.sleep(100);
+        assertThat(extraResp.earnedCoin()).isZero();
+        assertThat(extraResp.rewarded()).isFalse();
+        assertThat(extraResp.walletBalance()).isEqualTo(balanceBefore);
         assertThat(walletBalance(userId) - balanceBefore).isZero();
     }
 

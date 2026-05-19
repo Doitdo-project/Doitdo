@@ -32,6 +32,9 @@ import com.doitdo.domain.todo.repository.TodoListQueryRepository;
 import com.doitdo.domain.todo.repository.TodoSpecifications;
 import com.doitdo.domain.todo.repository.projection.TodoListRow;
 import com.doitdo.domain.streak.application.UserStreakService;
+import com.doitdo.domain.user.application.CreditEarnService;
+import com.doitdo.domain.user.application.dto.EarnResult;
+import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.global.cache.CacheEvictHelper;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TodoErrorCode;
@@ -64,6 +67,7 @@ import org.springframework.util.StringUtils;
 public class TodoServiceImpl implements TodoService {
 
 	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+	private static final int TODO_COMPLETION_CREDIT = 20;
 
 	private final TodoRepository todoRepository;
 	private final TodoListQueryRepository todoListQueryRepository;
@@ -72,6 +76,7 @@ public class TodoServiceImpl implements TodoService {
 	private final SnoozeHistoryRepository snoozeHistoryRepository;
 	private final RecurrenceService recurrenceService;
 	private final UserStreakService userStreakService;
+	private final CreditEarnService creditEarnService;
 	private final ApplicationEventPublisher eventPublisher;
 	private final CacheEvictHelper cacheEvictHelper;
 
@@ -529,13 +534,27 @@ public class TodoServiceImpl implements TodoService {
 		TodoStatus beforeStatus = todo.getStatus();
 		todo.changeStatus(req.status());
 
-		// DONE 으로 새로 진입한 경우에만 streak 갱신 + Tamagotchi exp 이벤트 발행.
+		EarnResult earnResult = null;
+
+		// DONE 으로 새로 진입한 경우에만 streak 갱신 + 뚜레딧 적립 + Tamagotchi exp 이벤트 발행.
 		// - streak: UserStreakService 가 동기 갱신. 엔티티 내부에서도 당일 중복 no-op.
+		// - credit: 직접 호출하되 REQUIRES_NEW + retry 로 Todo DONE 롤백과 분리.
 		// - exp: 리스너가 AFTER_COMMIT + REQUIRES_NEW 로 처리 (멱등성은 Todo.expGranted 로 보장).
 		// - 가산 실패해도 Todo DONE 은 커밋 유지 (사용자 UX 우선)
 		if (beforeStatus != TodoStatus.DONE && req.status() == TodoStatus.DONE) {
-			todo.markFirstCompletedIfAbsent(LocalDate.now(SEOUL));
+			LocalDate today = LocalDate.now(SEOUL);
+			boolean firstCompletion = todo.getFirstCompletedDate() == null;
+			todo.markFirstCompletedIfAbsent(today);
 			userStreakService.recordActivity(userId);
+			if (firstCompletion && isRewardEligible(todo, today)) {
+				earnResult = creditEarnService.tryEarn(
+						userId,
+						WalletEarnSource.TODO_COMPLETION,
+						TODO_COMPLETION_CREDIT,
+						todo.getTodoId(),
+						false
+				);
+			}
 			eventPublisher.publishEvent(new TodoCompletedEvent(userId, todo.getTodoId()));
 			log.info("event=TODO_COMPLETED userId={} todoId={}", userId, todo.getTodoId());
 		}
@@ -547,7 +566,20 @@ public class TodoServiceImpl implements TodoService {
 
 		String colorHex = resolveColorHexForTodo(userId, todo);
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
-		return withExcludedDates(userId, todo, todo.getCategoryName(), colorHex, count);
+		TodoDetailResp resp = withExcludedDates(userId, todo, todo.getCategoryName(), colorHex, count);
+		if (earnResult == null) {
+			return resp;
+		}
+		return resp.withReward(earnResult.earnedAmount(), earnResult.rewarded(), earnResult.balance());
+	}
+
+	private boolean isRewardEligible(Todo todo, LocalDate today) {
+		LocalDate criteriaDate = switch (todo.getType()) {
+			case SOMEDAY -> null;
+			case PERIOD -> todo.getEndDate() != null ? todo.getEndDate() : todo.getStartDate();
+			default -> todo.getStartDate();
+		};
+		return criteriaDate == null || !criteriaDate.isBefore(today);
 	}
 
 	@Override

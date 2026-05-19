@@ -1,6 +1,7 @@
 package com.doitdo.domain.user.application.impl;
 
 import com.doitdo.domain.user.application.CreditEarnService;
+import com.doitdo.domain.user.application.dto.EarnResult;
 import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.entity.WalletEarnLog;
 import com.doitdo.domain.user.entity.WalletEarnSource;
@@ -13,11 +14,21 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.dao.TransientDataAccessException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CreditEarnServiceImpl implements CreditEarnService {
 
 	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
@@ -32,13 +43,29 @@ public class CreditEarnServiceImpl implements CreditEarnService {
 	private final WalletEarnLogRepository walletEarnLogRepository;
 
 	@Override
-	@Transactional
-	public int tryEarn(Long userId, WalletEarnSource source, int amount, Long refId, boolean bypassDailyCap) {
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	@Retryable(
+			retryFor = {
+					PessimisticLockingFailureException.class,
+					OptimisticLockingFailureException.class,
+					CannotAcquireLockException.class,
+					TransientDataAccessException.class
+			},
+			noRetryFor = CustomException.class,
+			notRecoverable = CustomException.class,
+			maxAttempts = 3,
+			backoff = @Backoff(delay = 50, maxDelay = 100, multiplier = 2.0)
+	)
+	public EarnResult tryEarn(Long userId, WalletEarnSource source, int amount, Long refId, boolean bypassDailyCap) {
 		UserWallet wallet = userWalletRepository.findByUserIdForUpdate(userId)
 				.orElseThrow(() -> new CustomException(UserErrorCode.U05_001));
 
+		if (isDuplicateTodoCompletion(userId, source, refId)) {
+			return new EarnResult(0, wallet.getBalance(), false);
+		}
+
 		if (shouldCheckDailyCap(source, bypassDailyCap) && exceedsDailyCap(userId, source, amount)) {
-			return 0;
+			return new EarnResult(0, wallet.getBalance(), false);
 		}
 
 		wallet.addBalance(amount);
@@ -50,7 +77,29 @@ public class CreditEarnServiceImpl implements CreditEarnService {
 				.earnedAt(LocalDateTime.now(SEOUL))
 				.build());
 
-		return amount;
+		return new EarnResult(amount, wallet.getBalance(), true);
+	}
+
+	@Recover
+	public EarnResult recover(
+			TransientDataAccessException exception,
+			Long userId,
+			WalletEarnSource source,
+			int amount,
+			Long refId,
+			boolean bypassDailyCap) {
+		int balance = userWalletRepository.findByUserId(userId)
+				.map(UserWallet::getBalance)
+				.orElse(0);
+		log.warn("event=CREDIT_EARN_RETRY_EXHAUSTED userId={} source={} refId={} amount={} balance={}",
+				userId, source, refId, amount, balance, exception);
+		return new EarnResult(0, balance, false);
+	}
+
+	private boolean isDuplicateTodoCompletion(Long userId, WalletEarnSource source, Long refId) {
+		return source == WalletEarnSource.TODO_COMPLETION
+				&& refId != null
+				&& walletEarnLogRepository.existsByUserIdAndSourceAndRefId(userId, source, refId);
 	}
 
 	private boolean shouldCheckDailyCap(WalletEarnSource source, boolean bypassDailyCap) {

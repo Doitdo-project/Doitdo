@@ -519,7 +519,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 				PET_TOUCH_CREDIT,
 				lockedUserCharacter.getCharacterId(),
 				false
-			);
+			).earnedAmount();
 			if (earnedAmount > 0) {
 				lockedUserCharacter.recordTouch(now, today);
 			}
@@ -557,7 +557,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			POOP_CLEAR_REWARD,
 			userCharacter.getCharacterId(),
 			true
-		);
+		).earnedAmount();
 		userCharacter.markPoopCleared(userCharacter.getPoopTimeDate());
 		cacheEvictHelper.evictTamagotchiCurrentAfterCommit(userId);
 		return earnedAmount;

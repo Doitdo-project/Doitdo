@@ -12,6 +12,7 @@ import com.doitdo.domain.streak.entity.UserStreak;
 import com.doitdo.domain.streak.repository.StreakRewardLogRepository;
 import com.doitdo.domain.streak.repository.UserStreakRepository;
 import com.doitdo.domain.user.application.CreditEarnService;
+import com.doitdo.domain.user.application.dto.EarnResult;
 import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.repository.UserWalletRepository;
@@ -159,7 +160,7 @@ class UserStreakServiceImplRewardTest {
 		given(streakRewardLogRepository.save(org.mockito.ArgumentMatchers.any(StreakRewardLog.class)))
 				.willReturn(savedRewardLog);
 		given(creditEarnService.tryEarn(userId, WalletEarnSource.STREAK_7DAY, 500, 50L, true))
-				.willReturn(500);
+				.willReturn(new EarnResult(500, 500, true));
 		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet));
 
 		StreakRewardResp resp = service.claimSevenDayReward(userId);
