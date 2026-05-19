@@ -47,6 +47,8 @@ class CharacterCard extends StatelessWidget {
     this.afterEvolutionCharacterId,
     this.onEvolutionAnimationStart,
     this.onEvolutionComplete,
+    this.isFarewellAnimating = false,
+    this.onFarewellComplete,
     this.onTapShop,
     this.onTapCollection,
     this.onEggTap,
@@ -93,6 +95,9 @@ class CharacterCard extends StatelessWidget {
   /// 일반 캐릭터 슬롯으로 복귀하게 한다.
   final VoidCallback? onEvolutionComplete;
 
+  final bool isFarewellAnimating;
+  final VoidCallback? onFarewellComplete;
+
   final VoidCallback? onTapShop;
   final VoidCallback? onTapCollection;
 
@@ -129,7 +134,8 @@ class CharacterCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 미수령 중이거나 알 상태면 우측 상점/도감 아이콘은 숨긴다.
-    final hideChrome = character == null || character!.isEgg;
+    final hideChrome =
+        character == null || character!.isEgg || isFarewellAnimating;
 
     return SizedBox(
       // 침대/창문 일러스트가 잘리지 않도록 충분한 높이 확보. 캐릭터는 카드 하단
@@ -218,22 +224,45 @@ class CharacterCard extends StatelessWidget {
                   left: 0,
                   right: 0,
                   bottom: floorInset,
-                  child: _WalkingSlot(
-                    enableWalk: _shouldWalk,
-                    horizontalOnly: _shouldUseHorizontalWalkMotion,
-                    reverseMotionFacing: _shouldReverseMotionFacing,
-                    walkStartDelay: _walkStartDelay,
-                    walkRestartDelay: _walkRestartDelay,
-                    onCharacterTap: _isGrown ? onCharacterTap : null,
-                    bubble: _speechText != null
-                        ? Transform.translate(
-                            offset: Offset(0, 10.h),
-                            child: _AutoToggledBubble(text: _speechText!),
-                          )
-                        : null,
-                    characterBuilder: (_, isWalking) =>
-                        _buildCharacterSlot(isWalking),
-                  ),
+                  child: isFarewellAnimating
+                      ? _FarewellWalkingSlot(
+                          onComplete: onFarewellComplete,
+                          builder: (context, isWalking) => Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              AnimatedOpacity(
+                                opacity: isWalking ? 1.0 : 0.0,
+                                duration: const Duration(milliseconds: 220),
+                                child: IgnorePointer(
+                                  ignoring: !isWalking,
+                                  child: Transform.translate(
+                                    offset: Offset(0, 10.h),
+                                    child: const _SpeechBubble(
+                                      text: '키워줘서 고마워요!',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              _buildFarewellCharacterSlot(isWalking),
+                            ],
+                          ),
+                        )
+                      : _WalkingSlot(
+                          enableWalk: _shouldWalk,
+                          horizontalOnly: _shouldUseHorizontalWalkMotion,
+                          reverseMotionFacing: _shouldReverseMotionFacing,
+                          walkStartDelay: _walkStartDelay,
+                          walkRestartDelay: _walkRestartDelay,
+                          onCharacterTap: _isGrown ? onCharacterTap : null,
+                          bubble: _speechText != null
+                              ? Transform.translate(
+                                  offset: Offset(0, 10.h),
+                                  child: _AutoToggledBubble(text: _speechText!),
+                                )
+                              : null,
+                          characterBuilder: (_, isWalking) =>
+                              _buildCharacterSlot(isWalking),
+                        ),
                 ),
 
               // 우측 상단 메뉴 — 캐릭터 수령 이후에만 노출.
@@ -307,6 +336,11 @@ class CharacterCard extends StatelessWidget {
     return _hasWalkAsset;
   }
 
+  bool get _shouldMirrorFarewellCharacter {
+    if (character?.characterId == 12) return true;
+    return _shouldReverseMotionFacing;
+  }
+
   Duration get _walkStartDelay {
     final id = character?.characterId;
     if (id == null || !_characterWalkIntroAssetIds.contains(id)) {
@@ -371,6 +405,33 @@ class CharacterCard extends StatelessWidget {
       // 탭은 바깥 _WalkingSlot 이 받아 walk 정지 + 콜백 호출까지 한 번에 처리한다.
       // 여기서 또 GestureDetector 를 만들면 hit-test 가 중첩되어 어느 한 쪽만
       // 동작하는 회색지대가 생긴다.
+    );
+  }
+
+  Widget _buildFarewellCharacterSlot(bool isWalking) {
+    final c = character;
+    if (c == null || c.isEgg) return _buildCharacterSlot(isWalking);
+
+    return Stack(
+      alignment: Alignment.center,
+      clipBehavior: Clip.none,
+      children: [
+        Transform.scale(
+          scaleX: _shouldMirrorFarewellCharacter ? -1.0 : 1.0,
+          child: _GrownCharacter(
+            key: ValueKey(
+              'farewell-grown-${c.thumbnailUrl}-${c.characterId}-$isWalking',
+            ),
+            thumbnailUrl: c.thumbnailUrl,
+            eyeGifCharacterId: c.characterId,
+            imageHeight: _grownCharacterImageDesignHeight.h,
+            isWalking: isWalking,
+          ),
+        ),
+        Positioned.fill(
+          child: IgnorePointer(child: const _FarewellBundleOverlay()),
+        ),
+      ],
     );
   }
 }
@@ -734,6 +795,7 @@ class _GrownCharacterState extends State<_GrownCharacter> {
   Timer? _walkOutroTimer;
 
   String? _blinkAsset;
+
   // 매 blink 마다 GIF 위젯이 frame 0 부터 재생되도록 부여하는 키.
   int _blinkTick = 0;
   bool _showWalkIntro = false;
@@ -1134,6 +1196,201 @@ class _CharacterGifReplacementState extends State<_CharacterGifReplacement> {
 
 enum _WalkPhase { walking, idling }
 
+class _FarewellWalkingSlot extends StatefulWidget {
+  const _FarewellWalkingSlot({required this.builder, this.onComplete});
+
+  /// prepare 구간에는 중앙에 고정된 정지 캐릭터를 그리고,
+  /// walk 구간부터 walking gif 로 전환하기 위해 현재 walking 여부를 넘긴다.
+  final Widget Function(BuildContext context, bool isWalking) builder;
+  final VoidCallback? onComplete;
+
+  @override
+  State<_FarewellWalkingSlot> createState() => _FarewellWalkingSlotState();
+}
+
+class _FarewellWalkingSlotState extends State<_FarewellWalkingSlot>
+    with SingleTickerProviderStateMixin {
+  static const Duration _walkStartDelay = Duration(milliseconds: 3000);
+  static const Duration _walkDuration = Duration(milliseconds: 3600);
+  static final Duration _duration = _walkStartDelay + _walkDuration;
+
+  late final AnimationController _controller;
+  late final Animation<double> _curve;
+  bool _completed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: _duration)
+      ..addStatusListener((status) {
+        if (status != AnimationStatus.completed || _completed) return;
+        _completed = true;
+        widget.onComplete?.call();
+      })
+      ..forward();
+    _curve = CurvedAnimation(parent: _controller, curve: Curves.linear);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final exitX = constraints.maxWidth / 2 + 140.w;
+        final walkStartFraction =
+            _walkStartDelay.inMilliseconds / _duration.inMilliseconds;
+
+        return AnimatedBuilder(
+          animation: _curve,
+          builder: (_, __) {
+            final t = _curve.value;
+            final walkT = ((t - walkStartFraction) / (1 - walkStartFraction))
+                .clamp(0.0, 1.0);
+
+            final isWalking = walkT > 0;
+            final bob = isWalking ? sin(walkT * pi * 16) * 1.5.h : 0.0;
+
+            final coverT = (t / 0.18).clamp(0.0, 1.0);
+            final coverOpacity = Curves.easeOutCubic.transform(coverT);
+            final coverScale = 0.92 + coverOpacity * 0.08;
+
+            final exitY = 90.h;
+
+            return Transform.translate(
+              offset: Offset(exitX * walkT, exitY * walkT + bob),
+              child: Opacity(
+                opacity: coverOpacity,
+                child: Transform.scale(
+                  scale: coverScale,
+                  child: widget.builder(context, isWalking),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _FarewellBundleOverlay extends StatefulWidget {
+  const _FarewellBundleOverlay();
+
+  @override
+  State<_FarewellBundleOverlay> createState() => _FarewellBundleOverlayState();
+}
+
+class _FarewellBundleOverlayState extends State<_FarewellBundleOverlay>
+    with SingleTickerProviderStateMixin {
+  static const Duration _swapDuration = Duration(milliseconds: 2500);
+  static const Duration _bundleAttachDelay = Duration(milliseconds: 700);
+
+  late final AnimationController _controller;
+  Timer? _swapTimer;
+  Timer? _bundleTimer;
+
+  bool _showSwap = true;
+  bool _showBundle = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+
+    _bundleTimer = Timer(_bundleAttachDelay, () {
+      if (!mounted) return;
+      setState(() => _showBundle = true);
+    });
+
+    _swapTimer = Timer(_swapDuration, () {
+      if (!mounted) return;
+      setState(() => _showSwap = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _swapTimer?.cancel();
+    _bundleTimer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutBack,
+      builder: (context, entrance, child) {
+        return AnimatedBuilder(
+          animation: _controller,
+          child: child,
+          builder: (_, child) {
+            final sway = sin(_controller.value * pi * 2) * 0.025;
+            final lift = sin(_controller.value * pi * 2) * 1.2.h;
+
+            return Opacity(
+              opacity: entrance.clamp(0.0, 1.0),
+              child: Transform.translate(
+                offset: Offset(0, lift),
+                child: Transform.rotate(
+                  angle: sway,
+                  child: Transform.scale(
+                    scale: 0.92 + entrance * 0.08,
+                    child: child,
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+      child: Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [
+          // 0.7초 뒤 보따리 png 장착. 이후 캐릭터와 함께 퇴장한다.
+          AnimatedOpacity(
+            opacity: _showBundle ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 160),
+            child: Image.asset(
+              'assets/images/farewell.png',
+              scale: 0.1,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.medium,
+            ),
+          ),
+
+          // 독립 버튼 직후 크게 터지는 보따리 생성 연출.
+          // 2.5초 뒤 사라지고 보따리 png만 남는다.
+          AnimatedOpacity(
+            opacity: _showSwap ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 180),
+            child: Transform.scale(
+              scale: 3.0,
+              child: Image.asset(
+                'assets/animations/farewell_swap.gif',
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.medium,
+                gaplessPlayback: true,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _WalkingSlot extends StatefulWidget {
   const _WalkingSlot({
     required this.enableWalk,
@@ -1152,6 +1409,7 @@ class _WalkingSlot extends StatefulWidget {
   final bool reverseMotionFacing;
   final Duration walkStartDelay;
   final Duration walkRestartDelay;
+
   // 자식 캐릭터 위젯 — 현재 phase 가 walking 인지를 받아 base / blink 표현을
   // 적절히 선택할 수 있게 한다. _GrownCharacter 는 isWalking 으로 분기하고,
   // 알/미수령 등 다른 분기는 그 값을 무시한다.
@@ -1173,8 +1431,10 @@ class _WalkingSlotState extends State<_WalkingSlot>
   // 범위에서 랜덤 선택해, 모든 발걸음이 같은 박자로 안 떨어진다.
   static const int _walkDurationMinMs = 5500;
   static const int _walkDurationMaxMs = 6000;
+
   // 좌우 이동 범위(.w). 베이스(0) 기준 ±이 만큼 사이에서 다음 target 의 x 좌표를 뽑음.
   static const double _walkRangeX = 60.0;
+
   // 한 구간당 X 가 이전 X 에서 변화할 수 있는 폭(.w). 매 구간마다 ±_walkRangeX 안에서
   // 새로 뽑으면 가운데 기준으로 좌-우-좌-우 왕복하는 느낌이 강해서 지그재그처럼
   // 보임. 이전 X 기준 ±이 만큼만 변동 + clamp 으로, 한 방향으로 흘러가다 끝에서
@@ -1182,6 +1442,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
   static const double _walkXJitter = 40.0;
   static const double _walkRangeY = 30.0;
   static const double _walkYJitter = 10.0;
+
   // 상하 이동 범위(.h). 베이스(0) 기준 -이 만큼 위쪽까지만 — 아래로 가면 카드 바닥선을
   // 넘어 발이 잘릴 수 있어 위쪽 방향으로만 한정.
   // 한 구간당 Y 가 이전 Y 에서 변화할 수 있는 폭(.h). 매 구간마다 Y 를 0..
@@ -1193,36 +1454,44 @@ class _WalkingSlotState extends State<_WalkingSlot>
   // 너무 길면 답답, 너무 짧으면 깜빡임을 못 보고 다시 출발 — 1~2초가 다마고치 톤.
   static const int _idleDurationMinMs = 1000;
   static const int _idleDurationMaxMs = 2000;
+
   // 진입 시 walk 모드(돌아다님)가 활성화될 확률. 1/3 — 평균 3번 들어오면 1번
   // 정도만 자유 보행이고 나머지는 기존처럼 가만히 + 간헐 깜빡임. 다마고치가
   // 매번 돌아다니면 산만하기 때문에 평소엔 가만히 있다가 가끔 신난 듯 걷는 톤.
   static const double _roamingProbability = 1 / 3;
+
   // 탭 직후, 외부에서 액션 사이클 진입(=enableWalk false 전환) 까지의 최대 대기 시간.
   // 서버 호출이 실패해 액션 자체가 안 들어와도 무한 정지 방지.
   static const Duration _tapPauseTimeout = Duration(seconds: 5);
 
   late final AnimationController _walkController;
+
   // true 면 좌측을 바라보고 있는 상태 — Transform 으로 X 축 반전한다.
   bool _facingLeft = false;
+
   // 현재 구간의 시작/도착 지점(raw double, .w/.h 미적용). 매 사이클 완료 시 _walkTo
   // 가 새 _walkFrom 으로 인계되고 _walkTo 는 다음 random target 으로 갱신된다.
   Offset _walkFrom = Offset.zero;
   Offset _walkTo = Offset.zero;
+
   // 사용자가 탭한 직후, 외부 액션 사이클 진입(=enableWalk false)·완료 신호를
   // 기다리는 동안 true. 타임아웃이 먼저 끝나면 안전망으로 false 복귀.
   bool _tapPaused = false;
   Timer? _tapPauseTimer;
   bool _hasPositionSnapshot = false;
+
   // 현재 사이클의 phase. walking 동안은 idle gif base + blink off, idling 동안은
   // 캐릭터별 PNG base + 간헐 blink. enableWalk=false 면 항상 idling 으로 고정.
   _WalkPhase _phase = _WalkPhase.idling;
   Timer? _idleTimer;
   Timer? _walkStartDelayTimer;
+
   // 자유 보행 모드 여부. initState 에서 첫 추첨, 그 후 화면이 hidden→visible
   // (다른 탭/화면에서 돌아오는 시점) 으로 전환될 때마다 [_rerollRoaming] 으로 재추첨.
   // 외부 enableWalk 의 false↔true (액션 사이클) 에는 영향받지 않는다.
   bool _roamingThisSession = false;
   bool _hasFacingDirection = false;
+
   // VisibilityDetector 의 첫 콜백은 mount 직후 1 frame 만에 호출되는데, initState
   // 에서 이미 한 번 추첨했으니 이 첫 콜백은 무시한다. 두 번째부터 진짜 화면 전환.
   bool _firstVisibilityCallback = true;

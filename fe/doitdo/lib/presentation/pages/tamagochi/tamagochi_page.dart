@@ -65,6 +65,9 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   /// farewell API 호출 in-flight 여부. 뱃지 중복 탭 방지용.
   bool _farewelling = false;
 
+  /// farewell API 성공 후 새 알로 갱신하기 전까지 배웅 연출을 보여주는 상태.
+  bool _farewellAnimating = false;
+
   /// 진화 플로우 진행 중 여부. evolve API 호출 시작부터 진화 연출 종료까지
   /// true 로 유지 — 진화 뱃지/메뉴/상태 알약의 입력을 잠그는 용도.
   bool _evolving = false;
@@ -403,36 +406,73 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   /// 성공 시 서버가 다음 알을 자동 배정하므로 ViewModel 이 load() 로 갱신.
   Future<void> _handleFarewellTap() async {
     if (_farewelling) return;
+
     final character = ref.read(characterViewModelProvider).valueOrNull;
     final name = (character == null || character.name.isEmpty)
         ? '다마고치'
         : character.name;
+
     final confirmed = await showDoitdoDialog(
       context: context,
       title: '독립 시키기',
       message:
-          '$name가 떠날 준비가 됐어요.\n'
+      '$name가 떠날 준비가 됐어요.\n'
           '배웅하면 되돌릴 수 없고 바로 새 알이 도착해요.',
       confirmLabel: '배웅하기',
       cancelLabel: '취소',
     );
+
     if (!mounted || confirmed != true) return;
 
     setState(() => _farewelling = true);
-    final ok = await ref.read(characterViewModelProvider.notifier).farewell();
-    if (!mounted) return;
-    setState(() => _farewelling = false);
 
+    final ok = await ref
+        .read(characterViewModelProvider.notifier)
+        .farewell(refreshAfter: false);
+
+    if (!mounted) return;
+
+    setState(() {
+      _farewelling = false;
+    });
+
+    if (!ok) {
+      final messenger = ScaffoldMessenger.of(context);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('독립 처리 중 문제가 생겼어요. 다시 시도해주세요.'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      return;
+    }
+
+    await Future<void>.delayed(const Duration(seconds: 1));
+
+    if (!mounted) return;
+
+    setState(() {
+      _farewellAnimating = true;
+    });
+  }
+
+  /// 배웅 연출이 끝난 뒤 새 알 상태를 서버에서 다시 당겨오고 안내를 띄운다.
+  Future<void> _handleFarewellAnimationComplete() async {
+    if (!_farewellAnimating) return;
+    await ref.read(characterViewModelProvider.notifier).load(force: true);
+    if (!mounted) return;
+    setState(() => _farewellAnimating = false);
     final messenger = ScaffoldMessenger.of(context);
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        SnackBar(
-          content: Text(
-            ok ? '독립 완료! 새 알이 도착했어요.' : '독립 처리 중 문제가 생겼어요. 다시 시도해주세요.',
-          ),
+        const SnackBar(
+          content: Text('알이 도착했어요!'),
           behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
+          duration: Duration(seconds: 2),
         ),
       );
   }
@@ -778,6 +818,9 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                 onEvolutionAnimationStart:
                                     _onEvolutionAnimationStart,
                                 onEvolutionComplete: _onEvolutionComplete,
+                                isFarewellAnimating: _farewellAnimating,
+                                onFarewellComplete:
+                                    _handleFarewellAnimationComplete,
                                 topSafePadding: topInset,
                                 onTapShop: () =>
                                     context.push(AppRoutes.tamagochiShop),
@@ -801,7 +844,9 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                       );
                                 },
                               ),
-                              if (character != null && !character.isEgg)
+                              if (character != null &&
+                                  !character.isEgg &&
+                                  !_farewellAnimating)
                                 Positioned(
                                   left: 0,
                                   right: 0,
@@ -825,7 +870,10 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                     onClaimReward: _handleClaimReward,
                                     onTapEvolve: _handleEvolveTap,
                                     onTapFarewell: _handleFarewellTap,
-                                    actionBusy: _evolving || _farewelling,
+                                    actionBusy:
+                                        _evolving ||
+                                        _farewelling ||
+                                        _farewellAnimating,
                                   ),
                                 ),
                             ],
