@@ -18,9 +18,13 @@ import 'package:visibility_detector/visibility_detector.dart';
 const Set<int> _characterWalkAssetIds = {6, 9, 18};
 const Set<int> _characterWalkIntroAssetIds = {6, 18};
 const Set<int> _characterWalkOutroAssetIds = {6, 18};
+const Set<int> _horizontalWalkCharacterIds = {6, 12, 18};
+const Set<int> _naturalFacingWalkCharacterIds = {6};
+const Set<int> _reverseFacingWalkCharacterIds = {12};
 const Duration _characterWalkIntroDuration = Duration(milliseconds: 240);
 const Duration _characterWalkOutroDuration = Duration(milliseconds: 220);
 const Duration _characterWalkOutroBlinkDuration = Duration(seconds: 2);
+const double _grownCharacterImageDesignHeight = 80;
 
 /// 다마고치 메인 상단의 방 일러스트 카드.
 ///
@@ -212,7 +216,7 @@ class CharacterCard extends StatelessWidget {
                   bottom: floorInset,
                   child: _WalkingSlot(
                     enableWalk: _shouldWalk,
-                    horizontalOnly: _hasWalkAsset,
+                    horizontalOnly: _shouldUseHorizontalWalkMotion,
                     reverseMotionFacing: _shouldReverseMotionFacing,
                     walkStartDelay: _walkStartDelay,
                     walkRestartDelay: _walkRestartDelay,
@@ -286,9 +290,16 @@ class CharacterCard extends StatelessWidget {
     return id != null && _characterWalkAssetIds.contains(id);
   }
 
+  bool get _shouldUseHorizontalWalkMotion {
+    final id = character?.characterId;
+    return id != null && _horizontalWalkCharacterIds.contains(id);
+  }
+
   bool get _shouldReverseMotionFacing {
     final id = character?.characterId;
-    if (id == 6) return false;
+    if (id == null) return false;
+    if (_naturalFacingWalkCharacterIds.contains(id)) return false;
+    if (_reverseFacingWalkCharacterIds.contains(id)) return true;
     return _hasWalkAsset;
   }
 
@@ -318,7 +329,7 @@ class CharacterCard extends StatelessWidget {
         beforeCharacterId: beforeEvolutionCharacterId ?? character?.characterId,
         afterCharacterId: afterEvolutionCharacterId,
         evolution: ev,
-        size: 112.h,
+        size: _grownCharacterImageDesignHeight.h,
         onAnimationStart: onEvolutionAnimationStart,
         onComplete: onEvolutionComplete,
       );
@@ -348,7 +359,7 @@ class CharacterCard extends StatelessWidget {
       key: ValueKey('grown-$imageUrl-${c.characterId}-${state.actionTick}'),
       thumbnailUrl: imageUrl,
       eyeGifCharacterId: isAction ? null : c.characterId,
-      imageHeight: 80.h,
+      imageHeight: _grownCharacterImageDesignHeight.h,
       // 액션 중에는 walking 으로 보이면 안 된다(공용 10.gif 대신 액션 gif 가
       // base 여야 함). _WalkingSlot 이 enableWalk=false 일 때도 builder 를
       // isWalking=false 로 호출하지만, 안전하게 isAction 도 OR 로 묶어 명시.
