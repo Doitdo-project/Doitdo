@@ -136,8 +136,10 @@ class AttendanceRewardIntegrationTest {
 		Long userId = createCompletedUserWithWallet(0);
 		String token = jwtUtil.generateAccessToken(userId);
 
-		int petEarned = creditEarnService.tryEarn(userId, WalletEarnSource.PET_TOUCH, 100, null, false);
-		int todoEarned = creditEarnService.tryEarn(userId, WalletEarnSource.TODO_COMPLETION, 100, null, false);
+		int petEarned = creditEarnService.tryEarn(userId, WalletEarnSource.PET_TOUCH, 100, null, false)
+				.earnedAmount();
+		int todoEarned = creditEarnService.tryEarn(userId, WalletEarnSource.TODO_COMPLETION, 100, null, false)
+				.earnedAmount();
 
 		assertThat(petEarned).isEqualTo(100);
 		assertThat(todoEarned).isEqualTo(100);

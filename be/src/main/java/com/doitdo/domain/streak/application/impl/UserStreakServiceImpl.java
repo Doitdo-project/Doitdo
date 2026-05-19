@@ -8,6 +8,7 @@ import com.doitdo.domain.streak.entity.UserStreak;
 import com.doitdo.domain.streak.repository.StreakRewardLogRepository;
 import com.doitdo.domain.streak.repository.UserStreakRepository;
 import com.doitdo.domain.user.application.CreditEarnService;
+import com.doitdo.domain.user.application.dto.EarnResult;
 import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.repository.UserWalletRepository;
@@ -74,7 +75,7 @@ public class UserStreakServiceImpl implements UserStreakService {
 				streakCount,
 				SEVEN_DAY_REWARD_AMOUNT
 		));
-		int earnedAmount = creditEarnService.tryEarn(
+		EarnResult earnResult = creditEarnService.tryEarn(
 				userId,
 				WalletEarnSource.STREAK_7DAY,
 				SEVEN_DAY_REWARD_AMOUNT,
@@ -84,7 +85,7 @@ public class UserStreakServiceImpl implements UserStreakService {
 		UserWallet wallet = userWalletRepository.findByUserId(userId)
 				.orElseThrow(() -> new CustomException(UserErrorCode.U06_004));
 
-		return StreakRewardResp.rewarded(streakCount, earnedAmount, wallet.getBalance());
+		return StreakRewardResp.rewarded(streakCount, earnResult.earnedAmount(), wallet.getBalance());
 	}
 
 	private boolean isRewardable(UserStreak streak) {

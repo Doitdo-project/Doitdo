@@ -131,8 +131,13 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `occurrenceDate` | `LocalDate` | nullable. 반복 파생 NORMAL 인스턴스면 해당 발생일. 일반 TODO / RECURRING 마스터는 null |
 | `snoozedDays` | `int` | 이 TODO 를 미룬 누적 횟수. `snooze_history` 테이블 COUNT 파생 (todos DDL 변경 없음) |
 | `excludedDates` | `List<LocalDate>` | RECURRING 마스터에서 `scope=only` 로 삭제된 occurrence 날짜 목록. RECURRING 이 아니면 `[]` |
+| `earnedCoin` | `Integer` | `PATCH /api/todos/{todoId}/status` 로 TODO 가 새로 DONE 처리될 때 적립된 뚜레딧. 미적립/일일 상한/기본 응답은 `0` |
+| `rewarded` | `Boolean` | TODO 완료 적립 성공 여부 |
+| `walletBalance` | `Integer` | 적립을 시도한 TODO 완료 응답의 현재 지갑 잔액. 기본 TODO 조회/목록/검색 응답에서는 `null` |
 
 `TodoListResp.items[]` 와 `TodoSearchResp.items[]` 도 동일한 `TodoDetailResp` 구조를 사용한다.
+
+`PATCH /api/todos/{todoId}/status` 에서 `status=DONE` 으로 새로 전이되면 완료 1건당 20 뚜레딧 적립을 즉시 시도한다. 일일 상한 도달이나 재시도 실패 시 `earnedCoin=0`, `rewarded=false`, `walletBalance=현재 잔액` 으로 응답하며 TODO 완료 자체는 유지한다.
 
 ### `DELETE /api/todos/{todoId}` 반복 scope
 

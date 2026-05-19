@@ -267,8 +267,10 @@ class PoopMissionIntegrationTest {
 		setServiceClock(todayAt(10, 0));
 		String token = jwtUtil.generateAccessToken(userId);
 
-		assertThat(creditEarnService.tryEarn(userId, WalletEarnSource.PET_TOUCH, 100, null, false)).isEqualTo(100);
-		assertThat(creditEarnService.tryEarn(userId, WalletEarnSource.TODO_COMPLETION, 100, null, false))
+		assertThat(creditEarnService.tryEarn(userId, WalletEarnSource.PET_TOUCH, 100, null, false).earnedAmount())
+			.isEqualTo(100);
+		assertThat(creditEarnService.tryEarn(userId, WalletEarnSource.TODO_COMPLETION, 100, null, false)
+			.earnedAmount())
 			.isEqualTo(100);
 		assertThat(walletBalance(userId)).isEqualTo(200);
 
