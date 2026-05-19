@@ -130,6 +130,9 @@ flutter:
     - assets/animations/
     - assets/animations/eye/
     - assets/animations/idle/
+    - assets/animations/walk/
+    - assets/animations/up/
+    - assets/animations/down/
     - assets/mock_api/
     - assets/seeds/
     - .env
