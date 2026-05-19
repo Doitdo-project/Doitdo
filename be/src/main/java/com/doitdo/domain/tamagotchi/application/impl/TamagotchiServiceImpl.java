@@ -434,7 +434,7 @@ public class TamagotchiServiceImpl implements TamagotchiService {
 			throw new CustomException(TamagotchiErrorCode.M00_002);
 		}
 		if (adultUserCharacter.getFarewellAvailableAt() == null
-			|| LocalDateTime.now().isBefore(adultUserCharacter.getFarewellAvailableAt())) {
+			|| LocalDateTime.now(clock).isBefore(adultUserCharacter.getFarewellAvailableAt())) {
 			throw new CustomException(TamagotchiErrorCode.M00_003);
 		}
 		if (!Boolean.TRUE.equals(approved)) {
