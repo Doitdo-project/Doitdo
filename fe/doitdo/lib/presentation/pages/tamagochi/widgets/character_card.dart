@@ -149,7 +149,10 @@ class CharacterCard extends StatelessWidget {
           // 디바이스에 무관하게 정렬되도록 한다.
           final canvas = computeRoomCanvasLayout(
             parentWidth: constraints.maxWidth,
-            parentHeight: constraints.maxHeight,
+            parentHeight: (constraints.maxHeight - topSafePadding).clamp(
+              0.0,
+              double.infinity,
+            ),
             aspect: kRoomCanvasAspect,
           );
           // 바닥선(러그 슬롯 bottom 비율) 위에 발이 닿도록 동일 비율을 공유.
@@ -182,6 +185,7 @@ class CharacterCard extends StatelessWidget {
                   onPoopTap: onPoopTap,
                   poopLeftRatio: poopLeftRatio,
                   poopBottomRatio: poopBottomRatio,
+                  topSafePadding: topSafePadding,
                 ),
               ),
 
