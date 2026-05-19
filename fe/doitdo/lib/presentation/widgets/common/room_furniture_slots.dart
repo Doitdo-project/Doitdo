@@ -35,12 +35,12 @@ class RoomFurnitureSlot {
 const Map<ShopCategory, RoomFurnitureSlot> kRoomFurnitureSlots = {
   ShopCategory.bed: RoomFurnitureSlot(
     left: 0.00,
-    bottom: 0.12,
+    bottom: 0.11,
     width: 0.28,
     height: 0.36,
   ),
   ShopCategory.plant: RoomFurnitureSlot(
-    right: 0.04,
+    right: 0.06,
     bottom: 0.16,
     width: 0.14,
     height: 0.20,
@@ -53,13 +53,13 @@ const Map<ShopCategory, RoomFurnitureSlot> kRoomFurnitureSlots = {
   ),
   ShopCategory.desk: RoomFurnitureSlot(
     left: 0.06,
-    top: 0.28,
+    top: 0.31,
     width: 0.26,
     height: 0.26,
   ),
   ShopCategory.tv: RoomFurnitureSlot(
     right: 0.02,
-    top: 0.26,
+    top: 0.27,
     width: 0.26,
     height: 0.26,
   ),
