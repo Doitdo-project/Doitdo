@@ -31,12 +31,12 @@ class ShopRoomPreview extends StatelessWidget {
         .toList(growable: false);
 
     return AspectRatio(
-      aspectRatio: computeRoomFrameAspect(context),
+      aspectRatio: kRoomCanvasAspect,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20.r),
         child: Container(
           decoration: BoxDecoration(
-            color: colors.streakCardBg,
+            color: Colors.transparent,
             border: Border.all(color: colors.border),
             borderRadius: BorderRadius.circular(20.r),
           ),
@@ -60,10 +60,10 @@ class ShopRoomPreviewEmpty extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return AspectRatio(
-      aspectRatio: computeRoomFrameAspect(context),
+      aspectRatio: kRoomCanvasAspect,
       child: Container(
         decoration: BoxDecoration(
-          color: colors.streakCardBg,
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(20.r),
           border: Border.all(color: colors.border),
         ),
