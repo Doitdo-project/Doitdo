@@ -18,8 +18,8 @@ import 'package:visibility_detector/visibility_detector.dart';
 const Set<int> _characterWalkAssetIds = {6, 9, 18};
 const Set<int> _characterWalkIntroAssetIds = {6, 18};
 const Set<int> _characterWalkOutroAssetIds = {6, 18};
-const Duration _characterWalkIntroDuration = Duration(milliseconds: 900);
-const Duration _characterWalkOutroDuration = Duration(milliseconds: 900);
+const Duration _characterWalkIntroDuration = Duration(milliseconds: 240);
+const Duration _characterWalkOutroDuration = Duration(milliseconds: 220);
 const Duration _characterWalkOutroBlinkDuration = Duration(seconds: 2);
 
 /// 다마고치 메인 상단의 방 일러스트 카드.
@@ -201,7 +201,7 @@ class CharacterCard extends StatelessWidget {
                 child: _WalkingSlot(
                   enableWalk: _shouldWalk,
                   horizontalOnly: _hasWalkAsset,
-                  reverseMotionFacing: _hasWalkAsset,
+                  reverseMotionFacing: _shouldReverseMotionFacing,
                   walkStartDelay: _walkStartDelay,
                   walkRestartDelay: _walkRestartDelay,
                   onCharacterTap: _isGrown ? onCharacterTap : null,
@@ -272,6 +272,12 @@ class CharacterCard extends StatelessWidget {
   bool get _hasWalkAsset {
     final id = character?.characterId;
     return id != null && _characterWalkAssetIds.contains(id);
+  }
+
+  bool get _shouldReverseMotionFacing {
+    final id = character?.characterId;
+    if (id == 6) return false;
+    return _hasWalkAsset;
   }
 
   Duration get _walkStartDelay {
@@ -915,7 +921,6 @@ class _GrownCharacterState extends State<_GrownCharacter> {
           : 'assets/animations/idle/$id.gif';
       base = Image.asset(
         assetPath,
-        key: ValueKey('character-motion-$assetPath'),
         height: widget.imageHeight,
         fit: BoxFit.contain,
         filterQuality: FilterQuality.medium,
@@ -930,7 +935,6 @@ class _GrownCharacterState extends State<_GrownCharacter> {
     } else if (_showWalkOutro && id != null) {
       base = Image.asset(
         'assets/animations/down/$id.gif',
-        key: ValueKey('character-motion-down-$id'),
         height: widget.imageHeight,
         fit: BoxFit.contain,
         filterQuality: FilterQuality.medium,
@@ -951,28 +955,16 @@ class _GrownCharacterState extends State<_GrownCharacter> {
             );
     }
 
-    Widget? blinkOverlay;
+    Widget? blinkReplacement;
     if (id != null && blinkAsset != null) {
       final basePath = 'assets/animations/eye/$id.gif';
       // ValueKey 로 매 blink 마다 GIF 위젯을 새로 mount → frame 0 부터 재생.
-      blinkOverlay = Image.asset(
-        blinkAsset,
-        key: ValueKey('blink-$blinkAsset-$_blinkTick'),
+      blinkReplacement = _CharacterGifReplacement(
+        assetPath: blinkAsset,
+        fallbackAssetPath: blinkAsset == basePath ? null : basePath,
+        placeholder: base,
         height: widget.imageHeight,
-        fit: BoxFit.contain,
-        filterQuality: FilterQuality.medium,
-        gaplessPlayback: true,
-        errorBuilder: (_, _, _) => blinkAsset == basePath
-            ? const SizedBox.shrink()
-            : Image.asset(
-                basePath,
-                key: ValueKey('blink-fallback-$_blinkTick'),
-                height: widget.imageHeight,
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.medium,
-                gaplessPlayback: true,
-                errorBuilder: (_, _, _) => const SizedBox.shrink(),
-              ),
+        tick: _blinkTick,
       );
     }
 
@@ -987,7 +979,16 @@ class _GrownCharacterState extends State<_GrownCharacter> {
         widthFactor: 1.0,
         child: Stack(
           alignment: Alignment.center,
-          children: [base, ?blinkOverlay],
+          children: [
+            Visibility(
+              visible: blinkReplacement == null,
+              maintainState: true,
+              maintainAnimation: true,
+              maintainSize: true,
+              child: base,
+            ),
+            ?blinkReplacement,
+          ],
         ),
       ),
     );
@@ -1011,6 +1012,71 @@ class _GrownCharacterState extends State<_GrownCharacter> {
 /// 보행 사이클의 두 단계 — [walking] 은 좌우상하 random target 보행 (base 가
 /// 공용 둠칫둠칫 gif), [idling] 은 도착점에서 잠깐 멈춰서 캐릭터별 PNG + 간헐
 /// blink 를 보여주는 단계. 한 사이클 = walking → idling → walking ... 반복.
+class _CharacterGifReplacement extends StatefulWidget {
+  const _CharacterGifReplacement({
+    required this.assetPath,
+    required this.placeholder,
+    required this.height,
+    required this.tick,
+    this.fallbackAssetPath,
+  });
+
+  final String assetPath;
+  final String? fallbackAssetPath;
+  final Widget placeholder;
+  final double height;
+  final int tick;
+
+  @override
+  State<_CharacterGifReplacement> createState() =>
+      _CharacterGifReplacementState();
+}
+
+class _CharacterGifReplacementState extends State<_CharacterGifReplacement> {
+  bool _hasFrame = false;
+
+  @override
+  void didUpdateWidget(covariant _CharacterGifReplacement old) {
+    super.didUpdateWidget(old);
+    if (widget.assetPath != old.assetPath || widget.tick != old.tick) {
+      _hasFrame = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      widget.assetPath,
+      key: ValueKey('blink-${widget.assetPath}-${widget.tick}'),
+      height: widget.height,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.medium,
+      gaplessPlayback: true,
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        if (!_hasFrame && (wasSynchronouslyLoaded || frame != null)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _hasFrame = true);
+          });
+        }
+        return _hasFrame ? child : widget.placeholder;
+      },
+      errorBuilder: (_, _, _) {
+        final fallback = widget.fallbackAssetPath;
+        if (fallback == null) return widget.placeholder;
+        return Image.asset(
+          fallback,
+          key: ValueKey('blink-fallback-$fallback-${widget.tick}'),
+          height: widget.height,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.medium,
+          gaplessPlayback: true,
+          errorBuilder: (_, _, _) => widget.placeholder,
+        );
+      },
+    );
+  }
+}
+
 enum _WalkPhase { walking, idling }
 
 class _WalkingSlot extends StatefulWidget {
@@ -1091,6 +1157,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
   // 기다리는 동안 true. 타임아웃이 먼저 끝나면 안전망으로 false 복귀.
   bool _tapPaused = false;
   Timer? _tapPauseTimer;
+  bool _hasPositionSnapshot = false;
   // 현재 사이클의 phase. walking 동안은 idle gif base + blink off, idling 동안은
   // 캐릭터별 PNG base + 간헐 blink. enableWalk=false 면 항상 idling 으로 고정.
   _WalkPhase _phase = _WalkPhase.idling;
@@ -1204,6 +1271,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
         : _walkFrom.dy + (_walkTo.dy - _walkFrom.dy) * eased;
     _walkFrom = Offset(x, y);
     _walkTo = _walkFrom;
+    _hasPositionSnapshot = true;
   }
 
   void _pickNextWalkTarget() {
@@ -1281,6 +1349,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
     // hidden 중이라 점프가 보이지 않는다.
     _walkFrom = Offset.zero;
     _walkTo = Offset.zero;
+    _hasPositionSnapshot = false;
     _facingLeft = false;
     _hasFacingDirection = false;
     final newRoaming = _rng.nextDouble() < _roamingProbability;
@@ -1386,9 +1455,6 @@ class _WalkingSlotState extends State<_WalkingSlot>
         ? !_facingLeft
         : _facingLeft;
     final flippedCharacter = Transform.scale(
-      key: ValueKey(
-        'character-facing-${shouldMirrorCharacter ? 'mirrored' : 'normal'}',
-      ),
       scaleX: shouldMirrorCharacter ? -1.0 : 1.0,
       child: tapWrapped,
     );
@@ -1407,7 +1473,9 @@ class _WalkingSlotState extends State<_WalkingSlot>
       animation: _walkController,
       builder: (_, child) {
         final isRoamingActive = widget.enableWalk && _roamingThisSession;
-        if (!isRoamingActive && !_tapPaused) return child!;
+        if (!isRoamingActive && !_tapPaused && !_hasPositionSnapshot) {
+          return child!;
+        }
         final t = _walkController.value;
         final eased = Curves.easeInOut.transform(t);
         final dx = (_walkFrom.dx + (_walkTo.dx - _walkFrom.dx) * eased).w;
