@@ -30,21 +30,50 @@ class ShopRoomPreview extends StatelessWidget {
         )
         .toList(growable: false);
 
-    return AspectRatio(
-      aspectRatio: kRoomCanvasAspect,
+    return SizedBox(
+      width: double.infinity,
+      height: kRoomFrameDesignHeight.h, // 홈 카드와 동일한 높이
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20.r),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.transparent,
-            border: Border.all(color: colors.border),
-            borderRadius: BorderRadius.circular(20.r),
-          ),
-          child: RoomScene(
-            backgroundUrl: background?.imageUrl,
-            items: [
-              for (final item in furniture)
-                RoomSceneItem(category: item.category, imageUrl: item.imageUrl),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20.r),
+          child: Stack(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.transparent,
+                  border: Border.all(color: colors.border),
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                child: RoomScene(
+                  backgroundUrl: background?.imageUrl,
+                  extendBackgroundBehindSafeArea: true,
+                  items: [
+                    for (final item in furniture)
+                      RoomSceneItem(
+                        category: item.category,
+                        imageUrl: item.imageUrl,
+                      ),
+                  ],
+                ),
+              ),
+              // 상단 띠
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: EdgeInsets.symmetric(vertical: 6.h),
+                  color: Colors.black.withValues(alpha: 0.7),
+                  child: Text(
+                    '내 방 미리보기',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -59,8 +88,9 @@ class ShopRoomPreviewEmpty extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return AspectRatio(
-      aspectRatio: kRoomCanvasAspect,
+    return SizedBox(
+      width: double.infinity,
+      height: kRoomFrameDesignHeight.h,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.transparent,
