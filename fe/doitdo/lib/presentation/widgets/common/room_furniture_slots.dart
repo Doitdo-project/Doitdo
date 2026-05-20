@@ -35,7 +35,7 @@ class RoomFurnitureSlot {
 const Map<ShopCategory, RoomFurnitureSlot> kRoomFurnitureSlots = {
   ShopCategory.bed: RoomFurnitureSlot(
     left: 0.00,
-    bottom: 0.11,
+    bottom: 0.14,
     width: 0.28,
     height: 0.36,
   ),
@@ -53,25 +53,25 @@ const Map<ShopCategory, RoomFurnitureSlot> kRoomFurnitureSlots = {
   ),
   ShopCategory.desk: RoomFurnitureSlot(
     left: 0.06,
-    top: 0.31,
+    top: 0.28,
     width: 0.26,
     height: 0.26,
   ),
   ShopCategory.tv: RoomFurnitureSlot(
     right: 0.02,
-    top: 0.27,
+    top: 0.24,
     width: 0.26,
     height: 0.26,
   ),
   ShopCategory.window: RoomFurnitureSlot(
     right: 0.30,
-    top: 0.00,
+    top: -0.02,
     width: 0.28,
     height: 0.28,
   ),
   ShopCategory.clock: RoomFurnitureSlot(
     left: 0.08,
-    top: 0.10,
+    top: 0.08,
     width: 0.12,
     height: 0.12,
   ),
@@ -79,7 +79,7 @@ const Map<ShopCategory, RoomFurnitureSlot> kRoomFurnitureSlots = {
 
 const RoomFurnitureSlot kRoomFurnitureFallbackSlot = RoomFurnitureSlot(
   left: 0.30,
-  top: 0.35,
+  top: 0.36,
   width: 0.30,
   height: 0.30,
 );

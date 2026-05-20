@@ -32,7 +32,7 @@ class RoomScene extends StatelessWidget {
   final bool extendBackgroundBehindSafeArea;
   final RoomSceneOverlayBuilder? overlayBuilder;
 
-  static const Alignment backgroundAlignment = Alignment(0, -0.5);
+  static const Alignment backgroundAlignment = Alignment.bottomCenter;
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +61,7 @@ class RoomScene extends StatelessWidget {
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  if (bg != null && bg.isNotEmpty)
+                  if (bg != null && bg.isNotEmpty && !extendBackgroundBehindSafeArea)
                     Positioned.fill(child: _RoomNetworkImage.fill(url: bg)),
                   for (final item in items)
                     _RoomSceneFurniture(
@@ -118,8 +118,7 @@ class _RoomSceneFurniture extends StatelessWidget {
 
 class _RoomNetworkImage extends StatelessWidget {
   const _RoomNetworkImage.cover({required this.url}) : fit = BoxFit.cover;
-
-  const _RoomNetworkImage.fill({required this.url}) : fit = BoxFit.fill;
+  const _RoomNetworkImage.fill({required this.url}) : fit = BoxFit.cover;
 
   final String url;
   final BoxFit fit;
