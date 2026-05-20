@@ -1,397 +1,4490 @@
--- 시연용: 이메일 계정의 현재 활성 캐릭터를 즉시 진화/독립 가능 상태로 만든다.
--- BABY/TEEN: current_exp = required_exp, farewell_available_at = NULL
--- ADULT: current_exp = required_exp, farewell_available_at = 현재시간 - 1분
-UPDATE user_character uc
-JOIN users u ON u.user_id = uc.user_id
-JOIN characters c ON c.character_id = uc.character_id
-SET uc.current_exp = c.required_exp,
-    uc.farewell_available_at =
-      CASE
-        WHEN c.stage = 'ADULT' THEN DATE_SUB(NOW(), INTERVAL 1 MINUTE)
-        ELSE NULL
-      END
-WHERE u.email = 'gms07051@gmail.com'
-  AND u.is_deleted = 0
-  AND uc.is_active = 1
-  AND uc.is_deleted = 0
-  AND c.required_exp > 0;
+/*M!999999\- enable the sandbox mode */ 
+-- MariaDB dump 10.19-11.8.6-MariaDB, for debian-linux-gnu (aarch64)
+--
+-- Host: localhost    Database: doitdo
+-- ------------------------------------------------------
+-- Server version	11.8.6-MariaDB-ubu2404
 
--------------------
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*M!100616 SET @OLD_NOTE_VERBOSITY=@@NOTE_VERBOSITY, NOTE_VERBOSITY=0 */;
 
-USE doitdo;
+--
+-- Current Database: `doitdo`
+--
 
-UPDATE user_character uc
-JOIN users u ON u.user_id = uc.user_id
-JOIN characters c ON c.character_id = uc.character_id
-SET uc.current_exp = c.required_exp,
-    uc.farewell_available_at =
-      CASE
-        WHEN c.stage = 'ADULT' THEN DATE_SUB(NOW(), INTERVAL 1 MINUTE)
-        ELSE NULL
-      END
-WHERE u.email = 'gms07051@gmail.com'
-  AND u.is_deleted = 0
-  AND uc.is_active = 1
-  AND uc.is_deleted = 0
-  AND c.required_exp > 0;
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `doitdo` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci */;
 
+USE `doitdo`;
 
-  ---------------------------------------
+--
+-- Table structure for table `auto_providers`
+--
 
-  USE doitdo;
+DROP TABLE IF EXISTS `auto_providers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `auto_providers` (
+  `provider_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `apple_refresh_token` varchar(512) DEFAULT NULL,
+  `linked_at` datetime(6) NOT NULL,
+  `provider` varchar(20) NOT NULL,
+  `provider_uid` varchar(255) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`provider_id`),
+  UNIQUE KEY `uk_provider_uid` (`provider`,`provider_uid`)
+) ENGINE=InnoDB AUTO_INCREMENT=59 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-SET SQL_SAFE_UPDATES = 0;
+--
+-- Dumping data for table `auto_providers`
+--
 
-UPDATE user_character uc
-JOIN users u ON u.user_id = uc.user_id
-JOIN characters c ON c.character_id = uc.character_id
-SET uc.current_exp = c.required_exp,
-    uc.farewell_available_at =
-      CASE
-        WHEN c.stage = 'ADULT' THEN DATE_SUB(NOW(), INTERVAL 1 MINUTE)
-        ELSE NULL
-      END
-WHERE u.email = 'gms07051@gmail.com'
-  AND u.is_deleted = 0
-  AND uc.is_active = 1
-  AND uc.is_deleted = 0
-  AND c.required_exp > 0;
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `auto_providers` WRITE;
+/*!40000 ALTER TABLE `auto_providers` DISABLE KEYS */;
+INSERT INTO `auto_providers` VALUES
+(1,NULL,'2026-04-29 10:48:20.998443','KAKAO','4869860579',1),
+(2,NULL,'2026-04-29 10:50:40.787039','KAKAO','4869841452',2),
+(3,NULL,'2026-04-29 10:52:12.347791','KAKAO','4860276853',3),
+(4,NULL,'2026-04-29 10:54:15.540805','GOOGLE','102112796171071112572',4),
+(5,NULL,'2026-04-29 10:57:07.387324','KAKAO','4869177101',5),
+(6,NULL,'2026-04-29 12:26:35.432513','GOOGLE','115316207117491188873',3),
+(7,NULL,'2026-04-29 14:04:35.552154','KAKAO','4869795795',7),
+(8,NULL,'2026-04-29 14:18:21.961244','KAKAO','4857689327',8),
+(9,NULL,'2026-04-29 14:42:49.390672','KAKAO','4862412148',9),
+(10,NULL,'2026-04-29 16:03:54.789806','KAKAO','4868795498',10),
+(11,NULL,'2026-04-29 16:28:10.500648','KAKAO','4868160593',11),
+(12,NULL,'2026-04-29 17:23:23.863961','GOOGLE','102490797306374574621',12),
+(13,NULL,'2026-04-30 08:46:00.271060','GOOGLE','105060243941361581795',13),
+(14,NULL,'2026-04-30 10:44:41.464797','GOOGLE','115094317624809925926',14),
+(15,NULL,'2026-04-30 11:48:24.009253','GOOGLE','101083306172355839347',15),
+(16,NULL,'2026-04-30 14:02:55.124107','GOOGLE','111144720496287639788',16),
+(17,NULL,'2026-05-01 18:40:22.746671','GOOGLE','102004966496110612936',17),
+(18,NULL,'2026-05-04 19:31:15.361180','KAKAO','4878991588',18),
+(19,NULL,'2026-05-11 13:36:35.449429','GOOGLE','108233731827419781148',20),
+(20,NULL,'2026-05-11 14:20:34.007015','KAKAO','4889930367',21),
+(21,NULL,'2026-05-11 14:22:40.668745','KAKAO','4889934140',22),
+(22,NULL,'2026-05-11 14:22:41.029762','GOOGLE','110269279051764371151',23),
+(23,NULL,'2026-05-11 14:28:36.115316','KAKAO','4889944669',24),
+(24,NULL,'2026-05-11 14:37:57.487967','KAKAO','4889961294',25),
+(27,NULL,'2026-05-11 14:41:01.074790','KAKAO','4889965014',28),
+(29,NULL,'2026-05-11 15:29:31.052883','KAKAO','4890051789',31),
+(30,NULL,'2026-05-11 15:39:55.088513','GOOGLE','100036495230375249906',32),
+(32,NULL,'2026-05-11 16:20:15.643585','KAKAO','4890136050',34),
+(33,NULL,'2026-05-11 17:20:11.569903','GOOGLE','117279041928265843133',35),
+(34,NULL,'2026-05-11 18:02:19.366068','KAKAO','4890312610',36),
+(35,NULL,'2026-05-11 20:20:01.861261','KAKAO','4890532062',37),
+(36,NULL,'2026-05-11 21:43:03.071950','GOOGLE','100593102905556421805',39),
+(37,'rd9189069902743f5bc9f377768038c18.0.rrrvr.dVsi7zGTDmx9HamPLCrjhA','2026-05-12 00:30:43.268191','APPLE','001151.eaabac3bc5fc45dda30cfa0575343d0a.1530',40),
+(38,NULL,'2026-05-12 09:07:55.526788','KAKAO','4891132179',41),
+(39,NULL,'2026-05-12 10:10:24.398385','KAKAO','4891222604',42),
+(40,NULL,'2026-05-12 10:37:19.976776','KAKAO','4891265015',43),
+(41,NULL,'2026-05-12 10:41:01.755173','KAKAO','4891270684',44),
+(42,NULL,'2026-05-12 10:48:35.115020','KAKAO','4891282659',45),
+(43,NULL,'2026-05-12 13:01:27.197868','KAKAO','4891492788',46),
+(44,NULL,'2026-05-12 14:18:20.508378','GOOGLE','103570499103318382838',48),
+(45,NULL,'2026-05-12 14:44:56.762824','GOOGLE','113473322479171677802',49),
+(46,'r4b8616aeb66b44b68631a40af6baf950.0.rtsz.vXHwjXI8OgVd9gGh8f_jrQ','2026-05-12 16:17:16.553141','APPLE','000329.7c889de585744c8386b428f3efc3cdf7.0717',50),
+(47,NULL,'2026-05-12 17:54:57.408713','GOOGLE','108464397518920689131',52),
+(48,NULL,'2026-05-13 01:22:15.759373','GOOGLE','109450653950456825305',53),
+(49,NULL,'2026-05-14 00:33:04.518517','GOOGLE','110668423520698568304',54),
+(50,NULL,'2026-05-14 12:03:21.348753','GOOGLE','100557678981741135509',55),
+(51,'re089df60467444b6990e310c8723c906.0.srrqq.kT3aFykw34YeRaObdcDcRA','2026-05-14 18:44:59.859854','APPLE','001100.27784ab3d2744dc6bc7252752d3948f8.0944',56),
+(52,'r446a41fd250a430ca13e1614a3afa0b9.0.sruxz.GfEBZGd8cQDbo0u-Ge3Bmg','2026-05-15 10:06:52.513873','APPLE','001479.d01b3b5cad8d4d058217e559b46ceab5.0751',57),
+(53,NULL,'2026-05-19 17:04:15.526523','GOOGLE','105205157384653955822',60),
+(54,NULL,'2026-05-19 17:40:36.682900','GOOGLE','117228863399746871664',61),
+(55,NULL,'2026-05-20 13:03:45.411575','GOOGLE','115519103593992612168',62),
+(56,NULL,'2026-05-20 13:04:36.069372','GOOGLE','100850039153956771749',63),
+(57,NULL,'2026-05-20 13:32:26.245416','GOOGLE','104070537962560146101',64),
+(58,NULL,'2026-05-20 13:46:19.084336','GOOGLE','114146200134696548102',65);
+/*!40000 ALTER TABLE `auto_providers` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 
-SET SQL_SAFE_UPDATES = 1;
+--
+-- Table structure for table `bug_reports`
+--
 
+DROP TABLE IF EXISTS `bug_reports`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `bug_reports` (
+  `bug_report_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `content` varchar(500) NOT NULL,
+  `is_deleted` bit(1) NOT NULL,
+  `status` enum('COMPLETE','NEW','REVIEWING') NOT NULL,
+  `title` varchar(100) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`bug_report_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
+--
+-- Dumping data for table `bug_reports`
+--
 
----------------
----todo 모두 삭제----
-USE doitdo;
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `bug_reports` WRITE;
+/*!40000 ALTER TABLE `bug_reports` DISABLE KEYS */;
+INSERT INTO `bug_reports` VALUES
+(1,'2026-05-11 15:38:29.674418','2026-05-11 15:38:29.674418','슬라임을 터치하면, 사전에 사용자가 설정한 명언이 노출되는 기능이 있었으면 좋겠습니다!',0x00,'NEW','기능 추가 문의',20),
+(2,'2026-05-11 17:45:23.656208','2026-05-11 17:45:23.656208','우리 찬이가 진화하는데\n진화 버튼이 잘 안보여서 한참 찾았어요\n클릭을 유도하게 반짝효과를 넣든\n눈에 띄게 하면 좋을 것 같아요!',0x00,'NEW','찬이',29),
+(3,'2026-05-12 09:03:39.911066','2026-05-12 09:03:39.911066','반복 일정을 오늘 체크하면, 내일이나 그 이후에도 모두 체크 표시가 됩니다\n\n오늘 껏만 체크되어야 하는거 아닌가요?',0x00,'NEW','반복 일정 오류',20),
+(4,'2026-05-12 12:30:22.351401','2026-05-12 12:30:22.351401','반복일정 체크 후 앱 재실행하면 체크가 풀려있어요',0x00,'NEW','반복일정 체크 오류',20);
+/*!40000 ALTER TABLE `bug_reports` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 
-SET SQL_SAFE_UPDATES = 0;
+--
+-- Table structure for table `categories`
+--
 
-UPDATE todos t
-JOIN users u ON u.user_id = t.user_id
-SET t.is_deleted = 1
-WHERE u.email = 'gms07051@gmail.com'
-  AND u.is_deleted = 0
-  AND t.is_deleted = 0;
+DROP TABLE IF EXISTS `categories`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `categories` (
+  `category_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `category_name` varchar(10) DEFAULT NULL,
+  `color_id` int(11) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`category_id`),
+  KEY `idx_categories_user_name` (`user_id`,`category_name`)
+) ENGINE=InnoDB AUTO_INCREMENT=350 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-SET SQL_SAFE_UPDATES = 1;
+--
+-- Dumping data for table `categories`
+--
 
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `categories` WRITE;
+/*!40000 ALTER TABLE `categories` DISABLE KEYS */;
+INSERT INTO `categories` VALUES
+(1,'공부',1,1),
+(2,'운동',2,1),
+(3,'업무',3,1),
+(4,'집안일',4,1),
+(5,'기타',5,1),
+(6,'공부',1,2),
+(7,'운동',2,2),
+(8,'업무',3,2),
+(9,'집안일',4,2),
+(10,'기타',5,2),
+(16,'공부',1,4),
+(17,'운동',2,4),
+(18,'업무',3,4),
+(19,'집안일',4,4),
+(20,'기타',5,4),
+(21,'공부',1,5),
+(22,'운동',2,5),
+(23,'업무',3,5),
+(24,'집안일',4,5),
+(25,'기타',5,5),
+(26,'공부',1,6),
+(27,'운동',2,6),
+(28,'업무',3,6),
+(29,'집안일',4,6),
+(30,'기타',5,6),
+(31,'공부',1,7),
+(32,'운동',2,7),
+(33,'업무',3,7),
+(34,'집안일',4,7),
+(35,'기타',5,7),
+(36,'공부',1,8),
+(37,'운동',2,8),
+(38,'업무',3,8),
+(39,'집안일',4,8),
+(40,'기타',5,8),
+(46,'공부',1,10),
+(47,'운동',2,10),
+(48,'업무',3,10),
+(49,'집안일',4,10),
+(50,'기타',5,10),
+(51,'공부',1,11),
+(52,'운동',2,11),
+(53,'업무',3,11),
+(54,'집안일',4,11),
+(55,'기타',5,11),
+(56,'공부',1,12),
+(57,'운동',2,12),
+(58,'업무',3,12),
+(59,'집안일',4,12),
+(60,'기타',5,12),
+(61,'공부',1,13),
+(62,'운동',2,13),
+(63,'업무',3,13),
+(64,'집안일',4,13),
+(65,'기타',5,13),
+(66,'공부',1,14),
+(67,'운동',2,14),
+(68,'업무',3,14),
+(69,'집안일',4,14),
+(70,'기타',5,14),
+(71,'공부',1,15),
+(72,'운동',2,15),
+(73,'업무',3,15),
+(74,'집안일',4,15),
+(75,'기타',5,15),
+(76,'공부',1,16),
+(77,'운동',2,16),
+(78,'업무',3,16),
+(79,'집안일',4,16),
+(80,'기타',5,16),
+(81,'공부',1,17),
+(82,'운동',2,17),
+(83,'업무',3,17),
+(84,'집안일',4,17),
+(85,'기타',5,17),
+(86,'공부',1,18),
+(87,'운동',2,18),
+(88,'업무',3,18),
+(89,'집안일',4,18),
+(90,'기타',5,18),
+(101,'공부',1,21),
+(102,'운동',8,21),
+(103,'업무',3,21),
+(104,'집안일',4,21),
+(105,'기타',5,21),
+(106,'공부',1,22),
+(107,'운동',2,22),
+(108,'업무',3,22),
+(109,'집안일',4,22),
+(110,'기타',5,22),
+(111,'공부',1,23),
+(112,'운동',2,23),
+(113,'업무',3,23),
+(114,'집안일',4,23),
+(117,'전공',8,23),
+(118,'하기 싫음',5,23),
+(119,'공부',1,24),
+(120,'운동',2,24),
+(121,'업무',3,24),
+(122,'집안일',4,24),
+(123,'기타',5,24),
+(124,'공부',1,25),
+(125,'운동',2,25),
+(126,'업무',3,25),
+(127,'집안일',4,25),
+(128,'기타',5,25),
+(139,'공부',25,28),
+(140,'운동',26,28),
+(141,'업무',27,28),
+(142,'집안일',28,28),
+(143,'기타',29,28),
+(150,'여자친구',8,25),
+(151,'공부',1,30),
+(152,'운동',2,30),
+(153,'업무',3,30),
+(154,'집안일',4,30),
+(155,'기타',5,30),
+(156,'일정',8,20),
+(157,'공부',1,31),
+(158,'운동',2,31),
+(159,'업무',3,31),
+(160,'집안일',4,31),
+(161,'기타',5,31),
+(162,'공부',1,32),
+(163,'운동',2,32),
+(164,'업무',3,32),
+(165,'집안일',4,32),
+(166,'기타',5,32),
+(167,'공부',7,20),
+(173,'공부',1,34),
+(174,'운동',2,34),
+(175,'업무',3,34),
+(176,'집안일',4,34),
+(177,'기타',5,34),
+(178,'공부',1,35),
+(179,'운동',2,35),
+(180,'업무',3,35),
+(181,'집안일',4,35),
+(182,'기타',5,35),
+(183,'기타',1,20),
+(184,'공부',1,36),
+(185,'운동',2,36),
+(186,'업무',3,36),
+(187,'집안일',4,36),
+(188,'기타',5,36),
+(189,'공부',1,37),
+(190,'운동',2,37),
+(191,'업무',3,37),
+(192,'집안일',4,37),
+(193,'기타',5,37),
+(194,'공부',1,38),
+(195,'운동',2,38),
+(196,'업무',3,38),
+(197,'집안일',4,38),
+(198,'기타',5,38),
+(199,'공부',1,39),
+(200,'운동',2,39),
+(201,'업무',3,39),
+(202,'집안일',4,39),
+(203,'기타',5,39),
+(204,'공부',1,40),
+(205,'운동',2,40),
+(206,'업무',3,40),
+(207,'집안일',4,40),
+(208,'기타',5,40),
+(209,'공부',1,41),
+(210,'운동',2,41),
+(211,'업무',3,41),
+(212,'집안일',4,41),
+(213,'기타',5,41),
+(220,'공부',1,42),
+(221,'운동',2,42),
+(222,'업무',3,42),
+(223,'집안일',4,42),
+(224,'기타',5,42),
+(226,'여행',6,42),
+(227,'공부',1,43),
+(228,'운동',2,43),
+(229,'업무',3,43),
+(230,'집안일',4,43),
+(231,'기타',5,43),
+(232,'공부',1,44),
+(233,'운동',2,44),
+(234,'업무',3,44),
+(235,'집안일',4,44),
+(236,'기타',5,44),
+(237,'공부',1,45),
+(238,'운동',2,45),
+(239,'업무',3,45),
+(240,'집안일',4,45),
+(241,'기타',5,45),
+(242,'공부',1,46),
+(243,'운동',2,46),
+(244,'업무',3,46),
+(245,'집안일',4,46),
+(246,'기타',5,46),
+(247,'공부',1,47),
+(248,'운동',2,47),
+(249,'업무',3,47),
+(250,'집안일',4,47),
+(251,'기타',5,47),
+(252,'공부',25,48),
+(253,'운동',26,48),
+(254,'업무',27,48),
+(255,'집안일',28,48),
+(256,'기타',29,48),
+(257,'공부',1,49),
+(258,'운동',2,49),
+(259,'업무',3,49),
+(260,'집안일',4,49),
+(261,'기타',5,49),
+(262,'공부',1,50),
+(263,'운동',2,50),
+(264,'업무',3,50),
+(265,'집안일',4,50),
+(266,'기타',5,50),
+(267,'공부',1,51),
+(268,'운동',2,51),
+(269,'업무',3,51),
+(270,'집안일',4,51),
+(271,'기타',5,51),
+(272,'공부',1,52),
+(273,'운동',2,52),
+(274,'업무',3,52),
+(275,'집안일',4,52),
+(276,'기타',5,52),
+(277,'공부',1,53),
+(278,'운동',2,53),
+(279,'업무',3,53),
+(280,'집안일',4,53),
+(281,'기타',5,53),
+(282,'공부',1,54),
+(283,'운동',2,54),
+(284,'업무',3,54),
+(285,'집안일',4,54),
+(286,'기타',5,54),
+(287,'공부',1,55),
+(288,'운동',2,55),
+(289,'업무',3,55),
+(290,'집안일',4,55),
+(291,'기타',5,55),
+(292,'공부',1,56),
+(293,'운동',2,56),
+(294,'업무',3,56),
+(295,'집안일',4,56),
+(296,'기타',5,56),
+(297,'공부',1,57),
+(298,'운동',2,57),
+(299,'업무',3,57),
+(300,'집안일',4,57),
+(301,'기타',5,57),
+(302,'금단',8,15),
+(303,'공부',1,58),
+(304,'운동',2,58),
+(305,'업무',3,58),
+(306,'집안일',4,58),
+(307,'기타',5,58),
+(308,'공부',1,59),
+(309,'운동',2,59),
+(310,'업무',3,59),
+(311,'집안일',4,59),
+(312,'기타',5,59),
+(313,'공부',25,3),
+(314,'운동',26,3),
+(315,'업무',27,3),
+(316,'집안일',28,3),
+(317,'기타',29,3),
+(320,'공부',1,60),
+(321,'운동',2,60),
+(322,'업무',3,60),
+(323,'집안일',4,60),
+(324,'기타',5,60),
+(325,'공부',1,61),
+(326,'운동',2,61),
+(327,'업무',3,61),
+(328,'집안일',4,61),
+(329,'기타',5,61),
+(330,'공부',1,62),
+(331,'운동',2,62),
+(332,'업무',3,62),
+(333,'집안일',4,62),
+(334,'기타',5,62),
+(335,'공부',1,63),
+(336,'운동',2,63),
+(337,'업무',3,63),
+(338,'집안일',4,63),
+(339,'기타',5,63),
+(340,'공부',1,64),
+(341,'운동',2,64),
+(342,'업무',3,64),
+(343,'집안일',4,64),
+(344,'기타',5,64),
+(345,'공부',1,65),
+(346,'운동',2,65),
+(347,'업무',3,65),
+(348,'집안일',4,65),
+(349,'기타',5,65);
+/*!40000 ALTER TABLE `categories` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 
-SELECT
-  COUNT(*) AS total_todos,
-  SUM(CASE WHEN t.is_deleted = 0 THEN 1 ELSE 0 END) AS active_todos,
-  SUM(CASE WHEN t.is_deleted = 1 THEN 1 ELSE 0 END) AS deleted_todos
-FROM todos t
-JOIN users u ON u.user_id = t.user_id
-WHERE u.email = 'gms07051@gmail.com';
+--
+-- Table structure for table `character_actions`
+--
 
------------------------
+DROP TABLE IF EXISTS `character_actions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `character_actions` (
+  `action_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `action_type` varchar(50) NOT NULL,
+  `action_url` varchar(500) NOT NULL,
+  `character_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`action_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=103 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-USE doitdo;
+--
+-- Dumping data for table `character_actions`
+--
 
-SET SQL_SAFE_UPDATES = 0;
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `character_actions` WRITE;
+/*!40000 ALTER TABLE `character_actions` DISABLE KEYS */;
+INSERT INTO `character_actions` VALUES
+(1,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','EYE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/baby/eye.gif',4),
+(2,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','IDLE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/baby/idle.gif',4),
+(3,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','EYE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/teen/eye.gif',5),
+(4,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','IDLE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/teen/idle.gif',5),
+(5,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','EYE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/adult/eye.gif',6),
+(6,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','IDLE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/adult/idle.gif',6),
+(7,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','EYE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/baby/eye.gif',7),
+(8,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','IDLE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/baby/idle.gif',7),
+(9,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','EYE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/teen/eye.gif',8),
+(10,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','IDLE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/teen/idle.gif',8),
+(11,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','EYE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/adult/eye_2.gif',9),
+(12,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','EYE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/adult/eye.gif',9),
+(13,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','IDLE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/adult/idle.gif',9),
+(14,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','EYE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/baby/eye.gif',10),
+(15,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','IDLE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/baby/idle.gif',10),
+(16,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','EYE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/teen/eye.gif',11),
+(17,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','IDLE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/teen/idle.gif',11),
+(18,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','EYE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/adult/eye.gif',12),
+(19,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','IDLE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/adult/idle.gif',12),
+(22,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','EYE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/baby/eye.gif',16),
+(23,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','IDLE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/baby/idle.gif',16),
+(24,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','EYE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/teen/eye.gif',17),
+(25,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','IDLE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/teen/idle.gif',17),
+(26,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','EYE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/adult/eye_2.gif',18),
+(27,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','EYE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/adult/eye.gif',18),
+(28,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','IDLE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/adult/idle_2.gif',18),
+(29,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','IDLE','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/adult/idle.gif',18),
+(36,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','WALK','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/baby/idle.gif',4),
+(37,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SLEEP','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/baby/idle.gif',4),
+(38,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','HAPPY','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/baby/idle.gif',4),
+(39,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SAD','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/baby/idle.gif',4),
+(40,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','WALK','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/teen/idle.gif',5),
+(41,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SLEEP','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/teen/idle.gif',5),
+(42,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','HAPPY','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/teen/idle.gif',5),
+(43,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SAD','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/teen/idle.gif',5),
+(44,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','WALK','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/adult/walk.gif',6),
+(45,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SLEEP','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/adult/sleep_1.gif',6),
+(46,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','HAPPY','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/adult/happy.gif',6),
+(47,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SAD','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/adult/idle.gif',6),
+(48,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','WALK','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/baby/idle.gif',7),
+(49,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SLEEP','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/baby/idle.gif',7),
+(50,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','HAPPY','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/baby/idle.gif',7),
+(51,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SAD','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/baby/idle.gif',7),
+(52,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','WALK','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/teen/idle.gif',8),
+(53,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SLEEP','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/teen/idle.gif',8),
+(54,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','HAPPY','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/teen/idle.gif',8),
+(55,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SAD','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/teen/idle.gif',8),
+(56,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','WALK','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/adult/walk.gif',9),
+(57,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SLEEP','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/adult/sleep_1.gif',9),
+(58,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','HAPPY','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/adult/happy.gif',9),
+(59,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SAD','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/adult/idle.gif',9),
+(60,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','WALK','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/baby/idle.gif',10),
+(61,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SLEEP','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/baby/idle.gif',10),
+(62,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','HAPPY','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/baby/idle.gif',10),
+(63,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SAD','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/baby/idle.gif',10),
+(64,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','WALK','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/teen/idle.gif',11),
+(65,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SLEEP','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/teen/idle.gif',11),
+(66,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','HAPPY','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/teen/idle.gif',11),
+(67,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SAD','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/teen/idle.gif',11),
+(68,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','WALK','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/adult/walk.gif',12),
+(69,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SLEEP','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/adult/sleep_1.gif',12),
+(70,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','HAPPY','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/adult/happy.gif',12),
+(71,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SAD','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/adult/idle.gif',12),
+(72,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','WALK','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/baby/idle.gif',16),
+(73,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SLEEP','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/baby/idle.gif',16),
+(74,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','HAPPY','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/baby/idle.gif',16),
+(75,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SAD','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/baby/idle.gif',16),
+(76,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','WALK','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/teen/idle.gif',17),
+(77,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SLEEP','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/teen/idle.gif',17),
+(78,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','HAPPY','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/teen/idle.gif',17),
+(79,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SAD','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/teen/idle.gif',17),
+(80,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','WALK','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/adult/walk.gif',18),
+(81,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SLEEP','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/adult/sleep_1.gif',18),
+(82,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','HAPPY','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/adult/happy.gif',18),
+(83,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SAD','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/adult/idle_2.gif',18),
+(99,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SLEEP','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/actions/adult/sleep_2.gif',6),
+(100,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SLEEP','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/actions/adult/sleep_2.gif',9),
+(101,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SLEEP','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/actions/adult/sleep_2.gif',12),
+(102,'2026-05-19 09:56:08.000000','2026-05-19 09:56:08.000000','SLEEP','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/actions/adult/sleep_2.gif',18);
+/*!40000 ALTER TABLE `character_actions` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 
--- 기존 카테고리 전체 제거
-DELETE c
-FROM categories c
-JOIN users u ON u.user_id = c.user_id
-WHERE u.email = 'gms07051@gmail.com'
-  AND u.is_deleted = 0;
+--
+-- Table structure for table `character_species_backgrounds`
+--
 
--- 기본 카테고리 5개 재생성
-INSERT INTO categories (user_id, category_name, color_id)
-SELECT u.user_id, v.category_name, pc.color_id
-FROM users u
-JOIN (
-  SELECT '공부' AS category_name, 1 AS color_order
-  UNION ALL SELECT '운동', 2
-  UNION ALL SELECT '업무', 3
-  UNION ALL SELECT '집안일', 4
-  UNION ALL SELECT '기타', 5
-) v
-JOIN palettes p ON p.palette_id = (
-  SELECT p2.palette_id
-  FROM palettes p2
-  ORDER BY p2.display_order ASC
-  LIMIT 1
-)
-JOIN palette_colors pc
-  ON pc.palette_id = p.palette_id
- AND pc.color_order = v.color_order
-WHERE u.email = 'gms07051@gmail.com'
-  AND u.is_deleted = 0;
+DROP TABLE IF EXISTS `character_species_backgrounds`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `character_species_backgrounds` (
+  `species` varchar(20) NOT NULL,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `birth_background` text NOT NULL,
+  PRIMARY KEY (`species`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-SET SQL_SAFE_UPDATES = 1;
+--
+-- Dumping data for table `character_species_backgrounds`
+--
 
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `character_species_backgrounds` WRITE;
+/*!40000 ALTER TABLE `character_species_backgrounds` DISABLE KEYS */;
+INSERT INTO `character_species_backgrounds` VALUES
+('DUCK','2026-04-24 12:32:48.000000','2026-04-24 12:32:48.000000','뒤뚱뒤뚱 걸으면서도 할 일만큼은 꼬박꼬박 해내는 성실함의 상징. 겉으론 여유로워 보여도 물밑에선 누구보다 바쁘게 발을 젓는다. \"하루에 한 걸음이라도 앞으로\"가 평생의 모토인 꾸준함의 대명사.'),
+('ELEPHANT','2026-04-24 12:32:48.000000','2026-04-24 12:32:48.000000','한 번 세운 약속은 절대 잊지 않는 기억력의 왕. 작은 할 일도 코끝에 매듭처럼 기록해두고, 몇 년이 지나도 그날의 다짐을 떠올린다. 느리지만 묵직하게, 가장 큰 꿈을 가장 오래 완주하는 듬직한 친구.'),
+('HALLABONG','2026-04-24 12:32:48.000000','2026-04-24 12:32:48.000000','제주 바람과 햇살을 먹고 자란 감귤 정령. 새콤달콤한 성격처럼 하루의 목표도 알록달록하게 세운다. 껍질 속 작은 알갱이들처럼 큰 목표를 잘게 나눠 차근차근 해치우는 것이 특기인 분할정복의 달인.'),
+('RACCOON','2026-04-24 12:32:48.000000','2026-04-24 12:32:48.000000','손끝이 야무져 어떤 일이든 꼼꼼히 챙기는 세심함의 대명사. 쓰레기통에서 보물을 찾아내듯 하루의 자투리 시간에서도 의미를 길어 올린다. \"놓치는 것 없이 오늘을 정리한다\"가 모토인 작은 정리왕.');
+/*!40000 ALTER TABLE `character_species_backgrounds` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 
-------------
---todo채우기용
-USE doitdo;
+--
+-- Table structure for table `character_unlocks`
+--
 
-SET SQL_SAFE_UPDATES = 0;
+DROP TABLE IF EXISTS `character_unlocks`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `character_unlocks` (
+  `character_id` bigint(20) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  `unlocked_at` datetime(6) NOT NULL,
+  PRIMARY KEY (`character_id`,`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-UPDATE todos t
-JOIN users u ON u.user_id = t.user_id
-SET t.is_deleted = 1
-WHERE u.email = 'gms07051@gmail.com'
-  AND u.is_deleted = 0
-  AND t.is_deleted = 0;
+--
+-- Dumping data for table `character_unlocks`
+--
 
-INSERT INTO todos (
-  user_id, category_id,
-  title, content, type, status, done_date, first_completed_date,
-  priority, alert_time, start_date, end_date,
-  master_todo_id, recurrence_group_id, days_of_week,
-  is_deleted, exp_granted, created_at, updated_at
-)
-WITH RECURSIVE dates AS (
-  SELECT DATE('2026-05-01') AS d
-  UNION ALL
-  SELECT DATE_ADD(d, INTERVAL 1 DAY)
-  FROM dates
-  WHERE d < DATE('2026-05-21')
-),
-items AS (
-  SELECT 1 AS slot, '공부' AS category_name, '알고리즘 1문제 풀기' AS title, '오늘의 문제 풀이와 오답 정리' AS content, '09:00' AS alert_time
-  UNION ALL SELECT 2, '업무', '시연 체크리스트 확인', '기능별 시연 흐름 점검', '10:30'
-  UNION ALL SELECT 3, '운동', '산책 20분', '가볍게 걷고 컨디션 관리', '18:30'
-  UNION ALL SELECT 4, '집안일', '책상 정리', '작업 공간 정리하기', '21:00'
-)
-SELECT
-  u.user_id,
-  c.category_id,
-  CONCAT(DATE_FORMAT(d.d, '%c/%e'), ' ', i.title),
-  i.content,
-  'NORMAL',
-  CASE WHEN d.d < DATE('2026-05-19') THEN 'DONE' ELSE 'TODO' END,
-  CASE WHEN d.d < DATE('2026-05-19') THEN d.d ELSE NULL END,
-  CASE WHEN d.d < DATE('2026-05-19') THEN d.d ELSE NULL END,
-  i.slot,
-  i.alert_time,
-  d.d,
-  NULL,
-  NULL,
-  NULL,
-  NULL,
-  0,
-  CASE WHEN d.d < DATE('2026-05-19') THEN 1 ELSE 0 END,
-  NOW(),
-  NOW()
-FROM dates d
-JOIN items i
-JOIN users u ON u.email = 'gms07051@gmail.com' AND u.is_deleted = 0
-JOIN categories c ON c.user_id = u.user_id AND c.category_name = i.category_name;
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `character_unlocks` WRITE;
+/*!40000 ALTER TABLE `character_unlocks` DISABLE KEYS */;
+INSERT INTO `character_unlocks` VALUES
+(4,5,'2026-04-29 14:14:14.207790'),
+(4,15,'2026-05-16 15:53:14.120631'),
+(4,58,'2026-05-17 17:10:57.318957'),
+(5,5,'2026-04-29 14:14:14.207790'),
+(5,15,'2026-05-16 15:53:14.121352'),
+(5,58,'2026-05-17 17:10:57.319428'),
+(6,5,'2026-04-29 14:03:38.631255'),
+(6,15,'2026-05-16 15:53:14.121868'),
+(6,58,'2026-05-17 17:10:57.319900'),
+(7,15,'2026-05-17 17:03:29.915766'),
+(7,58,'2026-05-17 19:38:54.850727'),
+(8,15,'2026-05-17 17:03:29.917418'),
+(8,58,'2026-05-17 19:38:54.851282'),
+(9,15,'2026-05-17 17:03:29.918050'),
+(9,58,'2026-05-17 19:38:54.851824'),
+(10,3,'2026-05-20 12:09:34.432925'),
+(10,4,'2026-05-13 11:00:36.389765'),
+(10,58,'2026-05-17 19:32:42.837669'),
+(11,3,'2026-05-20 12:09:34.438876'),
+(11,4,'2026-05-13 11:00:36.394850'),
+(11,58,'2026-05-17 19:32:42.838187'),
+(12,3,'2026-05-20 12:09:34.439876'),
+(12,4,'2026-05-13 11:00:36.395604'),
+(12,58,'2026-05-17 19:32:42.838600'),
+(16,3,'2026-05-20 12:14:46.613303'),
+(16,15,'2026-05-17 16:18:51.221294'),
+(16,36,'2026-05-11 18:06:42.473179'),
+(16,58,'2026-05-17 17:03:08.557765'),
+(17,3,'2026-05-20 12:14:46.614209'),
+(17,15,'2026-05-17 16:18:51.221910'),
+(17,36,'2026-05-11 18:06:42.476963'),
+(17,58,'2026-05-17 17:03:08.558270'),
+(18,3,'2026-05-20 12:14:46.614992'),
+(18,15,'2026-05-17 16:18:51.222783'),
+(18,36,'2026-05-11 18:06:42.477692'),
+(18,58,'2026-05-17 17:03:08.558714'),
+(26,15,'2026-05-16 15:53:14.122467'),
+(26,58,'2026-05-17 17:10:57.320394'),
+(27,15,'2026-05-17 17:03:29.918629'),
+(27,58,'2026-05-17 19:38:54.852317'),
+(28,3,'2026-05-20 12:09:34.440713'),
+(28,4,'2026-05-13 11:00:36.396214'),
+(28,58,'2026-05-17 19:32:42.838973'),
+(30,3,'2026-05-20 12:14:46.615827'),
+(30,15,'2026-05-17 16:18:51.223538'),
+(30,36,'2026-05-11 18:06:42.478373'),
+(30,58,'2026-05-17 17:03:08.559115');
+/*!40000 ALTER TABLE `character_unlocks` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 
-INSERT INTO todos (
-  user_id, category_id,
-  title, content, type, status, done_date, first_completed_date,
-  priority, alert_time, start_date, end_date,
-  master_todo_id, recurrence_group_id, days_of_week,
-  is_deleted, exp_granted, created_at, updated_at
-)
-SELECT u.user_id, c.category_id,
-       p.title, p.content, 'PERIOD',
-       CASE WHEN p.end_date < DATE('2026-05-19') THEN 'DONE' ELSE 'TODO' END,
-       CASE WHEN p.end_date < DATE('2026-05-19') THEN p.end_date ELSE NULL END,
-       CASE WHEN p.end_date < DATE('2026-05-19') THEN p.end_date ELSE NULL END,
-       p.priority, p.alert_time, p.start_date, p.end_date,
-       NULL, NULL, NULL,
-       0,
-       CASE WHEN p.end_date < DATE('2026-05-19') THEN 1 ELSE 0 END,
-       NOW(), NOW()
-FROM users u
-JOIN (
-  SELECT '업무' category_name, '발표 자료 초안 만들기' title, '핵심 화면 캡처와 순서 정리' content, DATE('2026-05-01') start_date, DATE('2026-05-03') end_date, 1 priority, '14:00' alert_time
-  UNION ALL SELECT '업무', 'API 테스트 케이스 정리', '주요 성공/실패 케이스 점검', '2026-05-02', '2026-05-06', 2, '15:00'
-  UNION ALL SELECT '공부', 'CS 개념 복습 주간', '네트워크/DB/운영체제 정리', '2026-05-05', '2026-05-09', 3, '20:00'
-  UNION ALL SELECT '업무', '피드백 반영', '테스터 피드백 확인 및 정리', '2026-05-08', '2026-05-12', 4, '16:00'
-  UNION ALL SELECT '기타', '앱스토어 이미지 정리', '스크린샷 문구와 순서 확인', '2026-05-10', '2026-05-14', 5, '13:00'
-  UNION ALL SELECT '업무', '최종 발표 스크립트 작성', '시연 멘트와 역할 분담 정리', '2026-05-13', '2026-05-17', 6, '19:00'
-  UNION ALL SELECT '업무', '시연 동선 점검', '로그인부터 캐릭터 독립까지 리허설', '2026-05-15', '2026-05-19', 7, '11:00'
-  UNION ALL SELECT '기타', '배포 체크리스트 확인', '환경변수와 서버 상태 확인', '2026-05-18', '2026-05-21', 8, '17:00'
-) p
-JOIN categories c ON c.user_id = u.user_id AND c.category_name = p.category_name
-WHERE u.email = 'gms07051@gmail.com'
-  AND u.is_deleted = 0;
+--
+-- Table structure for table `characters`
+--
 
-INSERT INTO todos (
-  user_id, category_id,
-  title, content, type, status, done_date, first_completed_date,
-  priority, alert_time, start_date, end_date,
-  master_todo_id, recurrence_group_id, days_of_week,
-  is_deleted, exp_granted, created_at, updated_at
-)
-SELECT u.user_id, c.category_id,
-       r.title, r.content, 'RECURRING', 'TODO', NULL, NULL,
-       r.priority, r.alert_time, r.start_date, r.end_date,
-       NULL, NULL, r.days_of_week,
-       0, 0, NOW(), NOW()
-FROM users u
-JOIN (
-  SELECT '운동' category_name, '매일 아침 스트레칭' title, '하루 시작 전 10분 스트레칭' content, DATE('2026-05-01') start_date, DATE('2026-05-21') end_date, 'MON,TUE,WED,THU,FRI,SAT,SUN' days_of_week, 1 priority, '08:00' alert_time
-  UNION ALL SELECT '공부', '평일 알고리즘 복습', '어제 푼 문제 다시 보기', '2026-05-01', '2026-05-21', 'MON,TUE,WED,THU,FRI', 2, '09:30'
-  UNION ALL SELECT '업무', '평일 Jira 확인', '진행 중 이슈와 오늘 작업 확인', '2026-05-01', '2026-05-21', 'MON,TUE,WED,THU,FRI', 3, '10:00'
-  UNION ALL SELECT '운동', '월수금 산책', '저녁 산책 20분', '2026-05-01', '2026-05-21', 'MON,WED,FRI', 4, '18:00'
-  UNION ALL SELECT '공부', '화목 CS 정리', '면접 질문 3개 정리', '2026-05-01', '2026-05-21', 'TUE,THU', 5, '20:30'
-  UNION ALL SELECT '집안일', '토요일 방 청소', '바닥과 책상 정리', '2026-05-01', '2026-05-21', 'SAT', 6, '11:00'
-  UNION ALL SELECT '기타', '일요일 주간 회고', '이번 주 완료한 일 돌아보기', '2026-05-01', '2026-05-21', 'SUN', 7, '21:00'
-) r
-JOIN categories c ON c.user_id = u.user_id AND c.category_name = r.category_name
-WHERE u.email = 'gms07051@gmail.com'
-  AND u.is_deleted = 0;
+DROP TABLE IF EXISTS `characters`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `characters` (
+  `character_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `name` varchar(20) NOT NULL,
+  `required_exp` int(11) DEFAULT NULL,
+  `species` varchar(20) NOT NULL,
+  `stage` enum('ADULT','BABY','EGG','TEEN') NOT NULL,
+  `thumbnail_url` varchar(500) NOT NULL,
+  PRIMARY KEY (`character_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-SET SQL_SAFE_UPDATES = 1;
+--
+-- Dumping data for table `characters`
+--
 
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `characters` WRITE;
+/*!40000 ALTER TABLE `characters` DISABLE KEYS */;
+INSERT INTO `characters` VALUES
+(4,'2026-04-23 15:46:38.000000','2026-04-23 15:46:38.000000','아기 오리',75,'DUCK','BABY','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/duck-baby.png'),
+(5,'2026-04-23 15:46:38.000000','2026-04-23 15:46:38.000000','오리',100,'DUCK','TEEN','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/duck-teen.png'),
+(6,'2026-04-23 15:46:38.000000','2026-04-23 15:46:38.000000','어른 오리',125,'DUCK','ADULT','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/duck/duck-adult.png'),
+(7,'2026-04-23 15:46:38.000000','2026-04-23 15:46:38.000000','아기 코끼리',75,'ELEPHANT','BABY','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/elephant-baby.png'),
+(8,'2026-04-23 15:46:38.000000','2026-04-23 15:46:38.000000','코끼리',100,'ELEPHANT','TEEN','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/elephant-teen.png'),
+(9,'2026-04-23 15:46:38.000000','2026-04-23 15:46:38.000000','어른 코끼리',125,'ELEPHANT','ADULT','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/elephant/elephant-adult.png'),
+(10,'2026-04-23 15:46:38.000000','2026-04-23 15:46:38.000000','아기 한라봉',75,'HALLABONG','BABY','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/hallabong-baby.png'),
+(11,'2026-04-23 15:46:38.000000','2026-04-23 15:46:38.000000','한라봉',100,'HALLABONG','TEEN','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/hallabong-teen.png'),
+(12,'2026-04-23 15:46:38.000000','2026-04-23 15:46:38.000000','어른 한라봉',125,'HALLABONG','ADULT','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/hallabong/hallabong-adult.png'),
+(16,'2026-04-23 15:46:38.000000','2026-04-23 15:46:38.000000','아기 너구리',75,'RACCOON','BABY','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/raccoon-baby.png'),
+(17,'2026-04-23 15:46:38.000000','2026-04-23 15:46:38.000000','너구리',100,'RACCOON','TEEN','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/raccoon-teen.png'),
+(18,'2026-04-23 15:46:38.000000','2026-04-23 15:46:38.000000','어른 너구리',125,'RACCOON','ADULT','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/characters_main_ver2/raccoon/raccoon-adult.png'),
+(26,'2026-04-23 15:47:44.000000','2026-04-23 15:47:44.000000','오리 알',0,'DUCK','EGG','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/temp5.png'),
+(27,'2026-04-23 15:47:44.000000','2026-04-23 15:47:44.000000','코끼리 알',0,'ELEPHANT','EGG','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/temp5.png'),
+(28,'2026-04-23 15:47:44.000000','2026-04-23 15:47:44.000000','한라봉 씨앗',0,'HALLABONG','EGG','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/temp5.png'),
+(30,'2026-04-23 15:47:44.000000','2026-04-23 15:47:44.000000','너구리 알',0,'RACCOON','EGG','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/temp5.png');
+/*!40000 ALTER TABLE `characters` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 
+--
+-- Table structure for table `device_tokens`
+--
 
+DROP TABLE IF EXISTS `device_tokens`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `device_tokens` (
+  `device_token_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `fcm_token` varchar(255) NOT NULL,
+  `is_active` bit(1) NOT NULL,
+  `platform` enum('ANDROID','IOS') NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`device_token_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=78 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
----
----스트릭5일
+--
+-- Dumping data for table `device_tokens`
+--
 
-USE doitdo;
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `device_tokens` WRITE;
+/*!40000 ALTER TABLE `device_tokens` DISABLE KEYS */;
+INSERT INTO `device_tokens` VALUES
+(1,'2026-04-29 10:49:38.253804','2026-04-29 10:50:07.657121','eDgA96SUTROL1dJbWybeAM:APA91bHpiat2-8e_uwh4x8I03XUHY_5-3__oYBlR8DCTkxal22WlLwELh9-0oeQbgbwog0ufqeD3GdqRDHzCXmEBznHcLwuy7CL7XHu0M7w1NypKBTdtvYU',0x01,'ANDROID',1),
+(2,'2026-04-29 12:26:35.663614','2026-04-29 15:07:00.857506','cV_Wk-IPQRWdmuIE2QbrKB:APA91bEtfjpQ5Ktc9H2ky4adJ89700NjA2rI1aFoCZvrIV0kOA9t34lp_LF-ENwnZWme1oB7_y1nmtc_QLr5PmZSexIEH49y4HiNlxVjM_j4qjihIT2k_c4',0x00,'ANDROID',3),
+(3,'2026-04-29 12:56:08.259631','2026-04-29 15:07:00.857552','e5bZ4LHcT3CilKl7FUie9f:APA91bG471uGk3OPfb4OBeef50DAc_u5CDsxkSLzTHSmKyr_LEOvcygZCCEcW0HWpiA5xvWP8jKSw9RuT9WuPpYk8tnJunJgX2aRz2aX0ScdUXCJx7WMJFc',0x00,'ANDROID',3),
+(4,'2026-04-29 13:29:58.441634','2026-04-29 13:30:38.386269','fxHklCsxR5-CZcQu0MZROB:APA91bErUHH2Ax5CzHuPXHtw39sBRPxaKeFReDQAqakbEiaWC1BOB2UzAUwtvfssVBVu9vtQbHAk3V4sS7XtidN-UxCMvIz-sRMM-oybdslhOQFedmafBro',0x00,'ANDROID',3),
+(5,'2026-04-29 13:32:33.847355','2026-04-29 14:43:00.201551','dPVTy1gxQ0W0cTJOjRJ4Ne:APA91bEifrF-kR_D87t7iDjaDboc2IMd-Z0VESqTsn2IHXirFyF7Sri9ljQWdUwPD2K-VhY5e6rGdh7FIL0NIau4sJKbPrOHuh1c7XgLPzAnQ5g6_EvPkIM',0x01,'ANDROID',3),
+(6,'2026-04-29 14:31:07.756099','2026-04-29 14:31:07.756099','dOyLk0LiQ0mupSCTUuFefV:APA91bHHQQc_zRW9_sXsOhcFdFbuJBa34EF049NZ5rRGAlfUWWwpzcyQs17zoBm1ZNFUijaYepsZEwnCDFA-9OY0lzG-Jn-peJXT_VvxtkXNCrsaRRDgu9U',0x01,'IOS',8),
+(7,'2026-04-29 15:05:59.216897','2026-04-29 17:24:00.310862','dudJuz3wS9mUoFliQ4_QwV:APA91bG-toq3TOzTgnwQDN9P1kzGhingAelONOzuOXBtvcZhsyvDXA4xM7Ty93jnY2M9XPUFmRx73MjSBuofAi61mo-6CKEAptV12Fk5zpWD7_WStH3sJbg',0x01,'ANDROID',9),
+(8,'2026-04-29 16:59:03.211400','2026-04-29 16:59:03.211400','fOfe7LynQ8-fC8YtupPxXe:APA91bFUWmDpQ3UO7wQMjGoYjKBl2o0ZTiFyfDg-Lu9KChjsceTUaMaQd4SOal0Xx_UHNvIAa_olGwtDsdy3w9YouQpD40meeUJXFQh20QiJFFG4jJU6ZMI',0x01,'ANDROID',5),
+(9,'2026-04-30 10:25:35.686995','2026-04-30 10:25:35.686995','ca2tHcL0TcypLqjKW0ieyk:APA91bHA3WTMREQuZrXt1GSXH0zZgojFTFzGR9weqNyb_p4MWd3pgEJmuttMY8fDARMyNK1-APeyAs1LSdRK3zzq41BqgjY8zAoSHALA_Rb4KVzbRLvWGNE',0x01,'ANDROID',7),
+(10,'2026-04-30 10:45:31.365500','2026-04-30 10:49:24.708409','cUjqHw7BQ_-Zv-8sEnZl8b:APA91bEQ_VJFAc3e8PquvdkO4I_gE95u95lh3JVkg3mhx-UJuF9CJMIjmOk5fGQ5UpVulSy7qAg7m--j8-L6CKzHXCtfxuUvQQGZ9z877QmM3KzcJXklk8Y',0x01,'ANDROID',14),
+(11,'2026-04-30 13:32:08.149378','2026-04-30 13:32:11.126101','egzjaRkuRa-W1K8cmLv34d:APA91bF-15Dt-OPWqgZ2PzExPUBGViCpgmCj5JI321U8lDEo6hAyVG99xJn7b69sgzhHKou2psb8_xk_iBBhU3JsUUmbR-jqa7Rs3Ej6AtS96qB4M46-tsw',0x00,'ANDROID',14),
+(12,'2026-04-30 13:32:53.672088','2026-04-30 13:33:22.305551','c5PKGV3GRA-9B57ePhRt7l:APA91bHl-uweYax3ujpXMH4kgjRk4G-8LS1m4Fr4EBYcj9Kqjwtk-0DH06-XN5r3r50GcjfHrkBLHP494Dnuut94x_xZRTf1VTzjUcX5f7eMhxhZjSQVZkQ',0x01,'ANDROID',3),
+(13,'2026-04-30 14:52:55.412020','2026-04-30 15:11:54.040602','eGwzlHP1Toy8UCiXV8N8Ou:APA91bFZs6__IFYro517ERBstMNjD-2haTZLbO9tyCobO03u6YHACdJ1Wu9FYgipMzSPzA4QiUorZ1kLLHjZCJkKpD7mETkevOZTyiLSEbVAw04O30Z3THI',0x01,'ANDROID',3),
+(14,'2026-04-30 17:48:20.637598','2026-04-30 17:48:20.637598','dMq5SYz2R5KYkhISZinPvW:APA91bEC-El_2BVTwgknzAbeZbosMz_iIL3_bAA30VroxMfHK_QZ0ptwAlUbbWNwFpuhZFqMdlEJhsloNHQRBLbep9yi3gwwyjbSx3iC3eZRBRo8GJrqViw',0x01,'ANDROID',16),
+(15,'2026-04-30 20:06:52.544412','2026-04-30 20:06:52.544412','fOpnJpxSRB2_je48WZ2tJZ:APA91bFuTzAzpn5KTDJ4OPH1Kr1jxoX7uNdSp_ujm1INzjKzfKIMAZo-L8KnveTfl1yFut2j9dhSiMAVSwLovtVAlcRjq8OEEJRdGGwVTP0RiqWYzgCJtxQ',0x01,'ANDROID',10),
+(16,'2026-05-01 18:43:06.569842','2026-05-01 18:43:06.569842','fMnnL3CGRF29P1HGwOLIVZ:APA91bGesNDaqSHxbesDUhTtju8yf51hhwINmtRWoH_NPBjv_JHkFjoPikJSpiJP1vZqmYlfh-2GcnU0l3Th7ZBEzUF7-zrek_yXBcJMJefelTskpAs1O-Q',0x01,'ANDROID',17),
+(17,'2026-05-04 09:43:09.655087','2026-05-04 09:43:09.655087','c8gEc0y9RVulKDsMhMxTMG:APA91bHCGE-FQjBY3p4_QBApQfa3CLRF5jGhVkat4q-pMNHM6-Q5dm_IGQrdpioIgwtVMYBRx_235FmvKBiyuV3kOc2bqz7GitU-X95T66YaKICpIPg1LpU',0x01,'ANDROID',3),
+(18,'2026-05-04 10:13:06.237851','2026-05-04 10:13:06.237851','e6-xzl1KSymOduvE2---Rs:APA91bEJ9UJJnCVLA0LBSDBdmQJaOIGDnZRa_fn3VReQuqEcxIrqkIQGDhBc3UiNShjiGux3jymdSK2iIZl0VD1g9xDr9uKubVw22mALogmwX5n_UWQEz-A',0x01,'ANDROID',3),
+(19,'2026-05-04 11:02:20.768557','2026-05-04 11:02:20.768557','dhRkhDo0RVGY6rztlIrxUo:APA91bGF6T-ejuKtzp8J52brVlsRN9ESFLi0D5_eHuMmYXXx3PzrwOgJYtFBSJW_-K79_K3oILGzrqfoWRxxDMYmmqdo0Fi5PZR5u3z6JeNxxzRBEKwSySs',0x01,'ANDROID',15),
+(20,'2026-05-06 17:58:16.785681','2026-05-06 17:58:16.785681','cH6ttLTRQxaDMho8FZa7O-:APA91bGrTnQCLS2InS-m54aZgOxu9XBef2m-ysiFBltj0BzFGcuLtiU4SWeloeShk09gOCV-Aik-84u1sx1HBDV1Uwn0ZIM6lNMsahbWebNKyiXzle9nMK0',0x01,'ANDROID',3),
+(21,'2026-05-11 09:38:39.684001','2026-05-11 09:38:39.684001','cLWgwmaaSh6YBXAbq17KML:APA91bGrUHfabsVn9kriEES1DscjcYV_NgUQGEG2twZMAzJRiugrkPBR0JAGdMUN17Tsw-9J9aNMcc_exGV5Ter7oh8Vk_NoCQqUCVNcwnfKGUfoyuWfvFs',0x01,'ANDROID',3),
+(22,'2026-05-11 13:13:02.061544','2026-05-11 13:13:02.061544','dFSbcbrfR8GfXJh-JT2MF9:APA91bGTxxvKFw85w0H4ZYGpZQDTExlC7Olnn0UJELSnZ0DUivn5U1Nwvf7DLKILXbDyaHsEFwhu1B8gxz3XmG78pvtf_gkwjF_BMJkWtglIRxGWnIV9iK8',0x01,'ANDROID',9),
+(23,'2026-05-11 13:23:26.221988','2026-05-17 18:21:48.187067','d43LwnYQ4U7EuJCeC3pP43:APA91bEqfSZwQZ9OIxHaxNGcpS2gEhjsSnjbnwk87nOd1vVGVKECWEUZUDDMWM-0iUE3SBRBlJAkxDj099GzrRCe8pyRW0fObHg6s2so8-1vxTdxwxwDEP8',0x01,'IOS',14),
+(25,'2026-05-11 13:34:08.185578','2026-05-11 13:34:08.185578','ddt_88dzRNyobvsdiS3sca:APA91bG69Z_1sL_vpKtZivT0XsYgDRWephl6_65OQnDOsJFo4X3Wrt5rC0errEySqr6yEPSgI5WU1G24-5cIMTntmvM_U5VM4XOd16RibhuVOSBQoUUzP4w',0x01,'ANDROID',16),
+(26,'2026-05-11 13:35:31.762329','2026-05-11 13:35:31.762329','cJecEBG0Qda1McMOmv6B_r:APA91bHeOGaY95iz2tqPUK5754vZtzOLdL2li6M53rNLs6u943Y2aTP4eS48kIulKLjmY1e-RlM15ht4WFaels4VRJ9aITCN2eBuKxWExd2dsDTbIhKlZ84',0x01,'ANDROID',3),
+(27,'2026-05-11 13:36:53.513062','2026-05-11 13:36:53.513062','fLKen4OETuOhd-QPOSfcUG:APA91bGAOWfWbOOUz7sJx_5oL5XJGvxCODqEvuV3_YBzRFo5ZCm9cnZMqrcry680aSBlG2LdxbPciYOUfdXiXEX_TKtM5YWQq7jbZQBCkZyK0l0IKns3-H4',0x01,'ANDROID',20),
+(28,'2026-05-11 13:44:36.759705','2026-05-11 13:44:36.759705','dTPHkWZET12Y5YazosZP7n:APA91bE0Ms8-IsrmzRuA4M8AgGag34-cu5PhxAq92N1-nskgUEm6pfF5mvALoNPc_sZ8x9mBu1qjXc8zt98PmqgJY4RWkn_ufTMEGUzBplSeu-LLbXKvKiM',0x01,'ANDROID',9),
+(29,'2026-05-11 14:20:47.269890','2026-05-11 14:20:47.269890','fNZXSht4S_adzbPEtYcYXo:APA91bEEjKTNdXypyGlZ9Ts5D5E1Wf0jWu1-_ztub1yMnICbeeYoW_vViUO5kuk0L-NhuJgI5YUmcEjwKhrMejlL_10VsFn88uZx8gl_-swaNhjVmYkxXU4',0x01,'ANDROID',21),
+(30,'2026-05-11 14:22:49.560592','2026-05-11 14:22:49.560592','fxP08JnumkmCpw2Q4LlQV3:APA91bEq4k2NHd5Os61_bdeHiS9wJWGpH3JvU_j48bqaRhBLWUYueWpegqi9U17Bdks2oJRqDC_5T2o6IlwnxMKQwEJ3duCeA9y8p8hCW_GZHEJquuQh82k',0x01,'IOS',23),
+(31,'2026-05-11 14:23:10.238154','2026-05-11 14:23:10.238154','dsbh3UZybUmWqAWEF0LNIk:APA91bGrltD0sPpVIQLPq8z4NF0yh4V7tkzYWTo1SeDqYWBMD-qoDrQIwMaLrZTqI3nYXKnIj6b-w5i0boIAF4q-6Czzr8YpFts3I_ntRC_bMI3zyv6lmEU',0x01,'IOS',22),
+(32,'2026-05-11 14:30:01.622612','2026-05-11 14:30:01.622612','fQLsVnlLQsiPwJEJVevXrr:APA91bFhJ28OO8HS8iDNGf2U9oLk57Yy-EUq9VvsZtzCywiogOdf7ScV1QCyx4iWkzsuUiGsabxbyNzc4aAdO6dF9hbnSSQmwLl50fUxhkAjlsecTDxKFFw',0x01,'ANDROID',24),
+(33,'2026-05-11 14:38:29.314783','2026-05-11 14:38:29.314783','ffOxZzXKoEfRm7V5IRfbU0:APA91bHoZkJzH41OogSZTRqNI0MIyXMFJqQsqX9wImSMM8CQYL5N3Q2kiPYu6Qg_czitzs_G0pYdn7oK7QpbFcQKsoRLN5nhRpk-VNOlHqLMijybkZCE1U0',0x01,'IOS',25),
+(34,'2026-05-11 14:41:06.604771','2026-05-11 14:41:06.604771','fsFyBHuZRsOM-lVsTlaHXV:APA91bHDE9h2qb9pDVRtAN3j4sZZ67z8mU7N8oxVih1HsdhibqpKbEnfaMuqBD9lYiAE_ECBtOMx7lI8Wvzl2lHJLmyc_aTLDpRYAjuTy2L5IfR6mYAPDE4',0x01,'ANDROID',28),
+(36,'2026-05-11 15:29:42.110512','2026-05-11 15:32:47.207785','cNprh_mrOEnjhC9eLfWHyn:APA91bEk23AyTYZPaXYEHveQnxs3GqmYslF3UEaJtepmSWNEFD4pF_J4zXQFURJivQkFNtd9yeayGGV6IeLSHtX-H6agN_eN1_7osW4aibOAI-dhu4l9kOE',0x01,'IOS',31),
+(37,'2026-05-11 15:40:04.173948','2026-05-11 15:40:04.173948','f1gXidrAQNOi6UZ-dQDIWV:APA91bF1RBFVuuuZODbp9wrW-P9zvaqf6ZmnrrKlzK-GjUI1Y7ukFJEZ5hFoKPF5J0zqDYGDwG97WKhzO0qZVSKR-Vi40AW2EK7uQ8k_M4Btyt5g80wMgbs',0x01,'ANDROID',32),
+(38,'2026-05-11 15:48:52.290647','2026-05-11 15:48:52.290647','fLF65JBxQ7ifYmFw4_sxl5:APA91bEOeQRSco18DJwpjGyYPVJ8VqZPxVNq_I7x4B9YkO1t7Qxh0s5oOpdbmiSpnp0UwyD474lihk6jZRv6x6MVWNo8LMLIVDDUrLtt2qXVxAT0iQjPaZE',0x01,'ANDROID',3),
+(39,'2026-05-11 16:58:34.632903','2026-05-11 17:22:02.012881','fkJbyjhnTqi3B4JLTpPKVN:APA91bFSYi_fvj0sC_l55ood5YSr_B2tqpH3IobRIj9eRg1ctyzE-Fp1l-kXhpTFmN57xm5vaZ8irl7xGS5MWcKEAe6ZvzszIbU4ywSnliGl8J-hJ-OQzCI',0x01,'ANDROID',7),
+(40,'2026-05-11 17:14:29.319937','2026-05-11 17:14:29.319937','d96e1TIYSyW-rWU4WE4Rv5:APA91bFOB3-ZsYpd8R47gX6hcexXFt-0ttz3YYQdZ_GU3BqAAAxah8M2JsGN3e8x8qb-pd142yeevowM_qAUh1fxkOab3vgGWuDnZOE8AuWssu_IlxumOHE',0x01,'ANDROID',15),
+(41,'2026-05-11 18:02:30.542904','2026-05-11 18:02:30.542904','c_ijjeoVbEZBtXYcTtpb-B:APA91bEaOWG8X1whaXcMNV6xxO8vAEoyBYwtq19az7zaEVqtXfcGwP882uq1wB6mgOwlqStQbEC6jp6WaSVIpnGToSAY6ie0BKW2he6Z0IahJJ8_IRDttGk',0x01,'IOS',36),
+(42,'2026-05-11 20:23:22.779189','2026-05-11 20:23:22.779189','dd_7lRmVQ3uXEbmrZTGYfu:APA91bGpfjitg9H4qda38boB_x6clarh7WIYhZgp2Cj4U3-9StcmyIvREzIZhxwPed0EdiSl2gvczj2G1ylPRhjoIeuBhRvKWqtBm_fJ89UdShYevizDtEU',0x01,'ANDROID',38),
+(43,'2026-05-11 20:46:41.989993','2026-05-16 15:25:01.170041','dJvUgZIU00V5qCQBuxTmCq:APA91bHSTTp5XLPM1-CVsDK6HVnv7J0608XPmIlZ-k_tja_Mw_CkHmz15XLc9t8WuI25i5mdpeq2on3dgQw0-ojhMtDegV9KZaMUn_-B8AEeK5cByZAgOtg',0x01,'IOS',11),
+(44,'2026-05-11 21:43:12.309387','2026-05-11 21:43:12.309387','eDV3OrsuSSSqi29_3757ZQ:APA91bGpgEEW_IB-ZsO15x2m8BUiQpFYXGMICC6cvBKhgcjKUms8B0l2J4-4KklT2RgQ7gltq3sIfLlf4_dsk5zXu113HhdMYZHpAJ6ha4Er7vrDVwM8-TU',0x01,'ANDROID',39),
+(45,'2026-05-12 08:44:38.757891','2026-05-12 16:44:03.756444','dhe33FsXRG-Ad0IYogSLRA:APA91bFX7TqT2ktp5vj1yTJo9_-Sex_bXosSnKD48Bqb8cEscxJrrOjlrMeHEMx9HjOZOMhrwT8FY0UHV5efLuKMB_iTnE9a1xrBlsCgIk_d7AR3c7yi6bI',0x01,'ANDROID',3),
+(46,'2026-05-12 09:08:55.496343','2026-05-12 09:08:55.496343','dfYSHgUn1UQJudT0v8CZMY:APA91bGxLtR0mgceQG3jGvE1adStS7UwErxSQgkBTSGe4VoAwdMsY-KY8UGlutQ-9GuqO5BlgE8XivlXf5Q_Z-ibS-WvvNMSL46oKFuOxhCnoIU0r5FkNDI',0x01,'IOS',41),
+(47,'2026-05-12 10:11:11.284252','2026-05-12 10:11:11.284252','f9xyuCXrO0FYnsY_B2Z38o:APA91bFCXlU42AQK0EnKqbcLdiBEfevHzfq3xk2Rp7P9vczF0bEAjLA6Dg2_N8OqtFOVC2jiJN8BfLHrMY3uJKbFzME1Dkg-QilxIx0epP2570eMgUkczqM',0x01,'IOS',42),
+(48,'2026-05-12 10:37:30.141653','2026-05-12 10:37:30.141653','eCkoKO5Y0kAYmbPNAPLBGA:APA91bGjZGqpPkgqj4ayId5k8j117CYFWwJL3lsPAEVC-xm4RP96C9zrzrlvlgJR_tFRwCafbVOP5XPk3DTZ9iGhFBYK8KI6h3CeNNDzgApEHb_S2QT6yLw',0x01,'IOS',43),
+(49,'2026-05-12 10:41:09.979740','2026-05-12 10:41:09.979740','fUrnojgSTEISuvF-X17U49:APA91bFSD38p8v6j6inxq5v3KZNGYAjcNsniZl9EiI-8tqrKMLczgSf6Yy7XPXnQ9QaeOHT2H99Vgbeb30hxUaI3aNJHYHocajqhrXpow4uUAwq6dUVpO_U',0x01,'IOS',44),
+(50,'2026-05-12 10:48:49.557551','2026-05-12 10:48:49.557551','d-vcbjps5Ug9j6pNzvqcEy:APA91bEfbfCDIDF1_E0MuD4Qm0xhaAIL7ZsQ1RbedpSnxIK49FvMRLkjlhAIDID3Qw2IZRmCBNF11M1FeWLOGxlzNb9QcypYoXpaGgEIDJ5xBLaoIrEv9Vw',0x01,'IOS',45),
+(51,'2026-05-12 13:03:23.961289','2026-05-12 13:03:23.961289','eL_oiHPfdk5it29_OhMw0N:APA91bGk4caASMhHha8NNO6G-tLEdnv51oEqlKX1WRwnCJBc0tv-PtRO_1rtZB5Q8EXi_HkBSMmaTZCbrSo1jQ9-IDcD-lX0wTi19c43qPXguJdfxesXhiI',0x01,'IOS',46),
+(52,'2026-05-12 14:18:45.825030','2026-05-12 14:18:45.825030','dOlhPxxBWU-IjREjmnc8b-:APA91bFYzTFU2RbNykQ-c3pP6-pAV3HuqaGN7BqXVVKPds8SNjOioPXE2JGmEtQDm06Hv-NFW1l16ebpiISmGr6uQKIBK4n9xqa0L7wLdReJMuVYMDFisQA',0x01,'IOS',48),
+(53,'2026-05-12 14:45:04.697761','2026-05-12 14:45:04.697761','dFLR_kTuIkN_ljcnRVGGhn:APA91bGNRHdaHTFzab3mPdPNN7imrxmzsMgRigron1hcSwrg4a8UY76YBBuOuPFy0e5X90zjeRT4DMrYwgS7N48HXEduIdIg9wNZDd7sZ3AEcTpwsL5JXoI',0x01,'IOS',49),
+(54,'2026-05-12 16:17:23.475138','2026-05-12 16:17:23.475138','fS8e96NB301DqRiCGqeT8K:APA91bGT7ThaKDXRTXdGJqXDdddCi0na6qamOYZOED6MHqNjjJCWSNmvHUPvyKuo9AgtN5R2jiSr5w5X-iDr0L97_wwSouWVSh_He34GndlziA4IF40caE4',0x01,'IOS',50),
+(55,'2026-05-12 17:35:09.853391','2026-05-12 17:35:09.853391','cNKCrDYoRq2OAoNoOthrQ4:APA91bGdZg6qc9nBhU5nK9JGPLeXX_4kAUBKj1tDLP8ocVy1K92hipvICoe3mJXr5_6FC5GY-s-Uu_w-UrnsEdvzepACLhB8BXUoSUbzPadR1ZJQBZBP-NY',0x01,'ANDROID',34),
+(56,'2026-05-12 17:55:08.685673','2026-05-12 17:55:08.685673','e2I6Oj8rbEt7k_aNJ-zgWd:APA91bGU2kcxyUAFiR8aIYiX6U-pNE7yRay2NkggjOXBr1DNFsIdyK1B20lbe72ux2tL8f_7dCNmYUb3DF8BuclCXcTHlv9ftJLnlGrkapDUgH_xpeFCSMg',0x01,'IOS',52),
+(57,'2026-05-13 01:22:25.231179','2026-05-13 01:22:25.231179','ekub4JG_QOStPWel7TgmiG:APA91bFesDJS3A98UPb-EZx9fGSy4IijDAkgITlOo24JRpoTuzTCtrWBeJdpHZaFvPG-iwbU-aiH-lDUn8GIEJ6g3Y6uREtgFMt28TVDECPevHy14H-anD4',0x01,'ANDROID',53),
+(58,'2026-05-14 00:33:24.863113','2026-05-14 00:33:24.863113','ftS3kK0uQKOUvp0iFHFXYQ:APA91bESXa8_iDV5ION3VzYxJxDX4h6MG7Vp53zewLrBzIL--gHSlemtVqpOHNk2NixXlTPtlmClCTx_k9hY4tDZ3BOEeFvvmyPybXtQWdG4yKICU5owRhE',0x01,'ANDROID',54),
+(59,'2026-05-14 12:22:45.501382','2026-05-14 12:51:38.912317','fcfIlmGLT92bsB0IcX_kVL:APA91bFIQgDJylOx65IAlfe8U19LsZm2wJqkPYXLVREz43n9jnMGivujILNBVovbBr_g1uXVAZngXxDQH7-Ad7RxJDboCLGR3j6Qj8XRT5epnADS6qU85U8',0x01,'ANDROID',14),
+(60,'2026-05-14 18:45:31.305240','2026-05-14 18:45:31.305240','cD3Pk66QikBqkL40fMJv_S:APA91bExDKxH32Y_bOSuqVkQd7U9bBD0bgRLLCr3U2anmsbEf7JCeGV6c96wXPqN4LgqFl4FO7ir8ZzdPRgrFHDZWUnyNc_qrb-SwOOiv1ETc0REbE6d7n4',0x01,'IOS',56),
+(61,'2026-05-17 16:57:23.871636','2026-05-17 16:58:27.479277','e8_Hd8qFQvCuaK_BC3-WMw:APA91bEyKEKTc9jqY9HCftUYE_yzo-9C5rZALbO0_uPzV465AhMB0vYnp22A38gISW7Mludmgtwz8IvZJqfSqkzN3QpXrVc-gFjE4xaOa0IiQ6jaWC-ZYU8',0x01,'ANDROID',58),
+(62,'2026-05-17 17:01:45.668109','2026-05-17 17:01:45.668109','e0KJzLq0S6ibDnOCfMjnil:APA91bHg59BgE7wEmZsvlgEVjZRdGBjTYWMUbBBXBXeEfofvKPFtgdm9KbbflLODcDOwbDkTx5dE_aP5QWkE3j7VodsqYIwld0WOzRG20xxg1zbo_R9idtc',0x01,'ANDROID',15),
+(63,'2026-05-18 08:07:25.222554','2026-05-18 08:07:25.222554','c_zB1qc6RR6BqN3HmCqkbz:APA91bEtnfzvjH4lg09JCMcYDR6GBCcIQPWi2AKR7SlL1dveSJ6fkkXc3GaafPdb4G2_iAqSDpGIzaSg8bOJtFkhP_mJbJX_cDjKUkAKOrxtFDk_z-rd1Us',0x01,'ANDROID',59),
+(64,'2026-05-19 09:57:55.587405','2026-05-19 09:57:55.587405','cjTSlisGQBCHOiesWPEe-i:APA91bGFKbTSrn3ZGQ7SARKrr7GkRCmmWWaTtgkTA61HMqSy-VEZEBDipVMYC6ddUyPrMQ5cyxj9OQo25ABiwFVtOMV-XjFq5C-MVfZYnLTOvGKevWwIQ9Y',0x01,'ANDROID',3),
+(65,'2026-05-19 15:30:59.286980','2026-05-19 17:00:45.262005','e0ndo60tSb--YvEkWqawin:APA91bFPb5xHyW4toSwIrB4Il8OVi46X1g086JKIZ28GHL9FoiI9jydXuBfitu_NP_4elvjdOJbfIQdSU6oVDzry0B2R3olTyBmIfyc3lddaitsTs57X6As',0x01,'ANDROID',3),
+(66,'2026-05-19 17:01:04.689661','2026-05-19 17:01:04.689661','e9qtkEpnSbK9js9XfqTDtn:APA91bH-jfDvLKgVoz6SNTiH1dzDjJse_EmANRnWnNBDTjtb8nXAPLHHFNeo6JMdMqd2h-HuohJQIexfvc5tT4FAM-_dSRnG6kGjuzuoumpjp_NK4tgGXB0',0x01,'ANDROID',3),
+(67,'2026-05-19 17:03:07.794426','2026-05-19 17:26:42.328764','cb7uBV93Q7mp7Y93XF45On:APA91bHNuoU0zAGzGOxp_dpfpWUxi1j4U9oIzfGydZc9I4KBSMSehd4p7J3antXl1NY7ZVaFmek21BmTXBDXBlkf4kybAZa5JIphbe259YovwLGSj6edSUo',0x01,'ANDROID',3),
+(68,'2026-05-19 17:28:42.561946','2026-05-20 08:57:40.856580','cB3ex1MeTw6A-fGo0xmy_M:APA91bHdiAbCMcsZLzAOCSd4qCZw_C0WmI68B7W61nfZikoFokMQTYW4GHJKUl83RX1R-aj97rNV3WDd0P2hsLWr04FkyA0JwLNCbwqy2owLIG2vrzfOhFs',0x01,'ANDROID',3),
+(69,'2026-05-20 11:54:57.098592','2026-05-20 11:54:57.098592','d0E4Jsr-T0m2XU7156hxnH:APA91bEwjr__i2POOe0ec7ccl70asNtBaADWYxvbI1tHWn5mbaJAXu2ow5chlT-cLPxNMEpTxvHEdwQOacRAVpTeMBkTeCVPhRyGGjkZKwMyMd1hj0dEtjA',0x01,'ANDROID',3),
+(70,'2026-05-20 12:03:51.668412','2026-05-20 12:03:51.668412','cWL4D0MxTrqW7SF73hT0tL:APA91bEBGzF65Sb7blFY_UDQgqRJ_HFR_dx3iUIDUN7xrDja0iBSoxzM7ROu4oCOExSw_mX8Iggs3Z_4HzuQbYHHdwZU3XcBEgBCm7cGWEgY0MDIjNN5jZg',0x01,'ANDROID',3),
+(71,'2026-05-20 12:05:09.763934','2026-05-20 13:04:14.499112','f1ebGD4nQqeG5Vr7sAcpAH:APA91bHUzLpYgqBIDd-RjkAVfVwtFQNC59ld4ZXDcs2LGlrHcaZ-x_5bL3Q-GI8wq3HpGIz8JrHt7S_U879I0roVTxJYa04-3fqghj5p3d-3oiNSqqRHBUw',0x00,'ANDROID',62),
+(72,'2026-05-20 13:04:46.991674','2026-05-20 14:20:41.107086','fsFeM7HqSwKmW4QC0Nx0X-:APA91bHvVqxhSE1Nt3u2OHUkCM5G8lLaOxXG1TC24Mu8vD1_QaK8VKnmTAoOTnAdZGpKKKwtMBq25OUrhhWBw2kdTVyAKzTLtb0x2G8LDOg5hu_MXE7M_pM',0x01,'ANDROID',3),
+(73,'2026-05-20 13:49:12.948701','2026-05-20 13:49:12.948701','cr3b_VzES_-1Z8s1ggc7Pi:APA91bF38rWgBzuWm748VpyDdyO3ACgk_LDABeRal7rLLvLVjMISWnc0bKQrRkx1ys1khX6nOZyTtXs48v2N8XuwaguDIPBQXehODzmnVtOWA6CAqD6Ti_o',0x01,'ANDROID',16),
+(74,'2026-05-20 14:01:39.203220','2026-05-20 14:01:39.203220','eAHIZ0ABTrO47K0EoK9ISH:APA91bEKXCChslvq2L6J5xtzn8dtAMJZuRBP9ffUwrMs4gOAoK68_NRustC8GXXiHx_fjtBOjD80aFJM32yPZgajwZ-lv9wpLBvPyWTGUDx6XfM1f0lTcys',0x01,'ANDROID',9),
+(75,'2026-05-20 14:43:43.060389','2026-05-20 14:43:43.060389','euOmpr3tTcu4xQmP_FgrP1:APA91bGCT2LJWu6QhAdZBuTfCyFjuvY4xjGoLk93TfWX2wHsdwIhdhkIEyx45rHptP0yJu6Rq8N2SY37g_ptLkRDo1BkHnzv5PQPunMCUqjeA62g3tWhjDw',0x01,'ANDROID',7),
+(76,'2026-05-20 15:45:09.035167','2026-05-20 15:45:09.035167','cz9pexU5TJSHV8_KAkvN4s:APA91bHccLcMf7zCcm33gJXyfOjc7JxCBQ-bmrhigcpqEC8vGlIDgcy7PJWLTm3CWWr_cq5ksMdNro8LYIORPP-YyktZtS22HiGfj09TALwxPbZPbT74rzY',0x01,'ANDROID',15),
+(77,'2026-05-20 16:19:14.998090','2026-05-20 16:19:14.998090','f_LtElAUQ-OZF4YjfKudTJ:APA91bFbo8HBMT0hHddJtt8vMvSbKHRgxB0r73F9zRcneTK6PtPPXB771gtmI6ymNmaUgPWq4B1hYkkksVy96WvcG8K40fsFvUAAI6q4Afzja1Yh-rQ9Lfk',0x01,'ANDROID',9);
+/*!40000 ALTER TABLE `device_tokens` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 
-UPDATE user_streaks us
-JOIN users u ON u.user_id = us.user_id
-SET us.current_streak_count = 5,
-    us.current_streak_start_date = DATE_SUB(CURDATE(), INTERVAL 4 DAY),
-    us.last_active_date = CURDATE(),
-    us.longest_streak_count = GREATEST(us.longest_streak_count, 5),
-    us.longest_streak_start_date = DATE_SUB(CURDATE(), INTERVAL 4 DAY),
-    us.longest_streak_end_date = CURDATE()
-WHERE u.email = 'gms07051@gmail.com'
-  AND u.is_deleted = 0;
+--
+-- Table structure for table `furniture_purchase_logs`
+--
 
+DROP TABLE IF EXISTS `furniture_purchase_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `furniture_purchase_logs` (
+  `purchase_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `balance_after_purchase` int(11) NOT NULL,
+  `furniture_id` bigint(20) NOT NULL,
+  `price` int(11) NOT NULL,
+  `purchased_at` datetime(6) NOT NULL,
+  `user_furniture_id` bigint(20) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`purchase_id`),
+  KEY `idx_furniture_purchase_logs_user_id` (`user_id`),
+  KEY `idx_furniture_purchase_logs_furniture_id` (`furniture_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=102 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
+--
+-- Dumping data for table `furniture_purchase_logs`
+--
 
----도감초기화
-USE doitdo;
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `furniture_purchase_logs` WRITE;
+/*!40000 ALTER TABLE `furniture_purchase_logs` DISABLE KEYS */;
+INSERT INTO `furniture_purchase_logs` VALUES
+(1,2000,190,1000,'2026-05-11 14:09:32.270234',3,9),
+(2,500,74,1500,'2026-05-11 14:09:45.107358',4,9),
+(3,21110,194,1000,'2026-05-11 14:36:32.703733',18,23),
+(4,19610,63,1500,'2026-05-11 14:37:07.864779',19,23),
+(5,17810,96,1800,'2026-05-11 14:37:17.205213',20,23),
+(6,16610,176,1200,'2026-05-11 14:37:20.643296',21,23),
+(7,15810,80,800,'2026-05-11 14:37:25.849529',22,23),
+(8,14310,144,1500,'2026-05-11 14:37:37.362175',23,23),
+(9,13710,112,600,'2026-05-11 14:37:39.779388',24,23),
+(10,12510,128,1200,'2026-05-11 14:37:43.424621',25,23),
+(11,11510,211,1000,'2026-05-11 14:44:51.824755',30,23),
+(12,10510,212,1000,'2026-05-11 14:48:20.477380',40,23),
+(13,19020,205,1000,'2026-05-11 17:14:59.078345',57,15),
+(14,17520,71,1500,'2026-05-11 17:16:10.702997',58,15),
+(15,15720,94,1800,'2026-05-11 17:16:33.744467',59,15),
+(16,14520,55,1200,'2026-05-11 17:16:45.410924',60,15),
+(17,13720,88,800,'2026-05-11 17:18:24.160109',61,15),
+(18,12220,152,1500,'2026-05-11 17:18:32.215084',62,15),
+(19,11620,121,600,'2026-05-11 17:18:36.876908',63,15),
+(20,10420,132,1200,'2026-05-11 17:18:42.745649',64,15),
+(21,99000,208,1000,'2026-05-11 17:45:58.492135',66,29),
+(22,98200,88,800,'2026-05-11 17:46:08.351952',67,29),
+(23,97000,184,1200,'2026-05-11 17:46:20.578852',68,29),
+(24,95500,152,1500,'2026-05-11 17:46:39.320922',69,29),
+(25,93700,104,1800,'2026-05-11 17:46:46.530245',70,29),
+(26,92200,72,1500,'2026-05-11 17:46:48.634711',71,29),
+(27,91600,120,600,'2026-05-11 17:46:51.596929',72,29),
+(28,90400,136,1200,'2026-05-11 17:46:53.078330',73,29),
+(29,9110,211,1000,'2026-05-12 10:52:51.086603',85,44),
+(30,7610,76,1500,'2026-05-12 10:53:00.931662',86,44),
+(31,5810,108,1800,'2026-05-12 10:53:03.462327',87,44),
+(32,4610,188,1200,'2026-05-12 10:53:08.967616',88,44),
+(33,3810,92,800,'2026-05-12 10:53:12.671275',89,44),
+(34,2310,156,1500,'2026-05-12 10:53:15.623836',90,44),
+(35,1710,124,600,'2026-05-12 10:53:19.048668',91,44),
+(36,510,140,1200,'2026-05-12 10:53:22.751070',92,44),
+(37,99000,205,1000,'2026-05-12 15:14:16.227442',106,36),
+(38,97500,6,1500,'2026-05-12 15:14:27.918006',107,36),
+(39,95700,20,1800,'2026-05-12 15:14:29.985327',108,36),
+(40,94500,55,1200,'2026-05-12 15:14:31.470034',109,36),
+(41,93700,13,800,'2026-05-12 15:14:34.065050',110,36),
+(42,92200,41,1500,'2026-05-12 15:14:35.663522',111,36),
+(43,91600,27,600,'2026-05-12 15:14:42.315247',112,36),
+(44,90400,34,1200,'2026-05-12 15:14:44.148032',113,36),
+(45,89400,190,1000,'2026-05-12 15:15:29.086438',114,36),
+(46,87900,74,1500,'2026-05-12 15:15:35.720629',115,36),
+(47,86100,106,1800,'2026-05-12 15:15:37.135190',116,36),
+(48,84900,186,1200,'2026-05-12 15:15:38.474684',117,36),
+(49,84100,90,800,'2026-05-12 15:15:40.535350',118,36),
+(50,82600,154,1500,'2026-05-12 15:15:42.514302',119,36),
+(51,82000,122,600,'2026-05-12 15:15:44.734723',120,36),
+(52,80800,138,1200,'2026-05-12 15:15:47.053220',121,36),
+(53,18530,7,1500,'2026-05-12 15:57:10.822260',122,7),
+(54,17530,205,1000,'2026-05-12 15:57:25.862570',123,7),
+(55,15730,20,1800,'2026-05-12 15:57:37.647093',124,7),
+(56,14230,6,1500,'2026-05-12 15:57:40.551728',125,7),
+(57,13030,55,1200,'2026-05-12 15:58:09.932728',126,7),
+(58,12230,13,800,'2026-05-12 15:58:15.999317',127,7),
+(59,10730,41,1500,'2026-05-12 15:58:18.511147',128,7),
+(60,10130,27,600,'2026-05-12 15:58:21.430853',129,7),
+(61,8930,34,1200,'2026-05-12 15:58:24.182470',130,7),
+(62,19110,194,1000,'2026-05-12 18:15:30.397953',134,52),
+(63,18510,122,600,'2026-05-12 18:15:54.676563',135,52),
+(64,9570,6,550,'2026-05-13 17:49:53.382660',137,49),
+(65,9070,64,500,'2026-05-13 17:50:05.835167',138,49),
+(66,8820,176,250,'2026-05-13 17:50:12.207130',139,49),
+(67,8620,194,200,'2026-05-13 17:50:16.038698',140,49),
+(68,99950,210,200,'2026-05-14 15:20:50.321923',398,3),
+(69,99750,200,200,'2026-05-14 15:20:53.572004',399,3),
+(70,99860,211,150,'2026-05-14 15:58:56.190045',400,34),
+(71,99710,201,150,'2026-05-14 15:59:01.672525',401,34),
+(72,99260,76,450,'2026-05-14 15:59:42.385009',402,34),
+(73,98960,108,300,'2026-05-14 15:59:47.844645',403,34),
+(74,98760,188,200,'2026-05-14 15:59:51.383528',404,34),
+(75,98610,92,150,'2026-05-14 15:59:55.804058',405,34),
+(76,98310,156,300,'2026-05-14 15:59:58.425910',406,34),
+(77,98160,124,150,'2026-05-14 16:00:02.499172',407,34),
+(78,97810,140,350,'2026-05-14 16:00:04.972354',408,34),
+(79,50010,209,150,'2026-05-15 23:06:41.574024',411,46),
+(80,49560,5,450,'2026-05-15 23:07:03.338522',412,46),
+(81,49260,19,300,'2026-05-15 23:07:40.866645',413,46),
+(82,49060,54,200,'2026-05-15 23:08:08.775447',414,46),
+(83,10480,194,200,'2026-05-16 15:44:30.946780',416,15),
+(84,4560,77,450,'2026-05-19 17:34:17.722601',422,3),
+(85,4410,212,150,'2026-05-20 11:56:15.867745',424,3),
+(86,2220,133,400,'2026-05-20 12:26:09.086835',425,3),
+(87,2220,203,200,'2026-05-20 12:26:09.089898',426,3),
+(88,2220,69,500,'2026-05-20 12:26:09.095465',427,3),
+(89,2220,101,350,'2026-05-20 12:26:09.097747',428,3),
+(90,2220,117,200,'2026-05-20 12:26:09.100839',429,3),
+(91,2220,85,200,'2026-05-20 12:26:09.102075',430,3),
+(92,2220,149,350,'2026-05-20 12:26:09.102733',431,3),
+(93,2220,181,250,'2026-05-20 12:26:09.103356',432,3),
+(94,6680,128,400,'2026-05-20 14:44:16.033982',438,7),
+(95,6680,194,200,'2026-05-20 14:44:16.038819',439,7),
+(96,6680,64,500,'2026-05-20 14:44:16.039598',440,7),
+(97,6680,96,350,'2026-05-20 14:44:16.040382',441,7),
+(98,6680,112,200,'2026-05-20 14:44:16.041456',442,7),
+(99,6680,80,200,'2026-05-20 14:44:16.043960',443,7),
+(100,6680,144,350,'2026-05-20 14:44:16.044960',444,7),
+(101,6680,176,250,'2026-05-20 14:44:16.045779',445,7);
+/*!40000 ALTER TABLE `furniture_purchase_logs` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 
-SET SQL_SAFE_UPDATES = 0;
+--
+-- Table structure for table `furniture_themes`
+--
 
-DELETE cu
-FROM character_unlocks cu
-JOIN users u ON u.user_id = cu.user_id
-WHERE u.email = 'gms07051@gmail.com'
-  AND u.is_deleted = 0;
+DROP TABLE IF EXISTS `furniture_themes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `furniture_themes` (
+  `theme_code` varchar(30) NOT NULL,
+  `theme_name` varchar(50) NOT NULL,
+  `thumbnail_url` varchar(500) DEFAULT NULL,
+  `display_order` int(11) NOT NULL DEFAULT 0,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`theme_code`),
+  KEY `idx_furniture_themes_active_order` (`is_active`,`display_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-SET SQL_SAFE_UPDATES = 1;
+--
+-- Dumping data for table `furniture_themes`
+--
 
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `furniture_themes` WRITE;
+/*!40000 ALTER TABLE `furniture_themes` DISABLE KEYS */;
+INSERT INTO `furniture_themes` VALUES
+('AUTUMN','가을','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/autumn_background.webp',1,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('CHERRY','벚꽃','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/cherry_background.webp',2,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('CLASSIC','클래식','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/classic_background.webp',3,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('CYBER','사이버','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/cyber_background.webp',4,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('DAISY','데이지','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/daisy_background.webp',5,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('DESERT','사막','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/desert_background.webp',6,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('FOREST','숲','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/forest_background.webp',7,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('GOTHIC','고딕','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/gothic_background.webp',8,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('HEART','하트','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/heart_background.webp',9,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('HONEY','허니','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/honey_background.webp',10,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('LAVENDER','라벤더','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/lavender_background.webp',11,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('LEAF','잎','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/leaf_background.webp',12,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('MAPLE','단풍','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/maple_background.webp',13,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('MARINE','마린','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/marine_background.webp',14,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('MOON','달빛','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/moon_background.webp',15,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('OCEAN','바다','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/ocean_background.webp',16,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('PINE','소나무','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/pine_background.webp',17,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('RAINBOW','무지개','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/rainbow_background.webp',18,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('SAGE','세이지','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/sage_background.webp',19,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('SNOW','눈','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/snow_background.webp',20,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('SOLAR','태양','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/solar_background.webp',21,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('STRAWBERRY','딸기','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/strawberry_background.webp',22,1,'2026-05-14 10:50:27','2026-05-14 10:50:27'),
+('VINTAGE','빈티지','https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/vintage_background.webp',23,1,'2026-05-14 10:50:27','2026-05-14 10:50:27');
+/*!40000 ALTER TABLE `furniture_themes` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 
----알로 가기 기존꺼 소프트딜리트하고 
-USE doitdo;
+--
+-- Table structure for table `furnitures`
+--
 
-SET @email = 'gms07051@gmail.com';
+DROP TABLE IF EXISTS `furnitures`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `furnitures` (
+  `furniture_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `category` varchar(30) NOT NULL,
+  `theme_code` varchar(30) DEFAULT NULL,
+  `code` varchar(50) NOT NULL,
+  `default_x` int(11) NOT NULL,
+  `default_y` int(11) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `height` int(11) NOT NULL,
+  `image_url` varchar(500) DEFAULT NULL,
+  `is_deleted` bit(1) NOT NULL,
+  `is_on_sale` bit(1) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `price` int(11) NOT NULL,
+  `thumbnail_url` varchar(500) DEFAULT NULL,
+  `width` int(11) NOT NULL,
+  `z_index` int(11) NOT NULL,
+  PRIMARY KEY (`furniture_id`),
+  UNIQUE KEY `UKqthn487lf8ll22c2vnvid411j` (`code`),
+  UNIQUE KEY `uk_furnitures_theme_category` (`theme_code`,`category`),
+  KEY `idx_furnitures_category` (`category`),
+  KEY `idx_furnitures_theme_code` (`theme_code`)
+) ENGINE=InnoDB AUTO_INCREMENT=213 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-SET SQL_SAFE_UPDATES = 0;
+--
+-- Dumping data for table `furnitures`
+--
 
--- 기존 현재 캐릭터 비활성화
-UPDATE user_character uc
-JOIN users u ON u.user_id = uc.user_id
-SET uc.is_active = 0,
-    uc.is_deleted = 1,
-    uc.updated_at = NOW()
-WHERE u.email = @email
-  AND u.is_deleted = 0
-  AND uc.is_active = 1
-  AND uc.is_deleted = 0;
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `furnitures` WRITE;
+/*!40000 ALTER TABLE `furnitures` DISABLE KEYS */;
+INSERT INTO `furnitures` VALUES
+(1,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','BED','AUTUMN','BED_AUTUMN',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/autumn_bed.webp',0x00,0x01,'가을 침대',450,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/autumn_bed.webp',200,1),
+(2,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','BED','DAISY','BED_DAISY',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/daisy_bed.webp',0x00,0x01,'데이지 침대',500,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/daisy_bed.webp',200,1),
+(3,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','BED','FOREST','BED_FOREST',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/forest_bed.webp',0x00,0x01,'숲속 침대',450,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/forest_bed.webp',200,1),
+(4,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','BED','HEART','BED_HEART',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/heart_bed.webp',0x00,0x01,'하트 침대',500,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/heart_bed.webp',200,1),
+(5,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','BED','LEAF','BED_LEAF',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/leaf_bed.webp',0x00,0x01,'잎새 침대',450,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/leaf_bed.webp',200,1),
+(6,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','BED','MOON','BED_MOON',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/moon_bed.webp',0x00,0x01,'달빛 침대',550,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/moon_bed.webp',200,1),
+(7,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','BED','OCEAN','BED_OCEAN',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/ocean_bed.webp',0x00,0x01,'바다 침대',500,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/ocean_bed.webp',200,1),
+(8,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','CLOCK','AUTUMN','CLOCK_AUTUMN',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/autumn_clock.webp',0x00,0x01,'가을 시계',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/autumn_clock.webp',80,5),
+(9,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','CLOCK','DAISY','CLOCK_DAISY',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/daisy_clock.webp',0x00,0x01,'데이지 시계',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/daisy_clock.webp',80,5),
+(10,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','CLOCK','FOREST','CLOCK_FOREST',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/forest_clock.webp',0x00,0x01,'숲속 시계',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/forest_clock.webp',80,5),
+(11,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','CLOCK','HEART','CLOCK_HEART',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/heart_clock.webp',0x00,0x01,'하트 시계',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/heart_clock.webp',80,5),
+(12,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','CLOCK','LEAF','CLOCK_LEAF',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/leaf_clock.webp',0x00,0x01,'잎새 시계',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/leaf_clock.webp',80,5),
+(13,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','CLOCK','MOON','CLOCK_MOON',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/moon_clock.webp',0x00,0x01,'달빛 시계',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/moon_clock.webp',80,5),
+(14,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','CLOCK','OCEAN','CLOCK_OCEAN',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/ocean_clock.webp',0x00,0x01,'바다 시계',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/ocean_clock.webp',80,5),
+(15,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','DESK','AUTUMN','DESK_AUTUMN',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/autumn_desk.webp',0x00,0x01,'가을 책상',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/autumn_desk.webp',160,2),
+(16,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','DESK','DAISY','DESK_DAISY',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/daisy_desk.webp',0x00,0x01,'데이지 책상',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/daisy_desk.webp',160,2),
+(17,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','DESK','FOREST','DESK_FOREST',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/forest_desk.webp',0x00,0x01,'숲속 책상',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/forest_desk.webp',160,2),
+(18,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','DESK','HEART','DESK_HEART',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/heart_desk.webp',0x00,0x01,'하트 책상',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/heart_desk.webp',160,2),
+(19,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','DESK','LEAF','DESK_LEAF',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/leaf_desk.webp',0x00,0x01,'잎새 책상',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/leaf_desk.webp',160,2),
+(20,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','DESK','MOON','DESK_MOON',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/moon_desk.webp',0x00,0x01,'달빛 책상',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/moon_desk.webp',160,2),
+(21,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','DESK','OCEAN','DESK_OCEAN',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/ocean_desk.webp',0x00,0x01,'바다 책상',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/ocean_desk.webp',160,2),
+(22,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','PLANT','AUTUMN','PLANT_AUTUMN',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/autumn_plant.webp',0x00,0x01,'가을 식물',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/autumn_plant.webp',80,3),
+(23,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','PLANT','DAISY','PLANT_DAISY',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/daisy_plant.webp',0x00,0x01,'데이지 식물',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/daisy_plant.webp',80,3),
+(24,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','PLANT','FOREST','PLANT_FOREST',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/forest_plant.webp',0x00,0x01,'숲속 식물',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/forest_plant.webp',80,3),
+(25,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','PLANT','HEART','PLANT_HEART',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/heart_plant.webp',0x00,0x01,'하트 식물',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/heart_plant.webp',80,3),
+(26,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','PLANT','LEAF','PLANT_LEAF',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/leaf_plant.webp',0x00,0x01,'잎새 식물',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/leaf_plant.webp',80,3),
+(27,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','PLANT','MOON','PLANT_MOON',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/moon_plant.webp',0x00,0x01,'달빛 식물',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/moon_plant.webp',80,3),
+(28,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','PLANT','OCEAN','PLANT_OCEAN',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/ocean_plant.webp',0x00,0x01,'바다 식물',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/ocean_plant.webp',80,3),
+(29,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','RUG','AUTUMN','RUG_AUTUMN',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/autumn_rug.webp',0x00,0x01,'가을 카펫',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/autumn_rug.webp',200,0),
+(30,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','RUG','DAISY','RUG_DAISY',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/daisy_rug.webp',0x00,0x01,'데이지 카펫',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/daisy_rug.webp',200,0),
+(31,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','RUG','FOREST','RUG_FOREST',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/forest_rug.webp',0x00,0x01,'숲속 카펫',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/forest_rug.webp',200,0),
+(32,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','RUG','HEART','RUG_HEART',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/heart_rug.webp',0x00,0x01,'하트 카펫',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/heart_rug.webp',200,0),
+(33,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','RUG','LEAF','RUG_LEAF',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/leaf_rug.webp',0x00,0x01,'잎새 카펫',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/leaf_rug.webp',200,0),
+(34,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','RUG','MOON','RUG_MOON',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/moon_rug.webp',0x00,0x01,'달빛 카펫',450,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/moon_rug.webp',200,0),
+(35,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','RUG','OCEAN','RUG_OCEAN',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/ocean_rug.webp',0x00,0x01,'바다 카펫',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/ocean_rug.webp',200,0),
+(36,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','TV','AUTUMN','TV_AUTUMN',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/autumn_tv.webp',0x00,0x01,'가을 TV',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/autumn_tv.webp',160,5),
+(37,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','TV','DAISY','TV_DAISY',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/daisy_tv.webp',0x00,0x01,'데이지 TV',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/daisy_tv.webp',160,5),
+(38,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','TV','FOREST','TV_FOREST',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/forest_tv.webp',0x00,0x01,'숲속 TV',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/forest_tv.webp',160,5),
+(39,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','TV','HEART','TV_HEART',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/heart_tv.webp',0x00,0x01,'하트 TV',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/heart_tv.webp',160,5),
+(40,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','TV','LEAF','TV_LEAF',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/leaf_tv.webp',0x00,0x01,'잎새 TV',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/leaf_tv.webp',160,5),
+(41,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','TV','MOON','TV_MOON',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/moon_tv.webp',0x00,0x01,'달빛 TV',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/moon_tv.webp',160,5),
+(42,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','TV','OCEAN','TV_OCEAN',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/ocean_tv.webp',0x00,0x01,'바다 TV',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/ocean_tv.webp',160,5),
+(50,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','WINDOW','AUTUMN','WINDOW_AUTUMN',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/autumn_window.webp',0x00,0x01,'가을 창문',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/autumn_window.webp',160,5),
+(51,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','WINDOW','DAISY','WINDOW_DAISY',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/daisy_window.webp',0x00,0x01,'데이지 창문',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/daisy_window.webp',160,5),
+(52,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','WINDOW','FOREST','WINDOW_FOREST',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/forest_window.webp',0x00,0x01,'숲속 창문',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/forest_window.webp',160,5),
+(53,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','WINDOW','HEART','WINDOW_HEART',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/heart_window.webp',0x00,0x01,'하트 창문',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/heart_window.webp',160,5),
+(54,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','WINDOW','LEAF','WINDOW_LEAF',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/leaf_window.webp',0x00,0x01,'잎새 창문',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/leaf_window.webp',160,5),
+(55,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','WINDOW','MOON','WINDOW_MOON',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/moon_window.webp',0x00,0x01,'달빛 창문',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/moon_window.webp',160,5),
+(56,'2026-05-06 13:03:02.000000','2026-05-06 13:03:02.000000','WINDOW','OCEAN','WINDOW_OCEAN',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/ocean_window.webp',0x00,0x01,'바다 창문',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/ocean_window.webp',160,5),
+(61,'2026-05-06 15:48:21.000000','2026-05-06 15:48:21.000000','BACKGROUND',NULL,'DEFAULT_BACKGROUND',0,0,'신규 사용자 기본 배경',640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/default_background.webp',0x00,0x00,'기본 배경',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/default_background.webp',390,0),
+(62,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','BED','CHERRY','BED_CHERRY',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/cherry_bed.webp',0x00,0x01,'벚꽃 침대',550,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/cherry_bed.webp',200,1),
+(63,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','BED','CLASSIC','BED_CLASSIC',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/classic_bed.webp',0x00,0x01,'클래식 침대',500,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/classic_bed.webp',200,1),
+(64,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','BED','CYBER','BED_CYBER',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/cyber_bed.webp',0x00,0x01,'사이버 침대',500,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/cyber_bed.webp',200,1),
+(65,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','BED','DESERT','BED_DESERT',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/desert_bed.webp',0x00,0x01,'사막 침대',450,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/desert_bed.webp',200,1),
+(66,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','BED','GOTHIC','BED_GOTHIC',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/gothic_bed.webp',0x00,0x01,'고딕 침대',550,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/gothic_bed.webp',200,1),
+(67,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','BED','HONEY','BED_HONEY',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/honey_bed.webp',0x00,0x01,'허니 침대',500,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/honey_bed.webp',200,1),
+(68,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','BED','LAVENDER','BED_LAVENDER',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/lavender_bed.webp',0x00,0x01,'라벤더 침대',450,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/lavender_bed.webp',200,1),
+(69,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','BED','MAPLE','BED_MAPLE',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/maple_bed.webp',0x00,0x01,'단풍 침대',500,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/maple_bed.webp',200,1),
+(70,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','BED','MARINE','BED_MARINE',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/marine_bed.webp',0x00,0x01,'마린 침대',500,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/marine_bed.webp',200,1),
+(71,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','BED','PINE','BED_PINE',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/pine_bed.webp',0x00,0x01,'솔숲 침대',500,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/pine_bed.webp',200,1),
+(72,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','BED','RAINBOW','BED_RAINBOW',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/rainbow_bed.webp',0x00,0x01,'무지개 침대',550,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/rainbow_bed.webp',200,1),
+(73,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','BED','SAGE','BED_SAGE',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/sage_bed.webp',0x00,0x01,'세이지 침대',450,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/sage_bed.webp',200,1),
+(74,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','BED','SNOW','BED_SNOW',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/snow_bed.webp',0x00,0x01,'눈꽃 침대',550,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/snow_bed.webp',200,1),
+(75,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','BED','SOLAR','BED_SOLAR',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/solar_bed.webp',0x00,0x01,'태양 침대',500,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/solar_bed.webp',200,1),
+(76,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','BED','STRAWBERRY','BED_STRAWBERRY',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/strawberry_bed.webp',0x00,0x01,'딸기 침대',450,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/strawberry_bed.webp',200,1),
+(77,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','BED','VINTAGE','BED_VINTAGE',80,150,NULL,150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/vintage_bed.webp',0x00,0x01,'빈티지 침대',450,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/bed/vintage_bed.webp',200,1),
+(78,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','CLOCK','CHERRY','CLOCK_CHERRY',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/cherry_clock.webp',0x00,0x01,'벚꽃 시계',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/cherry_clock.webp',80,5),
+(79,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','CLOCK','CLASSIC','CLOCK_CLASSIC',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/classic_clock.webp',0x00,0x01,'클래식 시계',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/classic_clock.webp',80,5),
+(80,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','CLOCK','CYBER','CLOCK_CYBER',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/cyber_clock.webp',0x00,0x01,'사이버 시계',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/cyber_clock.webp',80,5),
+(81,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','CLOCK','DESERT','CLOCK_DESERT',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/desert_clock.webp',0x00,0x01,'사막 시계',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/desert_clock.webp',80,5),
+(82,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','CLOCK','GOTHIC','CLOCK_GOTHIC',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/gothic_clock.webp',0x00,0x01,'고딕 시계',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/gothic_clock.webp',80,5),
+(83,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','CLOCK','HONEY','CLOCK_HONEY',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/honey_clock.webp',0x00,0x01,'허니 시계',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/honey_clock.webp',80,5),
+(84,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','CLOCK','LAVENDER','CLOCK_LAVENDER',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/lavender_clock.webp',0x00,0x01,'라벤더 시계',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/lavender_clock.webp',80,5),
+(85,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','CLOCK','MAPLE','CLOCK_MAPLE',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/maple_clock.webp',0x00,0x01,'단풍 시계',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/maple_clock.webp',80,5),
+(86,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','CLOCK','MARINE','CLOCK_MARINE',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/marine_clock.webp',0x00,0x01,'마린 시계',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/marine_clock.webp',80,5),
+(87,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','CLOCK','PINE','CLOCK_PINE',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/pine_clock.webp',0x00,0x01,'솔숲 시계',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/pine_clock.webp',80,5),
+(88,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','CLOCK','RAINBOW','CLOCK_RAINBOW',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/rainbow_clock.webp',0x00,0x01,'무지개 시계',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/rainbow_clock.webp',80,5),
+(89,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','CLOCK','SAGE','CLOCK_SAGE',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/sage_clock.webp',0x00,0x01,'세이지 시계',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/sage_clock.webp',80,5),
+(90,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','CLOCK','SNOW','CLOCK_SNOW',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/snow_clock.webp',0x00,0x01,'눈꽃 시계',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/snow_clock.webp',80,5),
+(91,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','CLOCK','SOLAR','CLOCK_SOLAR',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/solar_clock.webp',0x00,0x01,'태양 시계',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/solar_clock.webp',80,5),
+(92,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','CLOCK','STRAWBERRY','CLOCK_STRAWBERRY',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/strawberry_clock.webp',0x00,0x01,'딸기 시계',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/strawberry_clock.webp',80,5),
+(93,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','CLOCK','VINTAGE','CLOCK_VINTAGE',50,40,NULL,80,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/vintage_clock.webp',0x00,0x01,'빈티지 시계',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/clock/vintage_clock.webp',80,5),
+(94,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','DESK','CHERRY','DESK_CHERRY',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/cherry_desk.webp',0x00,0x01,'벚꽃 책상',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/cherry_desk.webp',160,2),
+(95,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','DESK','CLASSIC','DESK_CLASSIC',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/classic_desk.webp',0x00,0x01,'클래식 책상',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/classic_desk.webp',160,2),
+(96,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','DESK','CYBER','DESK_CYBER',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/cyber_desk.webp',0x00,0x01,'사이버 책상',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/cyber_desk.webp',160,2),
+(97,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','DESK','DESERT','DESK_DESERT',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/desert_desk.webp',0x00,0x01,'사막 책상',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/desert_desk.webp',160,2),
+(98,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','DESK','GOTHIC','DESK_GOTHIC',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/gothic_desk.webp',0x00,0x01,'고딕 책상',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/gothic_desk.webp',160,2),
+(99,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','DESK','HONEY','DESK_HONEY',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/honey_desk.webp',0x00,0x01,'허니 책상',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/honey_desk.webp',160,2),
+(100,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','DESK','LAVENDER','DESK_LAVENDER',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/lavender_desk.webp',0x00,0x01,'라벤더 책상',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/lavender_desk.webp',160,2),
+(101,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','DESK','MAPLE','DESK_MAPLE',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/maple_desk.webp',0x00,0x01,'단풍 책상',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/maple_desk.webp',160,2),
+(102,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','DESK','MARINE','DESK_MARINE',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/marine_desk.webp',0x00,0x01,'마린 책상',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/marine_desk.webp',160,2),
+(103,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','DESK','PINE','DESK_PINE',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/pine_desk.webp',0x00,0x01,'솔숲 책상',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/pine_desk.webp',160,2),
+(104,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','DESK','RAINBOW','DESK_RAINBOW',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/rainbow_desk.webp',0x00,0x01,'무지개 책상',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/rainbow_desk.webp',160,2),
+(105,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','DESK','SAGE','DESK_SAGE',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/sage_desk.webp',0x00,0x01,'세이지 책상',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/sage_desk.webp',160,2),
+(106,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','DESK','SNOW','DESK_SNOW',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/snow_desk.webp',0x00,0x01,'눈꽃 책상',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/snow_desk.webp',160,2),
+(107,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','DESK','SOLAR','DESK_SOLAR',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/solar_desk.webp',0x00,0x01,'태양 책상',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/solar_desk.webp',160,2),
+(108,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','DESK','STRAWBERRY','DESK_STRAWBERRY',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/strawberry_desk.webp',0x00,0x01,'딸기 책상',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/strawberry_desk.webp',160,2),
+(109,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','DESK','VINTAGE','DESK_VINTAGE',50,120,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/vintage_desk.webp',0x00,0x01,'빈티지 책상',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/desk/vintage_desk.webp',160,2),
+(110,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','PLANT','CHERRY','PLANT_CHERRY',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/cherry_plant.webp',0x00,0x01,'벚꽃 식물',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/cherry_plant.webp',80,3),
+(111,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','PLANT','CLASSIC','PLANT_CLASSIC',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/classic_plant.webp',0x00,0x01,'클래식 식물',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/classic_plant.webp',80,3),
+(112,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','PLANT','CYBER','PLANT_CYBER',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/cyber_plant.webp',0x00,0x01,'사이버 식물',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/cyber_plant.webp',80,3),
+(113,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','PLANT','DESERT','PLANT_DESERT',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/desert_plant.webp',0x00,0x01,'사막 식물',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/desert_plant.webp',80,3),
+(114,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','PLANT','GOTHIC','PLANT_GOTHIC',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/gothic_plant.webp',0x00,0x01,'고딕 식물',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/gothic_plant.webp',80,3),
+(115,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','PLANT','HONEY','PLANT_HONEY',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/honey_plant.webp',0x00,0x01,'허니 식물',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/honey_plant.webp',80,3),
+(116,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','PLANT','LAVENDER','PLANT_LAVENDER',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/lavender_plant.webp',0x00,0x01,'라벤더 식물',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/lavender_plant.webp',80,3),
+(117,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','PLANT','MAPLE','PLANT_MAPLE',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/maple_plant.webp',0x00,0x01,'단풍 식물',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/maple_plant.webp',80,3),
+(118,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','PLANT','MARINE','PLANT_MARINE',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/marine_plant.webp',0x00,0x01,'마린 식물',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/marine_plant.webp',80,3),
+(119,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','PLANT','PINE','PLANT_PINE',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/pine_plant.webp',0x00,0x01,'솔숲 식물',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/pine_plant.webp',80,3),
+(120,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','PLANT','RAINBOW','PLANT_RAINBOW',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/rainbow_plant.webp',0x00,0x01,'무지개 식물',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/rainbow_plant.webp',80,3),
+(121,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','PLANT','SAGE','PLANT_SAGE',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/sage_plant.webp',0x00,0x01,'세이지 식물',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/sage_plant.webp',80,3),
+(122,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','PLANT','SNOW','PLANT_SNOW',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/snow_plant.webp',0x00,0x01,'눈꽃 식물',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/snow_plant.webp',80,3),
+(123,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','PLANT','SOLAR','PLANT_SOLAR',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/solar_plant.webp',0x00,0x01,'태양 식물',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/solar_plant.webp',80,3),
+(124,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','PLANT','STRAWBERRY','PLANT_STRAWBERRY',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/strawberry_plant.webp',0x00,0x01,'딸기 식물',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/strawberry_plant.webp',80,3),
+(125,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','PLANT','VINTAGE','PLANT_VINTAGE',200,140,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/vintage_plant.webp',0x00,0x01,'빈티지 식물',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/plant/vintage_plant.webp',80,3),
+(126,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','RUG','CHERRY','RUG_CHERRY',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/cherry_rug.webp',0x00,0x01,'벚꽃 카펫',450,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/cherry_rug.webp',200,0),
+(127,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','RUG','CLASSIC','RUG_CLASSIC',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/classic_rug.webp',0x00,0x01,'클래식 카펫',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/classic_rug.webp',200,0),
+(128,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','RUG','CYBER','RUG_CYBER',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/cyber_rug.webp',0x00,0x01,'사이버 카펫',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/cyber_rug.webp',200,0),
+(129,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','RUG','DESERT','RUG_DESERT',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/desert_rug.webp',0x00,0x01,'사막 카펫',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/desert_rug.webp',200,0),
+(130,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','RUG','GOTHIC','RUG_GOTHIC',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/gothic_rug.webp',0x00,0x01,'고딕 카펫',450,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/gothic_rug.webp',200,0),
+(131,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','RUG','HONEY','RUG_HONEY',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/honey_rug.webp',0x00,0x01,'허니 카펫',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/honey_rug.webp',200,0),
+(132,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','RUG','LAVENDER','RUG_LAVENDER',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/lavender_rug.webp',0x00,0x01,'라벤더 카펫',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/lavender_rug.webp',200,0),
+(133,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','RUG','MAPLE','RUG_MAPLE',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/maple_rug.webp',0x00,0x01,'단풍 카펫',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/maple_rug.webp',200,0),
+(134,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','RUG','MARINE','RUG_MARINE',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/marine_rug.webp',0x00,0x01,'마린 카펫',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/marine_rug.webp',200,0),
+(135,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','RUG','PINE','RUG_PINE',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/pine_rug.webp',0x00,0x01,'솔숲 카펫',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/pine_rug.webp',200,0),
+(136,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','RUG','RAINBOW','RUG_RAINBOW',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/rainbow_rug.webp',0x00,0x01,'무지개 카펫',450,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/rainbow_rug.webp',200,0),
+(137,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','RUG','SAGE','RUG_SAGE',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/sage_rug.webp',0x00,0x01,'세이지 카펫',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/sage_rug.webp',200,0),
+(138,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','RUG','SNOW','RUG_SNOW',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/snow_rug.webp',0x00,0x01,'눈꽃 카펫',450,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/snow_rug.webp',200,0),
+(139,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','RUG','SOLAR','RUG_SOLAR',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/solar_rug.webp',0x00,0x01,'태양 카펫',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/solar_rug.webp',200,0),
+(140,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','RUG','STRAWBERRY','RUG_STRAWBERRY',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/strawberry_rug.webp',0x00,0x01,'딸기 카펫',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/strawberry_rug.webp',200,0),
+(141,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','RUG','VINTAGE','RUG_VINTAGE',80,180,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/vintage_rug.webp',0x00,0x01,'빈티지 카펫',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/rug/vintage_rug.webp',200,0),
+(142,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','TV','CHERRY','TV_CHERRY',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/cherry_tv.webp',0x00,0x01,'벚꽃 TV',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/cherry_tv.webp',160,5),
+(143,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','TV','CLASSIC','TV_CLASSIC',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/classic_tv.webp',0x00,0x01,'클래식 TV',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/classic_tv.webp',160,5),
+(144,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','TV','CYBER','TV_CYBER',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/cyber_tv.webp',0x00,0x01,'사이버 TV',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/cyber_tv.webp',160,5),
+(145,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','TV','DESERT','TV_DESERT',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/desert_tv.webp',0x00,0x01,'사막 TV',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/desert_tv.webp',160,5),
+(146,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','TV','GOTHIC','TV_GOTHIC',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/gothic_tv.webp',0x00,0x01,'고딕 TV',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/gothic_tv.webp',160,5),
+(147,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','TV','HONEY','TV_HONEY',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/honey_tv.webp',0x00,0x01,'허니 TV',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/honey_tv.webp',160,5),
+(148,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','TV','LAVENDER','TV_LAVENDER',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/lavender_tv.webp',0x00,0x01,'라벤더 TV',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/lavender_tv.webp',160,5),
+(149,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','TV','MAPLE','TV_MAPLE',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/maple_tv.webp',0x00,0x01,'단풍 TV',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/maple_tv.webp',160,5),
+(150,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','TV','MARINE','TV_MARINE',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/marine_tv.webp',0x00,0x01,'마린 TV',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/marine_tv.webp',160,5),
+(151,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','TV','PINE','TV_PINE',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/pine_tv.webp',0x00,0x01,'솔숲 TV',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/pine_tv.webp',160,5),
+(152,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','TV','RAINBOW','TV_RAINBOW',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/rainbow_tv.webp',0x00,0x01,'무지개 TV',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/rainbow_tv.webp',160,5),
+(153,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','TV','SAGE','TV_SAGE',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/sage_tv.webp',0x00,0x01,'세이지 TV',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/sage_tv.webp',160,5),
+(154,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','TV','SNOW','TV_SNOW',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/snow_tv.webp',0x00,0x01,'눈꽃 TV',400,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/snow_tv.webp',160,5),
+(155,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','TV','SOLAR','TV_SOLAR',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/solar_tv.webp',0x00,0x01,'태양 TV',350,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/solar_tv.webp',160,5),
+(156,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','TV','STRAWBERRY','TV_STRAWBERRY',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/strawberry_tv.webp',0x00,0x01,'딸기 TV',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/strawberry_tv.webp',160,5),
+(157,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','TV','VINTAGE','TV_VINTAGE',100,40,NULL,100,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/vintage_tv.webp',0x00,0x01,'빈티지 TV',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/tv/vintage_tv.webp',160,5),
+(174,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','WINDOW','CHERRY','WINDOW_CHERRY',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/cherry_window.webp',0x00,0x01,'벚꽃 창문',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/cherry_window.webp',160,5),
+(175,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','WINDOW','CLASSIC','WINDOW_CLASSIC',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/classic_window.webp',0x00,0x01,'클래식 창문',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/classic_window.webp',160,5),
+(176,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','WINDOW','CYBER','WINDOW_CYBER',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/cyber_window.webp',0x00,0x01,'사이버 창문',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/cyber_window.webp',160,5),
+(177,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','WINDOW','DESERT','WINDOW_DESERT',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/desert_window.webp',0x00,0x01,'사막 창문',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/desert_window.webp',160,5),
+(178,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','WINDOW','GOTHIC','WINDOW_GOTHIC',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/gothic_window.webp',0x00,0x01,'고딕 창문',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/gothic_window.webp',160,5),
+(179,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','WINDOW','HONEY','WINDOW_HONEY',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/honey_window.webp',0x00,0x01,'허니 창문',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/honey_window.webp',160,5),
+(180,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','WINDOW','LAVENDER','WINDOW_LAVENDER',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/lavender_window.webp',0x00,0x01,'라벤더 창문',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/lavender_window.webp',160,5),
+(181,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','WINDOW','MAPLE','WINDOW_MAPLE',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/maple_window.webp',0x00,0x01,'단풍 창문',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/maple_window.webp',160,5),
+(182,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','WINDOW','MARINE','WINDOW_MARINE',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/marine_window.webp',0x00,0x01,'마린 창문',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/marine_window.webp',160,5),
+(183,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','WINDOW','PINE','WINDOW_PINE',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/pine_window.webp',0x00,0x01,'솔숲 창문',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/pine_window.webp',160,5),
+(184,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','WINDOW','RAINBOW','WINDOW_RAINBOW',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/rainbow_window.webp',0x00,0x01,'무지개 창문',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/rainbow_window.webp',160,5),
+(185,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','WINDOW','SAGE','WINDOW_SAGE',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/sage_window.webp',0x00,0x01,'세이지 창문',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/sage_window.webp',160,5),
+(186,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','WINDOW','SNOW','WINDOW_SNOW',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/snow_window.webp',0x00,0x01,'눈꽃 창문',300,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/snow_window.webp',160,5),
+(187,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','WINDOW','SOLAR','WINDOW_SOLAR',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/solar_window.webp',0x00,0x01,'태양 창문',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/solar_window.webp',160,5),
+(188,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','WINDOW','STRAWBERRY','WINDOW_STRAWBERRY',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/strawberry_window.webp',0x00,0x01,'딸기 창문',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/strawberry_window.webp',160,5),
+(189,'2026-05-06 17:46:04.000000','2026-05-06 17:46:04.000000','WINDOW','VINTAGE','WINDOW_VINTAGE',100,20,NULL,120,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/vintage_window.webp',0x00,0x01,'빈티지 창문',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/window/vintage_window.webp',160,5),
+(190,'2026-05-07 13:30:33.000000','2026-05-07 13:30:33.000000','BACKGROUND','SNOW','BACKGROUND_SNOW',0,0,'눈꽃 테마 배경',640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/snow_background.webp',0x00,0x01,'눈꽃 배경',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/snow_background.webp',390,0),
+(191,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','AUTUMN','BACKGROUND_AUTUMN',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/autumn_background.webp',0x00,0x01,'가을 배경',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/autumn_background.webp',390,0),
+(192,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','CHERRY','BACKGROUND_CHERRY',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/cherry_background.webp',0x00,0x01,'벚꽃 배경',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/cherry_background.webp',390,0),
+(193,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','CLASSIC','BACKGROUND_CLASSIC',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/classic_background.webp',0x00,0x01,'클래식 배경',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/classic_background.webp',390,0),
+(194,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','CYBER','BACKGROUND_CYBER',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/cyber_background.webp',0x00,0x01,'사이버 배경',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/cyber_background.webp',390,0),
+(195,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','DAISY','BACKGROUND_DAISY',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/daisy_background.webp',0x00,0x01,'데이지 배경',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/daisy_background.webp',390,0),
+(196,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','DESERT','BACKGROUND_DESERT',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/desert_background.webp',0x00,0x01,'사막 배경',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/desert_background.webp',390,0),
+(197,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','FOREST','BACKGROUND_FOREST',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/forest_background.webp',0x00,0x01,'숲속 배경',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/forest_background.webp',390,0),
+(198,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','GOTHIC','BACKGROUND_GOTHIC',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/gothic_background.webp',0x00,0x01,'고딕 배경',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/gothic_background.webp',390,0),
+(199,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','HEART','BACKGROUND_HEART',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/heart_background.webp',0x00,0x01,'하트 배경',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/heart_background.webp',390,0),
+(200,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','HONEY','BACKGROUND_HONEY',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/honey_background.webp',0x00,0x01,'허니 배경',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/honey_background.webp',390,0),
+(201,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','LAVENDER','BACKGROUND_LAVENDER',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/lavender_background.webp',0x00,0x01,'라벤더 배경',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/lavender_background.webp',390,0),
+(202,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','LEAF','BACKGROUND_LEAF',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/leaf_background.webp',0x00,0x01,'잎새 배경',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/leaf_background.webp',390,0),
+(203,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','MAPLE','BACKGROUND_MAPLE',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/maple_background.webp',0x00,0x01,'단풍 배경',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/maple_background.webp',390,0),
+(204,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','MARINE','BACKGROUND_MARINE',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/marine_background.webp',0x00,0x01,'마린 배경',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/marine_background.webp',390,0),
+(205,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','MOON','BACKGROUND_MOON',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/moon_background.webp',0x00,0x01,'달빛 배경',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/moon_background.webp',390,0),
+(206,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','OCEAN','BACKGROUND_OCEAN',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/ocean_background.webp',0x00,0x01,'바다 배경',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/ocean_background.webp',390,0),
+(207,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','PINE','BACKGROUND_PINE',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/pine_background.webp',0x00,0x01,'솔숲 배경',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/pine_background.webp',390,0),
+(208,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','RAINBOW','BACKGROUND_RAINBOW',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/rainbow_background.webp',0x00,0x01,'무지개 배경',250,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/rainbow_background.webp',390,0),
+(209,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','SAGE','BACKGROUND_SAGE',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/sage_background.webp',0x00,0x01,'세이지 배경',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/sage_background.webp',390,0),
+(210,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','SOLAR','BACKGROUND_SOLAR',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/solar_background.webp',0x00,0x01,'태양 배경',200,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/solar_background.webp',390,0),
+(211,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','STRAWBERRY','BACKGROUND_STRAWBERRY',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/strawberry_background.webp',0x00,0x01,'딸기 배경',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/strawberry_background.webp',390,0),
+(212,'2026-05-08 17:56:53.000000','2026-05-08 17:56:53.000000','BACKGROUND','VINTAGE','BACKGROUND_VINTAGE',0,0,NULL,640,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/vintage_background.webp',0x00,0x01,'빈티지 배경',150,'https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/furniture/background/vintage_background.webp',390,0);
+/*!40000 ALTER TABLE `furnitures` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 
--- 새 알 생성: 랜덤 EGG 중 하나
-INSERT INTO user_character (
-  user_id, character_id, equiped_items_id, name,
-  current_exp, is_active, is_deleted,
-  farewell_available_at, last_touched_at,
-  daily_touch_count, daily_touch_date,
-  poop_time, poop_time_date, poop_cleared_date,
-  farewell_notified,
-  created_at, updated_at
-)
-SELECT u.user_id, c.character_id, NULL, c.name,
-       0, 1, 0,
-       NULL, NULL,
-       0, NULL,
-       NULL, NULL, NULL,
-       0,
-       NOW(), NOW()
-FROM users u
-JOIN characters c ON c.stage = 'EGG'
-WHERE u.email = @email
-  AND u.is_deleted = 0
-ORDER BY RAND()
-LIMIT 1;
+--
+-- Table structure for table `items`
+--
 
-SET SQL_SAFE_UPDATES = 1;
+DROP TABLE IF EXISTS `items`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `items` (
+  `item_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `code` varchar(50) NOT NULL,
+  `img_url` varchar(500) DEFAULT NULL,
+  `is_deleted` bit(1) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `price` int(11) NOT NULL,
+  `thumbnail_url` varchar(500) DEFAULT NULL,
+  PRIMARY KEY (`item_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
+--
+-- Dumping data for table `items`
+--
 
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `items` WRITE;
+/*!40000 ALTER TABLE `items` DISABLE KEYS */;
+/*!40000 ALTER TABLE `items` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 
+--
+-- Table structure for table `notice_dismissals`
+--
 
----가구 미보유로 바꾸기
-USE doitdo;
+DROP TABLE IF EXISTS `notice_dismissals`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `notice_dismissals` (
+  `notice_dismissal_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `user_id` bigint(20) NOT NULL,
+  `notice_id` bigint(20) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`notice_dismissal_id`),
+  UNIQUE KEY `uk_notice_dismissals_user_notice` (`user_id`,`notice_id`),
+  KEY `idx_notice_dismissals_notice_id` (`notice_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-SET SQL_SAFE_UPDATES = 0;
+--
+-- Dumping data for table `notice_dismissals`
+--
 
--- 기본 배경 제외한 배치 제거
-DELETE rfp
-FROM room_furniture_placements rfp
-JOIN user_furnitures uf ON uf.user_furniture_id = rfp.user_furniture_id
-JOIN users u ON u.user_id = uf.user_id
-JOIN furnitures f ON f.furniture_id = uf.furniture_id
-WHERE u.email = 'gms07051@gmail.com'
-  AND f.code <> 'DEFAULT_BACKGROUND';
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `notice_dismissals` WRITE;
+/*!40000 ALTER TABLE `notice_dismissals` DISABLE KEYS */;
+/*!40000 ALTER TABLE `notice_dismissals` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 
--- 기본 배경 제외한 보유 가구 제거
-DELETE uf
-FROM user_furnitures uf
-JOIN users u ON u.user_id = uf.user_id
-JOIN furnitures f ON f.furniture_id = uf.furniture_id
-WHERE u.email = 'gms07051@gmail.com'
-  AND u.is_deleted = 0
-  AND f.code <> 'DEFAULT_BACKGROUND';
+--
+-- Table structure for table `notices`
+--
 
-SET SQL_SAFE_UPDATES = 1;
+DROP TABLE IF EXISTS `notices`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `notices` (
+  `notice_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `title` varchar(100) NOT NULL,
+  `content` text NOT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `started_at` datetime DEFAULT NULL,
+  `ended_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`notice_id`),
+  KEY `idx_notices_active_window_created` (`is_active`,`started_at`,`ended_at`,`created_at`,`notice_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
+--
+-- Dumping data for table `notices`
+--
 
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `notices` WRITE;
+/*!40000 ALTER TABLE `notices` DISABLE KEYS */;
+/*!40000 ALTER TABLE `notices` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 
+--
+-- Table structure for table `notifications`
+--
 
-----시연 3개 투두 만들기
-USE doitdo;
+DROP TABLE IF EXISTS `notifications`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `notifications` (
+  `notification_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `is_deleted` bit(1) NOT NULL,
+  `is_read` bit(1) NOT NULL,
+  `message` varchar(500) NOT NULL,
+  `read_at` datetime(6) DEFAULT NULL,
+  `reference_id` bigint(20) DEFAULT NULL,
+  `title` varchar(100) NOT NULL,
+  `type` enum('REMINDER_EVENING','REMINDER_MORNING','REMINDER_STREAK_TODO_EMPTY','TAMAGOTCHI_FAREWELL','TAMAGOTCHI_GROWTH','TODO_DONE','TODO_REMINDER','TODO_SNOOZED') NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`notification_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=46 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-INSERT INTO todos (
-  user_id, category_id,
-  title, content, type, status, done_date, first_completed_date,
-  priority, alert_time, start_date, end_date,
-  master_todo_id, recurrence_group_id, days_of_week,
-  is_deleted, exp_granted, created_at, updated_at
-)
-SELECT u.user_id, c.category_id,
-       v.title, v.content, v.type, 'TODO', NULL, NULL,
-       v.priority, NULL, v.start_date, NULL,
-       NULL, NULL, NULL,
-       0, 0, NOW(), NOW()
-FROM users u
-JOIN categories c
-  ON c.user_id = u.user_id
- AND c.category_name = '기타'
-JOIN (
-  SELECT
-    '투두 완료하고 크레딧 받아보기' AS title,
-    '예시 투두예요. 완료하면 크레딧이 쌓여요. 필요 없으면 삭제해도 괜찮아요.' AS content,
-    'NORMAL' AS type,
-    DATE('2026-05-21') AS start_date,
-    1 AS priority
-  UNION ALL
-  SELECT
-    '키우고 싶은 다마고치 떠올려보기',
-    '예시 투두예요. 언젠가 하고 싶은 일을 자유롭게 적어보세요.',
-    'SOMEDAY',
-    NULL,
-    2
-  UNION ALL
-  SELECT
-    '오늘 할 일 하나 완료하기',
-    '캐릭터 경험치와 보상 흐름을 확인하기 위한 투두예요.',
-    'NORMAL',
-    DATE('2026-05-21'),
-    3
-) v
-WHERE u.email = 'gms07051@gmail.com'
-  AND u.is_deleted = 0;
+--
+-- Dumping data for table `notifications`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `notifications` WRITE;
+/*!40000 ALTER TABLE `notifications` DISABLE KEYS */;
+INSERT INTO `notifications` VALUES
+(1,'2026-04-29 14:29:00.003699','2026-04-29 14:29:00.003699',0x00,0x01,'아직 2개의 할 일이 남아있어요.','2026-05-12 08:55:51.921031',NULL,'저녁 미완료 TODO 알림','REMINDER_EVENING',3),
+(2,'2026-04-29 14:30:00.002691','2026-04-29 14:30:00.002691',0x00,0x01,'\"어어아ㅏ앙ㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㄷㄷ\" 시작할 시간이에요.','2026-05-12 08:55:51.921031',197,'할 일 알림','TODO_REMINDER',3),
+(3,'2026-04-29 14:32:00.001980','2026-04-29 14:32:00.001980',0x00,0x01,'\"Codex 테스트 알림\" 시작할 시간이에요.','2026-05-12 08:55:51.921031',199,'할 일 알림','TODO_REMINDER',3),
+(4,'2026-04-29 15:07:00.002293','2026-04-29 15:07:00.002293',0x00,0x01,'\"상훈\"이(가) 독립할 준비가 되었어요!','2026-05-12 08:55:51.921031',4,'독립 준비 완료','TAMAGOTCHI_FAREWELL',3),
+(5,'2026-04-29 16:06:00.011701','2026-05-14 13:15:27.185791',0x01,0x01,'\"상훙2\"이(가) 독립할 준비가 되었어요!','2026-05-12 08:55:51.921031',9,'독립 준비 완료','TAMAGOTCHI_FAREWELL',3),
+(6,'2026-05-01 12:00:00.004411','2026-05-01 12:00:00.004411',0x01,0x01,'\"1\" 시작할 시간이에요.','2026-05-11 13:27:06.267300',236,'할 일 알림','TODO_REMINDER',16),
+(7,'2026-05-01 14:29:00.005992','2026-05-01 14:29:00.005992',0x00,0x01,'아직 3개의 할 일이 남아있어요.','2026-05-12 08:55:51.921031',NULL,'저녁 미완료 TODO 알림','REMINDER_EVENING',3),
+(8,'2026-05-02 12:00:00.004112','2026-05-02 12:00:00.004112',0x01,0x01,'\"1\" 시작할 시간이에요.','2026-05-11 13:27:06.267300',236,'할 일 알림','TODO_REMINDER',16),
+(9,'2026-05-02 14:29:00.004595','2026-05-02 14:29:00.004595',0x00,0x01,'아직 3개의 할 일이 남아있어요.','2026-05-12 08:55:51.921031',NULL,'저녁 미완료 TODO 알림','REMINDER_EVENING',3),
+(10,'2026-05-03 12:00:00.003292','2026-05-03 12:00:00.003292',0x01,0x01,'\"1\" 시작할 시간이에요.','2026-05-11 13:27:06.267300',236,'할 일 알림','TODO_REMINDER',16),
+(11,'2026-05-03 14:29:00.004148','2026-05-03 14:29:00.004148',0x00,0x01,'아직 3개의 할 일이 남아있어요.','2026-05-12 08:55:51.921031',NULL,'저녁 미완료 TODO 알림','REMINDER_EVENING',3),
+(12,'2026-05-04 12:00:00.012432','2026-05-04 12:00:00.012432',0x01,0x01,'\"1\" 시작할 시간이에요.','2026-05-11 13:27:06.267300',236,'할 일 알림','TODO_REMINDER',16),
+(13,'2026-05-04 14:29:00.023979','2026-05-04 14:29:00.023979',0x00,0x01,'아직 4개의 할 일이 남아있어요.','2026-05-12 08:55:51.921031',NULL,'저녁 미완료 TODO 알림','REMINDER_EVENING',3),
+(14,'2026-05-05 12:00:00.004432','2026-05-05 12:00:00.004432',0x01,0x01,'\"1\" 시작할 시간이에요.','2026-05-11 13:27:06.267300',236,'할 일 알림','TODO_REMINDER',16),
+(15,'2026-05-05 14:29:00.004191','2026-05-14 13:15:23.611328',0x01,0x01,'아직 3개의 할 일이 남아있어요.','2026-05-12 08:55:51.921031',NULL,'저녁 미완료 TODO 알림','REMINDER_EVENING',3),
+(16,'2026-05-06 12:00:00.017325','2026-05-06 12:00:00.017325',0x01,0x01,'\"1\" 시작할 시간이에요.','2026-05-11 13:27:06.267300',236,'할 일 알림','TODO_REMINDER',16),
+(17,'2026-05-07 12:00:00.004558','2026-05-07 12:00:00.004558',0x01,0x01,'\"1\" 시작할 시간이에요.','2026-05-11 13:27:06.267300',236,'할 일 알림','TODO_REMINDER',16),
+(18,'2026-05-08 12:00:00.037591','2026-05-08 12:00:00.037591',0x01,0x01,'\"1\" 시작할 시간이에요.','2026-05-11 13:27:06.267300',236,'할 일 알림','TODO_REMINDER',16),
+(19,'2026-05-08 12:00:00.040730','2026-05-08 12:00:00.040730',0x01,0x01,'\"1\" 시작할 시간이에요.','2026-05-11 13:27:06.267300',236,'할 일 알림','TODO_REMINDER',16),
+(20,'2026-05-09 12:00:00.010108','2026-05-09 12:00:00.010108',0x01,0x01,'\"1\" 시작할 시간이에요.','2026-05-11 13:27:06.267300',236,'할 일 알림','TODO_REMINDER',16),
+(21,'2026-05-09 12:00:00.010085','2026-05-09 12:00:00.010085',0x01,0x01,'\"1\" 시작할 시간이에요.','2026-05-11 13:27:06.267300',236,'할 일 알림','TODO_REMINDER',16),
+(22,'2026-05-10 12:00:00.008131','2026-05-11 13:27:02.548010',0x01,0x00,'\"1\" 시작할 시간이에요.',NULL,236,'할 일 알림','TODO_REMINDER',16),
+(23,'2026-05-10 12:00:00.006375','2026-05-10 12:00:00.006375',0x01,0x01,'\"1\" 시작할 시간이에요.','2026-05-11 13:27:06.267300',236,'할 일 알림','TODO_REMINDER',16),
+(24,'2026-05-11 12:00:00.002238','2026-05-11 13:27:01.743968',0x01,0x00,'\"1\" 시작할 시간이에요.',NULL,236,'할 일 알림','TODO_REMINDER',16),
+(25,'2026-05-11 12:00:00.008090','2026-05-11 13:27:01.141228',0x01,0x00,'\"1\" 시작할 시간이에요.',NULL,236,'할 일 알림','TODO_REMINDER',16),
+(26,'2026-05-11 18:55:00.005647','2026-05-12 22:12:58.633267',0x01,0x00,'\"픽업\" 시작할 시간이에요.',NULL,308,'할 일 알림','TODO_REMINDER',25),
+(27,'2026-05-11 18:55:00.006841','2026-05-12 22:12:57.233873',0x01,0x00,'\"픽업\" 시작할 시간이에요.',NULL,308,'할 일 알림','TODO_REMINDER',25),
+(28,'2026-05-11 21:00:00.002737','2026-05-11 21:00:00.002737',0x00,0x00,'\"헬스\" 시작할 시간이에요.',NULL,337,'할 일 알림','TODO_REMINDER',38),
+(29,'2026-05-11 21:00:00.002905','2026-05-11 21:00:00.002905',0x00,0x00,'\"헬스\" 시작할 시간이에요.',NULL,337,'할 일 알림','TODO_REMINDER',38),
+(30,'2026-05-12 12:00:00.002331','2026-05-12 12:00:00.002331',0x00,0x00,'\"1\" 시작할 시간이에요.',NULL,236,'할 일 알림','TODO_REMINDER',16),
+(31,'2026-05-12 12:00:00.003697','2026-05-12 12:00:00.003697',0x00,0x00,'\"1\" 시작할 시간이에요.',NULL,236,'할 일 알림','TODO_REMINDER',16),
+(32,'2026-05-12 17:00:00.005090','2026-05-12 17:00:00.005090',0x00,0x00,'\"데일리컨텐츠 작성\" 시작할 시간이에요.',NULL,390,'할 일 알림','TODO_REMINDER',15),
+(33,'2026-05-12 17:00:00.014460','2026-05-12 17:00:00.014460',0x00,0x00,'\"데일리컨텐츠 작성\" 시작할 시간이에요.',NULL,390,'할 일 알림','TODO_REMINDER',15),
+(34,'2026-05-12 18:00:00.006225','2026-05-12 18:00:00.006225',0x00,0x00,'\"저녁식사\" 시작할 시간이에요.',NULL,391,'할 일 알림','TODO_REMINDER',15),
+(35,'2026-05-12 18:00:00.007112','2026-05-12 18:00:00.007112',0x00,0x00,'\"저녁식사\" 시작할 시간이에요.',NULL,391,'할 일 알림','TODO_REMINDER',15),
+(36,'2026-05-12 22:00:00.040388','2026-05-12 22:00:00.040388',0x00,0x00,'아직 1개의 할 일이 남아있어요.',NULL,NULL,'저녁 미완료 TODO 알림','REMINDER_EVENING',48),
+(37,'2026-05-12 22:00:00.039630','2026-05-12 22:00:00.039630',0x00,0x00,'아직 1개의 할 일이 남아있어요.',NULL,NULL,'저녁 미완료 TODO 알림','REMINDER_EVENING',48),
+(38,'2026-05-13 12:00:00.002902','2026-05-13 12:00:00.002902',0x00,0x00,'\"1\" 시작할 시간이에요.',NULL,236,'할 일 알림','TODO_REMINDER',16),
+(39,'2026-05-13 12:00:00.006429','2026-05-13 12:00:00.006429',0x00,0x00,'\"1\" 시작할 시간이에요.',NULL,236,'할 일 알림','TODO_REMINDER',16),
+(40,'2026-05-14 08:00:00.003225','2026-05-14 08:00:00.003225',0x00,0x00,'\"개인상담\" 시작할 시간이에요.',NULL,516,'할 일 알림','TODO_REMINDER',15),
+(41,'2026-05-14 14:00:00.001622','2026-05-14 14:00:00.001622',0x00,0x00,'\"컨코 미팅\" 시작할 시간이에요.',NULL,529,'할 일 알림','TODO_REMINDER',15),
+(42,'2026-05-17 17:25:00.002298','2026-05-17 17:25:00.002298',0x00,0x00,'\"말라이 3세\"이(가) 독립할 준비가 되었어요!',NULL,65,'독립 준비 완료','TAMAGOTCHI_FAREWELL',58),
+(44,'2026-05-19 17:00:00.002882','2026-05-19 17:00:29.792215',0x00,0x01,'\"배포 체크리스트 확인\" 시작할 시간이에요.','2026-05-19 17:00:29.792107',1392,'할 일 알림','TODO_REMINDER',3);
+/*!40000 ALTER TABLE `notifications` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `palette_colors`
+--
+
+DROP TABLE IF EXISTS `palette_colors`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `palette_colors` (
+  `color_id` int(11) NOT NULL AUTO_INCREMENT,
+  `color` varchar(7) NOT NULL,
+  `color_order` int(11) NOT NULL,
+  `palette_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`color_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=81 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `palette_colors`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `palette_colors` WRITE;
+/*!40000 ALTER TABLE `palette_colors` DISABLE KEYS */;
+INSERT INTO `palette_colors` VALUES
+(1,'#1B2A41',1,1),
+(2,'#577B9C',2,1),
+(3,'#4A90E2',3,1),
+(4,'#B8D8DB',4,1),
+(5,'#6B8E5A',5,1),
+(6,'#F4E4C1',6,1),
+(7,'#F5A623',7,1),
+(8,'#CB3A45',8,1),
+(25,'#FFD4D9',1,4),
+(26,'#FFD5B8',2,4),
+(27,'#FFF0B8',3,4),
+(28,'#C4E8BE',4,4),
+(29,'#B8DCF2',5,4),
+(30,'#D0C4F0',6,4),
+(31,'#F0C5D9',7,4),
+(32,'#E0D5C5',8,4),
+(33,'#004B23',1,5),
+(34,'#006400',2,5),
+(35,'#007200',3,5),
+(36,'#008000',4,5),
+(37,'#38B000',5,5),
+(38,'#70E000',6,5),
+(39,'#9EF01A',7,5),
+(40,'#CCFF33',8,5),
+(41,'#03045E',1,6),
+(42,'#023E8A',2,6),
+(43,'#0077B6',3,6),
+(44,'#0096C7',4,6),
+(45,'#00B4D8',5,6),
+(46,'#48CAE4',6,6),
+(47,'#90E0EF',7,6),
+(48,'#ADE8F4',8,6),
+(49,'#523218',1,7),
+(50,'#733308',2,7),
+(51,'#96440C',3,7),
+(52,'#A4603A',4,7),
+(53,'#D78347',5,7),
+(54,'#E68E4F',6,7),
+(55,'#F18B1E',7,7),
+(56,'#ED7A08',8,7),
+(57,'#A48971',1,8),
+(58,'#8D6B48',2,8),
+(59,'#9A774F',3,8),
+(60,'#A9845A',4,8),
+(61,'#BE986D',5,8),
+(62,'#D2A87D',6,8),
+(63,'#E8C9AB',7,8),
+(64,'#F5D7BD',8,8),
+(65,'#FF5C8A',1,9),
+(66,'#FF7096',2,9),
+(67,'#FF85A1',3,9),
+(68,'#FF99AC',4,9),
+(69,'#FBB1BD',5,9),
+(70,'#F9BEC7',6,9),
+(71,'#F7CAD0',7,9),
+(72,'#FAE0E4',8,9),
+(73,'#FF9AA2',1,10),
+(74,'#FEB7B1',2,10),
+(75,'#FFDAC0',3,10),
+(76,'#FFECC4',4,10),
+(77,'#E2F0CC',5,10),
+(78,'#B5EAD6',6,10),
+(79,'#B7DBEB',7,10),
+(80,'#C7CEEA',8,10);
+/*!40000 ALTER TABLE `palette_colors` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `palettes`
+--
+
+DROP TABLE IF EXISTS `palettes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `palettes` (
+  `palette_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `palette_name` varchar(20) NOT NULL,
+  `display_order` int(11) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`palette_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `palettes`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `palettes` WRITE;
+/*!40000 ALTER TABLE `palettes` DISABLE KEYS */;
+INSERT INTO `palettes` VALUES
+(1,'기본',1),
+(4,'솜사탕',7),
+(5,'풀잎',2),
+(6,'파도',3),
+(7,'낙엽',4),
+(8,'바위',5),
+(9,'벚꽃',6),
+(10,'꿈',8);
+/*!40000 ALTER TABLE `palettes` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `purchase_logs`
+--
+
+DROP TABLE IF EXISTS `purchase_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `purchase_logs` (
+  `purchase_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `price` int(11) NOT NULL,
+  `purchased_at` datetime(6) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  `user_item_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`purchase_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `purchase_logs`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `purchase_logs` WRITE;
+/*!40000 ALTER TABLE `purchase_logs` DISABLE KEYS */;
+/*!40000 ALTER TABLE `purchase_logs` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `refresh_tokens`
+--
+
+DROP TABLE IF EXISTS `refresh_tokens`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `refresh_tokens` (
+  `token_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `expires_at` datetime(6) NOT NULL,
+  `token` varchar(512) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`token_id`),
+  UNIQUE KEY `uk_user_id` (`user_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=337 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `refresh_tokens`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `refresh_tokens` WRITE;
+/*!40000 ALTER TABLE `refresh_tokens` DISABLE KEYS */;
+INSERT INTO `refresh_tokens` VALUES
+(3,'2026-04-29 10:50:07.188540','2026-05-13 10:50:07.187659','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxIiwiaWF0IjoxNzc3NDI3NDA3LCJleHAiOjE3Nzg2MzcwMDd9.TorqW85MGIvcgYwJVUQLg17nljJQ_Pxf1eaDeT8UUqOB0pT7Zp5QI2g6Sey075rX',1),
+(4,'2026-04-29 10:50:40.796456','2026-05-13 10:50:40.795504','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIyIiwiaWF0IjoxNzc3NDI3NDQwLCJleHAiOjE3Nzg2MzcwNDB9.o4wMCHhOHdA5VzIjbpisMX3pvA2czs8j4Hx91qHoJSBx4cm5CeG3pP4BE0jiw9mv',2),
+(7,'2026-04-29 10:57:07.393031','2026-05-25 12:37:00.592428','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI1IiwiaWF0IjoxNzc4NDcwNjIwLCJleHAiOjE3Nzk2ODAyMjB9.lFRTUFvYLL6nzL5BIqqDK4rMGj5aXJolrCXbE1KoGjQms_l7nsSL24nuGP_54lJo',5),
+(19,'2026-04-29 14:18:21.969965','2026-06-03 12:51:43.333894','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI4IiwiaWF0IjoxNzc5MjQ5MTAzLCJleHAiOjE3ODA0NTg3MDN9.BmoNslrMUYmvXLwbtYQcXoAKwRzPzK4v9Q6ceVT1keMfEchtU9rI0I12dyPrEaZv',8),
+(22,'2026-04-29 16:03:54.810994','2026-06-03 03:21:24.369315','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxMCIsImlhdCI6MTc3OTIxNDg4NCwiZXhwIjoxNzgwNDI0NDg0fQ.wfqFen6zQ3ZpgUzygnO-CBh1yL0WH6Rnkh21dOssg2MbSFQkQlqDqnB2zYwnMZbe',10),
+(26,'2026-04-29 17:23:59.842161','2026-06-03 16:19:13.841041','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI5IiwiaWF0IjoxNzc5MjYxNTUzLCJleHAiOjE3ODA0NzExNTN9.9T9fWU9WxEriT5ORXgUHl6GoK4nl5v82csJRT0zS87eZw2Sb-aDeynA6RRh1n4l6',9),
+(27,'2026-04-30 08:46:00.287235','2026-05-14 09:51:36.499278','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxMyIsImlhdCI6MTc3NzUxMDI5NiwiZXhwIjoxNzc4NzE5ODk2fQ.Kc0hzVuLBYBN2jFaJStFj_nvFjeNqr8OuO1stuBpA7OdJKTbVCT26gUjiDU1LqKv',13),
+(40,'2026-05-01 18:40:22.754793','2026-06-02 17:20:44.626603','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxNyIsImlhdCI6MTc3OTE3ODg0NCwiZXhwIjoxNzgwMzg4NDQ0fQ.78nvLGVVGlBvfLgg7RjspOTKX3UNtW4J8oC9hjIzTF4Lohkc0DRQ8Ap1olksNZ1w',17),
+(41,'2026-05-04 19:31:15.398168','2026-05-18 19:31:15.394152','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxOCIsImlhdCI6MTc3Nzg5MDY3NSwiZXhwIjoxNzc5MTAwMjc1fQ.oR0e6mXkWXvEy9DG8HitzC7Gz57i_nQZaYid3iC0M3KcWXl_gQjEULmduaRX00V-',18),
+(46,'2026-05-11 13:23:25.540006','2026-06-01 09:46:29.230066','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxNCIsImlhdCI6MTc3OTA2NTE4OSwiZXhwIjoxNzgwMjc0Nzg5fQ.Y4v10IWPcP2r1_zdpOdAIlq_JjqAUSBD0_FzEhxZNMlZlkgPJXX-DQkmSwxmdohx',14),
+(48,'2026-05-11 13:34:07.838205','2026-06-03 13:49:12.284675','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxNiIsImlhdCI6MTc3OTI1MjU1MiwiZXhwIjoxNzgwNDYyMTUyfQ.szTg0cx9y88Ma9z0RafCioGLZEJsbBgWJZ5ffZ92-tD1-FUUHRxBAMsb9DFeMAXx',16),
+(49,'2026-05-11 13:36:35.497984','2026-05-26 22:17:54.518116','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIyMCIsImlhdCI6MTc3ODU5MTg3NCwiZXhwIjoxNzc5ODAxNDc0fQ.XK41VRwenpSHvtyyYiDBnFm2adwqSvS7zzG9nyOwDipx6ulOOXZlAqiUwruawUDN',20),
+(55,'2026-05-11 14:20:34.000000','2026-05-26 15:39:12.332219','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIyMSIsImlhdCI6MTc3ODU2Nzk1MiwiZXhwIjoxNzc5Nzc3NTUyfQ.CfobQi4TQwdS31VDomege7FQ1Ie8YxFKeSdzbSfXJHfnNiwPwUR5STS_TF6p9723',21),
+(56,'2026-05-11 14:22:40.000000','2026-05-25 14:22:40.684116','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIyMiIsImlhdCI6MTc3ODQ3Njk2MCwiZXhwIjoxNzc5Njg2NTYwfQ.m8cbbqO3isw1ZrLNmnWyN7BP7rynNtJKqPY4obBaNNS6ItYutkItOCqylMmCEcpP',22),
+(57,'2026-05-11 14:22:41.000000','2026-05-30 18:01:31.547065','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIyMyIsImlhdCI6MTc3ODkyMjA5MSwiZXhwIjoxNzgwMTMxNjkxfQ.tr9Yupjqw57EUhg5GU7wavxOiMYt-3Z2voDyCR3WHlc3gCV-rVrVVYOMf9qJHuUp',23),
+(58,'2026-05-11 14:28:36.000000','2026-05-26 08:59:12.965692','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIyNCIsImlhdCI6MTc3ODU0Mzk1MiwiZXhwIjoxNzc5NzUzNTUyfQ.LdxGQ_f3sf-_smZ6yzGkAxgaV8ZNBi6pOomDT7c-9dNM6J-xU2r_gv85htw8PIWh',24),
+(59,'2026-05-11 14:37:57.000000','2026-06-02 08:00:15.859260','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIyNSIsImlhdCI6MTc3OTE0NTIxNSwiZXhwIjoxNzgwMzU0ODE1fQ.EliYp2RW4vEjd7OIep42mxsxWIIiUgPywwO2UEIRiH_3CecyFsCRnx43fNpq9hl9',25),
+(62,'2026-05-11 14:41:01.000000','2026-05-28 00:56:05.405261','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIyOCIsImlhdCI6MTc3ODY4Nzc2NSwiZXhwIjoxNzc5ODk3MzY1fQ.fd2dLwJQdVzH_pO7gA0HDCp96cn2mYDKMQvFmJlpwmAhZwfb6DmlC2L9Sc3JD_fH',28),
+(75,'2026-05-11 15:32:46.000000','2026-05-31 21:13:06.470855','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIzMSIsImlhdCI6MTc3OTAxOTk4NiwiZXhwIjoxNzgwMjI5NTg2fQ.8p2vIyvusXrrRoCSyQ1rmxmAJ9FuLbP4p7xKTEVKTfThf-dttH2axi6yn8PFdPSl',31),
+(76,'2026-05-11 15:39:55.000000','2026-05-26 10:55:39.304760','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIzMiIsImlhdCI6MTc3ODU1MDkzOSwiZXhwIjoxNzc5NzYwNTM5fQ.TG35Cg4Otl-G8K1YoNVdlhAwMLB3gemZ60ozvRZZATAozEActFJi5d4RHv-XCsoA',32),
+(83,'2026-05-11 16:20:15.000000','2026-05-29 09:42:09.579953','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIzNCIsImlhdCI6MTc3ODgwNTcyOSwiZXhwIjoxNzgwMDE1MzI5fQ.tpoAxFIafyY-EUdDZ5kN_uaa3zVR4JDzz9e4wfVefynAD4_oGo905Yv8_5AAXlgt',34),
+(91,'2026-05-11 17:22:01.000000','2026-06-03 14:43:42.457751','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI3IiwiaWF0IjoxNzc5MjU1ODIyLCJleHAiOjE3ODA0NjU0MjJ9.qHWdbF8mZ737Ha5y8oUaJFefOAnta5itmUiwMGHR00pgnHMi_duJZLj5tuj9HlBO',7),
+(94,'2026-05-11 18:02:19.000000','2026-05-29 17:58:44.032567','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIzNiIsImlhdCI6MTc3ODgzNTUyNCwiZXhwIjoxNzgwMDQ1MTI0fQ.6sHgSi67hdqLJvPAEl79jP458-eUWVoGglFVVVz5E25CaoKE7E2EclU1BrzGoioC',36),
+(97,'2026-05-11 20:20:01.000000','2026-05-25 20:20:01.875795','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIzNyIsImlhdCI6MTc3ODQ5ODQwMSwiZXhwIjoxNzc5NzA4MDAxfQ.iSW84KFL4imrYKZPCbHq2ccB1IHvrmtByauByxwlWCcHQhyTI0Lrar-pt2Ck91JW',37),
+(99,'2026-05-11 20:23:13.000000','2026-06-03 12:41:42.204844','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIzOCIsImlhdCI6MTc3OTI0ODUwMiwiZXhwIjoxNzgwNDU4MTAyfQ.hsJkcIgW58Ni5euvZzJnDh8qpe0M4AHUO0mo-in6VOnNkhEUj3ldq5O59eGvR1At',38),
+(103,'2026-05-11 21:43:03.000000','2026-05-25 21:43:03.079891','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIzOSIsImlhdCI6MTc3ODUwMzM4MywiZXhwIjoxNzc5NzEyOTgzfQ.WWzURfpws5WiD6ZZucJVC8jkgRvL0RrBJv8SDaVEkeGkpM-MVJbJm51AAcy36paX',39),
+(107,'2026-05-12 00:30:43.000000','2026-05-26 00:30:43.284216','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI0MCIsImlhdCI6MTc3ODUxMzQ0MywiZXhwIjoxNzc5NzIzMDQzfQ.nGtH8AsmhqJjYp-8DZTST0dgVrIHtzlrvtxgEaqNKUK8DluhfPskGt_34NFXJtJY',40),
+(119,'2026-05-12 09:07:55.000000','2026-05-26 10:19:33.706755','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI0MSIsImlhdCI6MTc3ODU0ODc3MywiZXhwIjoxNzc5NzU4MzczfQ.bDZeX7zqVR6e_stZfavsnkVeVnOGAqaQhyBp6Mz5HRvat4J3z-nzS9Fbpcj_GPU2',41),
+(122,'2026-05-12 10:10:24.000000','2026-05-28 00:03:32.464417','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI0MiIsImlhdCI6MTc3ODY4NDYxMiwiZXhwIjoxNzc5ODk0MjEyfQ.GJ3ExrWaGDUD8j58l0YM_WUuopRWhTzK00bjQDmkKF_xlb7F9eHuytsaceAjXAK1',42),
+(125,'2026-05-12 10:37:19.000000','2026-05-26 12:52:09.281283','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI0MyIsImlhdCI6MTc3ODU1NzkyOSwiZXhwIjoxNzc5NzY3NTI5fQ.p2n1843rp1RQLkzPL4n_HVL7KjFCX1reGB-IpI0HCvWdRFrg6UpV_akuoXkctM4g',43),
+(126,'2026-05-12 10:41:01.000000','2026-05-26 10:41:01.761737','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI0NCIsImlhdCI6MTc3ODU1MDA2MSwiZXhwIjoxNzc5NzU5NjYxfQ.FbrNzZhSjZFWtPk_uuTCikqth8LqGih9HpeN2Oz4EtrqvFb51s1HQSkRiuk1zP4A',44),
+(127,'2026-05-12 10:48:35.000000','2026-05-31 20:31:27.824638','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI0NSIsImlhdCI6MTc3OTAxNzQ4NywiZXhwIjoxNzgwMjI3MDg3fQ.KensNS0nQb0bV98ruign2aUyq2rM7HJdqCKXF0_dk0cpcX3H2KsD0cWBq_WNj0C9',45),
+(140,'2026-05-12 13:01:27.000000','2026-05-30 13:20:37.156290','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI0NiIsImlhdCI6MTc3ODkwNTIzNywiZXhwIjoxNzgwMTE0ODM3fQ.u7YjsJ5ma_Twq6hjKJ586WDc1eHpg8rryNcWUIejUAf7ZiBgNG2U2cpLifKeqK4o',46),
+(144,'2026-05-12 14:18:20.000000','2026-05-28 21:02:03.388761','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI0OCIsImlhdCI6MTc3ODc2MDEyMywiZXhwIjoxNzc5OTY5NzIzfQ.TTUTynSenLRS5mtYL9hvvzUSQJ48-yIp-8rkb3vkkL1tLOcnT0Cvipq8Tdaayk6d',48),
+(146,'2026-05-12 14:44:56.000000','2026-05-27 17:49:11.483506','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI0OSIsImlhdCI6MTc3ODY2MjE1MSwiZXhwIjoxNzc5ODcxNzUxfQ.S5jE8QkaF5X1fC7QhD_7tUTd81LB0jPnCUuSHjEwRuv0GieQx8rQWcjbyaxTPhnv',49),
+(157,'2026-05-12 16:17:16.000000','2026-05-29 16:00:18.408191','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI1MCIsImlhdCI6MTc3ODgyODQxOCwiZXhwIjoxNzgwMDM4MDE4fQ.vAzHbUHt6n6tzv58hmlDx6WklekXLbFrxktBpPShL3fyV2QbQv6wR6xP4quWWMQN',50),
+(169,'2026-05-12 17:54:57.000000','2026-05-29 13:53:11.510885','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI1MiIsImlhdCI6MTc3ODgyMDc5MSwiZXhwIjoxNzgwMDMwMzkxfQ.5-KaJeUu_irsX2xvD9sE-pz6Si2g7zM68JDsnHFIgURM9w7lSpc-gy0KXf1yQgC5',52),
+(181,'2026-05-13 01:22:15.000000','2026-05-27 01:22:15.776070','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI1MyIsImlhdCI6MTc3ODYwMjkzNSwiZXhwIjoxNzc5ODEyNTM1fQ.lIaOW1DlAb6NfzWIlWFXhBz9v5Kc74yscrEbe1A3POMrc8TUnMwroxz-PCY30gjC',53),
+(217,'2026-05-14 00:33:04.000000','2026-06-01 11:57:47.727775','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI1NCIsImlhdCI6MTc3OTA3MzA2NywiZXhwIjoxNzgwMjgyNjY3fQ.hG-IQp-rxBNOacHX5fFQHIfBcIvJygSubSc2RNvhYjcnU2kOgXy3nRne9yccv-zm',54),
+(224,'2026-05-14 12:03:21.000000','2026-05-28 12:03:21.361644','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI1NSIsImlhdCI6MTc3ODcyNzgwMSwiZXhwIjoxNzc5OTM3NDAxfQ.XvYpp0QA0UfCzj9P6Lf4Vem79BHhfikucoe-Z0C4N5jBOvw1cUgKBEK4uhSkCVBz',55),
+(242,'2026-05-14 18:44:59.000000','2026-05-28 22:18:40.692147','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI1NiIsImlhdCI6MTc3ODc2NDcyMCwiZXhwIjoxNzc5OTc0MzIwfQ.Y0jcDNCZFaBCUpJFF7_DP-Qa8NtYx1W9Qh4kGpB1mNmdKEFng_PHUCu-64YsZwoD',56),
+(260,'2026-05-16 15:25:01.000000','2026-05-30 15:25:01.032781','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxMSIsImlhdCI6MTc3ODkxMjcwMSwiZXhwIjoxNzgwMTIyMzAxfQ.llBOKrqrd8S_V3bB8_ms-6dYfzG9yNIfFkIRQytRTp5CsaWVMgQIf3suolEP-3_W',11),
+(269,'2026-05-17 16:58:16.000000','2026-06-02 20:46:12.487687','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI1OCIsImlhdCI6MTc3OTE5MTE3MiwiZXhwIjoxNzgwNDAwNzcyfQ.rRljvzBCZ28h75Hum_UCKWolv-D6WrDOKYjGcpX243KzrIxuWDEflYLakN8L3Rww',58),
+(270,'2026-05-17 17:01:45.000000','2026-06-03 15:45:08.331100','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxNSIsImlhdCI6MTc3OTI1OTUwOCwiZXhwIjoxNzgwNDY5MTA4fQ.j6oYJuIGrXM9WHUJjo_L-3b11cX0n9Y5g_JMBXxCNb2D6FJ5nAelTKCaKMBDq30g',15),
+(281,'2026-05-18 08:07:18.000000','2026-06-01 08:07:18.014168','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI1OSIsImlhdCI6MTc3OTA1OTIzOCwiZXhwIjoxNzgwMjY4ODM4fQ.lxjVAh3b49opik_4vppdmbysP3uIVrOx16Cz6lUQB-g_4nloY-HkvQXj4d-Z_T12',59),
+(324,'2026-05-20 13:32:26.000000','2026-06-03 13:32:26.360594','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI2NCIsImlhdCI6MTc3OTI1MTU0NiwiZXhwIjoxNzgwNDYxMTQ2fQ.eAwVuZP-REQdaRadqpXDbk_ZRhIZBYg0nDO-HnjDQmbFEIBgMvPTWzkXL2rvXzO2',64),
+(326,'2026-05-20 13:46:19.000000','2026-06-03 13:46:19.108571','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI2NSIsImlhdCI6MTc3OTI1MjM3OSwiZXhwIjoxNzgwNDYxOTc5fQ.2YHhgZjOhbhMScp9siOLBDONaH3SbOzV0iJkY--5Hv9vfpW65gu_6zYFH2Xvuxrv',65),
+(331,'2026-05-20 14:20:40.000000','2026-06-03 14:20:40.809432','eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIzIiwiaWF0IjoxNzc5MjU0NDQwLCJleHAiOjE3ODA0NjQwNDB9.Sao-AfeAV2pN_vkU3Qb01-QlQnXG2i5DpZVBmXV7zLljtBlxe4olUmjhF4e3OR3y',3);
+/*!40000 ALTER TABLE `refresh_tokens` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `room_furniture_placements`
+--
+
+DROP TABLE IF EXISTS `room_furniture_placements`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `room_furniture_placements` (
+  `placement_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `rotation` int(11) NOT NULL,
+  `user_furniture_id` bigint(20) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  `x` int(11) NOT NULL,
+  `y` int(11) NOT NULL,
+  `z_index` int(11) NOT NULL,
+  PRIMARY KEY (`placement_id`),
+  KEY `idx_room_furniture_placements_user_id` (`user_id`),
+  KEY `idx_room_furniture_placements_user_furniture_id` (`user_furniture_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=220 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `room_furniture_placements`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `room_furniture_placements` WRITE;
+/*!40000 ALTER TABLE `room_furniture_placements` DISABLE KEYS */;
+INSERT INTO `room_furniture_placements` VALUES
+(3,'2026-05-11 14:09:32.707869','2026-05-11 14:09:32.707869',0,3,9,0,0,0),
+(4,'2026-05-11 14:09:45.538396','2026-05-11 14:09:45.538396',0,4,9,80,150,1),
+(5,'2026-05-11 14:20:02.671345','2026-05-11 14:20:02.671345',0,5,14,0,0,0),
+(6,'2026-05-11 14:20:34.024144','2026-05-11 14:20:34.024144',0,6,21,0,0,0),
+(7,'2026-05-11 14:22:31.537551','2026-05-11 14:22:31.537551',0,14,14,0,0,0),
+(8,'2026-05-11 14:22:31.537551','2026-05-11 14:22:31.537551',0,7,14,80,150,1),
+(9,'2026-05-11 14:22:31.537551','2026-05-11 14:22:31.537551',0,8,14,50,50,2),
+(10,'2026-05-11 14:22:31.537551','2026-05-11 14:22:31.537551',0,9,14,200,150,1),
+(11,'2026-05-11 14:22:31.537551','2026-05-11 14:22:31.537551',0,10,14,300,200,1),
+(12,'2026-05-11 14:22:31.537551','2026-05-11 14:22:31.537551',0,11,14,150,250,0),
+(13,'2026-05-11 14:22:31.537551','2026-05-11 14:22:31.537551',0,12,14,200,50,2),
+(14,'2026-05-11 14:22:31.537551','2026-05-11 14:22:31.537551',0,13,14,300,50,2),
+(15,'2026-05-11 14:22:40.682709','2026-05-11 14:22:40.682709',0,15,22,0,0,0),
+(17,'2026-05-11 14:28:36.128401','2026-05-11 14:28:36.128401',0,17,24,0,0,0),
+(19,'2026-05-11 14:37:08.029844','2026-05-11 14:37:08.029844',0,19,23,80,150,1),
+(20,'2026-05-11 14:37:17.391863','2026-05-11 14:37:17.391863',0,20,23,50,120,2),
+(21,'2026-05-11 14:37:20.813598','2026-05-11 14:37:20.813598',0,21,23,100,20,5),
+(22,'2026-05-11 14:37:26.037344','2026-05-11 14:37:26.037344',0,22,23,50,40,5),
+(23,'2026-05-11 14:37:37.543187','2026-05-11 14:37:37.543187',0,23,23,100,40,5),
+(24,'2026-05-11 14:37:40.072019','2026-05-11 14:37:40.072019',0,24,23,200,140,3),
+(25,'2026-05-11 14:37:43.605951','2026-05-11 14:37:43.605951',0,25,23,80,180,0),
+(29,'2026-05-11 14:41:01.087585','2026-05-11 14:41:01.087585',0,29,28,0,0,0),
+(38,'2026-05-11 14:46:49.574539','2026-05-11 14:46:49.574539',0,32,25,80,150,1),
+(39,'2026-05-11 14:46:49.574539','2026-05-11 14:46:49.574539',0,33,25,50,50,2),
+(40,'2026-05-11 14:46:49.574539','2026-05-11 14:46:49.574539',0,34,25,200,150,1),
+(41,'2026-05-11 14:46:49.574539','2026-05-11 14:46:49.574539',0,35,25,300,200,1),
+(42,'2026-05-11 14:46:49.574539','2026-05-11 14:46:49.574539',0,36,25,150,250,0),
+(43,'2026-05-11 14:46:49.574539','2026-05-11 14:46:49.574539',0,37,25,200,50,2),
+(44,'2026-05-11 14:46:49.574539','2026-05-11 14:46:49.574539',0,38,25,300,50,2),
+(46,'2026-05-11 14:47:49.125529','2026-05-11 14:47:49.125529',0,39,25,0,0,0),
+(47,'2026-05-11 14:48:20.878351','2026-05-11 14:48:20.878351',0,40,23,0,0,0),
+(50,'2026-05-11 15:29:31.058567','2026-05-11 15:29:31.058567',0,43,31,0,0,0),
+(51,'2026-05-11 15:31:21.631720','2026-05-11 15:31:21.631720',0,51,30,0,0,0),
+(52,'2026-05-11 15:31:21.631720','2026-05-11 15:31:21.631720',0,44,30,80,150,1),
+(53,'2026-05-11 15:31:21.631720','2026-05-11 15:31:21.631720',0,45,30,50,50,2),
+(54,'2026-05-11 15:31:21.631720','2026-05-11 15:31:21.631720',0,46,30,200,150,1),
+(55,'2026-05-11 15:31:21.631720','2026-05-11 15:31:21.631720',0,47,30,300,200,1),
+(56,'2026-05-11 15:31:21.631720','2026-05-11 15:31:21.631720',0,48,30,150,250,0),
+(57,'2026-05-11 15:31:21.631720','2026-05-11 15:31:21.631720',0,49,30,200,50,2),
+(58,'2026-05-11 15:31:21.631720','2026-05-11 15:31:21.631720',0,50,30,300,50,2),
+(59,'2026-05-11 15:39:55.095108','2026-05-11 15:39:55.095108',0,52,32,0,0,0),
+(60,'2026-05-11 15:58:50.396970','2026-05-11 15:58:50.396970',0,42,20,0,0,0),
+(61,'2026-05-11 16:17:20.390166','2026-05-11 16:17:20.390166',0,53,33,0,0,0),
+(66,'2026-05-11 17:16:10.966860','2026-05-11 17:16:10.966860',0,58,15,80,150,1),
+(67,'2026-05-11 17:16:34.000350','2026-05-11 17:16:34.000350',0,59,15,50,120,2),
+(68,'2026-05-11 17:16:45.669066','2026-05-11 17:16:45.669066',0,60,15,100,20,5),
+(69,'2026-05-11 17:18:24.397080','2026-05-11 17:18:24.397080',0,61,15,50,40,5),
+(70,'2026-05-11 17:18:32.460380','2026-05-11 17:18:32.460380',0,62,15,100,40,5),
+(71,'2026-05-11 17:18:37.118227','2026-05-11 17:18:37.118227',0,63,15,200,140,3),
+(72,'2026-05-11 17:18:42.976842','2026-05-11 17:18:42.976842',0,64,15,80,180,0),
+(73,'2026-05-11 17:20:11.579728','2026-05-11 17:20:11.579728',0,65,35,0,0,0),
+(74,'2026-05-11 17:46:00.902813','2026-05-11 17:46:00.902813',0,66,29,0,0,0),
+(75,'2026-05-11 17:46:08.521850','2026-05-11 17:46:08.521850',0,67,29,50,40,5),
+(76,'2026-05-11 17:46:20.736657','2026-05-11 17:46:20.736657',0,68,29,100,20,5),
+(77,'2026-05-11 17:46:39.458596','2026-05-11 17:46:39.458596',0,69,29,100,40,5),
+(78,'2026-05-11 17:46:46.679900','2026-05-11 17:46:46.679900',0,70,29,50,120,2),
+(79,'2026-05-11 17:46:48.779067','2026-05-11 17:46:48.779067',0,71,29,80,150,1),
+(80,'2026-05-11 17:46:51.715813','2026-05-11 17:46:51.715813',0,72,29,200,140,3),
+(81,'2026-05-11 17:46:53.221237','2026-05-11 17:46:53.221237',0,73,29,80,180,0),
+(83,'2026-05-11 20:20:01.870832','2026-05-11 20:20:01.870832',0,75,37,0,0,0),
+(84,'2026-05-11 20:23:13.203805','2026-05-11 20:23:13.203805',0,76,38,0,0,0),
+(86,'2026-05-11 21:43:03.078991','2026-05-11 21:43:03.078991',0,78,39,0,0,0),
+(87,'2026-05-12 00:30:43.281842','2026-05-12 00:30:43.281842',0,79,40,0,0,0),
+(88,'2026-05-12 09:07:55.535071','2026-05-12 09:07:55.535071',0,80,41,0,0,0),
+(89,'2026-05-12 10:10:24.403713','2026-05-12 10:10:24.403713',0,81,42,0,0,0),
+(90,'2026-05-12 10:37:19.986942','2026-05-12 10:37:19.986942',0,82,43,0,0,0),
+(92,'2026-05-12 10:48:35.120186','2026-05-12 10:48:35.120186',0,84,45,0,0,0),
+(93,'2026-05-12 10:52:51.258553','2026-05-12 10:52:51.258553',0,85,44,0,0,0),
+(94,'2026-05-12 10:53:01.085459','2026-05-12 10:53:01.085459',0,86,44,80,150,1),
+(95,'2026-05-12 10:53:03.612714','2026-05-12 10:53:03.612714',0,87,44,50,120,2),
+(96,'2026-05-12 10:53:09.127944','2026-05-12 10:53:09.127944',0,88,44,100,20,5),
+(97,'2026-05-12 10:53:12.827995','2026-05-12 10:53:12.827995',0,89,44,50,40,5),
+(98,'2026-05-12 10:53:15.778081','2026-05-12 10:53:15.778081',0,90,44,100,40,5),
+(99,'2026-05-12 10:53:19.203826','2026-05-12 10:53:19.203826',0,91,44,200,140,3),
+(100,'2026-05-12 10:53:22.902657','2026-05-12 10:53:22.902657',0,92,44,80,180,0),
+(101,'2026-05-12 11:00:29.282900','2026-05-12 11:00:29.282900',0,100,4,0,0,0),
+(102,'2026-05-12 11:00:29.282900','2026-05-12 11:00:29.282900',0,93,4,80,150,1),
+(103,'2026-05-12 11:00:29.282900','2026-05-12 11:00:29.282900',0,94,4,50,40,5),
+(104,'2026-05-12 11:00:29.282900','2026-05-12 11:00:29.282900',0,95,4,50,120,2),
+(105,'2026-05-12 11:00:29.282900','2026-05-12 11:00:29.282900',0,96,4,200,140,3),
+(106,'2026-05-12 11:00:29.282900','2026-05-12 11:00:29.282900',0,97,4,80,180,0),
+(107,'2026-05-12 11:00:29.282900','2026-05-12 11:00:29.282900',0,98,4,100,40,5),
+(108,'2026-05-12 11:00:29.282900','2026-05-12 11:00:29.282900',0,99,4,100,20,5),
+(110,'2026-05-12 13:42:20.798597','2026-05-12 13:42:20.798597',0,102,47,0,0,0),
+(111,'2026-05-12 14:18:20.536143','2026-05-12 14:18:20.536143',0,103,48,0,0,0),
+(113,'2026-05-12 14:51:00.164921','2026-05-12 14:51:00.164921',0,105,17,0,0,0),
+(123,'2026-05-12 15:15:35.863037','2026-05-12 15:15:35.863037',0,115,36,80,150,1),
+(124,'2026-05-12 15:15:37.320364','2026-05-12 15:15:37.320364',0,116,36,50,120,2),
+(125,'2026-05-12 15:15:38.661953','2026-05-12 15:15:38.661953',0,117,36,100,20,5),
+(126,'2026-05-12 15:15:40.728821','2026-05-12 15:15:40.728821',0,118,36,50,40,5),
+(127,'2026-05-12 15:15:42.707950','2026-05-12 15:15:42.707950',0,119,36,100,40,5),
+(128,'2026-05-12 15:15:44.927959','2026-05-12 15:15:44.927959',0,120,36,200,140,3),
+(129,'2026-05-12 15:15:47.234159','2026-05-12 15:15:47.234159',0,121,36,80,180,0),
+(131,'2026-05-12 15:16:43.231800','2026-05-12 15:16:43.231800',0,114,36,0,0,0),
+(142,'2026-05-12 16:19:30.399022','2026-05-12 16:19:30.399022',0,131,50,0,0,0),
+(143,'2026-05-12 16:41:24.589967','2026-05-12 16:41:24.589967',0,132,51,0,0,0),
+(147,'2026-05-13 01:22:15.773369','2026-05-13 01:22:15.773369',0,136,53,0,0,0),
+(149,'2026-05-13 10:05:17.370558','2026-05-13 10:05:17.370558',0,134,52,0,0,0),
+(150,'2026-05-13 10:05:20.296900','2026-05-13 10:05:20.296900',0,135,52,200,140,3),
+(152,'2026-05-13 17:50:05.990843','2026-05-13 17:50:05.990843',0,138,49,80,150,1),
+(153,'2026-05-13 17:50:12.399403','2026-05-13 17:50:12.399403',0,139,49,100,20,5),
+(154,'2026-05-13 17:50:16.154051','2026-05-13 17:50:16.154051',0,140,49,0,0,0),
+(155,'2026-05-14 00:33:04.527721','2026-05-14 00:33:04.527721',0,141,54,0,0,0),
+(156,'2026-05-14 12:03:21.359934','2026-05-14 12:03:21.359934',0,142,55,0,0,0),
+(173,'2026-05-14 15:59:35.943635','2026-05-14 15:59:35.943635',0,400,34,0,0,0),
+(174,'2026-05-14 15:59:42.570165','2026-05-14 15:59:42.570165',0,402,34,80,150,1),
+(175,'2026-05-14 15:59:48.075906','2026-05-14 15:59:48.075906',0,403,34,50,120,2),
+(176,'2026-05-14 15:59:51.520624','2026-05-14 15:59:51.520624',0,404,34,100,20,5),
+(177,'2026-05-14 15:59:55.984504','2026-05-14 15:59:55.984504',0,405,34,50,40,5),
+(178,'2026-05-14 15:59:58.620622','2026-05-14 15:59:58.620622',0,406,34,100,40,5),
+(179,'2026-05-14 16:00:02.640954','2026-05-14 16:00:02.640954',0,407,34,200,140,3),
+(180,'2026-05-14 16:00:05.129657','2026-05-14 16:00:05.129657',0,408,34,80,180,0),
+(181,'2026-05-14 18:44:59.865151','2026-05-14 18:44:59.865151',0,409,56,0,0,0),
+(182,'2026-05-15 10:06:52.521281','2026-05-15 10:06:52.521281',0,410,57,0,0,0),
+(183,'2026-05-15 23:06:41.916618','2026-05-15 23:06:41.916618',0,411,46,0,0,0),
+(184,'2026-05-15 23:07:03.687574','2026-05-15 23:07:03.687574',0,412,46,80,150,1),
+(185,'2026-05-15 23:07:41.210286','2026-05-15 23:07:41.210286',0,413,46,50,120,2),
+(186,'2026-05-15 23:08:09.124174','2026-05-15 23:08:09.124174',0,414,46,100,20,5),
+(187,'2026-05-16 15:25:02.883106','2026-05-16 15:25:02.883106',0,415,11,0,0,0),
+(188,'2026-05-16 15:44:31.300842','2026-05-16 15:44:31.300842',0,416,15,0,0,0),
+(189,'2026-05-17 16:58:16.270101','2026-05-17 16:58:16.270101',0,417,58,0,0,0),
+(190,'2026-05-18 08:07:17.830017','2026-05-18 08:07:17.830017',0,418,59,0,0,0),
+(191,'2026-05-18 09:41:27.754847','2026-05-18 09:41:27.754847',0,419,8,0,0,0),
+(193,'2026-05-19 17:04:15.530627','2026-05-19 17:04:15.530627',0,420,60,0,0,0),
+(196,'2026-05-19 17:40:36.689376','2026-05-19 17:40:36.689376',0,423,61,0,0,0),
+(199,'2026-05-20 12:26:09.270452','2026-05-20 12:26:09.270452',0,425,3,80,180,0),
+(200,'2026-05-20 12:26:09.271602','2026-05-20 12:26:09.271602',0,426,3,0,0,0),
+(201,'2026-05-20 12:26:09.272420','2026-05-20 12:26:09.272420',0,427,3,80,150,1),
+(202,'2026-05-20 12:26:09.273188','2026-05-20 12:26:09.273188',0,428,3,50,120,2),
+(203,'2026-05-20 12:26:09.274073','2026-05-20 12:26:09.274073',0,429,3,200,140,3),
+(204,'2026-05-20 12:26:09.274871','2026-05-20 12:26:09.274871',0,430,3,50,40,5),
+(205,'2026-05-20 12:26:09.275647','2026-05-20 12:26:09.275647',0,431,3,100,40,5),
+(206,'2026-05-20 12:26:09.276576','2026-05-20 12:26:09.276576',0,432,3,100,20,5),
+(207,'2026-05-20 13:03:45.450947','2026-05-20 13:03:45.450947',0,433,62,0,0,0),
+(208,'2026-05-20 13:04:36.088384','2026-05-20 13:04:36.088384',0,434,63,0,0,0),
+(209,'2026-05-20 13:32:26.289199','2026-05-20 13:32:26.289199',0,435,64,0,0,0),
+(210,'2026-05-20 13:46:19.106496','2026-05-20 13:46:19.106496',0,436,65,0,0,0),
+(211,'2026-05-20 13:49:13.232769','2026-05-20 13:49:13.232769',0,437,16,0,0,0),
+(212,'2026-05-20 14:44:16.268195','2026-05-20 14:44:16.268195',0,438,7,80,180,0),
+(213,'2026-05-20 14:44:16.269357','2026-05-20 14:44:16.269357',0,439,7,0,0,0),
+(214,'2026-05-20 14:44:16.270185','2026-05-20 14:44:16.270185',0,440,7,80,150,1),
+(215,'2026-05-20 14:44:16.271325','2026-05-20 14:44:16.271325',0,441,7,50,120,2),
+(216,'2026-05-20 14:44:16.272179','2026-05-20 14:44:16.272179',0,442,7,200,140,3),
+(217,'2026-05-20 14:44:16.272937','2026-05-20 14:44:16.272937',0,443,7,50,40,5),
+(218,'2026-05-20 14:44:16.273764','2026-05-20 14:44:16.273764',0,444,7,100,40,5),
+(219,'2026-05-20 14:44:16.274574','2026-05-20 14:44:16.274574',0,445,7,100,20,5);
+/*!40000 ALTER TABLE `room_furniture_placements` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `snooze_history`
+--
+
+DROP TABLE IF EXISTS `snooze_history`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `snooze_history` (
+  `snooze_history_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `from_date` date NOT NULL,
+  `snoozed_at` datetime(6) NOT NULL,
+  `to_date` date NOT NULL,
+  `todo_id` bigint(20) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`snooze_history_id`),
+  KEY `idx_snooze_history_todo_id` (`todo_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `snooze_history`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `snooze_history` WRITE;
+/*!40000 ALTER TABLE `snooze_history` DISABLE KEYS */;
+INSERT INTO `snooze_history` VALUES
+(1,'2026-04-29','2026-04-29 16:47:44.484217','2026-04-30',208,11),
+(2,'2026-04-29','2026-04-29 17:20:02.966236','2026-04-30',211,8),
+(3,'2026-04-29','2026-04-29 17:20:03.542968','2026-04-30',210,8),
+(4,'2026-04-29','2026-04-29 17:20:04.340822','2026-04-30',195,8),
+(5,'2026-04-30','2026-04-30 14:58:47.014906','2026-05-01',231,3),
+(6,'2026-05-11','2026-05-11 20:24:27.733076','2026-05-12',335,38),
+(7,'2026-05-12','2026-05-12 10:14:04.060722','2026-05-13',350,42),
+(8,'2026-05-13','2026-05-12 10:14:07.537503','2026-05-14',350,42),
+(9,'2026-05-14','2026-05-12 10:14:10.768466','2026-05-15',350,42),
+(10,'2026-05-13','2026-05-13 01:25:53.938884','2026-05-14',432,53);
+/*!40000 ALTER TABLE `snooze_history` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `streak_reward_logs`
+--
+
+DROP TABLE IF EXISTS `streak_reward_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `streak_reward_logs` (
+  `streak_reward_log_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `reward_amount` int(11) NOT NULL,
+  `streak_count` int(11) NOT NULL,
+  `streak_start_date` date NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`streak_reward_log_id`),
+  UNIQUE KEY `uk_streak_reward_logs_segment` (`user_id`,`streak_start_date`,`streak_count`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `streak_reward_logs`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `streak_reward_logs` WRITE;
+/*!40000 ALTER TABLE `streak_reward_logs` DISABLE KEYS */;
+INSERT INTO `streak_reward_logs` VALUES
+(1,'2026-05-12 16:08:16.197193','2026-05-12 16:08:16.197193',200,7,'2026-05-06',15);
+/*!40000 ALTER TABLE `streak_reward_logs` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `todos`
+--
+
+DROP TABLE IF EXISTS `todos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `todos` (
+  `todo_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `alert_time` varchar(5) DEFAULT NULL,
+  `category_id` bigint(20) DEFAULT NULL,
+  `content` varchar(100) DEFAULT NULL,
+  `days_of_week` varchar(27) DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `exp_granted` bit(1) NOT NULL,
+  `is_deleted` bit(1) NOT NULL,
+  `master_todo_id` bigint(20) DEFAULT NULL,
+  `recurrence_group_id` bigint(20) DEFAULT NULL,
+  `priority` int(11) NOT NULL,
+  `start_date` date DEFAULT NULL,
+  `status` enum('DONE','IN_PROGRESS','TODO') NOT NULL,
+  `title` varchar(20) NOT NULL,
+  `type` enum('NORMAL','PERIOD','RECURRING','SOMEDAY') NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  `done_date` date DEFAULT NULL,
+  `first_completed_date` date DEFAULT NULL,
+  `category_color_id` int(11) DEFAULT NULL,
+  `category_name` varchar(10) DEFAULT NULL,
+  PRIMARY KEY (`todo_id`),
+  KEY `idx_todos_list_default` (`user_id`,`is_deleted`,`start_date`,`todo_id`),
+  KEY `idx_todos_list_type` (`user_id`,`is_deleted`,`type`,`start_date`,`todo_id`),
+  KEY `idx_todos_list_status` (`user_id`,`is_deleted`,`status`,`start_date`,`todo_id`),
+  KEY `idx_todos_list_category` (`user_id`,`is_deleted`,`category_id`,`start_date`,`todo_id`),
+  KEY `idx_todos_list_priority` (`user_id`,`is_deleted`,`priority`,`start_date`,`todo_id`),
+  KEY `idx_todos_recurrence_group` (`user_id`,`recurrence_group_id`,`is_deleted`,`start_date`,`end_date`),
+  KEY `idx_todos_list_category_name` (`user_id`,`is_deleted`,`category_name`,`start_date`,`todo_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1462 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `todos`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `todos` WRITE;
+/*!40000 ALTER TABLE `todos` DISABLE KEYS */;
+INSERT INTO `todos` VALUES
+(188,'2026-04-29 14:04:35.601103','2026-04-29 14:42:22.230203',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-04-29','DONE','ㅇㅇㅇㅇㅇ','NORMAL',3,NULL,NULL,NULL,NULL),
+(189,'2026-04-29 14:05:35.035057','2026-04-29 14:05:42.477200',NULL,32,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-04-29','DONE','운동하기','NORMAL',7,NULL,NULL,2,'운동'),
+(190,'2026-04-29 14:06:03.333817','2026-04-30 10:28:02.160282',NULL,33,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-04-29','DONE','팀미팅','NORMAL',7,NULL,NULL,3,'업무'),
+(191,'2026-04-29 14:07:09.181836','2026-05-13 09:20:30.104250',NULL,12,NULL,NULL,NULL,0x01,0x01,NULL,NULL,27,'2026-04-29','DONE','ㅋㅋㅋㅋㅋㅋㅋㅋ','NORMAL',3,NULL,NULL,NULL,NULL),
+(192,'2026-04-29 14:07:57.510089','2026-05-19 16:48:58.207619',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','ㅅㅅㅅㅅㅅㅅㄹㄹㄱㅇ3ㅅㄱㅅㄱㅅ','SOMEDAY',3,NULL,NULL,NULL,NULL),
+(193,'2026-04-29 14:12:19.584069','2026-05-13 09:20:30.104358',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,28,'2026-04-29','DONE','ㅛㅛㅛ','NORMAL',3,NULL,NULL,NULL,NULL),
+(194,'2026-04-29 14:12:29.240242','2026-05-19 16:48:56.643997',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','ㅛㅛㅛㅛ','SOMEDAY',3,NULL,NULL,NULL,NULL),
+(195,'2026-04-29 14:18:46.691972','2026-04-29 17:20:04.343897',NULL,36,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-04-30','TODO','ㅇㅇㅇㅇㅇ','NORMAL',8,NULL,NULL,1,'공부'),
+(196,'2026-04-29 14:18:53.866645','2026-05-04 15:23:03.212631',NULL,36,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,NULL,'DONE','ㅇㅇㅇㅇㅇㅇ','SOMEDAY',8,NULL,NULL,1,'공부'),
+(197,'2026-04-29 14:26:30.728864','2026-05-13 09:20:30.104471','14:30',11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,30,'2026-04-29','DONE','어어아ㅏ앙ㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇ','NORMAL',3,NULL,NULL,NULL,NULL),
+(198,'2026-04-29 14:26:35.760556','2026-04-29 14:27:39.485980',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-04-29','DONE','ㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜ','NORMAL',7,NULL,NULL,1,'공부'),
+(199,'2026-04-29 14:31:38.237184','2026-04-29 14:33:33.985219','14:32',NULL,'FCM 발송 테스트',NULL,NULL,0x00,0x01,NULL,NULL,999,'2026-04-29','TODO','Codex 테스트 알림','NORMAL',3,NULL,NULL,NULL,NULL),
+(200,'2026-04-29 14:37:24.163893','2026-05-13 09:20:30.104550',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,31,'2026-04-29','DONE','ㅛㅛ','NORMAL',3,NULL,NULL,NULL,NULL),
+(201,'2026-04-29 14:42:06.604690','2026-05-13 09:20:30.104609',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,32,'2026-04-29','DONE','7','NORMAL',3,NULL,NULL,NULL,NULL),
+(202,'2026-04-29 14:42:33.898649','2026-05-13 09:20:30.104654',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,33,'2026-04-29','DONE','ㅎㅎㅎ','NORMAL',3,NULL,NULL,NULL,NULL),
+(203,'2026-04-29 14:43:30.625872','2026-04-29 16:10:03.794959',NULL,41,'ㅁㅎㅁㅎㄴㄹㄴㄹㄴㄹㅁㅎㄴㅎㄴㄴㄹㄴㄹㄴㄹㄴㄹㄴㄴㄹㄴㄹㄴㄹㄴㄴㄹㄴㄹㄴㄹㄴㄹㄴㄹㅈㄹㅈㄹㄴㅋㄹㅋㅊㅋㅊㄴㅊㄴㄴㅊㄴㄴㄹㄴㄹㄴㄹㄴㄹㅈㄴㄹㄴㅊㄴㄹㄴㄹㄴㄹㄴㄹㄴㄹㄴㄹㄴㄹㄴㄹㄴㄹㅁㄹㄴㄹㄴㅁㄹㅁㄹㄹㄴ',NULL,NULL,0x00,0x01,NULL,NULL,1,'2026-04-29','TODO','ㅇㅇㅇㅇ어너ㄴㄹㅁㄹㄴㄹㄴㄹㄴㄴㄹㄴㅎㅈ','NORMAL',9,NULL,NULL,NULL,NULL),
+(204,'2026-04-29 14:45:20.193595','2026-04-29 14:45:20.193595',NULL,41,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2025-12-15','TODO','ㅁㅁ멈ㅁ','NORMAL',9,NULL,NULL,NULL,NULL),
+(205,'2026-04-29 16:05:54.100001','2026-05-13 09:20:30.104698',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,34,'2026-04-29','DONE','먕먕','NORMAL',3,NULL,NULL,NULL,NULL),
+(206,'2026-04-29 16:29:30.907888','2026-05-11 14:16:57.450832',NULL,41,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-04-29','DONE','ㅠㅣ','NORMAL',9,NULL,NULL,NULL,NULL),
+(207,'2026-04-29 16:35:56.108311','2026-05-11 14:16:58.891572',NULL,41,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-04-29','DONE','ㅇ','NORMAL',9,NULL,NULL,NULL,NULL),
+(208,'2026-04-29 16:35:59.137929','2026-04-29 16:47:44.491092',NULL,51,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-04-30','TODO','웅','NORMAL',11,NULL,NULL,1,'공부'),
+(209,'2026-04-29 16:36:04.024813','2026-05-16 15:25:50.534940',NULL,51,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,NULL,'TODO','나나','SOMEDAY',11,NULL,'2026-05-16',1,'공부'),
+(210,'2026-04-29 16:44:10.975303','2026-04-29 17:20:03.546197',NULL,36,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-04-30','TODO','ㅇ','NORMAL',8,NULL,NULL,1,'공부'),
+(211,'2026-04-29 16:44:14.580810','2026-04-29 17:20:02.969373',NULL,36,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-04-30','TODO','ㅇ','NORMAL',8,NULL,NULL,1,'공부'),
+(212,'2026-04-29 16:44:18.994130','2026-04-29 16:45:00.855957',NULL,51,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,NULL,'DONE','ㅇ','SOMEDAY',11,NULL,NULL,1,'공부'),
+(213,'2026-04-29 16:44:24.422447','2026-04-29 16:45:03.234742',NULL,51,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,NULL,'DONE','ㅇ','SOMEDAY',11,NULL,NULL,1,'공부'),
+(214,'2026-04-29 16:45:10.853974','2026-05-11 14:17:05.732182',NULL,41,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','ㅇ','SOMEDAY',9,NULL,NULL,NULL,NULL),
+(215,'2026-04-29 16:45:15.779029','2026-05-11 14:17:07.470005',NULL,41,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','ㄴ','SOMEDAY',9,NULL,NULL,NULL,NULL),
+(216,'2026-04-29 16:46:42.378970','2026-05-11 14:17:00.732021',NULL,41,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-04-29','DONE','머멈머머머머머머머머멈머머머머머머멈','NORMAL',9,NULL,NULL,NULL,NULL),
+(217,'2026-04-29 17:24:50.619782','2026-05-11 14:17:02.469694',NULL,41,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-04-29','DONE','ㅕㅕ','NORMAL',9,NULL,NULL,NULL,NULL),
+(218,'2026-04-29 17:57:31.247520','2026-04-29 17:57:33.206604',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-04-29','DONE','ㅎ','NORMAL',4,NULL,NULL,1,'공부'),
+(219,'2026-04-30 08:47:45.210578','2026-04-30 09:04:31.966376',NULL,61,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-04-30','DONE','상훈님 바보','NORMAL',13,NULL,NULL,1,'공부'),
+(220,'2026-04-30 08:47:55.558395','2026-04-30 09:04:35.384690',NULL,61,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-04-30','DONE','보고 계신가요????','NORMAL',13,NULL,NULL,1,'공부'),
+(221,'2026-04-30 08:48:05.418561','2026-04-30 09:04:36.001460',NULL,61,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-04-30','DONE','여기 사람 잇어요 !!!!!!','NORMAL',13,NULL,NULL,1,'공부'),
+(222,'2026-04-30 09:51:43.902868','2026-04-30 09:51:43.902868',NULL,61,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-04-30','TODO','저 집에 가고싶습니다','NORMAL',13,NULL,NULL,1,'공부'),
+(223,'2026-04-30 09:51:50.461115','2026-04-30 09:51:50.461115',NULL,61,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-04-30','TODO','날 집에 보내라','NORMAL',13,NULL,NULL,1,'공부'),
+(224,'2026-04-30 10:25:54.720430','2026-05-01 10:18:37.749328',NULL,33,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-04-30','DONE','주간회의','NORMAL',7,NULL,NULL,3,'업무'),
+(225,'2026-04-30 10:26:04.298804','2026-05-01 10:18:38.131413',NULL,33,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-04-30','DONE','미팅','NORMAL',7,NULL,NULL,3,'업무'),
+(226,'2026-04-30 11:49:19.606793','2026-04-30 11:50:50.921323',NULL,75,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-04-30','DONE','커피마시기','NORMAL',15,NULL,NULL,5,'기타'),
+(227,'2026-04-30 11:50:17.727557','2026-04-30 11:50:51.280613',NULL,71,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-04-30','DONE','점심먹기','NORMAL',15,NULL,NULL,1,'공부'),
+(228,'2026-04-30 14:03:40.193782','2026-04-30 14:04:50.729518',NULL,79,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-04-30','TODO','짐정리','NORMAL',16,NULL,NULL,4,'집안일'),
+(229,'2026-04-30 14:04:05.380462','2026-04-30 14:04:51.223026',NULL,76,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,NULL,'TODO','1','SOMEDAY',16,NULL,NULL,1,'공부'),
+(230,'2026-04-30 14:55:31.395663','2026-05-13 09:20:30.104742',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,35,'2026-04-30','DONE','비빔면먹기','NORMAL',3,NULL,NULL,NULL,NULL),
+(231,'2026-04-30 14:58:43.020953','2026-05-13 09:20:30.104785',NULL,11,NULL,NULL,NULL,0x00,0x01,NULL,NULL,36,'2026-05-01','TODO','미루기','NORMAL',3,NULL,NULL,NULL,NULL),
+(232,'2026-04-30 14:58:56.000715','2026-05-13 09:20:30.104828',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,37,'2026-04-30','DONE','담배피기','NORMAL',3,NULL,NULL,NULL,NULL),
+(233,'2026-04-30 17:47:13.454543','2026-05-13 09:20:30.104872',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,38,'2026-04-30','DONE','담배 또피기','NORMAL',3,NULL,NULL,NULL,NULL),
+(234,'2026-04-30 17:47:47.670174','2026-05-13 09:20:30.104939',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,39,'2026-04-30','DONE','또','NORMAL',3,NULL,NULL,NULL,NULL),
+(235,'2026-04-30 17:49:41.292191','2026-05-13 09:20:30.104988',NULL,11,NULL,NULL,NULL,0x00,0x01,NULL,NULL,40,'2026-04-30','TODO','냐옹','NORMAL',3,NULL,NULL,NULL,NULL),
+(236,'2026-04-30 17:49:50.401126','2026-04-30 17:49:50.401126','12:00',78,'1work',NULL,'2026-05-13',0x00,0x00,NULL,NULL,1,'2026-05-01','TODO','1','PERIOD',16,NULL,NULL,3,'업무'),
+(237,'2026-04-30 17:50:24.907737','2026-05-13 09:20:30.105035',NULL,11,NULL,NULL,NULL,0x00,0x01,NULL,NULL,41,'2026-04-30','TODO','지라보고 작업하기','NORMAL',3,NULL,NULL,NULL,NULL),
+(238,'2026-05-01 03:18:48.654723','2026-05-20 03:21:57.147227',NULL,49,'- 쌀\n- 양파\n- 애호박\n- 순찌 소스\n- 쌈장\n- 두부, 순두부\n- 김\n-',NULL,NULL,0x01,0x00,NULL,NULL,2,NULL,'DONE','장보기','SOMEDAY',10,'2026-05-20','2026-05-20',4,'집안일'),
+(239,'2026-05-01 10:18:55.825114','2026-05-01 10:18:55.825114',NULL,35,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-01','TODO','낙동강모임','NORMAL',7,NULL,NULL,5,'기타'),
+(240,'2026-05-01 12:35:20.022964','2026-05-13 09:20:30.105080',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,42,'2026-05-01','DONE','밥먹기','NORMAL',3,NULL,NULL,NULL,NULL),
+(241,'2026-05-04 11:37:11.636078','2026-05-04 11:37:11.636078',NULL,71,'점심먹기',NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-04','TODO','점심먹기','NORMAL',15,NULL,NULL,1,'공부'),
+(242,'2026-05-04 11:37:31.392699','2026-05-04 11:37:31.392699',NULL,73,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-04','TODO','개인상담','NORMAL',15,NULL,NULL,3,'업무'),
+(243,'2026-05-04 15:30:17.681092','2026-05-13 09:20:30.105157',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,43,'2026-05-04','DONE','아','NORMAL',3,NULL,NULL,NULL,NULL),
+(244,'2026-05-04 15:30:20.743355','2026-05-13 09:20:30.105204',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,44,'2026-05-04','DONE','에','NORMAL',3,NULL,NULL,NULL,NULL),
+(245,'2026-05-04 15:30:24.968636','2026-05-13 09:20:30.105249',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,45,'2026-05-04','DONE','우','NORMAL',3,NULL,NULL,NULL,NULL),
+(246,'2026-05-05 06:29:44.035016','2026-05-05 13:20:25.915994',NULL,81,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-05','TODO','ㅇ','NORMAL',17,NULL,NULL,1,'공부'),
+(247,'2026-05-05 06:29:50.988545','2026-05-05 06:29:50.988545',NULL,81,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-05','TODO','ㅡ','NORMAL',17,NULL,NULL,1,'공부'),
+(248,'2026-05-05 06:29:55.655414','2026-05-05 06:29:55.655414',NULL,81,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-05','TODO','ㅡ','NORMAL',17,NULL,NULL,1,'공부'),
+(249,'2026-05-05 16:39:42.661041','2026-05-05 16:39:44.495654',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-05','DONE','두있두쑤기','NORMAL',7,NULL,NULL,1,'공부'),
+(250,'2026-05-06 10:13:00.090301','2026-05-13 09:20:30.105293',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,46,'2026-05-06','DONE','냐옹','NORMAL',3,NULL,NULL,NULL,NULL),
+(251,'2026-05-06 10:13:18.420235','2026-05-13 09:20:30.104415',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,29,'2026-05-06','DONE','냐옹2','NORMAL',3,NULL,NULL,NULL,NULL),
+(252,'2026-05-06 10:19:25.814858','2026-05-06 10:19:40.981769',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-06','DONE','팀미팅','NORMAL',7,NULL,NULL,1,'공부'),
+(253,'2026-05-06 10:19:48.700142','2026-05-13 09:20:30.105339',NULL,11,NULL,NULL,NULL,0x00,0x01,NULL,NULL,47,'2026-05-06','TODO','야옹','NORMAL',3,NULL,NULL,NULL,NULL),
+(254,'2026-05-06 10:20:11.707349','2026-05-13 09:20:30.105416',NULL,11,NULL,NULL,NULL,0x00,0x01,NULL,NULL,48,'2026-05-06','TODO','배고파','NORMAL',3,NULL,NULL,NULL,NULL),
+(255,'2026-05-06 10:22:35.443355','2026-05-13 09:20:30.105470',NULL,11,NULL,NULL,NULL,0x00,0x01,NULL,NULL,49,'2026-05-06','TODO','오ㅑ이리오래걸힐까','NORMAL',3,NULL,NULL,NULL,NULL),
+(256,'2026-05-06 10:44:31.685300','2026-05-13 09:20:30.105547',NULL,11,NULL,NULL,NULL,0x00,0x01,NULL,NULL,50,'2026-05-06','TODO','내옹3','NORMAL',3,NULL,NULL,NULL,NULL),
+(257,'2026-05-06 12:25:24.383297','2026-05-13 09:20:30.103154',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,4,'2026-05-06','DONE','이미지올리기','NORMAL',3,NULL,NULL,NULL,NULL),
+(258,'2026-05-06 15:53:55.918967','2026-05-06 15:55:26.996877',NULL,73,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-06','DONE','개인상담','NORMAL',15,NULL,NULL,3,'업무'),
+(259,'2026-05-06 15:54:17.497830','2026-05-06 15:55:29.146632','16:00',73,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-06','DONE','프로젝트 테스트','NORMAL',15,NULL,NULL,3,'업무'),
+(260,'2026-05-06 15:54:29.991995','2026-05-06 15:55:40.396608',NULL,71,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-06','DONE','원격설정','NORMAL',15,NULL,NULL,1,'공부'),
+(261,'2026-05-06 15:55:23.538149','2026-05-11 17:01:38.348388',NULL,75,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,NULL,'DONE','용돈정리','SOMEDAY',15,'2026-05-11','2026-05-11',5,'기타'),
+(262,'2026-05-06 19:01:49.016340','2026-05-06 19:02:02.926448',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-06','DONE','밥먹기','NORMAL',7,NULL,NULL,1,'공부'),
+(263,'2026-05-06 19:01:59.976323','2026-05-06 19:01:59.976323',NULL,34,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-06','TODO','청소','NORMAL',7,NULL,NULL,4,'집안일'),
+(264,'2026-05-07 09:34:59.296184','2026-05-07 09:35:01.994593',NULL,33,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-07','DONE','미팅','NORMAL',7,NULL,NULL,3,'업무'),
+(265,'2026-05-07 09:35:14.477515','2026-05-07 09:35:14.477515',NULL,33,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-07','TODO','회진','NORMAL',7,NULL,NULL,3,'업무'),
+(266,'2026-05-07 12:58:04.574835','2026-05-07 12:58:04.574835','08:00',73,'하루일정 계확','THU',NULL,0x00,0x00,NULL,266,1,'2026-05-07','TODO','개인상담','RECURRING',15,NULL,NULL,3,'업무'),
+(267,'2026-05-07 12:58:31.229761','2026-05-07 12:59:40.792747',NULL,75,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-07','DONE','다이소 물품 구매','NORMAL',15,NULL,NULL,5,'기타'),
+(268,'2026-05-07 14:35:58.083838','2026-05-20 13:07:52.568265',NULL,37,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,NULL,'DONE','dddddd','SOMEDAY',8,'2026-05-20','2026-05-20',2,'운동'),
+(269,'2026-05-07 14:36:51.587899','2026-05-07 14:48:17.092936',NULL,39,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-07','TODO','fffff','NORMAL',8,NULL,NULL,4,'집안일'),
+(270,'2026-05-07 14:48:11.733917','2026-05-07 14:48:11.733917',NULL,38,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-07','TODO','rkdkrkrkk','NORMAL',8,NULL,NULL,3,'업무'),
+(271,'2026-05-07 14:48:31.383809','2026-05-07 14:48:41.481862',NULL,40,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-07','TODO','djdjdjdjj','NORMAL',8,NULL,NULL,5,'기타'),
+(272,'2026-05-07 14:48:52.582999','2026-05-07 14:48:52.582999',NULL,36,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-07','TODO','sjjd','NORMAL',8,NULL,NULL,1,'공부'),
+(273,'2026-05-08 13:13:27.515118','2026-05-08 13:13:30.033594',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-08','DONE','뚜앗두하기','NORMAL',7,NULL,NULL,1,'공부'),
+(274,'2026-05-08 13:13:52.904113','2026-05-08 13:13:52.904113',NULL,31,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-08','TODO','듀오링고하기','NORMAL',7,NULL,NULL,1,'공부'),
+(275,'2026-05-11 09:39:11.958945','2026-05-13 09:20:30.103200',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,5,'2026-05-11','DONE','예비군','NORMAL',3,'2026-05-11','2026-05-11',NULL,NULL),
+(276,'2026-05-11 13:28:16.833437','2026-05-11 13:28:26.832701',NULL,76,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-11','DONE','테스트','NORMAL',16,NULL,NULL,1,'공부'),
+(277,'2026-05-11 13:44:24.174166','2026-05-13 09:20:30.103291',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,7,'2026-05-11','DONE','배고파','NORMAL',3,'2026-05-11','2026-05-11',NULL,NULL),
+(278,'2026-05-11 13:44:31.626118','2026-05-13 09:20:30.102971',NULL,11,NULL,NULL,NULL,0x01,0x01,NULL,NULL,51,'2026-05-11','DONE','머야오ㅑ','NORMAL',3,'2026-05-11','2026-05-11',NULL,NULL),
+(279,'2026-05-11 14:21:06.225606','2026-05-11 14:21:07.004818',NULL,66,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-11','DONE','뇨뇨뇨','NORMAL',14,'2026-05-11','2026-05-11',1,'공부'),
+(280,'2026-05-11 14:25:30.526602','2026-05-12 12:26:00.597609',NULL,116,NULL,'MON,WED,THU,FRI','2026-05-13',0x00,0x00,NULL,280,5,'2026-05-11','TODO','데이터베이스 공부','RECURRING',23,NULL,NULL,NULL,NULL),
+(281,'2026-05-11 14:26:14.960644','2026-05-11 14:41:22.537505',NULL,107,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-11','DONE','운동','NORMAL',22,'2026-05-11','2026-05-11',2,'운동'),
+(282,'2026-05-11 14:28:07.771299','2026-05-11 14:42:07.351943',NULL,106,NULL,NULL,'2026-06-26',0x01,0x00,NULL,NULL,1,'2026-05-28','DONE','공부','PERIOD',22,'2026-05-11','2026-05-11',1,'공부'),
+(283,'2026-05-11 14:28:50.913099','2026-05-11 14:36:25.606306',NULL,101,NULL,NULL,'2027-04-23',0x00,0x00,NULL,NULL,1,'2026-05-13','TODO','두잇뚜 테스팅','PERIOD',21,NULL,NULL,1,'공부'),
+(284,'2026-05-11 14:30:22.463399','2026-05-11 14:41:35.611471',NULL,110,NULL,NULL,'2026-06-17',0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','노래','PERIOD',22,'2026-05-11','2026-05-11',5,'기타'),
+(285,'2026-05-11 14:30:37.382445','2026-05-11 14:41:23.387466',NULL,106,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,NULL,'DONE','뭐지','SOMEDAY',22,'2026-05-11','2026-05-11',1,'공부'),
+(286,'2026-05-11 14:30:50.034888','2026-05-11 14:41:35.995952',NULL,106,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','테스트','NORMAL',22,'2026-05-11','2026-05-11',1,'공부'),
+(287,'2026-05-11 14:34:38.622926','2026-05-11 15:08:43.187429',NULL,119,NULL,NULL,NULL,0x01,0x00,NULL,NULL,2,'2026-05-11','DONE','공부','NORMAL',24,'2026-05-11','2026-05-11',1,'공부'),
+(288,'2026-05-11 14:35:37.467725','2026-05-11 15:08:43.037810',NULL,119,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-11','TODO','1','NORMAL',24,NULL,NULL,1,'공부'),
+(289,'2026-05-11 14:40:23.031273','2026-05-11 14:45:15.601041',NULL,126,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-11','DONE','ERP 전표 접수모델 개발','NORMAL',25,'2026-05-11','2026-05-11',3,'업무'),
+(290,'2026-05-11 14:40:51.835466','2026-05-11 16:00:22.854710',NULL,41,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-11','DONE','공부','NORMAL',9,'2026-05-11','2026-05-11',NULL,NULL),
+(291,'2026-05-11 14:41:18.738019','2026-05-11 14:48:10.084642',NULL,139,'연구를하자',NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-11','DONE','연구','NORMAL',28,'2026-05-11','2026-05-11',25,'공부'),
+(292,'2026-05-11 14:46:31.480844','2026-05-11 14:48:48.837875',NULL,144,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-11','DONE','ㄴㄴ','NORMAL',29,'2026-05-11','2026-05-11',NULL,NULL),
+(293,'2026-05-11 14:48:17.192351','2026-05-12 14:53:15.312974',NULL,139,NULL,NULL,NULL,0x01,0x00,NULL,NULL,2,'2026-05-11','DONE','연구하기','NORMAL',28,'2026-05-11','2026-05-11',25,'공부'),
+(294,'2026-05-11 14:48:20.909532','2026-05-12 14:53:15.313073',NULL,139,NULL,NULL,NULL,0x01,0x00,NULL,NULL,3,'2026-05-11','DONE','열심히살기','NORMAL',28,'2026-05-11','2026-05-11',25,'공부'),
+(295,'2026-05-11 14:52:19.489994','2026-05-11 14:53:41.082234',NULL,144,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','ㅠㅗ','SOMEDAY',29,'2026-05-11','2026-05-11',NULL,NULL),
+(296,'2026-05-11 14:53:45.376848','2026-05-11 17:52:24.865057',NULL,144,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','ㄴㄴㄴ','SOMEDAY',29,'2026-05-11','2026-05-11',NULL,NULL),
+(297,'2026-05-11 14:54:12.147882','2026-05-11 14:54:12.147882',NULL,144,NULL,NULL,NULL,0x00,0x01,NULL,NULL,1,'2026-05-22','TODO','ㅇㅇ','NORMAL',29,NULL,NULL,NULL,NULL),
+(298,'2026-05-11 14:55:12.686581','2026-05-11 14:55:12.686581',NULL,144,'예찬이랑 피시방가기',NULL,NULL,0x00,0x01,NULL,NULL,1,NULL,'TODO','피방','SOMEDAY',29,NULL,NULL,NULL,NULL),
+(299,'2026-05-11 14:55:19.937598','2026-05-11 14:56:44.421243',NULL,147,NULL,NULL,NULL,0x00,0x01,NULL,NULL,1,'2026-05-15','TODO','황예찬','NORMAL',29,NULL,NULL,NULL,NULL),
+(300,'2026-05-11 15:01:38.528901','2026-05-12 14:53:15.313176',NULL,139,NULL,NULL,NULL,0x01,0x00,NULL,NULL,4,'2026-05-11','DONE','화장실가기','NORMAL',28,'2026-05-11','2026-05-11',25,'공부'),
+(301,'2026-05-11 15:08:51.692736','2026-05-11 15:08:51.692736',NULL,144,NULL,'MON,TUE,WED,THU,FRI','2026-08-22',0x00,0x01,NULL,301,1,'2026-05-22','TODO','웅','RECURRING',29,NULL,NULL,NULL,NULL),
+(302,'2026-05-11 15:10:11.846155','2026-05-11 15:10:11.846155',NULL,146,NULL,'MON,TUE,WED,THU,FRI,SAT,SUN',NULL,0x00,0x01,NULL,302,1,'2026-05-11','TODO','테스트','RECURRING',29,NULL,NULL,NULL,NULL),
+(303,'2026-05-11 15:11:13.569303','2026-05-12 12:55:28.365276',NULL,111,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','아하하하하하','NORMAL',23,'2026-05-12','2026-05-12',1,'공부'),
+(304,'2026-05-11 15:11:20.030538','2026-05-12 12:26:00.597760',NULL,111,NULL,NULL,NULL,0x01,0x00,NULL,NULL,3,'2026-05-11','DONE','아아아아앙','NORMAL',23,'2026-05-12','2026-05-11',1,'공부'),
+(305,'2026-05-11 15:11:30.635160','2026-05-11 15:13:42.073355',NULL,111,NULL,NULL,NULL,0x01,0x00,NULL,NULL,3,NULL,'DONE','어유라니느','SOMEDAY',23,'2026-05-11','2026-05-11',1,'공부'),
+(306,'2026-05-11 15:11:40.518557','2026-05-11 15:13:41.619830',NULL,117,NULL,NULL,NULL,0x01,0x00,NULL,NULL,2,NULL,'DONE','지배제자두류이나','SOMEDAY',23,'2026-05-11','2026-05-11',8,'전공'),
+(307,'2026-05-11 15:12:27.079448','2026-05-12 12:26:00.597795',NULL,111,NULL,NULL,NULL,0x00,0x00,NULL,NULL,4,'2026-05-11','DONE','나나나나난','NORMAL',23,'2026-05-12','2026-05-12',1,'공부'),
+(308,'2026-05-11 15:19:36.249900','2026-05-11 19:56:08.848500','18:55',150,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-11','DONE','픽업','NORMAL',25,'2026-05-11','2026-05-11',8,'여자친구'),
+(309,'2026-05-11 15:19:47.492602','2026-05-11 22:33:58.244854',NULL,125,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-11','DONE','헬스장 등록','NORMAL',25,'2026-05-11','2026-05-11',2,'운동'),
+(310,'2026-05-11 15:28:29.944370','2026-05-12 12:50:51.465630',NULL,156,NULL,NULL,NULL,0x00,0x00,NULL,NULL,13,'2026-05-24','TODO','할머니 생신 식사','NORMAL',20,NULL,NULL,8,'일정'),
+(311,'2026-05-11 15:33:01.248625','2026-05-11 21:33:48.217074',NULL,155,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-11','DONE','물 마시기','NORMAL',30,'2026-05-11','2026-05-11',5,'기타'),
+(312,'2026-05-11 15:33:06.804862','2026-05-11 15:33:06.804862',NULL,154,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,NULL,'TODO','양파 사기','SOMEDAY',30,NULL,NULL,4,'집안일'),
+(313,'2026-05-11 15:33:24.550583','2026-05-11 16:00:35.439948',NULL,156,'일시 : 2026년 05월 24일 (일) 14:10까지 \n장소 : 서울호서직업전문학교[CBT 3실]\n준비물: 신분증, 펜',NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-24','TODO','정처기 필기','NORMAL',20,NULL,'2026-05-11',8,'일정'),
+(314,'2026-05-11 15:33:42.852770','2026-05-11 15:33:42.852770',NULL,151,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-11','TODO','알고리즘 풀기','NORMAL',30,NULL,NULL,1,'공부'),
+(315,'2026-05-11 15:36:29.659333','2026-05-11 15:36:29.659333',NULL,157,'공부해라',NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-15','TODO','ADSP 공부','NORMAL',31,NULL,NULL,1,'공부'),
+(316,'2026-05-11 15:37:12.418307','2026-05-11 15:37:20.552496',NULL,157,'공부하기',NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-15','DONE','ADSP','NORMAL',31,'2026-05-11','2026-05-11',1,'공부'),
+(317,'2026-05-11 16:08:45.824832','2026-05-12 12:50:51.465353',NULL,167,NULL,NULL,NULL,0x00,0x00,NULL,NULL,6,'2026-05-11','TODO','정처기 강의 [209~228]','NORMAL',20,NULL,NULL,7,'공부'),
+(318,'2026-05-11 16:09:01.468391','2026-05-12 12:50:52.426537',NULL,167,NULL,NULL,NULL,0x00,0x00,NULL,NULL,4,'2026-05-12','TODO','정처기 강의 [229~288]','NORMAL',20,NULL,NULL,7,'공부'),
+(319,'2026-05-11 16:09:19.772610','2026-05-12 12:50:51.465389',NULL,167,NULL,NULL,NULL,0x00,0x00,NULL,NULL,7,'2026-05-13','TODO','정처기 강의 [289~328]','NORMAL',20,NULL,NULL,7,'공부'),
+(320,'2026-05-11 16:09:34.988403','2026-05-12 12:50:51.465423',NULL,167,NULL,NULL,NULL,0x00,0x00,NULL,NULL,8,'2026-05-14','TODO','정처기 강의 [329~368]','NORMAL',20,NULL,NULL,7,'공부'),
+(321,'2026-05-11 16:09:52.737093','2026-05-12 12:50:51.465458',NULL,167,NULL,NULL,NULL,0x00,0x00,NULL,NULL,9,'2026-05-15','TODO','정처기 강의 [369~408]','NORMAL',20,NULL,NULL,7,'공부'),
+(322,'2026-05-11 16:10:09.050510','2026-05-12 12:50:51.465525',NULL,167,NULL,NULL,NULL,0x00,0x00,NULL,NULL,10,'2026-05-16','TODO','정처기 강의 [409~448]','NORMAL',20,NULL,NULL,7,'공부'),
+(323,'2026-05-11 16:10:26.470981','2026-05-12 12:50:51.465562',NULL,167,NULL,NULL,NULL,0x00,0x00,NULL,NULL,11,'2026-05-17','TODO','정처기 강의 [449~486]','NORMAL',20,NULL,NULL,7,'공부'),
+(324,'2026-05-11 16:58:43.379386','2026-05-11 16:58:45.001508',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-11','DONE','팀미팅','NORMAL',7,'2026-05-11','2026-05-11',1,'공부'),
+(325,'2026-05-11 16:59:00.736762','2026-05-11 16:59:01.692650',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-11','DONE','밥먹기','NORMAL',7,'2026-05-11','2026-05-11',1,'공부'),
+(326,'2026-05-11 16:59:07.196877','2026-05-11 16:59:07.826964',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-11','DONE','운동하기','NORMAL',7,'2026-05-11','2026-05-11',1,'공부'),
+(327,'2026-05-11 17:01:14.232849','2026-05-11 17:01:35.928018',NULL,71,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-11','DONE','삼성헬스 등록','NORMAL',15,'2026-05-11','2026-05-11',1,'공부'),
+(328,'2026-05-11 17:01:33.639646','2026-05-11 17:01:36.734742',NULL,71,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-11','DONE','AINOTE 초기화','NORMAL',15,'2026-05-11','2026-05-11',1,'공부'),
+(329,'2026-05-11 17:39:32.421093','2026-05-12 12:50:51.465597',NULL,183,NULL,NULL,NULL,0x01,0x00,NULL,NULL,12,'2026-05-11','DONE','데코타일 당근','NORMAL',20,'2026-05-11','2026-05-11',1,'기타'),
+(330,'2026-05-11 17:39:42.053467','2026-05-12 01:48:16.000018',NULL,183,NULL,NULL,NULL,0x00,0x01,NULL,NULL,1,'2026-05-11','TODO','청소기 당근','NORMAL',20,NULL,NULL,1,'기타'),
+(331,'2026-05-11 17:52:29.516581','2026-05-11 17:52:30.824372',NULL,144,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-11','DONE','ㅎㅎㅎㅎㅎ','NORMAL',29,'2026-05-11','2026-05-11',NULL,NULL),
+(332,'2026-05-11 18:05:09.895762','2026-05-11 20:21:25.940757',NULL,184,NULL,NULL,NULL,0x01,0x00,NULL,NULL,2,'2026-05-11','DONE','ㅇ 우우퉅','NORMAL',36,'2026-05-11','2026-05-11',1,'공부'),
+(333,'2026-05-11 18:05:34.751122','2026-05-11 18:06:37.099607',NULL,184,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-11','DONE','도어러아앝','NORMAL',36,'2026-05-11','2026-05-11',1,'공부'),
+(334,'2026-05-11 18:07:38.577647','2026-05-11 20:21:25.940823',NULL,184,NULL,NULL,NULL,0x01,0x00,NULL,NULL,3,'2026-05-11','DONE','뎌덛','NORMAL',36,'2026-05-11','2026-05-11',1,'공부'),
+(335,'2026-05-11 20:24:22.820716','2026-05-11 20:24:27.740510',NULL,194,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','TODO','운동하러가기','NORMAL',38,NULL,'2026-05-11',1,'공부'),
+(336,'2026-05-11 20:24:53.505199','2026-05-11 20:25:06.658728',NULL,195,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-11','DONE','상체','NORMAL',38,'2026-05-11','2026-05-11',2,'운동'),
+(337,'2026-05-11 20:28:00.604630','2026-05-11 21:03:42.133814','21:00',195,'상체 등 위주',NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-11','DONE','헬스','NORMAL',38,'2026-05-11','2026-05-11',2,'운동'),
+(338,'2026-05-12 02:53:12.833216','2026-05-12 12:50:51.465184',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴','MON,TUE,WED,THU,FRI,SAT,SUN',NULL,0x00,0x00,NULL,338,2,'2026-05-11','TODO','밤 루틴','RECURRING',20,NULL,NULL,1,'기타'),
+(339,'2026-05-12 08:58:26.517186','2026-05-12 09:01:13.556445',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴','MON,TUE,WED,THU,FRI,SAT,SUN',NULL,0x00,0x01,NULL,339,1,'2026-05-12','TODO','아침 루틴','RECURRING',20,NULL,NULL,1,'기타'),
+(340,'2026-05-12 08:59:21.145903','2026-05-12 08:59:26.007011',NULL,119,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,NULL,'TODO','ㅣ','SOMEDAY',24,NULL,'2026-05-12',1,'공부'),
+(341,'2026-05-12 09:01:29.814583','2026-05-12 09:01:52.807460',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴','MON,TUE,WED,THU,FRI,SAT,SUN',NULL,0x00,0x01,NULL,341,1,'2026-05-12','TODO','아침 루틴','RECURRING',20,NULL,NULL,1,'기타'),
+(342,'2026-05-12 09:02:08.535808','2026-05-12 12:50:52.426577',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴','MON,TUE,WED,THU,FRI,SAT,SUN',NULL,0x00,0x00,NULL,342,5,'2026-05-12','TODO','아침 루틴','RECURRING',20,NULL,NULL,1,'기타'),
+(343,'2026-05-12 10:07:25.704232','2026-05-13 09:20:30.103340',NULL,14,NULL,NULL,NULL,0x01,0x01,NULL,NULL,8,'2026-05-12','DONE','나너넌','NORMAL',3,'2026-05-12','2026-05-12',NULL,NULL),
+(344,'2026-05-12 10:09:38.380795','2026-05-13 09:20:30.103389',NULL,214,NULL,NULL,NULL,0x01,0x01,NULL,NULL,9,'2026-05-12','DONE','1','NORMAL',3,'2026-05-12','2026-05-12',NULL,NULL),
+(345,'2026-05-12 10:09:41.920134','2026-05-13 09:20:30.103435',NULL,215,NULL,NULL,NULL,0x01,0x01,NULL,NULL,10,'2026-05-12','DONE','2','NORMAL',3,'2026-05-12','2026-05-12',NULL,NULL),
+(346,'2026-05-12 10:09:45.727970','2026-05-13 09:20:30.103503',NULL,216,NULL,NULL,NULL,0x01,0x01,NULL,NULL,11,'2026-05-12','DONE','3','NORMAL',3,'2026-05-12','2026-05-12',NULL,NULL),
+(347,'2026-05-12 10:09:49.200430','2026-05-13 09:20:30.103556',NULL,217,NULL,NULL,NULL,0x01,0x01,NULL,NULL,12,'2026-05-12','DONE','4','NORMAL',3,'2026-05-12','2026-05-12',NULL,NULL),
+(348,'2026-05-12 10:09:52.814803','2026-05-13 09:20:30.103605',NULL,218,NULL,NULL,NULL,0x01,0x01,NULL,NULL,13,'2026-05-12','DONE','5','NORMAL',3,'2026-05-12','2026-05-12',NULL,NULL),
+(349,'2026-05-12 10:09:56.722696','2026-05-13 09:20:30.103654',NULL,219,NULL,NULL,NULL,0x01,0x01,NULL,NULL,14,'2026-05-12','DONE','6','NORMAL',3,'2026-05-12','2026-05-12',NULL,NULL),
+(350,'2026-05-12 10:12:50.872081','2026-05-12 10:14:43.636857',NULL,222,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-15','DONE','SWAT CI 구축','NORMAL',42,'2026-05-12','2026-05-12',3,'업무'),
+(351,'2026-05-12 10:13:15.971204','2026-05-13 19:17:03.250799',NULL,222,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-15','DONE','ESGS 데이터 마이그레이션','NORMAL',42,'2026-05-13','2026-05-13',3,'업무'),
+(352,'2026-05-12 10:13:43.058160','2026-05-13 19:17:03.579983',NULL,222,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-15','DONE','ST 데이터 마이그레이션','NORMAL',42,'2026-05-13','2026-05-13',3,'업무'),
+(353,'2026-05-12 10:16:25.003637','2026-05-12 22:49:04.431631',NULL,226,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,NULL,'TODO','세계일주','SOMEDAY',42,NULL,'2026-05-12',6,'여행'),
+(354,'2026-05-12 10:20:42.160496','2026-05-19 15:31:39.941846',NULL,214,NULL,'MON,TUE,WED,THU,FRI,SAT,SUN',NULL,0x00,0x01,NULL,354,15,'2026-05-14','TODO','반복테르트','RECURRING',3,NULL,NULL,NULL,NULL),
+(355,'2026-05-12 10:27:41.988731','2026-05-13 09:20:36.620921',NULL,225,NULL,'MON,TUE,WED,THU,FRI,SAT,SUN',NULL,0x00,0x01,NULL,355,16,'2026-05-06','TODO','반복테스트 222','RECURRING',3,NULL,NULL,NULL,NULL),
+(356,'2026-05-12 10:49:55.563363','2026-05-12 10:49:55.563363',NULL,241,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-12','TODO','밥먹기','NORMAL',45,NULL,NULL,5,'기타'),
+(357,'2026-05-12 10:50:06.159057','2026-05-12 10:50:06.159057',NULL,238,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-12','TODO','등운동','NORMAL',45,NULL,NULL,2,'운동'),
+(358,'2026-05-12 11:59:10.001160','2026-05-12 16:24:43.244239',NULL,33,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','팀미팅','NORMAL',7,'2026-05-12','2026-05-12',3,'업무'),
+(359,'2026-05-12 12:16:36.898936','2026-05-12 14:56:15.841645',NULL,139,NULL,NULL,NULL,0x01,0x00,NULL,NULL,5,'2026-05-12','TODO','연구','NORMAL',28,NULL,'2026-05-12',25,'공부'),
+(360,'2026-05-12 12:16:39.203645','2026-05-12 14:56:24.404787',NULL,139,'ㅋㅋ??',NULL,NULL,0x01,0x00,NULL,NULL,7,'2026-05-12','TODO','점심','NORMAL',28,NULL,'2026-05-12',25,'공부'),
+(361,'2026-05-12 12:16:41.123107','2026-05-12 14:53:17.161273',NULL,139,NULL,NULL,NULL,0x01,0x00,NULL,NULL,8,'2026-05-12','TODO','저녁','NORMAL',28,NULL,'2026-05-12',25,'공부'),
+(362,'2026-05-12 12:16:45.934633','2026-05-12 14:53:15.313618',NULL,139,NULL,NULL,NULL,0x01,0x00,NULL,NULL,9,'2026-05-12','TODO','증바람','NORMAL',28,NULL,'2026-05-12',25,'공부'),
+(363,'2026-05-12 12:22:38.062179','2026-05-12 12:23:00.323578',NULL,139,NULL,NULL,NULL,0x01,0x01,NULL,NULL,5,'2026-05-12','DONE','ㅁㅁ','NORMAL',28,'2026-05-12','2026-05-12',25,'공부'),
+(364,'2026-05-12 12:22:42.863860','2026-05-12 12:23:03.495808',NULL,139,NULL,NULL,NULL,0x01,0x01,NULL,NULL,2,'2026-05-12','DONE','ㄴㄴ','NORMAL',28,'2026-05-12','2026-05-12',25,'공부'),
+(365,'2026-05-12 12:25:36.248799','2026-05-12 12:55:28.845023',NULL,111,NULL,NULL,NULL,0x01,0x00,NULL,NULL,2,'2026-05-12','DONE','너 뭔데','NORMAL',23,'2026-05-12','2026-05-12',1,'공부'),
+(366,'2026-05-12 12:42:43.908334','2026-05-13 09:20:30.103833',NULL,215,NULL,NULL,NULL,0x01,0x01,NULL,NULL,18,'2026-05-12','DONE','마마맘','NORMAL',3,'2026-05-12','2026-05-12',NULL,NULL),
+(367,'2026-05-12 12:43:16.503929','2026-05-13 09:20:30.103877',NULL,214,NULL,NULL,NULL,0x01,0x01,NULL,NULL,19,'2026-05-12','DONE','냐옹','NORMAL',3,'2026-05-12','2026-05-12',NULL,NULL),
+(368,'2026-05-12 12:43:48.403630','2026-05-13 09:20:30.103921',NULL,219,NULL,NULL,NULL,0x01,0x01,NULL,NULL,20,'2026-05-12','TODO','먀먀먀','NORMAL',3,NULL,'2026-05-12',NULL,NULL),
+(369,'2026-05-12 12:44:12.549399','2026-05-13 09:20:30.103965',NULL,225,NULL,NULL,NULL,0x01,0x01,NULL,NULL,21,'2026-05-12','DONE','ㅎㅎ','NORMAL',3,'2026-05-12','2026-05-12',NULL,NULL),
+(370,'2026-05-12 12:45:08.211269','2026-05-13 09:20:30.104011',NULL,218,NULL,NULL,NULL,0x01,0x01,NULL,NULL,22,'2026-05-12','DONE','ㅁㅁ','NORMAL',3,'2026-05-12','2026-05-12',NULL,NULL),
+(371,'2026-05-12 12:45:38.501883','2026-05-13 09:20:30.104061',NULL,215,NULL,NULL,NULL,0x01,0x01,NULL,NULL,23,'2026-05-12','DONE','ㅐ9ㅐ','NORMAL',3,'2026-05-12','2026-05-12',NULL,NULL),
+(372,'2026-05-12 12:47:16.889898','2026-05-12 12:50:52.426448',NULL,183,NULL,NULL,NULL,0x00,0x00,NULL,NULL,3,'2026-05-12','TODO','CU 기프티콘 판매','NORMAL',20,NULL,NULL,1,'기타'),
+(373,'2026-05-12 12:47:38.606903','2026-05-13 09:20:30.104111',NULL,218,NULL,NULL,NULL,0x01,0x01,NULL,NULL,24,'2026-05-12','DONE','22','NORMAL',3,'2026-05-12','2026-05-12',NULL,NULL),
+(374,'2026-05-12 12:47:57.127293','2026-05-13 09:20:30.103246',NULL,219,NULL,NULL,NULL,0x00,0x01,NULL,NULL,6,'2026-05-12','TODO','33','NORMAL',3,NULL,NULL,NULL,NULL),
+(375,'2026-05-12 13:05:21.796507','2026-05-15 23:03:43.760853',NULL,244,'2시',NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','민방위 훈련','NORMAL',46,'2026-05-15','2026-05-12',3,'업무'),
+(376,'2026-05-12 13:05:26.965653','2026-05-13 09:20:30.104158',NULL,219,NULL,NULL,NULL,0x00,0x01,NULL,NULL,25,'2026-05-12','TODO','느나느','NORMAL',3,NULL,NULL,NULL,NULL),
+(377,'2026-05-12 13:05:38.294721','2026-05-12 23:19:19.906117',NULL,243,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','스쿼시','NORMAL',46,'2026-05-12','2026-05-12',2,'운동'),
+(378,'2026-05-12 13:06:30.845927','2026-05-13 09:20:30.104204',NULL,218,NULL,NULL,NULL,0x01,0x01,NULL,NULL,26,'2026-05-12','TODO','아아아아','NORMAL',3,NULL,'2026-05-12',NULL,NULL),
+(379,'2026-05-12 13:13:58.038157','2026-05-12 23:19:23.276246',NULL,242,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','에디에슾 아답터 훑기','NORMAL',46,'2026-05-12','2026-05-12',1,'공부'),
+(380,'2026-05-12 13:27:52.159509','2026-05-13 09:20:30.103051',NULL,218,NULL,NULL,NULL,0x00,0x01,NULL,NULL,2,'2026-05-12','TODO','아아라','NORMAL',3,NULL,NULL,NULL,NULL),
+(381,'2026-05-12 14:02:09.592437','2026-05-12 14:02:09.592437',NULL,247,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-12','TODO','백엔드보아라','NORMAL',47,NULL,NULL,1,'공부'),
+(382,'2026-05-12 14:30:56.710380','2026-05-13 09:52:49.716937',NULL,255,'검은 빨래🫧',NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-12','DONE','빨래 돌리기','NORMAL',48,'2026-05-13','2026-05-13',28,'집안일'),
+(383,'2026-05-12 14:31:13.864055','2026-05-12 18:29:35.321714',NULL,254,NULL,NULL,NULL,0x01,0x00,NULL,NULL,2,'2026-05-12','DONE','재택근무','NORMAL',48,'2026-05-12','2026-05-12',27,'업무'),
+(384,'2026-05-12 14:34:39.913084','2026-05-12 14:34:39.913084',NULL,253,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,NULL,'TODO','포니3 취득','SOMEDAY',48,NULL,NULL,26,'운동'),
+(385,'2026-05-12 14:53:10.700416','2026-05-12 14:53:20.986770',NULL,139,NULL,'MON,TUE,WED,THU,FRI,SAT,SUN',NULL,0x00,0x00,NULL,385,6,'2026-05-12','TODO','열심히살기','RECURRING',28,NULL,NULL,25,'공부'),
+(386,'2026-05-12 15:11:14.939544','2026-05-12 15:12:21.528321',NULL,184,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-12','DONE','ㄹㄹㅊㅊ','NORMAL',36,'2026-05-12','2026-05-12',1,'공부'),
+(387,'2026-05-12 15:11:47.009751','2026-05-12 15:12:24.168098',NULL,184,NULL,NULL,NULL,0x00,0x01,NULL,NULL,1,NULL,'TODO','ㄴㄴ','SOMEDAY',36,NULL,NULL,1,'공부'),
+(388,'2026-05-12 15:39:36.676783','2026-05-12 15:39:48.443589',NULL,101,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','퇴근하기','NORMAL',21,'2026-05-12','2026-05-12',1,'공부'),
+(389,'2026-05-12 16:08:06.351055','2026-05-12 16:08:07.675154',NULL,73,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','일정계획','NORMAL',15,'2026-05-12','2026-05-12',3,'업무'),
+(390,'2026-05-12 16:11:27.937544','2026-05-12 21:25:09.472055','17:00',73,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','데일리컨텐츠 작성','NORMAL',15,'2026-05-12','2026-05-12',3,'업무'),
+(391,'2026-05-12 16:11:48.104239','2026-05-12 21:25:09.811119','18:00',75,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','저녁식사','NORMAL',15,'2026-05-12','2026-05-12',5,'기타'),
+(392,'2026-05-12 16:18:02.503210','2026-05-12 16:18:06.916905',NULL,262,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','개발…!','NORMAL',50,'2026-05-12','2026-05-12',1,'공부'),
+(393,'2026-05-12 16:18:09.800659','2026-05-12 16:18:10.639650',NULL,262,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','개발2','NORMAL',50,'2026-05-12','2026-05-12',1,'공부'),
+(394,'2026-05-12 16:18:43.691706','2026-05-12 16:18:45.114726',NULL,262,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,NULL,'DONE','오우예이','SOMEDAY',50,'2026-05-12','2026-05-12',1,'공부'),
+(395,'2026-05-12 16:19:04.059057','2026-05-12 16:20:14.306657',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(396,'2026-05-12 16:19:06.556754','2026-05-12 16:20:13.919929',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(397,'2026-05-12 16:19:14.044559','2026-05-12 16:20:12.622011',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(398,'2026-05-12 16:19:15.998063','2026-05-12 16:20:10.192910',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(399,'2026-05-12 16:19:18.078827','2026-05-12 16:25:21.583095',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(400,'2026-05-12 16:19:19.997640','2026-05-12 16:20:07.176305',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(401,'2026-05-12 16:19:21.678990','2026-05-12 16:20:04.700368',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(402,'2026-05-12 16:19:23.518137','2026-05-12 16:20:04.435299',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(403,'2026-05-12 16:19:25.392844','2026-05-12 16:20:03.598647',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(404,'2026-05-12 16:19:29.146647','2026-05-12 16:20:03.230669',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(405,'2026-05-12 16:19:31.201263','2026-05-12 16:20:02.363901',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(406,'2026-05-12 16:19:34.271653','2026-05-12 16:20:01.681132',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(407,'2026-05-12 16:19:36.230231','2026-05-12 16:20:01.333556',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(408,'2026-05-12 16:19:39.963369','2026-05-12 16:20:00.622385',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(409,'2026-05-12 16:19:41.758331','2026-05-12 16:20:00.314637',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(410,'2026-05-12 16:19:43.437793','2026-05-12 16:19:59.579621',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(411,'2026-05-12 16:19:45.841586','2026-05-12 16:19:59.262389',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(412,'2026-05-12 16:19:47.838643','2026-05-12 16:19:58.139392',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(413,'2026-05-12 16:19:50.158579','2026-05-12 16:19:57.419603',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(414,'2026-05-12 16:19:51.999466','2026-05-12 16:19:57.135911',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(415,'2026-05-12 16:19:54.320099','2026-05-12 16:19:56.493462',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','1','NORMAL',7,'2026-05-12','2026-05-12',1,'공부'),
+(416,'2026-05-12 16:51:40.019707','2026-05-19 15:31:37.841254',NULL,214,NULL,NULL,NULL,0x00,0x01,NULL,NULL,3,'2026-05-12','DONE','8ㅛ8ㅛ8ㅅ8585','PERIOD',3,'2026-05-13','2026-05-13',NULL,NULL),
+(417,'2026-05-12 16:54:57.394056','2026-05-13 15:11:46.979751',NULL,218,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','나나난','SOMEDAY',3,'2026-05-13','2026-05-13',NULL,NULL),
+(418,'2026-05-12 17:57:57.716394','2026-05-12 17:58:31.428868',NULL,126,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','농협 당기매출 미출하 정리','NORMAL',25,'2026-05-12','2026-05-12',3,'업무'),
+(419,'2026-05-12 17:58:07.473838','2026-05-12 22:11:39.837021',NULL,125,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','헬스','NORMAL',25,'2026-05-12','2026-05-12',2,'운동'),
+(420,'2026-05-12 17:58:27.971667','2026-05-12 22:11:44.361023',NULL,150,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-12','DONE','나은이집 잠깐 들리기','NORMAL',25,'2026-05-12','2026-05-12',8,'여자친구'),
+(421,'2026-05-12 17:59:13.658634','2026-05-12 18:00:44.030538',NULL,272,NULL,'MON,TUE,WED,THU,FRI,SAT,SUN',NULL,0x01,0x00,NULL,421,1,'2026-05-12','TODO','알고리즘 한문제 풀기','RECURRING',52,NULL,'2026-05-12',1,'공부'),
+(422,'2026-05-12 23:19:51.452083','2026-05-12 23:19:51.452083',NULL,242,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-17','TODO','에디에슾시험','NORMAL',46,NULL,NULL,1,'공부'),
+(423,'2026-05-13 00:00:00.018669','2026-05-13 00:00:00.018669',NULL,116,NULL,NULL,NULL,0x00,0x00,280,280,5,'2026-05-13','TODO','데이터베이스 공부','NORMAL',23,NULL,NULL,NULL,NULL),
+(424,'2026-05-13 00:00:00.027013','2026-05-13 00:00:00.027013',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴',NULL,NULL,0x00,0x00,338,338,2,'2026-05-13','TODO','밤 루틴','NORMAL',20,NULL,NULL,1,'기타'),
+(425,'2026-05-13 00:00:00.039241','2026-05-13 00:00:00.039241',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴',NULL,NULL,0x00,0x00,342,342,5,'2026-05-13','TODO','아침 루틴','NORMAL',20,NULL,NULL,1,'기타'),
+(426,'2026-05-13 00:00:00.046838','2026-05-13 15:11:39.696507',NULL,225,NULL,NULL,NULL,0x01,0x01,355,355,17,'2026-05-13','DONE','반복테스트 222','NORMAL',3,'2026-05-13','2026-05-13',NULL,NULL),
+(427,'2026-05-13 00:00:00.052234','2026-05-13 11:53:18.033959',NULL,139,NULL,NULL,NULL,0x01,0x00,385,385,6,'2026-05-13','DONE','열심히살기','NORMAL',28,'2026-05-13','2026-05-13',25,'공부'),
+(428,'2026-05-13 00:00:00.059742','2026-05-13 08:08:03.481563',NULL,272,NULL,NULL,NULL,0x00,0x01,421,421,1,'2026-05-13','TODO','알고리즘 한문제 풀기','NORMAL',52,NULL,NULL,1,'공부'),
+(429,'2026-05-13 00:00:00.059992','2026-05-13 11:53:17.827281',NULL,139,NULL,NULL,NULL,0x01,0x00,385,385,6,'2026-05-13','DONE','열심히살기','NORMAL',28,'2026-05-13','2026-05-13',25,'공부'),
+(430,'2026-05-13 01:23:44.807317','2026-05-13 01:23:46.635632',NULL,278,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','클라이밍','NORMAL',53,'2026-05-13','2026-05-13',2,'운동'),
+(431,'2026-05-13 01:23:56.992463','2026-05-13 01:23:58.008290',NULL,279,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','로동','NORMAL',53,'2026-05-13','2026-05-13',3,'업무'),
+(432,'2026-05-13 01:24:05.485065','2026-05-13 01:25:53.946995',NULL,280,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-14','TODO','제육볶음','NORMAL',53,NULL,NULL,4,'집안일'),
+(433,'2026-05-13 07:48:06.040346','2026-05-13 07:48:13.064440',NULL,111,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-12','DONE','ㅎㅎㅎㅎㅎㅎ','NORMAL',23,'2026-05-13','2026-05-13',1,'공부'),
+(434,'2026-05-13 09:29:09.570069','2026-05-13 10:57:37.078026',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','옹','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(435,'2026-05-13 09:39:41.580794','2026-05-13 09:39:41.580794',NULL,16,NULL,'MON,TUE,WED,SUN',NULL,0x00,0x00,NULL,435,1,'2026-05-03','TODO','엉','RECURRING',4,NULL,NULL,1,'공부'),
+(436,'2026-05-13 09:50:15.956933','2026-05-19 15:31:33.989309',NULL,219,NULL,'MON,TUE',NULL,0x00,0x01,NULL,436,1,'2026-05-18','TODO','ㅇㅎ','RECURRING',3,NULL,NULL,NULL,NULL),
+(437,'2026-05-13 09:53:07.086243','2026-05-13 18:21:30.121223',NULL,252,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','열일!!!🔥','NORMAL',48,'2026-05-13','2026-05-13',25,'공부'),
+(438,'2026-05-13 10:57:39.903069','2026-05-13 10:58:00.697625',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','어어','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(439,'2026-05-13 10:57:41.624885','2026-05-13 10:58:01.191392',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','어엉','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(440,'2026-05-13 10:57:43.374790','2026-05-13 10:58:03.117194',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅓ넝','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(441,'2026-05-13 10:57:45.419329','2026-05-13 10:58:02.729014',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(442,'2026-05-13 10:57:46.797928','2026-05-13 10:58:03.532079',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(443,'2026-05-13 10:57:48.313080','2026-05-13 10:58:04.425004',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅌ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(444,'2026-05-13 10:57:49.748242','2026-05-13 10:58:04.657659',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(445,'2026-05-13 10:57:51.123083','2026-05-13 10:58:05.591927',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(446,'2026-05-13 10:57:52.428627','2026-05-13 10:58:05.884640',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(447,'2026-05-13 10:57:53.743537','2026-05-13 10:58:06.630237',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(448,'2026-05-13 10:57:55.078218','2026-05-13 10:58:06.850513',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(449,'2026-05-13 10:57:56.393086','2026-05-13 10:58:07.800071',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(450,'2026-05-13 10:57:57.598844','2026-05-13 10:58:08.135049',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(451,'2026-05-13 10:57:58.982187','2026-05-13 10:58:08.431524',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(452,'2026-05-13 10:58:12.527615','2026-05-13 10:58:14.975518',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(453,'2026-05-13 10:58:26.521934','2026-05-13 10:59:00.708522',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(454,'2026-05-13 10:58:28.005692','2026-05-13 10:59:01.220635',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(455,'2026-05-13 10:58:29.318343','2026-05-13 10:59:01.233546',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(456,'2026-05-13 10:58:30.583239','2026-05-13 10:59:01.564281',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(457,'2026-05-13 10:58:31.819717','2026-05-13 10:59:01.938587',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(458,'2026-05-13 10:58:33.008332','2026-05-13 10:59:02.987449',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(459,'2026-05-13 10:58:34.198625','2026-05-13 10:59:03.214728',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(460,'2026-05-13 10:58:35.454360','2026-05-13 10:59:03.547521',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(461,'2026-05-13 10:58:36.585346','2026-05-13 10:59:03.828205',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(462,'2026-05-13 10:58:37.738982','2026-05-13 10:59:04.206377',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(463,'2026-05-13 10:58:38.993790','2026-05-13 10:59:05.304601',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(464,'2026-05-13 10:58:40.236167','2026-05-13 10:59:05.522070',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(465,'2026-05-13 10:58:41.418200','2026-05-13 10:59:05.836637',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(466,'2026-05-13 10:58:42.571462','2026-05-13 10:59:06.589234',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(467,'2026-05-13 10:58:44.551701','2026-05-13 10:59:06.813206',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(468,'2026-05-13 10:58:45.800959','2026-05-13 10:59:07.820272',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(469,'2026-05-13 10:58:47.342725','2026-05-13 10:59:08.072578',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(470,'2026-05-13 10:58:49.705561','2026-05-13 10:59:08.537971',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(471,'2026-05-13 10:58:51.342593','2026-05-13 10:59:10.426081',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(472,'2026-05-13 10:58:53.206338','2026-05-13 10:59:12.740869',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(473,'2026-05-13 10:58:54.627523','2026-05-13 10:59:13.242336',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(474,'2026-05-13 10:58:55.995412','2026-05-13 10:59:13.986389',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(475,'2026-05-13 10:58:57.683841','2026-05-13 10:59:15.566391',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(476,'2026-05-13 10:59:21.873629','2026-05-13 11:00:01.678291',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(477,'2026-05-13 10:59:23.011127','2026-05-13 11:00:03.290926',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(478,'2026-05-13 10:59:24.336262','2026-05-13 11:00:03.769144',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(479,'2026-05-13 10:59:26.206291','2026-05-13 11:00:04.795125',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(480,'2026-05-13 10:59:27.455424','2026-05-13 11:00:09.837979',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(481,'2026-05-13 10:59:28.712497','2026-05-13 11:00:12.220910',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(482,'2026-05-13 10:59:30.310815','2026-05-13 11:00:12.435960',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(483,'2026-05-13 10:59:31.528530','2026-05-13 11:00:12.764399',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(484,'2026-05-13 10:59:32.791308','2026-05-13 11:00:13.104777',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(485,'2026-05-13 10:59:34.030736','2026-05-13 11:00:19.747276',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(486,'2026-05-13 10:59:35.271703','2026-05-13 11:00:19.942586',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(487,'2026-05-13 10:59:36.546239','2026-05-13 11:00:20.195152',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(488,'2026-05-13 10:59:37.921616','2026-05-13 11:00:21.129439',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㅇ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(489,'2026-05-13 10:59:39.180623','2026-05-13 11:00:24.077592',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(490,'2026-05-13 10:59:40.866273','2026-05-13 11:00:24.407406',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(491,'2026-05-13 10:59:42.118185','2026-05-13 11:00:25.205046',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(492,'2026-05-13 10:59:43.365933','2026-05-13 11:00:25.465228',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(493,'2026-05-13 10:59:44.631250','2026-05-13 11:00:26.397887',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(494,'2026-05-13 10:59:45.834023','2026-05-13 11:00:26.636150',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(495,'2026-05-13 10:59:47.123640','2026-05-13 11:00:27.416785',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(496,'2026-05-13 10:59:48.302633','2026-05-13 11:00:28.913273',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(497,'2026-05-13 10:59:49.551561','2026-05-13 11:00:29.127402',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(498,'2026-05-13 10:59:50.720205','2026-05-13 11:00:30.194010',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(499,'2026-05-13 10:59:51.922346','2026-05-13 11:00:30.448129',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(500,'2026-05-13 10:59:53.158121','2026-05-13 11:00:30.798256',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(501,'2026-05-13 10:59:54.393856','2026-05-13 11:00:31.186203',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(502,'2026-05-13 10:59:55.602716','2026-05-13 11:00:32.156446',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(503,'2026-05-13 10:59:57.020601','2026-05-13 11:00:32.701332',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(504,'2026-05-13 10:59:58.575549','2026-05-13 11:00:32.929888',NULL,16,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','ㄱ','NORMAL',4,'2026-05-13','2026-05-13',1,'공부'),
+(505,'2026-05-13 12:48:57.309888','2026-05-13 15:11:37.985917',NULL,218,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-13','DONE','냐옽','NORMAL',3,'2026-05-13','2026-05-13',NULL,NULL),
+(506,'2026-05-13 13:04:51.149521','2026-05-13 13:05:07.655632',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-13','DONE','팀미팅','NORMAL',7,'2026-05-13','2026-05-13',1,'공부'),
+(507,'2026-05-13 15:08:11.261192','2026-05-13 15:08:11.261192',NULL,81,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-13','TODO','ㄷ','NORMAL',17,NULL,NULL,1,'공부'),
+(508,'2026-05-13 15:08:13.951732','2026-05-13 15:08:13.951732',NULL,81,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-13','TODO','ㅅ','NORMAL',17,NULL,NULL,1,'공부'),
+(509,'2026-05-13 15:08:18.548829','2026-05-13 15:08:18.548829',NULL,81,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-13','TODO','ㄴ','NORMAL',17,NULL,NULL,1,'공부'),
+(510,'2026-05-13 15:08:20.234467','2026-05-13 15:08:20.234467',NULL,81,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-13','TODO','ㅅ','NORMAL',17,NULL,NULL,1,'공부'),
+(511,'2026-05-13 15:08:26.728689','2026-05-13 15:08:26.728689',NULL,81,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-13','TODO','ㅂ','NORMAL',17,NULL,NULL,1,'공부'),
+(512,'2026-05-13 15:08:28.478371','2026-05-13 15:08:28.478371',NULL,81,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-13','TODO','ㅅ','NORMAL',17,NULL,NULL,1,'공부'),
+(513,'2026-05-13 15:08:30.822625','2026-05-13 15:08:30.822625',NULL,81,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-13','TODO','ㅂ','NORMAL',17,NULL,NULL,1,'공부'),
+(514,'2026-05-13 15:11:07.696660','2026-05-13 15:11:20.664305',NULL,219,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-13','DONE','ㅁㅁㅁㅁ','NORMAL',3,'2026-05-13','2026-05-13',NULL,NULL),
+(515,'2026-05-13 19:17:35.479836','2026-05-13 19:17:35.479836',NULL,222,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-15','TODO','DSR 데이터 마이그레이션','NORMAL',42,NULL,NULL,3,'업무'),
+(516,'2026-05-14 00:00:00.007130','2026-05-14 09:56:34.758401','08:00',73,'하루일정 계확',NULL,NULL,0x01,0x00,266,266,1,'2026-05-14','DONE','개인상담','NORMAL',15,'2026-05-14','2026-05-14',3,'업무'),
+(517,'2026-05-14 00:00:00.014499','2026-05-14 00:00:00.014499',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴',NULL,NULL,0x00,0x00,338,338,2,'2026-05-14','TODO','밤 루틴','NORMAL',20,NULL,NULL,1,'기타'),
+(518,'2026-05-14 00:00:00.018294','2026-05-14 00:00:00.018294',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴',NULL,NULL,0x00,0x00,342,342,5,'2026-05-14','TODO','아침 루틴','NORMAL',20,NULL,NULL,1,'기타'),
+(519,'2026-05-14 00:00:00.025117','2026-05-14 12:17:30.080015',NULL,214,NULL,NULL,NULL,0x01,0x01,354,354,15,'2026-05-14','DONE','반복테르트','NORMAL',3,'2026-05-14','2026-05-14',NULL,NULL),
+(520,'2026-05-14 00:00:00.028820','2026-05-14 00:00:00.028820',NULL,139,NULL,NULL,NULL,0x00,0x00,385,385,6,'2026-05-14','TODO','열심히살기','NORMAL',28,NULL,NULL,25,'공부'),
+(521,'2026-05-14 00:00:00.032304','2026-05-14 00:00:00.032304',NULL,272,NULL,NULL,NULL,0x00,0x00,421,421,1,'2026-05-14','TODO','알고리즘 한문제 풀기','NORMAL',52,NULL,NULL,1,'공부'),
+(522,'2026-05-14 09:51:23.168684','2026-05-14 09:51:24.173379',NULL,125,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-13','DONE','헬스','NORMAL',25,'2026-05-14','2026-05-14',2,'운동'),
+(523,'2026-05-14 09:51:33.546976','2026-05-14 09:51:34.233674',NULL,150,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-13','DONE','저녁','NORMAL',25,'2026-05-14','2026-05-14',8,'여자친구'),
+(524,'2026-05-14 09:51:42.832300','2026-05-14 09:51:42.832300',NULL,125,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-14','TODO','하체','NORMAL',25,NULL,NULL,2,'운동'),
+(525,'2026-05-14 09:52:00.933051','2026-05-14 09:52:00.933051',NULL,126,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-14','TODO','재고데이터 쿼리 정리','NORMAL',25,NULL,NULL,3,'업무'),
+(526,'2026-05-14 09:56:57.742778','2026-05-14 09:56:57.742778',NULL,71,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-14','TODO','AINOTE 실행테스트','NORMAL',15,NULL,NULL,1,'공부'),
+(527,'2026-05-14 09:57:11.998281','2026-05-14 09:57:11.998281',NULL,73,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-14','TODO','개인상담','NORMAL',15,NULL,NULL,3,'업무'),
+(528,'2026-05-14 09:57:39.777427','2026-05-14 09:57:39.777427',NULL,72,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-14','TODO','삼성헬스 실햄','NORMAL',15,NULL,NULL,2,'운동'),
+(529,'2026-05-14 09:58:18.530035','2026-05-14 09:58:18.530035','14:00',73,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-14','TODO','컨코 미팅','NORMAL',15,NULL,NULL,3,'업무'),
+(530,'2026-05-14 14:12:55.338020','2026-05-14 14:12:56.653125',NULL,31,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-14','DONE','팀미팅','NORMAL',7,'2026-05-14','2026-05-14',1,'공부'),
+(531,'2026-05-15 00:00:00.005141','2026-05-15 00:00:00.005141',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴',NULL,NULL,0x00,0x00,338,338,2,'2026-05-15','TODO','밤 루틴','NORMAL',20,NULL,NULL,1,'기타'),
+(532,'2026-05-15 00:00:00.008631','2026-05-15 00:00:00.008631',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴',NULL,NULL,0x00,0x00,342,342,5,'2026-05-15','TODO','아침 루틴','NORMAL',20,NULL,NULL,1,'기타'),
+(533,'2026-05-15 00:00:00.012259','2026-05-15 00:00:00.012259',NULL,214,NULL,NULL,NULL,0x00,0x01,354,354,15,'2026-05-15','TODO','반복테르트','NORMAL',3,NULL,NULL,NULL,NULL),
+(534,'2026-05-15 00:00:00.015426','2026-05-15 00:00:00.015426',NULL,139,NULL,NULL,NULL,0x00,0x00,385,385,6,'2026-05-15','TODO','열심히살기','NORMAL',28,NULL,NULL,25,'공부'),
+(535,'2026-05-15 00:00:00.018944','2026-05-15 00:00:00.018944',NULL,272,NULL,NULL,NULL,0x00,0x00,421,421,1,'2026-05-15','TODO','알고리즘 한문제 풀기','NORMAL',52,NULL,NULL,1,'공부'),
+(536,'2026-05-15 17:58:49.441241','2026-05-15 17:58:50.165124',NULL,184,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-15','DONE','ㄹㄹㄹ','NORMAL',36,'2026-05-15','2026-05-15',1,'공부'),
+(537,'2026-05-15 20:27:33.299791','2026-05-15 20:27:34.340864',NULL,118,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-15','DONE','예비군','NORMAL',23,'2026-05-15','2026-05-15',5,'하기 싫음'),
+(538,'2026-05-15 23:04:04.727836','2026-05-15 23:04:04.727836',NULL,246,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-16','TODO','텐동','NORMAL',46,NULL,NULL,5,'기타'),
+(539,'2026-05-15 23:09:30.465411','2026-05-15 23:09:34.495764',NULL,242,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-15','DONE','스벅','NORMAL',46,'2026-05-15','2026-05-15',1,'공부'),
+(540,'2026-05-15 23:10:04.857626','2026-05-15 23:10:04.857626',NULL,245,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-16','TODO','선풍기 청소','NORMAL',46,NULL,NULL,4,'집안일'),
+(541,'2026-05-15 23:10:17.253089','2026-05-15 23:10:17.253089',NULL,246,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-16','TODO','메가','NORMAL',46,NULL,NULL,5,'기타'),
+(542,'2026-05-15 23:11:06.227748','2026-05-15 23:11:06.227748',NULL,243,NULL,'MON,TUE,WED,THU,FRI,SAT,SUN',NULL,0x00,0x00,NULL,542,1,'2026-05-11','TODO','스트레칭','RECURRING',46,NULL,NULL,2,'운동'),
+(543,'2026-05-15 23:12:02.216705','2026-05-15 23:13:12.063861',NULL,242,NULL,'MON,TUE,WED,THU,FRI,SAT,SUN',NULL,0x00,0x01,NULL,543,1,'2026-05-15','TODO','이이','RECURRING',46,NULL,NULL,1,'공부'),
+(544,'2026-05-16 00:00:00.004621','2026-05-16 00:00:00.004621',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴',NULL,NULL,0x00,0x00,338,338,2,'2026-05-16','TODO','밤 루틴','NORMAL',20,NULL,NULL,1,'기타'),
+(545,'2026-05-16 00:00:00.008007','2026-05-16 00:00:00.008007',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴',NULL,NULL,0x00,0x00,342,342,5,'2026-05-16','TODO','아침 루틴','NORMAL',20,NULL,NULL,1,'기타'),
+(546,'2026-05-16 00:00:00.011723','2026-05-16 00:00:00.011723',NULL,214,NULL,NULL,NULL,0x00,0x01,354,354,15,'2026-05-16','TODO','반복테르트','NORMAL',3,NULL,NULL,NULL,NULL),
+(547,'2026-05-16 00:00:00.015109','2026-05-16 00:00:00.015109',NULL,139,NULL,NULL,NULL,0x00,0x00,385,385,6,'2026-05-16','TODO','열심히살기','NORMAL',28,NULL,NULL,25,'공부'),
+(548,'2026-05-16 00:00:00.018339','2026-05-16 00:00:00.018339',NULL,272,NULL,NULL,NULL,0x00,0x00,421,421,1,'2026-05-16','TODO','알고리즘 한문제 풀기','NORMAL',52,NULL,NULL,1,'공부'),
+(549,'2026-05-16 00:00:00.021471','2026-05-16 11:31:39.563281',NULL,243,NULL,NULL,NULL,0x00,0x01,542,542,1,'2026-05-16','TODO','스트레칭','NORMAL',46,NULL,NULL,2,'운동'),
+(550,'2026-05-16 11:46:55.762951','2026-05-16 16:09:15.593400',NULL,75,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','베이커리 까페 방문','NORMAL',15,'2026-05-16','2026-05-16',5,'기타'),
+(551,'2026-05-16 11:47:08.072504','2026-05-16 16:09:18.239339',NULL,72,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','강아지 산책','NORMAL',15,'2026-05-16','2026-05-16',2,'운동'),
+(552,'2026-05-16 11:47:32.429040','2026-05-16 16:09:20.161385',NULL,72,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','삼성헬스 운동','NORMAL',15,'2026-05-16','2026-05-16',2,'운동'),
+(553,'2026-05-16 15:43:32.469111','2026-05-16 16:10:46.070513',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','밥먹기','SOMEDAY',15,'2026-05-16','2026-05-16',1,'공부'),
+(554,'2026-05-16 15:43:47.552823','2026-05-16 16:10:23.490535',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','숨쉬기','SOMEDAY',15,'2026-05-16','2026-05-16',1,'공부'),
+(555,'2026-05-16 15:43:59.302660','2026-05-16 16:10:25.291028',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','게임하기','SOMEDAY',15,'2026-05-16','2026-05-16',1,'공부'),
+(556,'2026-05-16 15:44:06.807740','2026-05-16 16:10:28.060510',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','눈 깜박이기','SOMEDAY',15,'2026-05-16','2026-05-16',1,'공부'),
+(557,'2026-05-16 15:45:41.828903','2026-05-16 16:10:29.978185',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','오윤 없애기','SOMEDAY',15,'2026-05-16','2026-05-16',1,'공부'),
+(558,'2026-05-16 15:45:51.551820','2026-05-16 16:10:31.519732',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','소화하기','SOMEDAY',15,'2026-05-16','2026-05-16',1,'공부'),
+(559,'2026-05-16 15:45:58.863057','2026-05-16 16:10:33.009881',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','똥싸기','SOMEDAY',15,'2026-05-16','2026-05-16',1,'공부'),
+(560,'2026-05-16 15:46:05.547250','2026-05-16 16:10:34.500635',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','쉬싸기','SOMEDAY',15,'2026-05-16','2026-05-16',1,'공부'),
+(561,'2026-05-16 15:46:23.648008','2026-05-16 16:10:36.580092',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','벌레잡기','SOMEDAY',15,'2026-05-16','2026-05-16',1,'공부'),
+(562,'2026-05-16 15:46:46.393122','2026-05-16 16:09:55.948581',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','모노두 색이다른 잡기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(563,'2026-05-16 15:46:57.261982','2026-05-16 16:09:23.439763',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','야구보기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(564,'2026-05-16 15:47:08.679587','2026-05-16 16:09:25.058235',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','이거 하기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(565,'2026-05-16 15:47:17.836873','2026-05-16 16:09:28.139628',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','배경 사기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(566,'2026-05-16 15:48:20.761436','2026-05-16 16:09:30.030553',NULL,302,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','건강하개 먹기','NORMAL',15,'2026-05-16','2026-05-16',8,'금단'),
+(567,'2026-05-16 15:48:58.509145','2026-05-16 16:09:31.720998',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','zzz하기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(568,'2026-05-16 15:49:18.543815','2026-05-16 16:09:33.769913',NULL,302,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','게임영상','NORMAL',15,'2026-05-16','2026-05-16',8,'금단'),
+(569,'2026-05-16 15:49:33.292845','2026-05-16 16:09:35.389798',NULL,302,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','로벅스','NORMAL',15,'2026-05-16','2026-05-16',8,'금단'),
+(570,'2026-05-16 15:49:54.875659','2026-05-16 16:09:37.440354',NULL,302,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','1x1x1x1얻기','NORMAL',15,'2026-05-16','2026-05-16',8,'금단'),
+(571,'2026-05-16 15:50:23.599907','2026-05-16 16:09:39.345823',NULL,302,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','앨리엇 마일스톤4 얻기','NORMAL',15,'2026-05-16','2026-05-16',8,'금단'),
+(572,'2026-05-16 15:50:55.312951','2026-05-16 16:09:41.190210',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','케이티 10대0 스코어 보기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(573,'2026-05-16 15:51:16.461119','2026-05-16 16:10:38.520844',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','두산지기','SOMEDAY',15,'2026-05-16','2026-05-16',1,'공부'),
+(574,'2026-05-16 15:51:37.509337','2026-05-16 16:10:40.090524',NULL,73,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','엔씨이기기','SOMEDAY',15,'2026-05-16','2026-05-16',3,'업무'),
+(575,'2026-05-16 15:51:58.878025','2026-05-16 16:10:41.731673',NULL,302,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','두산이기기','SOMEDAY',15,'2026-05-16','2026-05-16',8,'금단'),
+(576,'2026-05-16 15:52:13.213394','2026-05-16 16:09:43.509943',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','떡 만지기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(577,'2026-05-16 15:52:37.749332','2026-05-16 16:09:45.176077',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','맹수라고 말하기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(578,'2026-05-16 15:52:58.172644','2026-05-16 16:09:46.809825',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','내거 비밀번호 입력','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(579,'2026-05-16 15:53:57.784083','2026-05-16 16:09:48.459833',NULL,73,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','오리 도감등록','NORMAL',15,'2026-05-16','2026-05-16',3,'업무'),
+(580,'2026-05-16 15:54:18.152904','2026-05-16 16:09:50.101947',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','오리 말하기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(581,'2026-05-16 15:54:38.901754','2026-05-16 16:10:43.690417',NULL,302,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','엔씨지기','SOMEDAY',15,'2026-05-16','2026-05-16',8,'금단'),
+(582,'2026-05-16 15:55:08.415409','2026-05-16 16:09:51.750151',NULL,73,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','미아울 노래부르기','NORMAL',15,'2026-05-16','2026-05-16',3,'업무'),
+(583,'2026-05-16 15:55:37.956157','2026-05-16 16:09:54.379803',NULL,73,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','뱁새니니 잠새니 노래부르기','NORMAL',15,'2026-05-16','2026-05-16',3,'업무'),
+(584,'2026-05-16 15:57:39.285057','2026-05-16 16:09:21.829376',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','밖에 나오기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(585,'2026-05-16 16:04:38.166619','2026-05-16 16:09:57.441356',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','공부','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(586,'2026-05-16 16:05:02.569761','2026-05-16 16:09:59.908579',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','퉁','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(587,'2026-05-16 16:05:07.444026','2026-05-16 16:10:02.309650',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','퉁','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(588,'2026-05-16 16:05:10.188870','2026-05-16 16:10:03.978159',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','퉁','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(589,'2026-05-16 16:05:12.888801','2026-05-16 16:10:06.071321',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','퉁','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(590,'2026-05-16 16:05:16.383368','2026-05-16 16:10:07.740702',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','퉁','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(591,'2026-05-16 16:05:20.871784','2026-05-16 16:10:09.291978',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','퉁','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(592,'2026-05-16 16:05:32.786187','2026-05-16 16:10:10.920619',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','퉁','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(593,'2026-05-16 16:05:36.959668','2026-05-16 16:10:12.450917',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','퉁','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(594,'2026-05-16 16:05:39.609027','2026-05-16 16:10:14.360283',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','퉁','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(595,'2026-05-16 16:05:52.921113','2026-05-16 16:10:16.002798',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','사','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(596,'2026-05-16 16:05:57.062737','2026-05-16 16:10:18.390468',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','후','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(597,'2026-05-16 16:05:59.280344','2026-05-16 16:10:20.039573',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','르','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(598,'2026-05-16 16:08:57.749197','2026-05-16 16:10:21.661548',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','감기걸리기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(599,'2026-05-16 16:11:05.295562','2026-05-16 16:11:11.008784',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','퉁','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(600,'2026-05-16 16:11:17.095407','2026-05-16 16:11:21.531545',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','ㄱ','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(601,'2026-05-16 16:11:24.678588','2026-05-16 16:11:34.429783',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','ㅣ','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(602,'2026-05-16 16:11:27.730110','2026-05-16 16:11:32.541036',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','ㄴ','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(603,'2026-05-16 16:11:41.109079','2026-05-16 16:11:44.189562',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','ㅡ','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(604,'2026-05-16 16:12:03.166084','2026-05-16 16:12:06.672450',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','자기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(605,'2026-05-16 16:12:32.060066','2026-05-16 16:12:36.385784',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','퉁퉁하기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(606,'2026-05-16 16:12:44.096225','2026-05-16 16:13:17.741262',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','ㅋ','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(607,'2026-05-16 16:13:09.329785','2026-05-16 16:13:20.630152',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','TODO','똥싸기','NORMAL',15,NULL,'2026-05-16',1,'공부'),
+(608,'2026-05-16 16:14:28.264013','2026-05-16 16:14:44.283313',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','두산지기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(609,'2026-05-16 18:02:05.429411','2026-05-16 18:02:07.285894',NULL,111,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-16','DONE','카페가기','NORMAL',23,'2026-05-16','2026-05-16',1,'공부'),
+(610,'2026-05-16 18:51:21.881078','2026-05-16 18:51:24.419973',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','ㅣㅣㅣ','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(611,'2026-05-16 18:52:02.650577','2026-05-16 18:52:06.022909',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','똥','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(612,'2026-05-16 18:52:18.138567','2026-05-16 18:52:29.476785',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','ㅡ','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(613,'2026-05-16 18:52:21.744988','2026-05-16 18:52:31.043425',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','ㅡ','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(614,'2026-05-16 18:52:26.396626','2026-05-16 18:52:32.672455',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','ㅡ','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(615,'2026-05-16 18:53:09.806406','2026-05-16 18:53:12.859503',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','ㅋ','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(616,'2026-05-16 18:53:21.702348','2026-05-16 18:53:25.922388',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','ㅋ','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(617,'2026-05-16 18:54:07.298229','2026-05-16 18:54:09.341412',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','녕','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(618,'2026-05-16 18:55:11.895321','2026-05-16 18:55:14.832096',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','ㄲ','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(619,'2026-05-16 18:57:28.313668','2026-05-16 18:57:31.498697',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','배드민턴치기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(620,'2026-05-16 18:57:58.431601','2026-05-16 18:58:07.511147',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','몽구만지기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(621,'2026-05-16 18:59:10.731195','2026-05-16 18:59:16.793823',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','엄마가크러시마시기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(622,'2026-05-16 18:59:44.893266','2026-05-16 18:59:49.623266',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','밥머기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(623,'2026-05-16 19:20:38.538695','2026-05-16 19:20:41.693264',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','똥','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(624,'2026-05-16 19:22:58.837700','2026-05-16 19:23:02.770215',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','쉬사기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(625,'2026-05-16 19:23:50.860044','2026-05-16 19:23:54.446404',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','자기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(626,'2026-05-16 19:24:29.525847','2026-05-16 19:24:43.798600',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','그냥익기','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(627,'2026-05-16 19:26:10.995634','2026-05-16 19:26:14.012077',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-16','DONE','밥다머키','NORMAL',15,'2026-05-16','2026-05-16',1,'공부'),
+(628,'2026-05-17 00:00:00.005138','2026-05-17 00:00:00.005138',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴',NULL,NULL,0x00,0x00,338,338,2,'2026-05-17','TODO','밤 루틴','NORMAL',20,NULL,NULL,1,'기타'),
+(629,'2026-05-17 00:00:00.008429','2026-05-17 00:00:00.008429',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴',NULL,NULL,0x00,0x00,342,342,5,'2026-05-17','TODO','아침 루틴','NORMAL',20,NULL,NULL,1,'기타'),
+(630,'2026-05-17 00:00:00.013531','2026-05-17 00:00:00.013531',NULL,214,NULL,NULL,NULL,0x00,0x01,354,354,15,'2026-05-17','TODO','반복테르트','NORMAL',3,NULL,NULL,NULL,NULL),
+(631,'2026-05-17 00:00:00.016455','2026-05-17 00:00:00.016455',NULL,139,NULL,NULL,NULL,0x00,0x00,385,385,6,'2026-05-17','TODO','열심히살기','NORMAL',28,NULL,NULL,25,'공부'),
+(632,'2026-05-17 00:00:00.019635','2026-05-17 00:00:00.019635',NULL,272,NULL,NULL,NULL,0x00,0x00,421,421,1,'2026-05-17','TODO','알고리즘 한문제 풀기','NORMAL',52,NULL,NULL,1,'공부'),
+(633,'2026-05-17 00:00:00.022757','2026-05-17 00:00:00.022757',NULL,16,NULL,NULL,NULL,0x00,0x00,435,435,1,'2026-05-17','TODO','엉','NORMAL',4,NULL,NULL,1,'공부'),
+(634,'2026-05-17 00:00:00.026405','2026-05-17 00:00:00.026405',NULL,243,NULL,NULL,NULL,0x00,0x00,542,542,1,'2026-05-17','TODO','스트레칭','NORMAL',46,NULL,NULL,2,'운동'),
+(635,'2026-05-17 16:16:20.859050','2026-05-17 16:16:29.191372',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','공부하기','SOMEDAY',15,'2026-05-17','2026-05-17',1,'공부'),
+(636,'2026-05-17 16:16:48.584595','2026-05-17 16:16:51.528200',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','자기','SOMEDAY',15,'2026-05-17','2026-05-17',1,'공부'),
+(637,'2026-05-17 16:17:16.507805','2026-05-17 16:17:19.432905',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','똥싸기','SOMEDAY',15,'2026-05-17','2026-05-17',1,'공부'),
+(638,'2026-05-17 16:17:46.144948','2026-05-17 16:17:48.783176',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','산책가기','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(639,'2026-05-17 16:18:17.349220','2026-05-17 16:18:21.136387',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','쉬사기','SOMEDAY',15,'2026-05-17','2026-05-17',1,'공부'),
+(640,'2026-05-17 16:18:44.722864','2026-05-17 16:18:53.998963',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','애씨지기','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(641,'2026-05-17 16:19:44.870315','2026-05-17 16:19:47.929441',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(642,'2026-05-17 16:19:51.618745','2026-05-17 16:20:00.250945',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(643,'2026-05-17 16:19:53.931463','2026-05-17 16:19:58.791895',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(644,'2026-05-17 16:20:12.106741','2026-05-17 16:20:19.943127',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','한이','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(645,'2026-05-17 16:20:44.723042','2026-05-17 16:20:47.102834',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㄷ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(646,'2026-05-17 16:21:06.694089','2026-05-17 16:21:15.808444',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(647,'2026-05-17 16:21:10.141572','2026-05-17 16:21:14.268688',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㄱ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(648,'2026-05-17 16:21:43.812340','2026-05-17 16:23:01.903287',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','똥싸기','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(649,'2026-05-17 16:21:59.563112','2026-05-17 16:23:04.255416',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','쉬싸기','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(650,'2026-05-17 16:22:16.008107','2026-05-17 16:23:05.825019',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(651,'2026-05-17 16:22:23.047642','2026-05-17 16:23:07.615906',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(652,'2026-05-17 16:22:29.342443','2026-05-17 16:23:08.914689',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(653,'2026-05-17 16:22:33.228695','2026-05-17 16:23:10.344712',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(654,'2026-05-17 16:22:41.253322','2026-05-17 16:23:11.674793',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(655,'2026-05-17 16:22:47.347065','2026-05-17 16:23:13.255631',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(656,'2026-05-17 16:22:53.226126','2026-05-17 16:23:15.264919',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(657,'2026-05-17 16:23:29.492537','2026-05-17 16:24:02.899021',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(658,'2026-05-17 16:23:34.050248','2026-05-17 16:24:04.094822',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(659,'2026-05-17 16:23:37.748088','2026-05-17 16:24:05.854653',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(660,'2026-05-17 16:23:41.999237','2026-05-17 16:24:07.424369',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(661,'2026-05-17 16:23:46.638702','2026-05-17 16:24:09.095699',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(662,'2026-05-17 16:23:52.436764','2026-05-17 16:24:10.853862',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(663,'2026-05-17 16:24:16.655604','2026-05-17 16:24:28.942578',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(664,'2026-05-17 16:24:21.017264','2026-05-17 16:24:30.284548',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(665,'2026-05-17 16:24:23.983468','2026-05-17 16:24:32.093849',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(666,'2026-05-17 16:25:27.642994','2026-05-17 16:26:00.058370',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(667,'2026-05-17 16:25:32.130125','2026-05-17 16:26:01.785719',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(668,'2026-05-17 16:25:38.098657','2026-05-17 16:26:03.277614',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(669,'2026-05-17 16:25:45.984521','2026-05-17 16:26:04.758733',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(670,'2026-05-17 16:25:52.153212','2026-05-17 16:26:06.207809',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(671,'2026-05-17 16:26:11.641415','2026-05-17 16:26:46.879623',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(672,'2026-05-17 16:26:16.930718','2026-05-17 16:26:49.069536',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(673,'2026-05-17 16:26:20.079082','2026-05-17 16:26:50.508589',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(674,'2026-05-17 16:26:25.096463','2026-05-17 16:26:52.537301',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(675,'2026-05-17 16:26:29.071551','2026-05-17 16:26:53.781126',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(676,'2026-05-17 16:26:32.879256','2026-05-17 16:26:55.110167',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(677,'2026-05-17 16:26:38.147430','2026-05-17 16:26:56.370555',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','둥','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(678,'2026-05-17 16:27:00.196348','2026-05-17 16:27:28.186945',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(679,'2026-05-17 16:27:05.251437','2026-05-17 16:27:31.355320',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(680,'2026-05-17 16:27:08.910734','2026-05-17 16:27:38.020592',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(681,'2026-05-17 16:27:17.111089','2026-05-17 16:27:39.593293',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(682,'2026-05-17 16:27:51.288874','2026-05-17 16:28:25.841821',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(683,'2026-05-17 16:27:54.976300','2026-05-17 16:28:27.780271',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(684,'2026-05-17 16:27:58.935771','2026-05-17 16:28:29.319711',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(685,'2026-05-17 16:28:03.008674','2026-05-17 16:28:30.700975',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(686,'2026-05-17 16:28:06.693161','2026-05-17 16:28:32.260425',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(687,'2026-05-17 16:28:09.808666','2026-05-17 16:28:36.861574',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(688,'2026-05-17 16:28:13.410595','2026-05-17 16:28:38.937092',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(689,'2026-05-17 16:28:50.663402','2026-05-17 16:29:08.965210',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(690,'2026-05-17 16:28:55.469414','2026-05-17 16:29:11.965305',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(691,'2026-05-17 16:28:58.940918','2026-05-17 16:29:15.521125',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(692,'2026-05-17 16:29:02.710148','2026-05-17 16:29:18.147336',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(693,'2026-05-17 16:29:24.378443','2026-05-17 16:29:41.994667',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(694,'2026-05-17 16:29:28.328122','2026-05-17 16:29:40.667234',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(695,'2026-05-17 16:29:33.581024','2026-05-17 16:29:38.995763',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(696,'2026-05-17 16:29:46.459806','2026-05-17 16:30:16.981015',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(697,'2026-05-17 16:29:50.923929','2026-05-17 16:30:18.216357',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(698,'2026-05-17 16:29:55.178280','2026-05-17 16:30:19.436063',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','둥','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(699,'2026-05-17 16:29:58.166369','2026-05-17 16:30:20.796068',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(700,'2026-05-17 16:30:02.498863','2026-05-17 16:30:22.066683',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(701,'2026-05-17 16:30:08.422954','2026-05-17 16:30:23.807088',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','툿ㅇ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(702,'2026-05-17 16:30:45.204645','2026-05-17 16:31:06.460725',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(703,'2026-05-17 16:30:48.818252','2026-05-17 16:31:08.509055',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(704,'2026-05-17 16:30:53.475597','2026-05-17 16:31:13.030741',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','퉁','SOMEDAY',15,'2026-05-17','2026-05-17',1,'공부'),
+(705,'2026-05-17 16:30:57.242814','2026-05-17 16:31:10.871140',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(706,'2026-05-17 16:31:18.136202','2026-05-17 16:31:29.724263',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(707,'2026-05-17 16:31:21.506056','2026-05-17 16:31:32.414146',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(708,'2026-05-17 16:31:27.256843','2026-05-17 16:31:34.144602',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','둣','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(709,'2026-05-17 16:31:49.465294','2026-05-17 16:32:09.699560',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(710,'2026-05-17 16:31:53.123689','2026-05-17 16:32:11.058651',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(711,'2026-05-17 16:31:57.323868','2026-05-17 16:32:18.420676',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(712,'2026-05-17 16:32:02.005447','2026-05-17 16:32:19.980634',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(713,'2026-05-17 16:32:06.326144','2026-05-17 16:32:21.830070',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(714,'2026-05-17 16:33:08.505583','2026-05-17 16:33:22.127715',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(715,'2026-05-17 16:33:13.182861','2026-05-17 16:33:23.653214',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(716,'2026-05-17 16:33:17.872626','2026-05-17 16:33:25.787293',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(717,'2026-05-17 16:33:30.931366','2026-05-17 16:35:31.947637',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(718,'2026-05-17 16:33:33.917120','2026-05-17 16:35:33.338512',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(719,'2026-05-17 16:33:38.210531','2026-05-17 16:35:34.588356',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(720,'2026-05-17 16:33:42.245220','2026-05-17 16:35:35.848373',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(721,'2026-05-17 16:33:45.746785','2026-05-17 16:35:37.658729',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(722,'2026-05-17 16:33:51.662645','2026-05-17 16:35:38.969005',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(723,'2026-05-17 16:33:56.251547','2026-05-17 16:35:40.978633',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(724,'2026-05-17 16:34:00.129821','2026-05-17 16:35:42.998532',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(725,'2026-05-17 16:34:04.761457','2026-05-17 16:35:44.549351',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(726,'2026-05-17 16:34:08.849105','2026-05-17 16:35:45.956421',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(727,'2026-05-17 16:34:12.922711','2026-05-17 16:35:47.838732',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(728,'2026-05-17 16:34:16.659068','2026-05-17 16:36:46.553709',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(729,'2026-05-17 16:34:20.402701','2026-05-17 16:36:49.284896',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(730,'2026-05-17 16:34:23.798178','2026-05-17 16:36:50.864545',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(731,'2026-05-17 16:34:26.847082','2026-05-17 16:36:54.384234',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(732,'2026-05-17 16:34:30.708865','2026-05-17 16:36:55.774709',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(733,'2026-05-17 16:34:35.815622','2026-05-17 16:36:57.075133',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(734,'2026-05-17 16:34:39.787337','2026-05-17 16:36:59.934554',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(735,'2026-05-17 16:34:43.969997','2026-05-17 16:37:01.264458',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(736,'2026-05-17 16:34:47.524283','2026-05-17 16:37:03.472338',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(737,'2026-05-17 16:34:53.762192','2026-05-17 16:37:07.254123',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','사','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(738,'2026-05-17 16:35:08.691865','2026-05-17 16:37:09.444590',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','후','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(739,'2026-05-17 16:35:13.433565','2026-05-17 16:37:11.194319',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','르','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(740,'2026-05-17 16:37:19.659848','2026-05-17 16:37:22.773191',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(741,'2026-05-17 16:37:27.368657','2026-05-17 16:37:41.084088',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(742,'2026-05-17 16:37:30.877813','2026-05-17 16:37:42.182455',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(743,'2026-05-17 16:37:45.301555','2026-05-17 16:38:15.481213',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(744,'2026-05-17 16:37:48.951788','2026-05-17 16:38:16.692191',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(745,'2026-05-17 16:37:54.707314','2026-05-17 16:38:18.730548',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(746,'2026-05-17 16:37:58.714769','2026-05-17 16:38:19.942875',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(747,'2026-05-17 16:38:02.614809','2026-05-17 16:38:21.404429',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(748,'2026-05-17 16:38:07.133412','2026-05-17 16:38:22.943975',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','뚱','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(749,'2026-05-17 16:38:51.765247','2026-05-17 16:39:18.274169',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(750,'2026-05-17 16:38:58.121407','2026-05-17 16:39:21.295115',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(751,'2026-05-17 16:39:06.264125','2026-05-17 16:39:22.913940',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(752,'2026-05-17 16:39:11.626094','2026-05-17 16:39:24.444331',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','투','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(753,'2026-05-17 16:39:28.629260','2026-05-17 16:39:41.478946',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(754,'2026-05-17 16:39:31.729069','2026-05-17 16:39:44.566383',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(755,'2026-05-17 16:39:36.451170','2026-05-17 16:39:47.254176',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(756,'2026-05-17 16:39:55.480762','2026-05-17 16:40:09.560838',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(757,'2026-05-17 16:39:59.179963','2026-05-17 16:40:11.636365',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(758,'2026-05-17 16:40:03.884044','2026-05-17 16:40:13.686508',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅡㄷ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(759,'2026-05-17 16:40:15.857171','2026-05-17 16:40:41.348395',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅡ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(760,'2026-05-17 16:40:19.570322','2026-05-17 16:40:42.999342',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㄷ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(761,'2026-05-17 16:40:21.384582','2026-05-17 16:40:45.088788',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㄷ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(762,'2026-05-17 16:40:28.325097','2026-05-17 16:40:47.969299',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㄱ.','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(763,'2026-05-17 16:41:27.052253','2026-05-17 16:41:44.168386',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(764,'2026-05-17 16:41:30.853925','2026-05-17 16:41:47.029606',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','투','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(765,'2026-05-17 16:41:34.812114','2026-05-17 16:41:49.038198',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(766,'2026-05-17 16:41:38.293615','2026-05-17 16:41:50.638922',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(767,'2026-05-17 16:41:53.698815','2026-05-17 16:42:09.988210',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅡ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(768,'2026-05-17 16:41:56.599040','2026-05-17 16:42:11.486705',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅡ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(769,'2026-05-17 16:42:00.191412','2026-05-17 16:42:13.674789',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅡ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(770,'2026-05-17 16:42:02.180992','2026-05-17 16:42:15.139742',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㄷ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(771,'2026-05-17 16:42:04.670283','2026-05-17 16:42:17.177267',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㄷ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(772,'2026-05-17 16:42:30.593448','2026-05-17 16:42:40.283983',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(773,'2026-05-17 16:42:34.738355','2026-05-17 16:42:43.122762',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(774,'2026-05-17 16:42:37.613183','2026-05-17 16:42:45.622495',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(775,'2026-05-17 16:42:50.215336','2026-05-17 16:43:16.528371',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(776,'2026-05-17 16:42:54.298328','2026-05-17 16:43:19.510660',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(777,'2026-05-17 16:42:58.155892','2026-05-17 16:43:21.740185',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(778,'2026-05-17 16:43:03.353970','2026-05-17 16:43:23.879775',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(779,'2026-05-17 16:43:06.269076','2026-05-17 16:43:25.990400',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(780,'2026-05-17 16:43:09.248377','2026-05-17 16:43:28.118413',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(781,'2026-05-17 16:43:12.661222','2026-05-17 16:43:31.199196',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','둥','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(782,'2026-05-17 16:43:36.356798','2026-05-17 16:43:39.149434',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(783,'2026-05-17 16:43:42.541920','2026-05-17 16:43:49.069559',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','퉁','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(784,'2026-05-17 16:43:46.294426','2026-05-17 16:43:50.388685',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','든ㅇ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(785,'2026-05-17 16:43:52.858590','2026-05-17 16:43:55.779376',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅡ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(786,'2026-05-17 16:44:27.889728','2026-05-17 16:44:46.474967',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(787,'2026-05-17 16:44:30.355520','2026-05-17 16:44:47.993869',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(788,'2026-05-17 16:44:32.624013','2026-05-17 16:44:50.094315',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(789,'2026-05-17 16:44:35.125770','2026-05-17 16:44:51.703727',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(790,'2026-05-17 16:44:37.165630','2026-05-17 16:44:53.171773',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(791,'2026-05-17 16:45:04.455213','2026-05-17 16:45:27.275021',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(792,'2026-05-17 16:45:06.314720','2026-05-17 16:45:29.159333',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(793,'2026-05-17 16:45:08.904417','2026-05-17 16:45:30.623018',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(794,'2026-05-17 16:45:13.563471','2026-05-17 16:45:32.292911',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(795,'2026-05-17 16:45:17.106611','2026-05-17 16:45:33.743140',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(796,'2026-05-17 16:45:19.214631','2026-05-17 16:45:36.463684',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(797,'2026-05-17 16:45:39.289622','2026-05-17 16:46:18.917338',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(798,'2026-05-17 16:45:41.488625','2026-05-17 16:46:20.224924',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(799,'2026-05-17 16:45:43.573755','2026-05-17 16:46:21.685235',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(800,'2026-05-17 16:45:45.573276','2026-05-17 16:46:23.042114',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(801,'2026-05-17 16:45:48.143825','2026-05-17 16:46:24.406653',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(802,'2026-05-17 16:45:50.102399','2026-05-17 16:46:25.736078',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(803,'2026-05-17 16:45:52.053227','2026-05-17 16:46:27.055695',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(804,'2026-05-17 16:45:54.497263','2026-05-17 16:46:28.267250',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(805,'2026-05-17 16:45:56.709646','2026-05-17 16:46:29.628618',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(806,'2026-05-17 16:45:59.503371','2026-05-17 16:46:31.625565',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(807,'2026-05-17 16:46:48.396832','2026-05-17 16:47:06.755132',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(808,'2026-05-17 16:46:50.013982','2026-05-17 16:47:08.012916',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(809,'2026-05-17 16:46:52.372998','2026-05-17 16:47:09.453467',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(810,'2026-05-17 16:46:55.142868','2026-05-17 16:47:11.302460',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(811,'2026-05-17 16:46:56.653123','2026-05-17 16:47:12.794105',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(812,'2026-05-17 16:46:58.603325','2026-05-17 16:47:14.483234',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(813,'2026-05-17 16:47:17.939070','2026-05-17 16:47:39.795679',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(814,'2026-05-17 16:47:19.265996','2026-05-17 16:47:41.026953',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(815,'2026-05-17 16:47:21.802957','2026-05-17 16:47:42.698839',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(816,'2026-05-17 16:47:23.906244','2026-05-17 16:47:43.918154',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(817,'2026-05-17 16:47:25.784863','2026-05-17 16:47:45.687268',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(818,'2026-05-17 16:47:27.966074','2026-05-17 16:47:47.117265',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(819,'2026-05-17 16:47:29.604732','2026-05-17 16:47:48.647114',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(820,'2026-05-17 16:47:51.407260','2026-05-17 16:48:13.331144',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(821,'2026-05-17 16:47:52.977704','2026-05-17 16:48:15.031738',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(822,'2026-05-17 16:48:18.024153','2026-05-17 16:48:35.234391',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(823,'2026-05-17 16:48:19.433555','2026-05-17 16:48:38.932763',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(824,'2026-05-17 16:48:20.804559','2026-05-17 16:48:40.863301',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(825,'2026-05-17 16:48:22.124117','2026-05-17 16:48:42.841372',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(826,'2026-05-17 16:48:23.854151','2026-05-17 16:48:45.313653',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(827,'2026-05-17 16:48:28.229770','2026-05-17 16:48:47.803336',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(828,'2026-05-17 16:48:29.422196','2026-05-17 16:48:49.253619',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(829,'2026-05-17 16:48:30.965654','2026-05-17 16:48:53.758994',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(830,'2026-05-17 16:48:32.375799','2026-05-17 16:48:55.595439',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(831,'2026-05-17 16:48:58.213366','2026-05-17 16:49:16.744122',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(832,'2026-05-17 16:48:59.626395','2026-05-17 16:49:19.145342',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(833,'2026-05-17 16:49:01.155925','2026-05-17 16:49:20.825453',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(834,'2026-05-17 16:49:02.565692','2026-05-17 16:49:23.892966',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(835,'2026-05-17 16:49:04.245551','2026-05-17 16:49:25.355842',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(836,'2026-05-17 16:49:05.976679','2026-05-17 16:49:26.816419',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(837,'2026-05-17 16:49:07.334050','2026-05-17 16:49:29.182205',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(838,'2026-05-17 16:49:08.765410','2026-05-17 16:49:30.575534',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(839,'2026-05-17 16:49:10.602591','2026-05-17 16:49:31.715415',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(840,'2026-05-17 16:49:12.233808','2026-05-17 16:49:34.263518',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(841,'2026-05-17 16:49:13.773810','2026-05-17 16:49:35.383382',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(842,'2026-05-17 16:49:38.135348','2026-05-17 16:50:03.925671',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(843,'2026-05-17 16:49:39.596741','2026-05-17 16:50:06.014381',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(844,'2026-05-17 16:49:41.015536','2026-05-17 16:50:08.045521',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(845,'2026-05-17 16:49:42.834210','2026-05-17 16:50:09.555909',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(846,'2026-05-17 16:49:50.213794','2026-05-17 16:50:10.845314',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(847,'2026-05-17 16:49:54.323799','2026-05-17 16:50:12.355616',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(848,'2026-05-17 16:49:59.123835','2026-05-17 16:50:13.664218',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(849,'2026-05-17 16:50:39.681848','2026-05-17 16:50:56.814975',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(850,'2026-05-17 16:50:41.792373','2026-05-17 16:50:59.694878',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(851,'2026-05-17 16:50:43.272238','2026-05-17 16:51:01.867947',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(852,'2026-05-17 16:50:45.011950','2026-05-17 16:51:06.986099',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(853,'2026-05-17 16:50:46.402688','2026-05-17 16:51:08.505139',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(854,'2026-05-17 16:50:47.862886','2026-05-17 16:51:10.696535',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(855,'2026-05-17 16:50:49.202848','2026-05-17 16:51:12.274649',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(856,'2026-05-17 16:50:50.512393','2026-05-17 16:51:14.216168',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(857,'2026-05-17 16:51:16.474869','2026-05-17 16:51:23.496147',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(858,'2026-05-17 16:51:18.375796','2026-05-17 16:51:25.754341',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(859,'2026-05-17 16:51:20.154815','2026-05-17 16:51:27.685406',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(860,'2026-05-17 16:51:29.945425','2026-05-17 16:52:05.903409',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(861,'2026-05-17 16:51:31.835669','2026-05-17 16:52:07.873875',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(862,'2026-05-17 16:51:33.214845','2026-05-17 16:52:09.333591',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(863,'2026-05-17 16:51:34.605420','2026-05-17 16:52:10.713373',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(864,'2026-05-17 16:51:35.985064','2026-05-17 16:52:12.173394',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(865,'2026-05-17 16:51:37.765930','2026-05-17 16:52:13.583632',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(866,'2026-05-17 16:51:39.315336','2026-05-17 16:52:15.743764',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(867,'2026-05-17 16:51:40.695536','2026-05-17 16:52:17.205063',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(868,'2026-05-17 16:52:19.783964','2026-05-17 16:52:33.493002',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(869,'2026-05-17 16:52:21.563897','2026-05-17 16:52:35.954190',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅣ','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(870,'2026-05-17 16:59:14.006000','2026-05-17 16:59:19.223607',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅑ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(871,'2026-05-17 16:59:32.564756','2026-05-17 16:59:37.922060',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅑ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(872,'2026-05-17 16:59:35.402463','2026-05-17 16:59:39.554247',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','7','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(873,'2026-05-17 16:59:43.572087','2026-05-17 16:59:58.767283',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅈ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(874,'2026-05-17 16:59:46.018723','2026-05-17 17:00:00.530510',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅛ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(875,'2026-05-17 16:59:48.506443','2026-05-17 17:00:02.146047',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅎ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(876,'2026-05-17 16:59:54.852144','2026-05-17 17:00:04.267163',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅐ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(877,'2026-05-17 17:00:07.535019','2026-05-17 17:00:30.841855',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㄱ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(878,'2026-05-17 17:00:11.048689','2026-05-17 17:00:32.493199',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㄷ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(879,'2026-05-17 17:00:15.490322','2026-05-17 17:00:34.073311',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅛ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(880,'2026-05-17 17:00:17.502752','2026-05-17 17:00:36.693183',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅅ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(881,'2026-05-17 17:00:19.356414','2026-05-17 17:00:38.526499',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅎ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(882,'2026-05-17 17:00:24.802618','2026-05-17 17:00:42.567608',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅇ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(883,'2026-05-17 17:00:45.168844','2026-05-17 17:01:16.607973',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,NULL,'DONE','ㅓ','SOMEDAY',58,'2026-05-17','2026-05-17',1,'공부'),
+(884,'2026-05-17 17:00:47.499939','2026-05-17 17:01:07.346847',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅑ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(885,'2026-05-17 17:00:49.735343','2026-05-17 17:01:10.735872',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅛ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(886,'2026-05-17 17:00:52.067357','2026-05-17 17:01:12.295228',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','7ㅕ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(887,'2026-05-17 17:00:54.127287','2026-05-17 17:01:14.591163',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅕ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(888,'2026-05-17 17:01:24.166156','2026-05-17 17:01:43.671017',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','9','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(889,'2026-05-17 17:01:26.355309','2026-05-17 17:01:45.164862',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅕ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(890,'2026-05-17 17:01:28.383724','2026-05-17 17:01:47.045723',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅅ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(891,'2026-05-17 17:01:30.573920','2026-05-17 17:01:48.405259',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅅ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(892,'2026-05-17 17:01:33.012898','2026-05-17 17:01:50.967078',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','6','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(893,'2026-05-17 17:01:36.048314','2026-05-17 17:01:52.652590',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅕ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(894,'2026-05-17 17:01:54.044864','2026-05-17 17:02:16.109413',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(895,'2026-05-17 17:01:58.905106','2026-05-17 17:02:19.460788',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','7','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(896,'2026-05-17 17:01:59.485167','2026-05-17 17:02:17.808921',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(897,'2026-05-17 17:01:59.912717','2026-05-17 17:02:19.277159',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(898,'2026-05-17 17:02:01.404804','2026-05-17 17:02:21.298711',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','7','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(899,'2026-05-17 17:02:02.437600','2026-05-17 17:02:21.918464',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(900,'2026-05-17 17:02:04.022536','2026-05-17 17:02:23.555267',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(901,'2026-05-17 17:02:04.264963','2026-05-17 17:02:23.008017',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','4','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(902,'2026-05-17 17:02:06.279890','2026-05-17 17:02:24.728899',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','3','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(903,'2026-05-17 17:02:07.018455','2026-05-17 17:02:25.479440',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(904,'2026-05-17 17:02:11.062939','2026-05-17 17:02:27.147395',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(905,'2026-05-17 17:02:29.637953','2026-05-17 17:02:47.167856',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(906,'2026-05-17 17:02:31.903567','2026-05-17 17:02:49.273420',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(907,'2026-05-17 17:02:33.683006','2026-05-17 17:02:50.999721',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(908,'2026-05-17 17:02:36.608169','2026-05-17 17:03:21.174843',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㄷ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(909,'2026-05-17 17:02:37.118593','2026-05-17 17:02:52.942282',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(910,'2026-05-17 17:02:38.759158','2026-05-17 17:02:55.071371',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(911,'2026-05-17 17:02:39.417618','2026-05-17 17:03:18.652339',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅈ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(912,'2026-05-17 17:02:40.438926','2026-05-17 17:02:56.699901',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(913,'2026-05-17 17:02:42.185867','2026-05-17 17:03:24.575387',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㄴ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(914,'2026-05-17 17:02:45.059833','2026-05-17 17:03:29.913806',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','2','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(915,'2026-05-17 17:02:47.698832','2026-05-17 17:03:32.803811',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','2','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(916,'2026-05-17 17:02:51.325291','2026-05-17 17:03:34.844747',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㄷ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(917,'2026-05-17 17:02:53.358752','2026-05-17 17:03:36.633689',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(918,'2026-05-17 17:02:55.231012','2026-05-17 17:03:38.423907',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(919,'2026-05-17 17:02:59.168754','2026-05-17 17:03:41.920952',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','7','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(920,'2026-05-17 17:02:59.436586','2026-05-17 17:04:02.641510',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(921,'2026-05-17 17:03:01.012667','2026-05-17 17:04:06.234574',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(922,'2026-05-17 17:03:02.489169','2026-05-17 17:04:08.275122',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(923,'2026-05-17 17:03:05.191444','2026-05-17 17:04:10.740140',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(924,'2026-05-17 17:03:06.602715','2026-05-17 17:04:13.261927',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(925,'2026-05-17 17:03:08.012405','2026-05-17 17:04:22.492373',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(926,'2026-05-17 17:03:11.664709','2026-05-17 17:04:24.696215',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(927,'2026-05-17 17:03:13.466209','2026-05-17 17:04:27.404808',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(928,'2026-05-17 17:03:14.977331','2026-05-17 17:04:29.121298',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(929,'2026-05-17 17:03:17.313702','2026-05-17 17:04:31.363827',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(930,'2026-05-17 17:03:18.952991','2026-05-17 17:04:33.527869',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(931,'2026-05-17 17:03:20.462129','2026-05-17 17:04:35.350823',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(932,'2026-05-17 17:04:00.623830','2026-05-17 17:04:22.323541',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(933,'2026-05-17 17:04:03.665743','2026-05-17 17:04:24.284715',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(934,'2026-05-17 17:04:07.124758','2026-05-17 17:04:26.258236',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(935,'2026-05-17 17:04:09.198366','2026-05-17 17:04:28.019764',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(936,'2026-05-17 17:04:11.685402','2026-05-17 17:04:30.997820',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(937,'2026-05-17 17:04:13.713413','2026-05-17 17:04:32.489352',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(938,'2026-05-17 17:04:37.965934','2026-05-17 17:04:55.042300',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(939,'2026-05-17 17:04:39.493903','2026-05-17 17:04:56.995070',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(940,'2026-05-17 17:04:41.301920','2026-05-17 17:04:58.894121',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(941,'2026-05-17 17:04:42.872240','2026-05-17 17:05:01.258457',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(942,'2026-05-17 17:04:43.276334','2026-05-17 17:05:21.957611',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅛ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(943,'2026-05-17 17:04:45.289717','2026-05-17 17:05:04.220373',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(944,'2026-05-17 17:04:45.352953','2026-05-17 17:05:23.753775',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','9','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(945,'2026-05-17 17:04:46.881773','2026-05-17 17:05:06.375012',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(946,'2026-05-17 17:04:47.145014','2026-05-17 17:05:25.221059',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','7','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(947,'2026-05-17 17:04:49.267616','2026-05-17 17:05:27.764767',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','7','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(948,'2026-05-17 17:04:54.218997','2026-05-17 17:05:29.823576',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','6','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(949,'2026-05-17 17:04:56.017377','2026-05-17 17:05:31.567962',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','6','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(950,'2026-05-17 17:04:58.179625','2026-05-17 17:05:33.125725',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','7','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(951,'2026-05-17 17:05:00.585216','2026-05-17 17:05:34.952150',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','9','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(952,'2026-05-17 17:05:03.354898','2026-05-17 17:05:46.181460',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','8','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(953,'2026-05-17 17:05:05.140843','2026-05-17 17:05:36.665033',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','8','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(954,'2026-05-17 17:05:07.782359','2026-05-17 17:05:40.796590',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','8','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(955,'2026-05-17 17:05:07.940336','2026-05-17 17:05:31.347399',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(956,'2026-05-17 17:05:09.762988','2026-05-17 17:05:34.403371',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(957,'2026-05-17 17:05:10.106461','2026-05-17 17:05:42.557184',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','8','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(958,'2026-05-17 17:05:12.273579','2026-05-17 17:05:44.084091',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','8','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(959,'2026-05-17 17:05:13.896368','2026-05-17 17:05:37.142001',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(960,'2026-05-17 17:05:16.084159','2026-05-17 17:05:39.634911',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(961,'2026-05-17 17:05:17.838663','2026-05-17 17:05:41.831060',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(962,'2026-05-17 17:05:21.849731','2026-05-17 17:05:44.052343',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(963,'2026-05-17 17:05:48.468544','2026-05-17 17:05:59.704949',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(964,'2026-05-17 17:05:49.236607','2026-05-17 17:06:39.051454',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','4','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(965,'2026-05-17 17:05:49.889735','2026-05-17 17:06:01.893454',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(966,'2026-05-17 17:05:51.346649','2026-05-17 17:06:04.307643',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(967,'2026-05-17 17:05:51.373024','2026-05-17 17:06:41.469461',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','5','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(968,'2026-05-17 17:05:53.891342','2026-05-17 17:06:43.174528',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','8','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(969,'2026-05-17 17:05:56.124797','2026-05-17 17:06:09.969997',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(970,'2026-05-17 17:05:56.494579','2026-05-17 17:06:44.910987',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','6','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(971,'2026-05-17 17:05:58.907958','2026-05-17 17:06:47.189723',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','7','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(972,'2026-05-17 17:06:05.570063','2026-05-17 17:06:48.880624',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','6','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(973,'2026-05-17 17:06:10.540954','2026-05-17 17:06:38.946715',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(974,'2026-05-17 17:06:12.180510','2026-05-17 17:06:43.176774',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(975,'2026-05-17 17:06:56.045014','2026-05-17 17:07:29.365249',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(976,'2026-05-17 17:06:58.028138','2026-05-17 17:07:31.398251',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(977,'2026-05-17 17:06:59.966246','2026-05-17 17:07:32.808302',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(978,'2026-05-17 17:07:02.293233','2026-05-17 17:07:34.578776',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(979,'2026-05-17 17:07:04.569899','2026-05-17 17:07:36.074985',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(980,'2026-05-17 17:07:06.710815','2026-05-17 17:07:38.065878',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(981,'2026-05-17 17:07:08.632321','2026-05-17 17:07:40.418868',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(982,'2026-05-17 17:07:11.121612','2026-05-17 17:07:43.936641',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(983,'2026-05-17 17:07:14.187110','2026-05-17 17:07:45.858438',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(984,'2026-05-17 17:07:15.878739','2026-05-17 17:07:47.470584',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(985,'2026-05-17 17:07:18.597374','2026-05-17 17:07:49.770562',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(986,'2026-05-17 17:07:51.862451','2026-05-17 17:08:04.044593',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(987,'2026-05-17 17:07:53.703413','2026-05-17 17:08:05.755708',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(988,'2026-05-17 17:07:56.467532','2026-05-17 17:08:07.216533',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(989,'2026-05-17 17:08:14.298756','2026-05-17 17:08:51.953819',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(990,'2026-05-17 17:08:16.239544','2026-05-17 17:08:59.147338',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(991,'2026-05-17 17:08:17.795840','2026-05-17 17:09:00.810033',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(992,'2026-05-17 17:08:20.311101','2026-05-17 17:09:02.585327',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(993,'2026-05-17 17:08:22.082042','2026-05-17 17:09:07.286385',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(994,'2026-05-17 17:08:27.523577','2026-05-17 17:09:09.533668',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(995,'2026-05-17 17:08:30.073025','2026-05-17 17:09:11.885341',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(996,'2026-05-17 17:08:32.265147','2026-05-17 17:09:14.713181',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(997,'2026-05-17 17:08:34.409822','2026-05-17 17:09:16.763630',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(998,'2026-05-17 17:08:36.370186','2026-05-17 17:09:20.134994',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(999,'2026-05-17 17:08:38.770918','2026-05-17 17:09:22.301272',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1000,'2026-05-17 17:10:01.895299','2026-05-17 17:10:26.439403',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1001,'2026-05-17 17:10:03.321370','2026-05-17 17:10:28.027567',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1002,'2026-05-17 17:10:04.880660','2026-05-17 17:10:30.732416',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1003,'2026-05-17 17:10:06.303026','2026-05-17 17:10:33.024717',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1004,'2026-05-17 17:10:08.825880','2026-05-17 17:10:36.399143',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1005,'2026-05-17 17:10:10.379096','2026-05-17 17:10:38.616536',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1006,'2026-05-17 17:10:12.979164','2026-05-17 17:10:42.164225',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1007,'2026-05-17 17:10:46.402314','2026-05-17 17:10:58.953879',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1008,'2026-05-17 17:10:48.829784','2026-05-17 17:11:00.461606',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1009,'2026-05-17 17:10:50.483069','2026-05-17 17:11:04.616105',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1010,'2026-05-17 17:10:51.984730','2026-05-17 17:11:50.377088',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1011,'2026-05-17 17:11:20.191112','2026-05-17 17:11:54.642790',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1012,'2026-05-17 17:11:21.540412','2026-05-17 17:11:56.604941',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1013,'2026-05-17 17:11:23.074289','2026-05-17 17:11:58.608608',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1014,'2026-05-17 17:11:24.540374','2026-05-17 17:12:00.382944',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1015,'2026-05-17 17:11:26.609565','2026-05-17 17:12:02.021784',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1016,'2026-05-17 17:11:28.150461','2026-05-17 17:12:03.948159',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1017,'2026-05-17 17:11:29.699870','2026-05-17 17:12:05.305362',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1018,'2026-05-17 17:11:32.303420','2026-05-17 17:12:06.744803',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1019,'2026-05-17 17:11:34.527101','2026-05-17 17:12:09.128843',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1020,'2026-05-17 17:11:38.271212','2026-05-17 17:12:10.904159',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1021,'2026-05-17 17:11:39.825065','2026-05-17 17:12:12.487535',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1022,'2026-05-17 17:12:18.676623','2026-05-17 17:12:36.320657',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1023,'2026-05-17 17:12:20.507865','2026-05-17 17:12:37.868429',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1024,'2026-05-17 17:12:22.406389','2026-05-17 17:12:39.917126',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1025,'2026-05-17 17:12:23.988538','2026-05-17 17:12:42.774184',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1026,'2026-05-17 17:12:26.714010','2026-05-17 17:12:45.313126',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1027,'2026-05-17 17:12:28.694803','2026-05-17 17:12:48.891838',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1028,'2026-05-17 17:12:30.301454','2026-05-17 17:12:50.853019',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1029,'2026-05-17 17:13:04.600984','2026-05-17 17:13:20.729519',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1030,'2026-05-17 17:13:06.788035','2026-05-17 17:13:22.030035',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1031,'2026-05-17 17:13:10.671773','2026-05-17 17:13:23.418315',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1032,'2026-05-17 17:13:12.085553','2026-05-17 17:13:25.278853',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1033,'2026-05-17 17:13:30.674774','2026-05-17 17:13:40.786306',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1034,'2026-05-17 17:13:33.191384','2026-05-17 17:13:42.845117',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1035,'2026-05-17 17:13:37.462675','2026-05-17 17:13:44.427421',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1036,'2026-05-17 17:14:43.349608','2026-05-17 17:15:16.872714',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1037,'2026-05-17 17:14:44.668297','2026-05-17 17:15:20.467885',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1038,'2026-05-17 17:14:46.250296','2026-05-17 17:15:21.951324',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1039,'2026-05-17 17:14:48.646587','2026-05-17 17:15:23.499241',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1040,'2026-05-17 17:14:50.141390','2026-05-17 17:15:24.947730',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1041,'2026-05-17 17:14:51.769032','2026-05-17 17:15:26.523322',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1042,'2026-05-17 17:14:53.278712','2026-05-17 17:15:28.010925',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1043,'2026-05-17 17:14:55.608248','2026-05-17 17:15:30.204028',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1044,'2026-05-17 17:14:57.085699','2026-05-17 17:15:32.885142',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1045,'2026-05-17 17:14:58.497657','2026-05-17 17:15:35.195269',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1046,'2026-05-17 17:14:59.972340','2026-05-17 17:15:37.119210',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1047,'2026-05-17 17:15:01.795556','2026-05-17 17:15:40.556359',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1048,'2026-05-17 17:15:03.389762','2026-05-17 17:15:46.283688',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1049,'2026-05-17 17:15:06.343623','2026-05-17 17:15:48.884176',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1050,'2026-05-17 17:16:24.766779','2026-05-17 17:16:52.192455',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1051,'2026-05-17 17:16:26.787760','2026-05-17 17:16:55.286137',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1052,'2026-05-17 17:16:29.546413','2026-05-17 17:16:57.518199',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1053,'2026-05-17 17:17:14.498193','2026-05-17 17:17:51.544220',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1054,'2026-05-17 17:17:16.341025','2026-05-17 17:17:53.409014',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1055,'2026-05-17 17:17:18.619805','2026-05-17 17:17:55.631605',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1056,'2026-05-17 17:17:20.756045','2026-05-17 17:17:58.743628',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1057,'2026-05-17 17:17:28.728133','2026-05-17 17:18:00.454872',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1058,'2026-05-17 17:17:31.183241','2026-05-17 17:18:02.118934',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1059,'2026-05-17 17:17:33.377146','2026-05-17 17:18:03.392499',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1060,'2026-05-17 17:17:36.468007','2026-05-17 17:18:05.439009',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1061,'2026-05-17 17:17:40.229156','2026-05-17 17:18:06.990196',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1062,'2026-05-17 17:18:37.826242','2026-05-17 17:19:22.735745',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1063,'2026-05-17 17:18:39.436704','2026-05-17 17:19:29.298472',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1064,'2026-05-17 17:18:43.938215','2026-05-17 17:19:24.975203',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1065,'2026-05-17 17:18:46.304153','2026-05-17 17:19:33.953322',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1066,'2026-05-17 17:18:52.927639','2026-05-17 17:19:37.782072',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1067,'2026-05-17 17:18:55.952829','2026-05-17 17:19:39.818756',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1068,'2026-05-17 17:20:02.310103','2026-05-17 17:20:41.168772',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1069,'2026-05-17 17:20:06.146937','2026-05-17 17:20:43.353614',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1070,'2026-05-17 17:20:08.588060','2026-05-17 17:20:44.942805',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1071,'2026-05-17 17:20:11.591929','2026-05-17 17:20:46.961328',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1072,'2026-05-17 17:20:15.748462','2026-05-17 17:20:48.797405',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1073,'2026-05-17 17:20:18.561706','2026-05-17 17:20:50.152971',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1074,'2026-05-17 17:21:27.971684','2026-05-17 17:21:47.146317',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1075,'2026-05-17 17:21:29.859153','2026-05-17 17:21:49.747865',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1076,'2026-05-17 17:21:32.217041','2026-05-17 17:21:51.639846',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1077,'2026-05-17 17:21:33.696710','2026-05-17 17:21:55.605123',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1078,'2026-05-17 17:21:35.636384','2026-05-17 17:21:57.206999',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1079,'2026-05-17 17:21:37.018519','2026-05-17 17:21:58.686717',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1080,'2026-05-17 17:21:38.584416','2026-05-17 17:22:02.659941',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1081,'2026-05-17 17:22:30.249102','2026-05-17 17:22:53.768370',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1082,'2026-05-17 17:22:32.322648','2026-05-17 17:23:00.148294',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1083,'2026-05-17 17:22:34.853155','2026-05-17 17:23:02.833555',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1084,'2026-05-17 17:22:39.081687','2026-05-17 17:23:05.322588',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1085,'2026-05-17 17:22:41.100645','2026-05-17 17:23:08.690530',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1086,'2026-05-17 17:22:43.150205','2026-05-17 17:23:11.430796',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1087,'2026-05-17 17:22:45.241459','2026-05-17 17:23:14.550676',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1088,'2026-05-17 17:23:36.458814','2026-05-17 17:24:02.085096',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1089,'2026-05-17 17:23:42.484359','2026-05-17 17:24:04.151966',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1090,'2026-05-17 17:23:44.182178','2026-05-17 17:24:06.667427',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1091,'2026-05-17 17:23:46.152378','2026-05-17 17:24:08.974380',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1092,'2026-05-17 17:23:51.080034','2026-05-17 17:24:13.731434',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1093,'2026-05-17 17:23:52.843900','2026-05-17 17:24:15.577395',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1094,'2026-05-17 17:23:55.295425','2026-05-17 17:24:31.816133',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1095,'2026-05-17 17:24:38.088584','2026-05-17 17:25:01.941373',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1096,'2026-05-17 17:24:42.771754','2026-05-17 17:25:03.495878',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1097,'2026-05-17 17:24:45.011138','2026-05-17 17:25:07.006719',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1098,'2026-05-17 17:24:46.737086','2026-05-17 17:25:08.391380',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1099,'2026-05-17 17:24:49.544313','2026-05-17 17:25:14.239913',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1100,'2026-05-17 17:25:53.154455','2026-05-17 17:26:21.700992',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1101,'2026-05-17 17:25:54.769609','2026-05-17 17:26:23.125263',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1102,'2026-05-17 17:25:57.365695','2026-05-17 17:26:24.602892',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1103,'2026-05-17 17:25:59.523318','2026-05-17 17:26:28.198857',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1104,'2026-05-17 17:26:01.646923','2026-05-17 17:26:30.316250',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1105,'2026-05-17 17:26:04.062628','2026-05-17 17:26:32.633454',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1106,'2026-05-17 17:26:06.907331','2026-05-17 17:26:34.925332',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1107,'2026-05-17 17:26:08.827225','2026-05-17 17:26:37.084810',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1108,'2026-05-17 17:26:10.418916','2026-05-17 17:26:40.222227',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1109,'2026-05-17 18:22:59.504910','2026-05-17 18:23:16.221903',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(1110,'2026-05-17 18:23:00.938846','2026-05-17 18:23:18.194645',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(1111,'2026-05-17 18:23:03.385604','2026-05-17 18:23:20.499303',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(1112,'2026-05-17 18:23:05.137842','2026-05-17 18:23:22.452730',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(1113,'2026-05-17 18:23:06.591832','2026-05-17 18:23:24.306630',NULL,71,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',15,'2026-05-17','2026-05-17',1,'공부'),
+(1114,'2026-05-17 19:29:42.722573','2026-05-17 19:30:06.761392',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1115,'2026-05-17 19:29:44.297884','2026-05-17 19:30:09.179860',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1116,'2026-05-17 19:29:46.005997','2026-05-17 19:30:11.463145',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1117,'2026-05-17 19:29:47.537643','2026-05-17 19:30:13.035254',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1118,'2026-05-17 19:29:49.102520','2026-05-17 19:30:14.500428',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1119,'2026-05-17 19:29:50.741663','2026-05-17 19:30:17.945744',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1120,'2026-05-17 19:29:52.220747','2026-05-17 19:30:19.512883',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1121,'2026-05-17 19:29:53.727676','2026-05-17 19:30:21.351248',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1122,'2026-05-17 19:29:55.325396','2026-05-17 19:30:22.874198',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1123,'2026-05-17 19:29:56.755572','2026-05-17 19:30:24.378984',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1124,'2026-05-17 19:30:55.191550','2026-05-17 19:31:56.251398',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1125,'2026-05-17 19:30:56.546020','2026-05-17 19:31:58.293015',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1126,'2026-05-17 19:30:58.707635','2026-05-17 19:32:00.699910',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1127,'2026-05-17 19:31:02.032299','2026-05-17 19:32:02.507524',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1128,'2026-05-17 19:31:03.432014','2026-05-17 19:32:04.369962',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1129,'2026-05-17 19:31:05.116711','2026-05-17 19:32:06.764066',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1130,'2026-05-17 19:31:07.984828','2026-05-17 19:32:09.553975',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1131,'2026-05-17 19:31:11.252560','2026-05-17 19:32:11.552070',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1132,'2026-05-17 19:31:13.382953','2026-05-17 19:32:13.331960',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1133,'2026-05-17 19:31:14.957447','2026-05-17 19:32:15.148293',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1134,'2026-05-17 19:31:16.465359','2026-05-17 19:32:17.058848',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1135,'2026-05-17 19:31:18.576423','2026-05-17 19:32:18.612541',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1136,'2026-05-17 19:31:23.589442','2026-05-17 19:32:20.523833',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1137,'2026-05-17 19:31:26.180763','2026-05-17 19:32:22.276196',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1138,'2026-05-17 19:31:28.211468','2026-05-17 19:32:23.710954',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1139,'2026-05-17 19:31:43.583457','2026-05-17 19:32:25.351683',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1140,'2026-05-17 19:31:45.568949','2026-05-17 19:32:26.693071',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1141,'2026-05-17 19:31:47.272701','2026-05-17 19:32:28.772323',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1142,'2026-05-17 19:32:31.146726','2026-05-17 19:32:52.842887',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1143,'2026-05-17 19:32:34.531557','2026-05-17 19:32:54.875725',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1144,'2026-05-17 19:32:35.755357','2026-05-17 19:33:03.728016',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1145,'2026-05-17 19:32:37.265322','2026-05-17 19:33:05.113688',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1146,'2026-05-17 19:33:08.186550','2026-05-17 19:33:56.772654',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1147,'2026-05-17 19:33:10.296565','2026-05-17 19:34:01.130270',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1148,'2026-05-17 19:33:11.944185','2026-05-17 19:34:03.112873',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1149,'2026-05-17 19:33:14.051810','2026-05-17 19:34:06.570377',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1150,'2026-05-17 19:33:15.587946','2026-05-17 19:34:09.106718',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1151,'2026-05-17 19:33:17.999916','2026-05-17 19:34:10.662993',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1152,'2026-05-17 19:33:20.049602','2026-05-17 19:34:12.279753',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1153,'2026-05-17 19:33:21.775305','2026-05-17 19:34:14.075762',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1154,'2026-05-17 19:33:23.465138','2026-05-17 19:34:16.254511',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1155,'2026-05-17 19:33:26.208725','2026-05-17 19:34:20.115440',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1156,'2026-05-17 19:33:27.940214','2026-05-17 19:34:22.443173',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1157,'2026-05-17 19:33:30.143032','2026-05-17 19:34:24.690272',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1158,'2026-05-17 19:33:33.261214','2026-05-17 19:34:26.895264',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1159,'2026-05-17 19:33:36.581090','2026-05-17 19:34:29.197848',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1160,'2026-05-17 19:33:39.026436','2026-05-17 19:34:31.261362',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1161,'2026-05-17 19:33:41.474254','2026-05-17 19:34:34.754691',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1162,'2026-05-17 19:33:43.027282','2026-05-17 19:34:39.140315',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1163,'2026-05-17 19:34:43.615904','2026-05-17 19:35:02.219038',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1164,'2026-05-17 19:34:45.146166','2026-05-17 19:35:03.627580',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1165,'2026-05-17 19:34:47.785050','2026-05-17 19:35:05.515720',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1166,'2026-05-17 19:34:50.384652','2026-05-17 19:35:06.850628',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1167,'2026-05-17 19:34:52.650610','2026-05-17 19:35:08.459356',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1168,'2026-05-17 19:34:54.110789','2026-05-17 19:35:09.851332',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1169,'2026-05-17 19:35:14.967748','2026-05-17 19:35:22.963429',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1170,'2026-05-17 19:35:17.286581','2026-05-17 19:35:24.667494',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1171,'2026-05-17 19:35:18.979703','2026-05-17 19:35:26.584197',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1172,'2026-05-17 19:35:46.274405','2026-05-17 19:36:49.184741',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1173,'2026-05-17 19:35:48.433305','2026-05-17 19:36:51.066814',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1174,'2026-05-17 19:35:49.850304','2026-05-17 19:36:52.768977',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1175,'2026-05-17 19:35:51.497014','2026-05-17 19:36:55.190505',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1176,'2026-05-17 19:35:52.980416','2026-05-17 19:36:58.146981',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1177,'2026-05-17 19:35:54.528213','2026-05-17 19:37:00.813809',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1178,'2026-05-17 19:35:56.255607','2026-05-17 19:37:03.548303',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1179,'2026-05-17 19:35:57.786559','2026-05-17 19:37:06.226000',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1180,'2026-05-17 19:35:59.259537','2026-05-17 19:37:07.893114',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1181,'2026-05-17 19:36:00.895346','2026-05-17 19:37:09.222299',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1182,'2026-05-17 19:36:02.424084','2026-05-17 19:37:10.686108',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1183,'2026-05-17 19:36:04.391567','2026-05-17 19:37:12.942873',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1184,'2026-05-17 19:36:05.938836','2026-05-17 19:37:16.102493',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','TODO','1','NORMAL',58,NULL,'2026-05-17',1,'공부'),
+(1185,'2026-05-17 19:36:07.838853','2026-05-17 19:37:21.341438',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','TODO','1','NORMAL',58,NULL,'2026-05-17',1,'공부'),
+(1186,'2026-05-17 19:36:09.303351','2026-05-17 19:37:22.950852',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1187,'2026-05-17 19:36:10.903820','2026-05-17 19:37:24.399094',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1188,'2026-05-17 19:36:12.336813','2026-05-17 19:37:25.829211',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1189,'2026-05-17 19:36:14.158275','2026-05-17 19:37:27.753873',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1190,'2026-05-17 19:36:16.449258','2026-05-17 19:37:30.155667',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1191,'2026-05-17 19:36:18.122960','2026-05-17 19:37:32.631084',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1192,'2026-05-17 19:36:20.219947','2026-05-17 19:37:34.264875',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1193,'2026-05-17 19:36:21.937627','2026-05-17 19:37:36.172247',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1194,'2026-05-17 19:37:42.599744','2026-05-17 19:38:16.133500',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1195,'2026-05-17 19:37:44.327738','2026-05-17 19:38:18.245511',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1196,'2026-05-17 19:37:46.021166','2026-05-17 19:38:21.117675',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1197,'2026-05-17 19:37:47.854159','2026-05-17 19:38:23.403926',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1198,'2026-05-17 19:37:52.316207','2026-05-17 19:38:25.562235',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','ㅂ','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1199,'2026-05-17 19:37:54.358547','2026-05-17 19:38:27.204177',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1200,'2026-05-17 19:37:56.609674','2026-05-17 19:38:28.499054',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1201,'2026-05-17 19:38:01.801393','2026-05-17 19:38:30.016245',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1202,'2026-05-17 19:38:33.635088','2026-05-17 19:39:04.421445',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1203,'2026-05-17 19:38:35.729069','2026-05-17 19:39:06.794690',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1204,'2026-05-17 19:38:37.734804','2026-05-17 19:39:08.541276',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1205,'2026-05-17 19:38:39.833077','2026-05-17 19:39:09.998867',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1206,'2026-05-17 19:38:42.003008','2026-05-17 19:39:11.415021',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1207,'2026-05-17 19:38:44.207840','2026-05-17 19:39:13.071358',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1208,'2026-05-17 19:38:46.621508','2026-05-17 19:39:14.414434',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1209,'2026-05-17 19:38:48.732072','2026-05-17 19:39:16.294565',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1210,'2026-05-17 19:39:29.845972','2026-05-17 19:40:16.636457',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1211,'2026-05-17 19:39:34.198764','2026-05-17 19:40:18.328210',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1212,'2026-05-17 19:39:36.311654','2026-05-17 19:40:19.624373',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1213,'2026-05-17 19:39:39.784687','2026-05-17 19:40:20.937353',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1214,'2026-05-17 19:39:41.381411','2026-05-17 19:40:22.296629',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1215,'2026-05-17 19:39:44.398692','2026-05-17 19:40:23.859039',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1216,'2026-05-17 19:39:45.816460','2026-05-17 19:40:25.218752',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1217,'2026-05-17 19:39:47.459666','2026-05-17 19:40:26.716169',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1218,'2026-05-17 19:39:48.974676','2026-05-17 19:40:27.942837',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1219,'2026-05-17 19:39:50.383826','2026-05-17 19:40:31.555292',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1220,'2026-05-17 19:39:51.994626','2026-05-17 19:40:33.997811',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1221,'2026-05-17 19:39:53.618405','2026-05-17 19:40:35.489435',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1222,'2026-05-17 19:39:55.732596','2026-05-17 19:40:36.929940',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1223,'2026-05-17 19:39:57.222911','2026-05-17 19:40:39.154378',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1224,'2026-05-17 19:40:00.680767','2026-05-17 19:40:41.402138',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1225,'2026-05-17 19:40:02.335807','2026-05-17 19:40:46.532890',NULL,303,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1226,'2026-05-17 19:40:49.301384','2026-05-17 19:41:10.819235',NULL,303,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1227,'2026-05-17 19:40:50.851108','2026-05-17 19:41:11.338391',NULL,303,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1228,'2026-05-17 19:40:52.667569','2026-05-17 19:41:11.376257',NULL,303,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1229,'2026-05-17 19:40:59.575687','2026-05-17 19:41:11.860757',NULL,303,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1230,'2026-05-17 19:41:01.341901','2026-05-17 19:41:14.171800',NULL,303,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1231,'2026-05-17 19:41:04.283278','2026-05-17 19:41:14.231588',NULL,303,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1232,'2026-05-17 19:41:05.753887','2026-05-17 19:41:14.642814',NULL,303,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1233,'2026-05-17 19:41:07.168159','2026-05-17 19:41:14.742168',NULL,303,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1234,'2026-05-17 19:41:08.517842','2026-05-17 19:41:15.460100',NULL,303,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1235,'2026-05-17 19:41:10.176528','2026-05-17 19:41:15.560889',NULL,303,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-17','DONE','1','NORMAL',58,'2026-05-17','2026-05-17',1,'공부'),
+(1236,'2026-05-18 00:00:00.004868','2026-05-18 00:00:00.004868',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴',NULL,NULL,0x00,0x00,338,338,2,'2026-05-18','TODO','밤 루틴','NORMAL',20,NULL,NULL,1,'기타'),
+(1237,'2026-05-18 00:00:00.011871','2026-05-18 00:00:00.011871',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴',NULL,NULL,0x00,0x00,342,342,5,'2026-05-18','TODO','아침 루틴','NORMAL',20,NULL,NULL,1,'기타'),
+(1238,'2026-05-18 00:00:00.014757','2026-05-18 00:00:00.014757',NULL,214,NULL,NULL,NULL,0x00,0x01,354,354,15,'2026-05-18','TODO','반복테르트','NORMAL',3,NULL,NULL,NULL,NULL),
+(1239,'2026-05-18 00:00:00.017783','2026-05-18 00:00:00.017783',NULL,139,NULL,NULL,NULL,0x00,0x00,385,385,6,'2026-05-18','TODO','열심히살기','NORMAL',28,NULL,NULL,25,'공부'),
+(1240,'2026-05-18 00:00:00.020723','2026-05-18 00:00:00.020723',NULL,272,NULL,NULL,NULL,0x00,0x00,421,421,1,'2026-05-18','TODO','알고리즘 한문제 풀기','NORMAL',52,NULL,NULL,1,'공부'),
+(1241,'2026-05-18 00:00:00.023391','2026-05-18 00:00:00.023391',NULL,16,NULL,NULL,NULL,0x00,0x00,435,435,1,'2026-05-18','TODO','엉','NORMAL',4,NULL,NULL,1,'공부'),
+(1242,'2026-05-18 00:00:00.026023','2026-05-18 00:00:00.026023',NULL,219,NULL,NULL,NULL,0x00,0x01,436,436,1,'2026-05-18','TODO','ㅇㅎ','NORMAL',3,NULL,NULL,NULL,NULL),
+(1243,'2026-05-18 00:00:00.028791','2026-05-18 00:00:00.028791',NULL,243,NULL,NULL,NULL,0x00,0x00,542,542,1,'2026-05-18','TODO','스트레칭','NORMAL',46,NULL,NULL,2,'운동'),
+(1244,'2026-05-18 08:08:36.491675','2026-05-18 08:08:37.702773',NULL,308,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-18','DONE','あ','NORMAL',59,'2026-05-18','2026-05-18',1,'공부'),
+(1245,'2026-05-18 08:08:55.242211','2026-05-18 08:08:57.574726',NULL,312,NULL,NULL,NULL,0x01,0x00,NULL,NULL,1,NULL,'DONE','か','SOMEDAY',59,'2026-05-18','2026-05-18',5,'기타'),
+(1246,'2026-05-19 00:00:00.005851','2026-05-19 00:00:00.005851',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴',NULL,NULL,0x00,0x00,338,338,2,'2026-05-19','TODO','밤 루틴','NORMAL',20,NULL,NULL,1,'기타'),
+(1247,'2026-05-19 00:00:00.008901','2026-05-19 00:00:00.008901',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴',NULL,NULL,0x00,0x00,342,342,5,'2026-05-19','TODO','아침 루틴','NORMAL',20,NULL,NULL,1,'기타'),
+(1248,'2026-05-19 00:00:00.011725','2026-05-19 15:31:43.387294',NULL,214,NULL,NULL,NULL,0x01,0x01,354,354,15,'2026-05-19','DONE','반복테르트','NORMAL',3,'2026-05-19','2026-05-19',NULL,NULL),
+(1249,'2026-05-19 00:00:00.014286','2026-05-19 00:00:00.014286',NULL,139,NULL,NULL,NULL,0x00,0x00,385,385,6,'2026-05-19','TODO','열심히살기','NORMAL',28,NULL,NULL,25,'공부'),
+(1250,'2026-05-19 00:00:00.016842','2026-05-19 00:00:00.016842',NULL,272,NULL,NULL,NULL,0x00,0x00,421,421,1,'2026-05-19','TODO','알고리즘 한문제 풀기','NORMAL',52,NULL,NULL,1,'공부'),
+(1251,'2026-05-19 00:00:00.022304','2026-05-19 00:00:00.022304',NULL,16,NULL,NULL,NULL,0x00,0x00,435,435,1,'2026-05-19','TODO','엉','NORMAL',4,NULL,NULL,1,'공부'),
+(1252,'2026-05-19 00:00:00.024791','2026-05-19 15:31:36.261771',NULL,219,NULL,NULL,NULL,0x01,0x01,436,436,1,'2026-05-19','DONE','ㅇㅎ','NORMAL',3,'2026-05-19','2026-05-19',NULL,NULL),
+(1253,'2026-05-19 00:00:00.030257','2026-05-19 00:00:00.030257',NULL,243,NULL,NULL,NULL,0x00,0x00,542,542,1,'2026-05-19','TODO','스트레칭','NORMAL',46,NULL,NULL,2,'운동'),
+(1254,'2026-05-19 08:00:34.533823','2026-05-19 08:01:25.518311',NULL,150,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-17','DONE','여자친구집 인사','NORMAL',25,'2026-05-19','2026-05-19',8,'여자친구'),
+(1255,'2026-05-19 08:01:18.546894','2026-05-19 08:01:24.129410',NULL,125,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-18','DONE','가슴','NORMAL',25,'2026-05-19','2026-05-19',2,'운동'),
+(1256,'2026-05-19 08:01:34.626140','2026-05-19 08:01:34.626140',NULL,125,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-19','TODO','등','NORMAL',25,NULL,NULL,2,'운동'),
+(1257,'2026-05-19 08:01:45.879064','2026-05-19 08:01:45.879064',NULL,126,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-19','TODO','회의10시','NORMAL',25,NULL,NULL,3,'업무'),
+(1258,'2026-05-19 08:02:44.648002','2026-05-19 08:02:44.648002',NULL,126,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-19','TODO','매출 프로세스 수정','NORMAL',25,NULL,NULL,3,'업무'),
+(1259,'2026-05-19 15:32:23.541694','2026-05-19 15:34:02.262279',NULL,214,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-19','DONE','33','NORMAL',3,'2026-05-19','2026-05-19',NULL,NULL),
+(1260,'2026-05-19 15:32:32.041381','2026-05-19 15:34:01.044648',NULL,217,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-19','DONE','44','NORMAL',3,'2026-05-19','2026-05-19',NULL,NULL),
+(1261,'2026-05-19 15:33:10.510541','2026-05-19 15:34:03.496542',NULL,214,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-19','DONE','1','NORMAL',3,'2026-05-19','2026-05-19',NULL,NULL),
+(1262,'2026-05-19 15:33:14.592823','2026-05-19 15:34:04.833284',NULL,215,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-19','DONE','2','NORMAL',3,'2026-05-19','2026-05-19',NULL,NULL),
+(1263,'2026-05-19 15:33:18.462095','2026-05-19 15:34:06.489936',NULL,215,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-19','DONE','3','NORMAL',3,'2026-05-19','2026-05-19',NULL,NULL),
+(1264,'2026-05-19 16:58:14.000000','2026-05-19 16:58:14.000000','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x01,0x00,NULL,NULL,1,'2026-05-01','DONE','5/1 알고리즘 1문제 풀기','NORMAL',3,'2026-05-01','2026-05-01',25,'공부'),
+(1265,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314618','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x01,0x00,NULL,NULL,22,'2026-05-01','DONE','5/1 시연 체크리스트 확인','NORMAL',3,'2026-05-01','2026-05-01',27,'업무'),
+(1266,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314726','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x01,0x00,NULL,NULL,41,'2026-05-01','DONE','5/1 산책 20분','NORMAL',3,'2026-05-01','2026-05-01',26,'운동'),
+(1267,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314846','21:00',316,'작업 공간 정리하기',NULL,NULL,0x01,0x00,NULL,NULL,62,'2026-05-01','DONE','5/1 책상 정리','NORMAL',3,'2026-05-01','2026-05-01',28,'집안일'),
+(1268,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314466','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x01,0x00,NULL,NULL,2,'2026-05-02','DONE','5/2 알고리즘 1문제 풀기','NORMAL',3,'2026-05-02','2026-05-02',25,'공부'),
+(1269,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314624','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x01,0x00,NULL,NULL,23,'2026-05-02','DONE','5/2 시연 체크리스트 확인','NORMAL',3,'2026-05-02','2026-05-02',27,'업무'),
+(1270,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314732','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x01,0x00,NULL,NULL,42,'2026-05-02','DONE','5/2 산책 20분','NORMAL',3,'2026-05-02','2026-05-02',26,'운동'),
+(1271,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314852','21:00',316,'작업 공간 정리하기',NULL,NULL,0x01,0x00,NULL,NULL,63,'2026-05-02','DONE','5/2 책상 정리','NORMAL',3,'2026-05-02','2026-05-02',28,'집안일'),
+(1272,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314506','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x01,0x00,NULL,NULL,3,'2026-05-03','DONE','5/3 알고리즘 1문제 풀기','NORMAL',3,'2026-05-03','2026-05-03',25,'공부'),
+(1273,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314630','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x01,0x00,NULL,NULL,24,'2026-05-03','DONE','5/3 시연 체크리스트 확인','NORMAL',3,'2026-05-03','2026-05-03',27,'업무'),
+(1274,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314738','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x01,0x00,NULL,NULL,43,'2026-05-03','DONE','5/3 산책 20분','NORMAL',3,'2026-05-03','2026-05-03',26,'운동'),
+(1275,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314858','21:00',316,'작업 공간 정리하기',NULL,NULL,0x01,0x00,NULL,NULL,64,'2026-05-03','DONE','5/3 책상 정리','NORMAL',3,'2026-05-03','2026-05-03',28,'집안일'),
+(1276,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314515','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x01,0x00,NULL,NULL,4,'2026-05-04','DONE','5/4 알고리즘 1문제 풀기','NORMAL',3,'2026-05-04','2026-05-04',25,'공부'),
+(1277,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314635','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x01,0x00,NULL,NULL,25,'2026-05-04','DONE','5/4 시연 체크리스트 확인','NORMAL',3,'2026-05-04','2026-05-04',27,'업무'),
+(1278,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314744','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x01,0x00,NULL,NULL,44,'2026-05-04','DONE','5/4 산책 20분','NORMAL',3,'2026-05-04','2026-05-04',26,'운동'),
+(1279,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314863','21:00',316,'작업 공간 정리하기',NULL,NULL,0x01,0x00,NULL,NULL,65,'2026-05-04','DONE','5/4 책상 정리','NORMAL',3,'2026-05-04','2026-05-04',28,'집안일'),
+(1280,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314521','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x01,0x00,NULL,NULL,5,'2026-05-05','DONE','5/5 알고리즘 1문제 풀기','NORMAL',3,'2026-05-05','2026-05-05',25,'공부'),
+(1281,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314640','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x01,0x00,NULL,NULL,26,'2026-05-05','DONE','5/5 시연 체크리스트 확인','NORMAL',3,'2026-05-05','2026-05-05',27,'업무'),
+(1282,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314749','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x01,0x00,NULL,NULL,45,'2026-05-05','DONE','5/5 산책 20분','NORMAL',3,'2026-05-05','2026-05-05',26,'운동'),
+(1283,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314869','21:00',316,'작업 공간 정리하기',NULL,NULL,0x01,0x00,NULL,NULL,66,'2026-05-05','DONE','5/5 책상 정리','NORMAL',3,'2026-05-05','2026-05-05',28,'집안일'),
+(1284,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314527','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x01,0x00,NULL,NULL,6,'2026-05-06','DONE','5/6 알고리즘 1문제 풀기','NORMAL',3,'2026-05-06','2026-05-06',25,'공부'),
+(1285,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314647','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x01,0x00,NULL,NULL,27,'2026-05-06','DONE','5/6 시연 체크리스트 확인','NORMAL',3,'2026-05-06','2026-05-06',27,'업무'),
+(1286,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314755','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x01,0x00,NULL,NULL,46,'2026-05-06','DONE','5/6 산책 20분','NORMAL',3,'2026-05-06','2026-05-06',26,'운동'),
+(1287,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314874','21:00',316,'작업 공간 정리하기',NULL,NULL,0x01,0x00,NULL,NULL,67,'2026-05-06','DONE','5/6 책상 정리','NORMAL',3,'2026-05-06','2026-05-06',28,'집안일'),
+(1288,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314532','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x01,0x00,NULL,NULL,7,'2026-05-07','DONE','5/7 알고리즘 1문제 풀기','NORMAL',3,'2026-05-07','2026-05-07',25,'공부'),
+(1289,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314653','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x01,0x00,NULL,NULL,28,'2026-05-07','DONE','5/7 시연 체크리스트 확인','NORMAL',3,'2026-05-07','2026-05-07',27,'업무'),
+(1290,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314760','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x01,0x00,NULL,NULL,47,'2026-05-07','DONE','5/7 산책 20분','NORMAL',3,'2026-05-07','2026-05-07',26,'운동'),
+(1291,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314880','21:00',316,'작업 공간 정리하기',NULL,NULL,0x01,0x00,NULL,NULL,68,'2026-05-07','DONE','5/7 책상 정리','NORMAL',3,'2026-05-07','2026-05-07',28,'집안일'),
+(1292,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314538','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x01,0x00,NULL,NULL,8,'2026-05-08','DONE','5/8 알고리즘 1문제 풀기','NORMAL',3,'2026-05-08','2026-05-08',25,'공부'),
+(1293,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314658','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x01,0x00,NULL,NULL,29,'2026-05-08','DONE','5/8 시연 체크리스트 확인','NORMAL',3,'2026-05-08','2026-05-08',27,'업무'),
+(1294,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314765','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x01,0x00,NULL,NULL,48,'2026-05-08','DONE','5/8 산책 20분','NORMAL',3,'2026-05-08','2026-05-08',26,'운동'),
+(1295,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314886','21:00',316,'작업 공간 정리하기',NULL,NULL,0x01,0x00,NULL,NULL,69,'2026-05-08','DONE','5/8 책상 정리','NORMAL',3,'2026-05-08','2026-05-08',28,'집안일'),
+(1296,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314543','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x01,0x00,NULL,NULL,9,'2026-05-09','DONE','5/9 알고리즘 1문제 풀기','NORMAL',3,'2026-05-09','2026-05-09',25,'공부'),
+(1297,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314664','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x01,0x00,NULL,NULL,30,'2026-05-09','DONE','5/9 시연 체크리스트 확인','NORMAL',3,'2026-05-09','2026-05-09',27,'업무'),
+(1298,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314771','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x01,0x00,NULL,NULL,49,'2026-05-09','DONE','5/9 산책 20분','NORMAL',3,'2026-05-09','2026-05-09',26,'운동'),
+(1299,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314891','21:00',316,'작업 공간 정리하기',NULL,NULL,0x01,0x00,NULL,NULL,70,'2026-05-09','DONE','5/9 책상 정리','NORMAL',3,'2026-05-09','2026-05-09',28,'집안일'),
+(1300,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314550','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x01,0x00,NULL,NULL,10,'2026-05-10','DONE','5/10 알고리즘 1문제 풀기','NORMAL',3,'2026-05-10','2026-05-10',25,'공부'),
+(1301,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314670','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x01,0x00,NULL,NULL,31,'2026-05-10','DONE','5/10 시연 체크리스트 확인','NORMAL',3,'2026-05-10','2026-05-10',27,'업무'),
+(1302,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314776','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x01,0x00,NULL,NULL,50,'2026-05-10','DONE','5/10 산책 20분','NORMAL',3,'2026-05-10','2026-05-10',26,'운동'),
+(1303,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314897','21:00',316,'작업 공간 정리하기',NULL,NULL,0x01,0x00,NULL,NULL,71,'2026-05-10','DONE','5/10 책상 정리','NORMAL',3,'2026-05-10','2026-05-10',28,'집안일'),
+(1304,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314555','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x01,0x00,NULL,NULL,11,'2026-05-11','DONE','5/11 알고리즘 1문제 풀기','NORMAL',3,'2026-05-11','2026-05-11',25,'공부'),
+(1305,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314676','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x01,0x00,NULL,NULL,32,'2026-05-11','DONE','5/11 시연 체크리스트 확인','NORMAL',3,'2026-05-11','2026-05-11',27,'업무'),
+(1306,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314782','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x01,0x00,NULL,NULL,51,'2026-05-11','DONE','5/11 산책 20분','NORMAL',3,'2026-05-11','2026-05-11',26,'운동'),
+(1307,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314902','21:00',316,'작업 공간 정리하기',NULL,NULL,0x01,0x00,NULL,NULL,72,'2026-05-11','DONE','5/11 책상 정리','NORMAL',3,'2026-05-11','2026-05-11',28,'집안일'),
+(1308,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314561','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x01,0x00,NULL,NULL,12,'2026-05-12','DONE','5/12 알고리즘 1문제 풀기','NORMAL',3,'2026-05-12','2026-05-12',25,'공부'),
+(1309,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314682','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x01,0x00,NULL,NULL,33,'2026-05-12','DONE','5/12 시연 체크리스트 확인','NORMAL',3,'2026-05-12','2026-05-12',27,'업무'),
+(1310,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314788','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x01,0x00,NULL,NULL,52,'2026-05-12','DONE','5/12 산책 20분','NORMAL',3,'2026-05-12','2026-05-12',26,'운동'),
+(1311,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314908','21:00',316,'작업 공간 정리하기',NULL,NULL,0x01,0x00,NULL,NULL,73,'2026-05-12','DONE','5/12 책상 정리','NORMAL',3,'2026-05-12','2026-05-12',28,'집안일'),
+(1312,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314567','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x01,0x00,NULL,NULL,13,'2026-05-13','DONE','5/13 알고리즘 1문제 풀기','NORMAL',3,'2026-05-13','2026-05-13',25,'공부'),
+(1313,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314688','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x01,0x00,NULL,NULL,34,'2026-05-13','DONE','5/13 시연 체크리스트 확인','NORMAL',3,'2026-05-13','2026-05-13',27,'업무'),
+(1314,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314793','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x01,0x00,NULL,NULL,53,'2026-05-13','DONE','5/13 산책 20분','NORMAL',3,'2026-05-13','2026-05-13',26,'운동'),
+(1315,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314913','21:00',316,'작업 공간 정리하기',NULL,NULL,0x01,0x00,NULL,NULL,74,'2026-05-13','DONE','5/13 책상 정리','NORMAL',3,'2026-05-13','2026-05-13',28,'집안일'),
+(1316,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314573','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x01,0x00,NULL,NULL,14,'2026-05-14','DONE','5/14 알고리즘 1문제 풀기','NORMAL',3,'2026-05-14','2026-05-14',25,'공부'),
+(1317,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314694','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x01,0x00,NULL,NULL,35,'2026-05-14','DONE','5/14 시연 체크리스트 확인','NORMAL',3,'2026-05-14','2026-05-14',27,'업무'),
+(1318,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314799','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x01,0x00,NULL,NULL,54,'2026-05-14','DONE','5/14 산책 20분','NORMAL',3,'2026-05-14','2026-05-14',26,'운동'),
+(1319,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314919','21:00',316,'작업 공간 정리하기',NULL,NULL,0x01,0x00,NULL,NULL,75,'2026-05-14','DONE','5/14 책상 정리','NORMAL',3,'2026-05-14','2026-05-14',28,'집안일'),
+(1320,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314578','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x01,0x00,NULL,NULL,15,'2026-05-15','DONE','5/15 알고리즘 1문제 풀기','NORMAL',3,'2026-05-15','2026-05-15',25,'공부'),
+(1321,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314699','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x01,0x00,NULL,NULL,36,'2026-05-15','DONE','5/15 시연 체크리스트 확인','NORMAL',3,'2026-05-15','2026-05-15',27,'업무'),
+(1322,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314805','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x01,0x00,NULL,NULL,55,'2026-05-15','DONE','5/15 산책 20분','NORMAL',3,'2026-05-15','2026-05-15',26,'운동'),
+(1323,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314925','21:00',316,'작업 공간 정리하기',NULL,NULL,0x01,0x00,NULL,NULL,76,'2026-05-15','DONE','5/15 책상 정리','NORMAL',3,'2026-05-15','2026-05-15',28,'집안일'),
+(1324,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314584','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x01,0x00,NULL,NULL,16,'2026-05-16','DONE','5/16 알고리즘 1문제 풀기','NORMAL',3,'2026-05-16','2026-05-16',25,'공부'),
+(1325,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314704','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x01,0x00,NULL,NULL,37,'2026-05-16','DONE','5/16 시연 체크리스트 확인','NORMAL',3,'2026-05-16','2026-05-16',27,'업무'),
+(1326,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314811','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x01,0x00,NULL,NULL,56,'2026-05-16','DONE','5/16 산책 20분','NORMAL',3,'2026-05-16','2026-05-16',26,'운동'),
+(1327,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314931','21:00',316,'작업 공간 정리하기',NULL,NULL,0x01,0x00,NULL,NULL,77,'2026-05-16','DONE','5/16 책상 정리','NORMAL',3,'2026-05-16','2026-05-16',28,'집안일'),
+(1328,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314590','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x01,0x00,NULL,NULL,17,'2026-05-17','DONE','5/17 알고리즘 1문제 풀기','NORMAL',3,'2026-05-17','2026-05-17',25,'공부'),
+(1329,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314710','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x01,0x00,NULL,NULL,38,'2026-05-17','DONE','5/17 시연 체크리스트 확인','NORMAL',3,'2026-05-17','2026-05-17',27,'업무'),
+(1330,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314817','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x01,0x00,NULL,NULL,57,'2026-05-17','DONE','5/17 산책 20분','NORMAL',3,'2026-05-17','2026-05-17',26,'운동'),
+(1331,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314936','21:00',316,'작업 공간 정리하기',NULL,NULL,0x01,0x00,NULL,NULL,78,'2026-05-17','DONE','5/17 책상 정리','NORMAL',3,'2026-05-17','2026-05-17',28,'집안일'),
+(1332,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314595','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x01,0x00,NULL,NULL,18,'2026-05-18','DONE','5/18 알고리즘 1문제 풀기','NORMAL',3,'2026-05-18','2026-05-18',25,'공부'),
+(1333,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314715','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x01,0x00,NULL,NULL,39,'2026-05-18','DONE','5/18 시연 체크리스트 확인','NORMAL',3,'2026-05-18','2026-05-18',27,'업무'),
+(1334,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314823','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x01,0x00,NULL,NULL,58,'2026-05-18','DONE','5/18 산책 20분','NORMAL',3,'2026-05-18','2026-05-18',26,'운동'),
+(1335,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314942','21:00',316,'작업 공간 정리하기',NULL,NULL,0x01,0x00,NULL,NULL,79,'2026-05-18','DONE','5/18 책상 정리','NORMAL',3,'2026-05-18','2026-05-18',28,'집안일'),
+(1336,'2026-05-19 16:58:14.000000','2026-05-19 17:25:25.077633','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x00,0x01,NULL,NULL,1,'2026-05-19','TODO','5/19 알고리즘 1문제 풀기','NORMAL',3,NULL,NULL,25,'공부'),
+(1337,'2026-05-19 16:58:14.000000','2026-05-19 17:25:27.498541','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x00,0x01,NULL,NULL,2,'2026-05-19','TODO','5/19 시연 체크리스트 확인','NORMAL',3,NULL,NULL,27,'업무'),
+(1338,'2026-05-19 16:58:14.000000','2026-05-19 17:25:26.225441','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x00,0x01,NULL,NULL,3,'2026-05-19','TODO','5/19 산책 20분','NORMAL',3,NULL,NULL,26,'운동'),
+(1339,'2026-05-19 16:58:14.000000','2026-05-19 17:25:29.225909','21:00',316,'작업 공간 정리하기',NULL,NULL,0x00,0x01,NULL,NULL,4,'2026-05-19','TODO','5/19 책상 정리','NORMAL',3,NULL,NULL,28,'집안일'),
+(1340,'2026-05-19 16:58:14.000000','2026-05-19 17:27:21.002206','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x00,0x01,NULL,NULL,1,'2026-05-20','TODO','5/20 알고리즘 1문제 풀기','NORMAL',3,NULL,NULL,25,'공부'),
+(1341,'2026-05-19 16:58:14.000000','2026-05-19 17:27:22.419646','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x00,0x01,NULL,NULL,2,'2026-05-20','TODO','5/20 시연 체크리스트 확인','NORMAL',3,NULL,NULL,27,'업무'),
+(1342,'2026-05-19 16:58:14.000000','2026-05-19 17:27:23.838011','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x00,0x01,NULL,NULL,3,'2026-05-20','TODO','5/20 산책 20분','NORMAL',3,NULL,NULL,26,'운동'),
+(1343,'2026-05-19 16:58:14.000000','2026-05-19 17:27:25.158523','21:00',316,'작업 공간 정리하기',NULL,NULL,0x00,0x01,NULL,NULL,4,'2026-05-20','TODO','5/20 책상 정리','NORMAL',3,NULL,NULL,28,'집안일'),
+(1344,'2026-05-19 16:58:14.000000','2026-05-19 17:23:10.772426','09:00',313,'오늘의 문제 풀이와 오답 정리',NULL,NULL,0x00,0x01,NULL,NULL,1,'2026-05-21','TODO','5/21 알고리즘 1문제 풀기','NORMAL',3,NULL,NULL,25,'공부'),
+(1345,'2026-05-19 16:58:14.000000','2026-05-19 17:23:12.130441','10:30',315,'기능별 시연 흐름 점검',NULL,NULL,0x00,0x01,NULL,NULL,2,'2026-05-21','TODO','5/21 시연 체크리스트 확인','NORMAL',3,NULL,NULL,27,'업무'),
+(1346,'2026-05-19 16:58:14.000000','2026-05-19 17:23:15.010754','18:30',314,'가볍게 걷고 컨디션 관리',NULL,NULL,0x00,0x01,NULL,NULL,3,'2026-05-21','TODO','5/21 산책 20분','NORMAL',3,NULL,NULL,26,'운동'),
+(1347,'2026-05-19 16:58:14.000000','2026-05-19 17:23:18.791529','21:00',316,'작업 공간 정리하기',NULL,NULL,0x00,0x01,NULL,NULL,4,'2026-05-21','TODO','5/21 책상 정리','NORMAL',3,NULL,NULL,28,'집안일'),
+(1391,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314828','20:00',313,'네트워크/DB/운영체제 정리',NULL,'2026-05-09',0x01,0x00,NULL,NULL,59,'2026-05-05','DONE','CS 개념 복습 주간','PERIOD',3,'2026-05-09','2026-05-09',25,'공부'),
+(1392,'2026-05-19 16:58:14.000000','2026-05-19 17:23:21.911159','17:00',317,'환경변수와 서버 상태 확인',NULL,'2026-05-21',0x00,0x01,NULL,NULL,8,'2026-05-18','TODO','배포 체크리스트 확인','PERIOD',3,NULL,NULL,29,'기타'),
+(1393,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314953','13:00',317,'스크린샷 문구와 순서 확인',NULL,'2026-05-14',0x01,0x00,NULL,NULL,81,'2026-05-10','DONE','앱스토어 이미지 정리','PERIOD',3,'2026-05-14','2026-05-14',29,'기타'),
+(1394,'2026-05-19 16:58:14.000000','2026-05-19 17:25:30.557525','11:00',315,'로그인부터 캐릭터 독립까지 리허설',NULL,'2026-05-19',0x00,0x01,NULL,NULL,7,'2026-05-15','TODO','시연 동선 점검','PERIOD',3,NULL,NULL,27,'업무'),
+(1395,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314959','19:00',315,'시연 멘트와 역할 분담 정리',NULL,'2026-05-17',0x01,0x00,NULL,NULL,82,'2026-05-13','DONE','최종 발표 스크립트 작성','PERIOD',3,'2026-05-17','2026-05-17',27,'업무'),
+(1396,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314947','16:00',315,'테스터 피드백 확인 및 정리',NULL,'2026-05-12',0x01,0x00,NULL,NULL,80,'2026-05-08','DONE','피드백 반영','PERIOD',3,'2026-05-12','2026-05-12',27,'업무'),
+(1397,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314721','15:00',315,'주요 성공/실패 케이스 점검',NULL,'2026-05-06',0x01,0x00,NULL,NULL,40,'2026-05-02','DONE','API 테스트 케이스 정리','PERIOD',3,'2026-05-06','2026-05-06',27,'업무'),
+(1398,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314601','14:00',315,'핵심 화면 캡처와 순서 정리',NULL,'2026-05-03',0x01,0x00,NULL,NULL,19,'2026-05-01','DONE','발표 자료 초안 만들기','PERIOD',3,'2026-05-03','2026-05-03',27,'업무'),
+(1406,'2026-05-19 16:58:14.000000','2026-05-19 17:23:19.990516','20:30',313,'면접 질문 3개 정리','TUE,THU','2026-05-21',0x00,0x01,NULL,NULL,5,'2026-05-01','TODO','화목 CS 정리','RECURRING',3,NULL,NULL,25,'공부'),
+(1407,'2026-05-19 16:58:14.000000','2026-05-19 17:23:13.533500','09:30',313,'어제 푼 문제 다시 보기','MON,TUE,WED,THU,FRI','2026-05-21',0x00,0x01,NULL,NULL,2,'2026-05-01','TODO','평일 알고리즘 복습','RECURRING',3,NULL,NULL,25,'공부'),
+(1408,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314971','21:00',317,'이번 주 완료한 일 돌아보기','SUN','2026-05-21',0x00,0x00,NULL,NULL,84,'2026-05-01','TODO','일요일 주간 회고','RECURRING',3,NULL,NULL,29,'기타'),
+(1409,'2026-05-19 16:58:14.000000','2026-05-19 17:23:17.150786','10:00',315,'진행 중 이슈와 오늘 작업 확인','MON,TUE,WED,THU,FRI','2026-05-21',0x00,0x01,NULL,NULL,3,'2026-05-01','TODO','평일 Jira 확인','RECURRING',3,NULL,NULL,27,'업무'),
+(1410,'2026-05-19 16:58:14.000000','2026-05-19 17:27:26.978847','18:00',314,'저녁 산책 20분','MON,WED,FRI','2026-05-21',0x00,0x01,NULL,NULL,4,'2026-05-01','TODO','월수금 산책','RECURRING',3,NULL,NULL,26,'운동'),
+(1411,'2026-05-19 16:58:14.000000','2026-05-19 17:23:06.389145','08:00',314,'하루 시작 전 10분 스트레칭','MON,TUE,WED,THU,FRI,SAT,SUN','2026-05-21',0x00,0x01,NULL,NULL,1,'2026-05-01','TODO','매일 아침 스트레칭','RECURRING',3,NULL,NULL,26,'운동'),
+(1412,'2026-05-19 16:58:14.000000','2026-05-20 08:56:21.314965','11:00',316,'바닥과 책상 정리','SAT','2026-05-21',0x00,0x00,NULL,NULL,83,'2026-05-01','TODO','토요일 방 청소','RECURRING',3,NULL,NULL,28,'집안일'),
+(1413,'2026-05-19 17:03:16.196278','2026-05-19 17:23:04.889742',NULL,313,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-19','DONE','1','NORMAL',3,'2026-05-19','2026-05-19',25,'공부'),
+(1414,'2026-05-19 17:05:10.660214','2026-05-19 17:22:57.254204',NULL,315,NULL,NULL,NULL,0x00,0x01,NULL,NULL,1,NULL,'TODO','포트폴리오 제작','SOMEDAY',3,NULL,NULL,27,'업무'),
+(1415,'2026-05-19 17:29:28.457045','2026-05-19 17:29:43.232012',NULL,313,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-19','DONE','11','NORMAL',3,'2026-05-19','2026-05-19',25,'공부'),
+(1416,'2026-05-19 17:32:57.632235','2026-05-19 17:41:31.271593',NULL,313,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-19','DONE','1','NORMAL',3,'2026-05-19','2026-05-19',25,'공부'),
+(1417,'2026-05-19 17:32:59.635321','2026-05-19 17:41:29.911210',NULL,313,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-19','DONE','2','NORMAL',3,'2026-05-19','2026-05-19',25,'공부'),
+(1418,'2026-05-19 17:33:02.155678','2026-05-19 17:41:28.699464',NULL,313,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-19','DONE','3','NORMAL',3,'2026-05-19','2026-05-19',25,'공부'),
+(1419,'2026-05-19 17:35:51.409516','2026-05-19 17:41:41.506608','17:55',316,'꼭하기',NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-20','TODO','공부하기','NORMAL',3,NULL,'2026-05-19',28,'집안일'),
+(1420,'2026-05-19 17:40:05.952050','2026-05-19 17:40:13.978887',NULL,313,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-21','TODO','11','NORMAL',3,NULL,'2026-05-19',25,'공부'),
+(1421,'2026-05-19 17:40:25.089538','2026-05-19 17:41:27.417834',NULL,313,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-19','DONE','22','NORMAL',3,'2026-05-19','2026-05-19',25,'공부'),
+(1422,'2026-05-19 17:42:06.000000','2026-05-20 08:56:21.314607',NULL,317,'예시 투두예요. 완료하면 크레딧이 쌓여요. 필요 없으면 삭제해도 괜찮아요.',NULL,NULL,0x00,0x00,NULL,NULL,20,'2026-05-21','TODO','투두 완료하고 크레딧 받아보기','NORMAL',3,NULL,NULL,29,'기타'),
+(1423,'2026-05-19 17:42:06.000000','2026-05-20 08:56:23.095370',NULL,317,'예시 투두예요. 언젠가 하고 싶은 일을 자유롭게 적어보세요.',NULL,NULL,0x00,0x01,NULL,NULL,85,'2026-05-20','TODO','키우고 싶은 다마고치 떠올려보기','NORMAL',3,NULL,NULL,29,'기타'),
+(1424,'2026-05-19 17:42:06.000000','2026-05-20 08:56:21.314836',NULL,317,'캐릭터 경험치와 보상 흐름을 확인하기 위한 투두예요.',NULL,NULL,0x00,0x00,NULL,NULL,60,'2026-05-21','TODO','오늘 할 일 하나 완료하기','NORMAL',3,NULL,NULL,29,'기타'),
+(1425,'2026-05-19 17:42:36.000000','2026-05-20 12:16:28.085309',NULL,317,'예시 투두예요. 완료하면 크레딧이 쌓여요. 필요 없으면 삭제해도 괜찮아요.',NULL,NULL,0x01,0x01,NULL,NULL,21,'2026-05-20','TODO','투두 완료하고 크레딧 받아보기','NORMAL',3,NULL,'2026-05-20',29,'기타'),
+(1426,'2026-05-19 17:42:36.000000','2026-05-19 17:42:36.000000',NULL,317,'예시 투두예요. 언젠가 하고 싶은 일을 자유롭게 적어보세요.',NULL,NULL,0x00,0x00,NULL,NULL,2,NULL,'TODO','키우고 싶은 다마고치 떠올려보기','SOMEDAY',3,NULL,NULL,29,'기타'),
+(1427,'2026-05-19 17:42:36.000000','2026-05-20 12:16:17.211033',NULL,317,'캐릭터 경험치와 보상 흐름을 확인하기 위한 투두예요.',NULL,NULL,0x01,0x01,NULL,NULL,61,'2026-05-20','TODO','오늘 할 일 하나 완료하기','NORMAL',3,NULL,'2026-05-20',29,'기타'),
+(1428,'2026-05-19 17:42:43.094776','2026-05-19 17:42:51.884346',NULL,313,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-19','TODO','11','NORMAL',3,NULL,'2026-05-19',25,'공부'),
+(1429,'2026-05-19 17:42:54.271817','2026-05-19 17:42:57.604059',NULL,313,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-19','DONE','2','NORMAL',3,'2026-05-19','2026-05-19',25,'공부'),
+(1430,'2026-05-19 17:43:33.075862','2026-05-19 17:43:36.215654',NULL,313,NULL,NULL,NULL,0x01,0x01,NULL,NULL,1,'2026-05-19','DONE','1','NORMAL',3,'2026-05-19','2026-05-19',25,'공부'),
+(1431,'2026-05-20 00:00:00.005593','2026-05-20 00:00:00.005593',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴',NULL,NULL,0x00,0x00,338,NULL,2,'2026-05-20','TODO','밤 루틴','NORMAL',20,NULL,NULL,1,'기타'),
+(1432,'2026-05-20 00:00:00.009557','2026-05-20 00:00:00.009557',NULL,183,'1. 비타민C\n2. 스트레칭\n  - 종아리\n  - 햄스트링\n  - 고관절\n  - 캣카우\n  - 가슴',NULL,NULL,0x00,0x00,342,NULL,5,'2026-05-20','TODO','아침 루틴','NORMAL',20,NULL,NULL,1,'기타'),
+(1433,'2026-05-20 00:00:00.012616','2026-05-20 00:00:00.012616',NULL,139,NULL,NULL,NULL,0x00,0x00,385,NULL,6,'2026-05-20','TODO','열심히살기','NORMAL',28,NULL,NULL,25,'공부'),
+(1434,'2026-05-20 00:00:00.015535','2026-05-20 00:00:00.015535',NULL,272,NULL,NULL,NULL,0x00,0x00,421,NULL,1,'2026-05-20','TODO','알고리즘 한문제 풀기','NORMAL',52,NULL,NULL,1,'공부'),
+(1435,'2026-05-20 00:00:00.018636','2026-05-20 00:00:00.018636',NULL,16,NULL,NULL,NULL,0x00,0x00,435,NULL,1,'2026-05-20','TODO','엉','NORMAL',4,NULL,NULL,1,'공부'),
+(1436,'2026-05-20 00:00:00.021469','2026-05-20 00:00:00.021469',NULL,243,NULL,NULL,NULL,0x00,0x00,542,NULL,1,'2026-05-20','TODO','스트레칭','NORMAL',46,NULL,NULL,2,'운동'),
+(1437,'2026-05-20 03:21:48.816087','2026-05-20 03:21:48.816087',NULL,49,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,NULL,'TODO','청소기 돌리기','SOMEDAY',10,NULL,NULL,4,'집안일'),
+(1438,'2026-05-20 03:22:19.627060','2026-05-20 03:22:19.627060',NULL,47,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-20','TODO','운동하기','NORMAL',10,NULL,NULL,2,'운동'),
+(1439,'2026-05-20 03:22:38.185679','2026-05-20 03:22:38.185679',NULL,48,NULL,NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-20','TODO','낮잠 안자기','NORMAL',10,NULL,NULL,3,'업무'),
+(1440,'2026-05-20 12:09:16.926970','2026-05-20 12:10:01.850854',NULL,313,NULL,NULL,NULL,0x01,0x01,NULL,NULL,85,'2026-05-20','DONE','1','NORMAL',3,'2026-05-20','2026-05-20',25,'공부'),
+(1441,'2026-05-20 12:09:19.328669','2026-05-20 12:10:03.582775',NULL,313,NULL,NULL,NULL,0x01,0x01,NULL,NULL,86,'2026-05-20','DONE','2','NORMAL',3,'2026-05-20','2026-05-20',25,'공부'),
+(1442,'2026-05-20 12:09:21.170980','2026-05-20 12:10:05.704873',NULL,313,NULL,NULL,NULL,0x01,0x01,NULL,NULL,87,'2026-05-20','DONE','3','NORMAL',3,'2026-05-20','2026-05-20',25,'공부'),
+(1443,'2026-05-20 12:14:25.486199','2026-05-20 12:14:35.142920',NULL,313,NULL,NULL,NULL,0x01,0x01,NULL,NULL,85,'2026-05-20','DONE','11','NORMAL',3,'2026-05-20','2026-05-20',25,'공부'),
+(1444,'2026-05-20 12:14:39.902726','2026-05-20 12:14:50.454231',NULL,313,NULL,NULL,NULL,0x01,0x01,NULL,NULL,85,'2026-05-20','DONE','22','NORMAL',3,'2026-05-20','2026-05-20',25,'공부'),
+(1445,'2026-05-20 12:14:57.529576','2026-05-20 12:15:30.100270',NULL,313,NULL,NULL,NULL,0x01,0x01,NULL,NULL,85,'2026-05-20','DONE','33','NORMAL',3,'2026-05-20','2026-05-20',25,'공부'),
+(1446,'2026-05-20 12:16:02.747627','2026-05-20 12:16:24.031184',NULL,317,NULL,NULL,NULL,0x00,0x01,NULL,NULL,85,'2026-05-20','TODO','투두 완료하고 크레딧 받아보기','NORMAL',3,NULL,NULL,29,'기타'),
+(1447,'2026-05-20 12:16:12.592133','2026-05-20 12:16:31.050919',NULL,317,NULL,NULL,NULL,0x00,0x00,NULL,NULL,86,'2026-05-20','TODO','오늘 할 일 하나 완료하기','NORMAL',3,NULL,NULL,29,'기타'),
+(1448,'2026-05-20 12:16:26.489201','2026-05-20 12:16:41.958889',NULL,317,NULL,NULL,NULL,0x00,0x00,NULL,NULL,87,'2026-05-20','TODO','투두 완료하고 크레딧 받아보기','NORMAL',3,NULL,NULL,29,'기타'),
+(1449,'2026-05-20 12:17:02.159783','2026-05-20 12:17:05.714885',NULL,313,NULL,NULL,NULL,0x01,0x01,NULL,NULL,88,'2026-05-20','TODO','11','NORMAL',3,NULL,'2026-05-20',25,'공부'),
+(1450,'2026-05-20 13:03:45.432806','2026-05-20 13:03:45.432806',NULL,334,'예시 투두예요. 완료하면 크레딧이 쌓여요. 필요 없으면 삭제해도 괜찮아요.',NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-20','TODO','투두 완료하고 크레딧 받아보기','NORMAL',62,NULL,NULL,5,'기타'),
+(1451,'2026-05-20 13:03:45.439137','2026-05-20 13:03:45.439137',NULL,334,'예시 투두예요. 언젠가 하고 싶은 일을 자유롭게 적어보세요.',NULL,NULL,0x00,0x00,NULL,NULL,1,NULL,'TODO','키우고 싶은 다마고치 떠올려보기','SOMEDAY',62,NULL,NULL,5,'기타'),
+(1452,'2026-05-20 13:04:36.080099','2026-05-20 13:04:36.080099',NULL,339,'예시 투두예요. 완료하면 크레딧이 쌓여요. 필요 없으면 삭제해도 괜찮아요.',NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-20','TODO','투두 완료하고 크레딧 받아보기','NORMAL',63,NULL,NULL,5,'기타'),
+(1453,'2026-05-20 13:04:36.081776','2026-05-20 13:04:36.081776',NULL,339,'예시 투두예요. 언젠가 하고 싶은 일을 자유롭게 적어보세요.',NULL,NULL,0x00,0x00,NULL,NULL,1,NULL,'TODO','키우고 싶은 다마고치 떠올려보기','SOMEDAY',63,NULL,NULL,5,'기타'),
+(1454,'2026-05-20 13:07:51.029644','2026-05-20 13:07:56.930704',NULL,335,NULL,NULL,NULL,0x01,0x00,NULL,NULL,2,'2026-05-20','DONE','오늘의 할일','NORMAL',63,'2026-05-20','2026-05-20',1,'공부'),
+(1455,'2026-05-20 13:32:26.267556','2026-05-20 13:32:26.267556',NULL,344,'예시 투두예요. 완료하면 크레딧이 쌓여요. 필요 없으면 삭제해도 괜찮아요.',NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-20','TODO','투두 완료하고 크레딧 받아보기','NORMAL',64,NULL,NULL,5,'기타'),
+(1456,'2026-05-20 13:32:26.273539','2026-05-20 13:32:26.273539',NULL,344,'예시 투두예요. 언젠가 하고 싶은 일을 자유롭게 적어보세요.',NULL,NULL,0x00,0x00,NULL,NULL,1,NULL,'TODO','키우고 싶은 다마고치 떠올려보기','SOMEDAY',64,NULL,NULL,5,'기타'),
+(1457,'2026-05-20 13:46:19.097826','2026-05-20 13:46:19.097826',NULL,349,'예시 투두예요. 완료하면 크레딧이 쌓여요. 필요 없으면 삭제해도 괜찮아요.',NULL,NULL,0x00,0x00,NULL,NULL,1,'2026-05-20','TODO','투두 완료하고 크레딧 받아보기','NORMAL',65,NULL,NULL,5,'기타'),
+(1458,'2026-05-20 13:46:19.099243','2026-05-20 13:46:19.099243',NULL,349,'예시 투두예요. 언젠가 하고 싶은 일을 자유롭게 적어보세요.',NULL,NULL,0x00,0x00,NULL,NULL,1,NULL,'TODO','키우고 싶은 다마고치 떠올려보기','SOMEDAY',65,NULL,NULL,5,'기타'),
+(1459,'2026-05-20 14:20:52.740051','2026-05-20 14:20:57.414971',NULL,313,NULL,NULL,NULL,0x01,0x01,NULL,NULL,88,'2026-05-20','TODO','22','NORMAL',3,NULL,'2026-05-20',25,'공부'),
+(1460,'2026-05-20 16:21:35.582505','2026-05-20 16:24:20.510131',NULL,NULL,NULL,NULL,NULL,0x01,0x00,NULL,NULL,2,'2026-05-20','DONE','아','NORMAL',9,'2026-05-20','2026-05-20',NULL,NULL),
+(1461,'2026-05-20 16:24:25.826591','2026-05-20 16:24:29.297658',NULL,NULL,NULL,NULL,NULL,0x01,0x00,NULL,NULL,3,'2026-05-20','DONE','네','NORMAL',9,'2026-05-20','2026-05-20',NULL,NULL);
+/*!40000 ALTER TABLE `todos` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `user_character`
+--
+
+DROP TABLE IF EXISTS `user_character`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_character` (
+  `user_character_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `character_id` bigint(20) NOT NULL,
+  `current_exp` int(11) NOT NULL,
+  `farewell_available_at` datetime(6) DEFAULT NULL,
+  `farewell_notified` bit(1) NOT NULL DEFAULT b'0',
+  `equiped_items_id` bigint(20) DEFAULT NULL,
+  `is_active` bit(1) NOT NULL,
+  `is_deleted` bit(1) NOT NULL,
+  `name` varchar(50) DEFAULT NULL,
+  `user_id` bigint(20) NOT NULL,
+  `daily_touch_count` int(11) NOT NULL,
+  `daily_touch_date` date DEFAULT NULL,
+  `last_touched_at` datetime(6) DEFAULT NULL,
+  `poop_time` time DEFAULT NULL,
+  `poop_time_date` date DEFAULT NULL,
+  `poop_cleared_date` date DEFAULT NULL,
+  PRIMARY KEY (`user_character_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=82 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_character`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `user_character` WRITE;
+/*!40000 ALTER TABLE `user_character` DISABLE KEYS */;
+INSERT INTO `user_character` VALUES
+(1,'2026-04-29 10:48:39.901399','2026-04-29 10:49:18.284081',7,10,NULL,0x00,NULL,0x01,0x00,'포비',1,0,NULL,NULL,NULL,NULL,NULL),
+(2,'2026-04-29 10:54:21.388874','2026-05-14 16:42:45.573406',12,0,NULL,0x00,NULL,0x01,0x00,'몽둥이',4,1,'2026-05-14','2026-05-14 16:42:45.570548',NULL,NULL,NULL),
+(3,'2026-04-29 11:36:03.863738','2026-04-29 13:49:23.654776',6,265,NULL,0x00,NULL,0x01,0x00,'오리',5,0,NULL,NULL,NULL,NULL,NULL),
+(4,'2026-04-29 11:39:38.344352','2026-04-29 15:07:14.398691',12,300,'2026-04-28 22:36:23.425592',0x01,NULL,0x00,0x00,'상훈',3,0,NULL,NULL,NULL,NULL,NULL),
+(5,'2026-04-29 13:05:50.696527','2026-04-29 13:05:50.696527',27,0,NULL,0x00,NULL,0x01,0x00,'뚜잇이',6,0,NULL,NULL,NULL,NULL,NULL),
+(6,'2026-04-29 14:05:04.740903','2026-05-20 14:43:44.726368',11,10,NULL,0x00,NULL,0x01,0x00,'찹쌀떡',7,1,'2026-05-20','2026-05-20 14:43:44.712729','16:44:00','2026-05-20',NULL),
+(7,'2026-04-29 14:18:38.759964','2026-05-20 13:07:52.568422',10,15,NULL,0x00,NULL,0x01,0x00,'오둥이',8,1,'2026-05-20','2026-05-20 12:51:48.590373','21:30:00','2026-05-20',NULL),
+(8,'2026-04-29 14:42:57.564799','2026-05-20 16:24:41.679624',5,0,NULL,0x00,NULL,0x01,0x00,'라봉봉',9,1,'2026-05-20','2026-05-20 16:24:41.669916','19:22:00','2026-05-20',NULL),
+(9,'2026-04-29 15:07:14.394632','2026-04-30 14:58:30.154768',18,300,'2026-04-29 16:05:57.084029',0x01,NULL,0x00,0x00,'상훙2',3,0,NULL,NULL,NULL,NULL,NULL),
+(10,'2026-04-29 16:04:05.818223','2026-05-20 03:22:57.627952',4,6,NULL,0x00,NULL,0x01,0x00,'오둥이',10,1,'2026-05-20','2026-05-20 03:22:57.624548',NULL,NULL,NULL),
+(11,'2026-04-29 16:28:17.835735','2026-05-16 15:25:05.850673',4,19,NULL,0x00,NULL,0x01,0x00,'몽둥이',11,1,'2026-05-16','2026-05-16 15:25:05.847864',NULL,NULL,NULL),
+(12,'2026-04-29 17:23:50.847700','2026-04-29 17:23:50.847700',28,0,NULL,0x00,NULL,0x01,0x00,'한라봉 씨앗',12,0,NULL,NULL,NULL,NULL,NULL),
+(13,'2026-04-30 08:46:15.529226','2026-04-30 09:04:36.001622',7,16,NULL,0x00,NULL,0x01,0x00,'말랑이',13,0,NULL,NULL,NULL,NULL,NULL),
+(14,'2026-04-30 10:44:51.513142','2026-05-14 12:49:06.382718',16,3,NULL,0x00,NULL,0x01,0x00,'말랑이잉',14,1,'2026-05-14','2026-05-14 12:49:06.379855',NULL,NULL,NULL),
+(15,'2026-04-30 11:48:43.285174','2026-05-16 16:06:35.298375',6,125,'2026-05-16 16:06:15.180861',0x00,NULL,0x00,0x00,'쫀득이',15,2,'2026-05-16','2026-05-16 15:42:52.772830',NULL,NULL,NULL),
+(16,'2026-04-30 14:03:14.802670','2026-05-20 13:49:12.652000',16,14,NULL,0x00,NULL,0x01,0x00,'포비',16,0,NULL,NULL,'21:48:00','2026-05-20',NULL),
+(17,'2026-04-30 14:58:30.148867','2026-05-13 15:11:27.708404',6,125,'2026-05-13 15:11:20.664193',0x00,NULL,0x00,0x00,'상훈3',3,2,'2026-05-13','2026-05-13 15:02:19.740775',NULL,NULL,NULL),
+(18,'2026-05-01 18:40:42.820812','2026-05-05 13:20:20.727471',10,5,NULL,0x00,NULL,0x01,0x00,'한라봉 씨앗',17,0,NULL,NULL,NULL,NULL,NULL),
+(19,'2026-05-04 19:32:14.937781','2026-05-04 19:32:31.196815',6,30,NULL,0x00,NULL,0x01,0x00,'말랑이',18,0,NULL,NULL,NULL,NULL,NULL),
+(20,'2026-05-11 13:30:25.627419','2026-05-11 13:30:48.539753',16,0,NULL,0x00,NULL,0x01,0x01,'원스토어',19,0,NULL,NULL,NULL,NULL,NULL),
+(21,'2026-05-11 13:37:01.189049','2026-05-11 21:46:10.195355',7,10,NULL,0x00,NULL,0x01,0x00,'준멍이',20,3,'2026-05-11','2026-05-11 21:46:10.192438',NULL,NULL,NULL),
+(22,'2026-05-11 14:21:27.075238','2026-05-12 15:39:42.066249',7,4,NULL,0x00,NULL,0x01,0x00,'모찌',21,1,'2026-05-12','2026-05-12 15:39:42.059640',NULL,NULL,NULL),
+(23,'2026-05-11 14:22:54.015082','2026-05-16 18:02:09.267667',17,19,NULL,0x00,NULL,0x01,0x00,'내가간다아들',23,1,'2026-05-16','2026-05-16 18:02:09.264669',NULL,NULL,NULL),
+(24,'2026-05-11 14:23:29.049052','2026-05-11 14:42:07.352102',10,22,NULL,0x00,NULL,0x01,0x00,'홍기',22,1,'2026-05-11','2026-05-11 14:23:42.104968',NULL,NULL,NULL),
+(25,'2026-05-11 14:30:24.055414','2026-05-12 08:59:22.186687',7,14,NULL,0x00,NULL,0x01,0x00,'코끼리 알',24,1,'2026-05-12','2026-05-12 08:59:17.646906',NULL,NULL,NULL),
+(26,'2026-05-11 14:38:57.980765','2026-05-12 22:12:41.061891',8,14,NULL,0x00,NULL,0x01,0x00,'이래롬',25,1,'2026-05-12','2026-05-12 22:12:41.056709',NULL,NULL,NULL),
+(27,'2026-05-11 14:41:10.733789','2026-05-13 11:53:08.455944',10,69,NULL,0x00,NULL,0x01,0x00,'정예성',28,1,'2026-05-12','2026-05-12 12:16:49.559969',NULL,NULL,NULL),
+(28,'2026-05-11 14:45:55.950054','2026-05-11 17:44:06.563560',18,299,NULL,0x00,NULL,0x01,0x01,'찬이',29,2,'2026-05-11','2026-05-11 17:31:23.313649',NULL,NULL,NULL),
+(29,'2026-05-11 15:23:58.396990','2026-05-13 00:23:36.200216',10,5,NULL,0x00,NULL,0x01,0x00,'말랑이',30,1,'2026-05-13','2026-05-13 00:23:36.194368',NULL,NULL,NULL),
+(30,'2026-05-11 15:29:47.284767','2026-05-17 21:13:06.238060',4,3,NULL,0x00,NULL,0x01,0x00,'래로',31,1,'2026-05-17','2026-05-17 21:13:06.235510',NULL,NULL,NULL),
+(31,'2026-05-11 15:40:10.889627','2026-05-12 10:55:42.105293',4,0,NULL,0x00,NULL,0x01,0x00,'둥이',32,1,'2026-05-12','2026-05-12 10:55:42.102055',NULL,NULL,NULL),
+(32,'2026-05-11 16:17:28.586714','2026-05-11 16:17:37.767595',7,0,NULL,0x00,NULL,0x01,0x01,'코끼리 알',33,1,'2026-05-11','2026-05-11 16:17:37.763306',NULL,NULL,NULL),
+(33,'2026-05-11 16:20:21.870004','2026-05-15 09:42:11.658614',4,0,NULL,0x00,NULL,0x01,0x00,'귀요밍',34,1,'2026-05-15','2026-05-15 09:42:11.655846',NULL,NULL,NULL),
+(34,'2026-05-11 17:20:42.128297','2026-05-11 17:20:42.128297',28,0,NULL,0x00,NULL,0x01,0x00,'한라봉 씨앗',35,0,NULL,NULL,NULL,NULL,NULL),
+(35,'2026-05-11 18:02:33.767765','2026-05-11 18:07:52.712984',18,300,'2026-05-11 18:07:40.700725',0x00,NULL,0x00,0x00,'못생긴찬이',36,1,'2026-05-11','2026-05-11 18:02:55.443353',NULL,NULL,NULL),
+(36,'2026-05-11 18:07:52.709513','2026-05-15 17:58:50.165186',10,9,NULL,0x00,NULL,0x01,0x00,'꺼져',36,1,'2026-05-15','2026-05-15 17:58:46.485199',NULL,NULL,NULL),
+(37,'2026-05-11 20:23:13.205099','2026-05-20 12:41:44.512312',10,13,NULL,0x00,NULL,0x01,0x00,'벤치',38,2,'2026-05-11','2026-05-11 23:06:50.323011','19:49:00','2026-05-20',NULL),
+(38,'2026-05-11 21:43:16.842914','2026-05-11 21:43:16.842914',27,0,NULL,0x00,NULL,0x01,0x00,'코끼리 알',39,0,NULL,NULL,NULL,NULL,NULL),
+(39,'2026-05-12 00:31:01.453148','2026-05-12 00:31:01.453148',28,0,NULL,0x00,NULL,0x01,0x00,'한라봉 씨앗',40,0,NULL,NULL,NULL,NULL,NULL),
+(40,'2026-05-12 09:09:00.957691','2026-05-12 09:09:13.569173',10,0,NULL,0x00,NULL,0x01,0x00,'전차정',41,1,'2026-05-12','2026-05-12 09:09:13.566298',NULL,NULL,NULL),
+(41,'2026-05-12 10:11:31.271304','2026-05-14 00:03:41.964448',10,19,NULL,0x00,NULL,0x01,0x00,'정현',42,1,'2026-05-14','2026-05-14 00:03:41.959552',NULL,NULL,NULL),
+(42,'2026-05-12 10:37:34.284115','2026-05-12 10:38:02.170896',4,0,NULL,0x00,NULL,0x01,0x00,'추동순',43,1,'2026-05-12','2026-05-12 10:38:02.167921',NULL,NULL,NULL),
+(43,'2026-05-12 10:41:15.261701','2026-05-12 10:41:31.337317',4,0,NULL,0x00,NULL,0x01,0x00,'달이',44,1,'2026-05-12','2026-05-12 10:41:31.333146',NULL,NULL,NULL),
+(44,'2026-05-12 10:49:23.795263','2026-05-12 10:50:14.380837',4,0,NULL,0x00,NULL,0x01,0x00,'창쫀쿠',45,1,'2026-05-12','2026-05-12 10:50:14.377698',NULL,NULL,NULL),
+(45,'2026-05-12 13:03:40.241779','2026-05-16 13:20:41.800424',4,18,NULL,0x00,NULL,0x01,0x00,'돌돌이',46,1,'2026-05-16','2026-05-16 13:20:41.797640',NULL,NULL,NULL),
+(46,'2026-05-12 13:42:20.799671','2026-05-12 13:42:49.587738',4,0,NULL,0x00,NULL,0x01,0x00,'밤이',47,1,'2026-05-12','2026-05-12 13:42:49.584336',NULL,NULL,NULL),
+(47,'2026-05-12 14:19:58.349610','2026-05-14 18:35:39.763383',4,6,NULL,0x00,NULL,0x01,0x00,'말랑콩떡',48,1,'2026-05-14','2026-05-14 18:35:39.760559',NULL,NULL,NULL),
+(48,'2026-05-12 14:45:12.286343','2026-05-13 17:49:13.467323',7,0,NULL,0x00,NULL,0x01,0x00,'황예찬',49,1,'2026-05-13','2026-05-13 17:49:13.463211',NULL,NULL,NULL),
+(49,'2026-05-12 16:17:29.683780','2026-05-15 16:00:20.480850',16,16,NULL,0x00,NULL,0x01,0x00,'호빵',50,1,'2026-05-15','2026-05-15 16:00:20.477859',NULL,NULL,NULL),
+(50,'2026-05-12 16:41:24.591699','2026-05-12 16:41:24.591699',30,0,NULL,0x00,NULL,0x01,0x00,'뚜잇이',51,0,NULL,NULL,NULL,NULL,NULL),
+(51,'2026-05-12 17:55:14.236835','2026-05-15 14:05:56.813979',10,5,NULL,0x00,NULL,0x01,0x00,'99대장강지석',52,1,'2026-05-15','2026-05-15 14:05:56.811007',NULL,NULL,NULL),
+(52,'2026-05-13 01:22:30.215707','2026-05-13 01:23:58.008400',4,9,NULL,0x00,NULL,0x01,0x00,'말자하는ㄹㅇ꿀챔',53,1,'2026-05-13','2026-05-13 01:23:26.107265',NULL,NULL,NULL),
+(53,'2026-05-13 15:11:27.704524','2026-05-19 15:33:00.673460',18,125,'2026-05-19 15:31:38.000000',0x00,NULL,0x00,0x00,'상훈4',3,1,'2026-05-19','2026-05-19 09:58:35.285346',NULL,NULL,NULL),
+(54,'2026-05-14 00:34:26.959814','2026-05-14 00:34:26.959814',26,0,NULL,0x00,NULL,0x01,0x00,'오리 알',54,0,NULL,NULL,NULL,NULL,NULL),
+(55,'2026-05-14 18:45:50.128892','2026-05-14 22:18:53.902000',7,0,NULL,0x00,NULL,0x01,0x00,'냥냥먀',56,1,'2026-05-14','2026-05-14 22:18:53.899176',NULL,NULL,NULL),
+(56,'2026-05-15 10:07:30.973290','2026-05-15 10:07:30.973290',28,0,NULL,0x00,NULL,0x01,0x00,'한라봉 씨앗',57,0,NULL,NULL,NULL,NULL,NULL),
+(57,'2026-05-16 16:06:35.296134','2026-05-17 16:24:41.485314',18,125,'2026-05-17 16:24:25.701933',0x00,NULL,0x00,0x00,'쫀득이 2세',15,1,'2026-05-17','2026-05-17 16:19:09.554570',NULL,NULL,NULL),
+(58,'2026-05-17 16:24:41.481514','2026-05-17 16:35:29.314438',6,125,'2026-05-17 16:35:26.392534',0x00,NULL,0x00,0x00,'쫀득이 3세',15,1,'2026-05-17','2026-05-17 16:31:30.832360',NULL,NULL,NULL),
+(59,'2026-05-17 16:35:29.310339','2026-05-17 16:43:57.233864',18,125,'2026-05-17 16:43:53.496612',0x00,NULL,0x00,0x00,'쫀득이 4세',15,1,'2026-05-17','2026-05-17 16:40:48.689038',NULL,NULL,NULL),
+(60,'2026-05-17 16:43:57.230304','2026-05-17 16:50:15.301311',6,125,'2026-05-17 16:50:00.393089',0x00,NULL,0x00,0x00,'쫀득이 5세',15,0,'2026-05-17',NULL,NULL,NULL,NULL),
+(61,'2026-05-17 16:50:15.298228','2026-05-17 17:06:15.599273',9,125,'2026-05-17 17:06:13.822670',0x00,NULL,0x00,0x00,'쫀득이 6세',15,0,NULL,NULL,NULL,NULL,NULL),
+(62,'2026-05-17 16:58:16.271425','2026-05-17 17:06:14.233498',18,125,'2026-05-17 17:06:12.436952',0x00,NULL,0x00,0x00,'말라이 1세',58,1,'2026-05-17','2026-05-17 16:59:22.496158',NULL,NULL,NULL),
+(63,'2026-05-17 17:06:14.231426','2026-05-17 17:13:46.331998',6,125,'2026-05-17 17:13:38.183659',0x00,NULL,0x00,0x00,'말라이2세',58,1,'2026-05-17','2026-05-17 17:09:03.220975',NULL,NULL,NULL),
+(64,'2026-05-17 17:06:15.598174','2026-05-20 15:45:21.561757',7,23,NULL,0x00,NULL,0x01,0x00,'쫀득이 7세',15,1,'2026-05-20','2026-05-20 15:45:21.550207','20:23:00','2026-05-20',NULL),
+(65,'2026-05-17 17:13:46.327656','2026-05-17 17:25:22.434206',6,125,'2026-05-17 17:24:56.238039',0x01,NULL,0x00,0x00,'말라이 3세',58,0,NULL,NULL,NULL,NULL,NULL),
+(66,'2026-05-17 17:25:22.432215','2026-05-17 19:35:27.871548',12,125,'2026-05-17 19:35:20.281540',0x00,NULL,0x00,0x00,'말랑이4세',58,1,'2026-05-17','2026-05-17 19:30:16.376072',NULL,NULL,NULL),
+(67,'2026-05-17 19:35:27.869417','2026-05-17 19:41:17.249161',9,125,'2026-05-17 19:41:15.560840',0x00,NULL,0x00,0x00,'말랑이5세',58,0,NULL,NULL,NULL,NULL,NULL),
+(68,'2026-05-17 19:41:17.245456','2026-05-17 19:41:32.266876',4,0,NULL,0x00,NULL,0x01,0x00,'말ㄹㅇ이6세',58,0,NULL,NULL,NULL,NULL,NULL),
+(69,'2026-05-18 08:07:17.830908','2026-05-18 08:08:59.733823',4,11,NULL,0x00,NULL,0x01,0x00,'スライム',59,1,'2026-05-18','2026-05-18 08:08:59.731510',NULL,NULL,NULL),
+(70,'2026-05-19 15:33:00.669378','2026-05-19 15:33:49.397040',6,125,'2026-05-19 15:32:42.000000',0x00,NULL,0x00,0x00,'푸딩이',3,0,NULL,NULL,NULL,NULL,NULL),
+(71,'2026-05-19 15:33:49.395174','2026-05-19 17:26:16.000000',5,5,NULL,0x00,NULL,0x00,0x01,'콩이',3,1,'2026-05-19','2026-05-19 16:48:10.112687',NULL,NULL,NULL),
+(72,'2026-05-19 17:04:21.620190','2026-05-20 12:11:37.458768',16,0,NULL,0x00,NULL,0x01,0x00,'오둥이',60,0,NULL,NULL,'13:57:00','2026-05-20',NULL),
+(73,'2026-05-19 17:26:16.000000','2026-05-19 17:33:30.233814',6,125,'2026-05-19 17:32:26.000000',0x00,NULL,0x00,0x00,'말랑이',3,1,'2026-05-19','2026-05-19 17:32:50.195797',NULL,NULL,NULL),
+(74,'2026-05-19 17:33:30.230764','2026-05-19 17:43:27.000000',10,32,NULL,0x00,NULL,0x00,0x01,'콩이',3,0,NULL,NULL,NULL,NULL,NULL),
+(75,'2026-05-19 17:40:44.405018','2026-05-19 17:40:44.405018',27,0,NULL,0x00,NULL,0x01,0x00,'코끼리 알',61,0,NULL,NULL,NULL,NULL,NULL),
+(76,'2026-05-19 17:43:27.000000','2026-05-20 12:09:46.538115',12,125,'2026-05-20 12:08:35.000000',0x00,NULL,0x00,0x00,'콩이',3,1,'2026-05-20','2026-05-20 12:03:54.278968','14:47:00','2026-05-20',NULL),
+(77,'2026-05-20 12:09:46.530781','2026-05-20 12:15:04.659352',18,125,'2026-05-20 12:13:54.000000',0x00,NULL,0x00,0x00,'콩이',3,1,'2026-05-20','2026-05-20 12:11:25.555091','20:19:00','2026-05-20',NULL),
+(78,'2026-05-20 12:15:04.655747','2026-05-20 12:16:58.000000',4,11,NULL,0x00,NULL,0x00,0x01,'쫀득이',3,0,'2026-05-20',NULL,'14:04:00','2026-05-20',NULL),
+(79,'2026-05-20 12:16:58.000000','2026-05-20 14:20:54.037068',10,5,NULL,0x00,NULL,0x01,0x00,'미치비',3,0,'2026-05-20',NULL,'19:58:00','2026-05-20',NULL),
+(80,'2026-05-20 13:04:07.092771','2026-05-20 13:04:07.092771',26,0,NULL,0x00,NULL,0x01,0x00,'오리 알',62,0,NULL,NULL,NULL,NULL,NULL),
+(81,'2026-05-20 13:04:57.981976','2026-05-20 13:07:56.930863',4,5,NULL,0x00,NULL,0x01,0x00,'밤이',63,0,NULL,NULL,'15:39:00','2026-05-20',NULL);
+/*!40000 ALTER TABLE `user_character` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `user_character_history`
+--
+
+DROP TABLE IF EXISTS `user_character_history`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_character_history` (
+  `user_character_history_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `actor_id` bigint(20) DEFAULT NULL,
+  `actor_type` enum('ADMIN','SYSTEM','USER') NOT NULL,
+  `after_character_id` bigint(20) DEFAULT NULL,
+  `after_exp` int(11) DEFAULT NULL,
+  `after_name` varchar(50) DEFAULT NULL,
+  `before_character_id` bigint(20) DEFAULT NULL,
+  `before_exp` int(11) DEFAULT NULL,
+  `before_name` varchar(50) DEFAULT NULL,
+  `event_type` enum('CREATED','EVOLVED','FAREWELL','HATCHED','NAME_UPDATED') NOT NULL,
+  `reason` varchar(100) DEFAULT NULL,
+  `request_id` varchar(100) DEFAULT NULL,
+  `user_character_id` bigint(20) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`user_character_history_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=253 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_character_history`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `user_character_history` WRITE;
+/*!40000 ALTER TABLE `user_character_history` DISABLE KEYS */;
+INSERT INTO `user_character_history` VALUES
+(1,'2026-04-29 10:48:39.902170','2026-04-29 10:48:39.902170',1,'USER',27,0,'코끼리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,1,1),
+(2,'2026-04-29 10:49:14.570985','2026-04-29 10:49:14.570985',1,'USER',7,0,'코끼리 알',27,0,'코끼리 알','HATCHED','egg hatched',NULL,1,1),
+(3,'2026-04-29 10:49:18.283221','2026-04-29 10:49:18.283221',1,'USER',7,0,'포비',7,0,'코끼리 알','NAME_UPDATED','name updated',NULL,1,1),
+(4,'2026-04-29 10:54:21.389622','2026-04-29 10:54:21.389622',4,'USER',28,0,'한라봉 씨앗',NULL,NULL,NULL,'CREATED','egg received',NULL,2,4),
+(5,'2026-04-29 10:54:27.961799','2026-04-29 10:54:27.961799',4,'USER',10,0,'한라봉 씨앗',28,0,'한라봉 씨앗','HATCHED','egg hatched',NULL,2,4),
+(6,'2026-04-29 10:54:33.515854','2026-04-29 10:54:33.515854',4,'USER',10,0,'몽둥이',10,0,'한라봉 씨앗','NAME_UPDATED','name updated',NULL,2,4),
+(7,'2026-04-29 11:39:38.345299','2026-04-29 11:39:38.345299',3,'USER',28,0,'한라봉 씨앗',NULL,NULL,NULL,'CREATED','egg received',NULL,4,3),
+(8,'2026-04-29 11:39:45.242244','2026-04-29 11:39:45.242244',3,'USER',10,0,'한라봉 씨앗',28,0,'한라봉 씨앗','HATCHED','egg hatched',NULL,4,3),
+(9,'2026-04-29 11:39:49.447307','2026-04-29 11:39:49.447307',3,'USER',10,0,'상훈',10,0,'한라봉 씨앗','NAME_UPDATED','name updated',NULL,4,3),
+(10,'2026-04-29 14:05:04.741788','2026-04-29 14:05:04.741788',7,'USER',28,0,'한라봉 씨앗',NULL,NULL,NULL,'CREATED','egg received',NULL,6,7),
+(11,'2026-04-29 14:05:07.647777','2026-04-29 14:05:07.647777',7,'USER',10,0,'한라봉 씨앗',28,0,'한라봉 씨앗','HATCHED','egg hatched',NULL,6,7),
+(12,'2026-04-29 14:05:15.200191','2026-04-29 14:05:15.200191',7,'USER',10,0,'찹쌀떡',10,0,'한라봉 씨앗','NAME_UPDATED','name updated',NULL,6,7),
+(13,'2026-04-29 14:07:15.586870','2026-04-29 14:07:15.586870',3,'USER',11,0,'상훈',10,100,'상훈','EVOLVED','evolved',NULL,4,3),
+(14,'2026-04-29 14:12:38.242191','2026-04-29 14:12:38.242191',3,'USER',12,0,'상훈',11,200,'상훈','EVOLVED','evolved',NULL,4,3),
+(15,'2026-04-29 14:18:38.760668','2026-04-29 14:18:38.760668',8,'USER',28,0,'한라봉 씨앗',NULL,NULL,NULL,'CREATED','egg received',NULL,7,8),
+(16,'2026-04-29 14:31:11.090349','2026-04-29 14:31:11.090349',8,'USER',10,0,'한라봉 씨앗',28,0,'한라봉 씨앗','HATCHED','egg hatched',NULL,7,8),
+(17,'2026-04-29 14:31:14.720070','2026-04-29 14:31:14.720070',8,'USER',10,0,'오둥이',10,0,'한라봉 씨앗','NAME_UPDATED','name updated',NULL,7,8),
+(18,'2026-04-29 14:42:57.565546','2026-04-29 14:42:57.565546',9,'USER',30,0,'너구리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,8,9),
+(19,'2026-04-29 14:43:01.749406','2026-04-29 14:43:01.749406',9,'USER',16,0,'너구리 알',30,0,'너구리 알','HATCHED','egg hatched',NULL,8,9),
+(20,'2026-04-29 14:43:09.991927','2026-04-29 14:43:09.991927',9,'USER',16,0,'라봉봉',16,0,'너구리 알','NAME_UPDATED','name updated',NULL,8,9),
+(21,'2026-04-29 15:07:14.395368','2026-04-29 15:07:14.395368',3,'USER',30,0,'상훈',12,300,'상훈','FAREWELL','independence approved',NULL,9,3),
+(22,'2026-04-29 15:07:19.682448','2026-04-29 15:07:19.682448',3,'USER',16,0,'상훈',30,0,'상훈','HATCHED','egg hatched',NULL,9,3),
+(23,'2026-04-29 15:07:26.113810','2026-04-29 15:07:26.113810',3,'USER',16,0,'상훙2',16,0,'상훈','NAME_UPDATED','name updated',NULL,9,3),
+(24,'2026-04-29 15:51:11.810376','2026-04-29 15:51:11.810376',3,'USER',17,0,'상훙2',16,100,'상훙2','EVOLVED','evolved',NULL,9,3),
+(25,'2026-04-29 15:51:31.961284','2026-04-29 15:51:31.961284',3,'USER',18,0,'상훙2',17,200,'상훙2','EVOLVED','evolved',NULL,9,3),
+(26,'2026-04-29 16:04:05.819757','2026-04-29 16:04:05.819757',10,'USER',26,0,'오리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,10,10),
+(27,'2026-04-29 16:04:11.153639','2026-04-29 16:04:11.153639',10,'USER',4,0,'오리 알',26,0,'오리 알','HATCHED','egg hatched',NULL,10,10),
+(28,'2026-04-29 16:04:14.493286','2026-04-29 16:04:14.493286',10,'USER',4,0,'오둥이',4,0,'오리 알','NAME_UPDATED','name updated',NULL,10,10),
+(29,'2026-04-29 16:28:17.837142','2026-04-29 16:28:17.837142',11,'USER',26,0,'오리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,11,11),
+(30,'2026-04-29 16:28:21.536370','2026-04-29 16:28:21.536370',11,'USER',4,0,'오리 알',26,0,'오리 알','HATCHED','egg hatched',NULL,11,11),
+(31,'2026-04-29 16:28:26.430424','2026-04-29 16:28:26.430424',11,'USER',4,0,'몽둥이',4,0,'오리 알','NAME_UPDATED','name updated',NULL,11,11),
+(32,'2026-04-29 17:23:50.849265','2026-04-29 17:23:50.849265',12,'USER',28,0,'한라봉 씨앗',NULL,NULL,NULL,'CREATED','egg received',NULL,12,12),
+(33,'2026-04-30 08:46:15.534784','2026-04-30 08:46:15.534784',13,'USER',27,0,'코끼리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,13,13),
+(34,'2026-04-30 08:46:20.224585','2026-04-30 08:46:20.224585',13,'USER',7,0,'코끼리 알',27,0,'코끼리 알','HATCHED','egg hatched',NULL,13,13),
+(35,'2026-04-30 08:46:36.388600','2026-04-30 08:46:36.388600',13,'USER',7,0,'말랑이',7,0,'코끼리 알','NAME_UPDATED','name updated',NULL,13,13),
+(36,'2026-04-30 10:44:51.514712','2026-04-30 10:44:51.514712',14,'USER',30,0,'너구리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,14,14),
+(37,'2026-04-30 10:44:56.956398','2026-04-30 10:44:56.956398',14,'USER',16,0,'너구리 알',30,0,'너구리 알','HATCHED','egg hatched',NULL,14,14),
+(38,'2026-04-30 10:45:03.945605','2026-04-30 10:45:03.945605',14,'USER',16,0,'말랑이잉',16,0,'너구리 알','NAME_UPDATED','name updated',NULL,14,14),
+(39,'2026-04-30 11:48:43.286868','2026-04-30 11:48:43.286868',15,'USER',26,0,'오리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,15,15),
+(40,'2026-04-30 11:48:48.846253','2026-04-30 11:48:48.846253',15,'USER',4,0,'오리 알',26,0,'오리 알','HATCHED','egg hatched',NULL,15,15),
+(41,'2026-04-30 11:48:56.069156','2026-04-30 11:48:56.069156',15,'USER',4,0,'쫀득이',4,0,'오리 알','NAME_UPDATED','name updated',NULL,15,15),
+(42,'2026-04-30 14:03:14.806381','2026-04-30 14:03:14.806381',16,'USER',30,0,'너구리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,16,16),
+(43,'2026-04-30 14:03:48.745963','2026-04-30 14:03:48.745963',16,'USER',16,0,'너구리 알',30,0,'너구리 알','HATCHED','egg hatched',NULL,16,16),
+(44,'2026-04-30 14:03:51.754412','2026-04-30 14:03:51.754412',16,'USER',16,0,'포비',16,0,'너구리 알','NAME_UPDATED','name updated',NULL,16,16),
+(45,'2026-04-30 14:58:30.150295','2026-04-30 14:58:30.150295',3,'USER',30,0,'상훙2',18,300,'상훙2','FAREWELL','independence approved',NULL,17,3),
+(46,'2026-04-30 14:58:33.536343','2026-04-30 14:58:33.536343',3,'USER',16,0,'상훙2',30,0,'상훙2','HATCHED','egg hatched',NULL,17,3),
+(47,'2026-04-30 14:58:37.855695','2026-04-30 14:58:37.855695',3,'USER',16,0,'상훈3',16,0,'상훙2','NAME_UPDATED','name updated',NULL,17,3),
+(48,'2026-04-30 17:47:51.810856','2026-04-30 17:47:51.810856',3,'USER',17,0,'상훈3',16,100,'상훈3','EVOLVED','evolved',NULL,17,3),
+(49,'2026-05-01 18:40:42.823701','2026-05-01 18:40:42.823701',17,'USER',28,0,'한라봉 씨앗',NULL,NULL,NULL,'CREATED','egg received',NULL,18,17),
+(50,'2026-05-01 18:42:51.170733','2026-05-01 18:42:51.170733',17,'USER',10,0,'한라봉 씨앗',28,0,'한라봉 씨앗','HATCHED','egg hatched',NULL,18,17),
+(51,'2026-05-04 19:32:14.940930','2026-05-04 19:32:14.940930',18,'USER',26,0,'오리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,19,18),
+(52,'2026-05-04 19:32:22.911441','2026-05-04 19:32:22.911441',18,'USER',4,0,'오리 알',26,0,'오리 알','HATCHED','egg hatched',NULL,19,18),
+(53,'2026-05-04 19:32:31.195321','2026-05-04 19:32:31.195321',18,'USER',4,0,'말랑이',4,0,'오리 알','NAME_UPDATED','name updated',NULL,19,18),
+(54,'2026-05-11 13:30:43.586826','2026-05-11 13:30:43.586826',19,'USER',16,0,'뚜잇이',30,0,'뚜잇이','HATCHED','egg hatched',NULL,20,19),
+(55,'2026-05-11 13:30:48.538178','2026-05-11 13:30:48.538178',19,'USER',16,0,'원스토어',16,0,'뚜잇이','NAME_UPDATED','name updated',NULL,20,19),
+(56,'2026-05-11 13:37:01.190146','2026-05-11 13:37:01.190146',20,'USER',27,0,'코끼리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,21,20),
+(57,'2026-05-11 13:37:05.898274','2026-05-11 13:37:05.898274',20,'USER',7,0,'코끼리 알',27,0,'코끼리 알','HATCHED','egg hatched',NULL,21,20),
+(58,'2026-05-11 13:37:11.815034','2026-05-11 13:37:11.815034',20,'USER',7,0,'준멍이',7,0,'코끼리 알','NAME_UPDATED','name updated',NULL,21,20),
+(59,'2026-05-11 14:21:27.078280','2026-05-11 14:21:27.078280',21,'USER',27,0,'코끼리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,22,21),
+(60,'2026-05-11 14:21:31.980864','2026-05-11 14:21:31.980864',21,'USER',7,0,'코끼리 알',27,0,'코끼리 알','HATCHED','egg hatched',NULL,22,21),
+(61,'2026-05-11 14:22:54.016411','2026-05-11 14:22:54.016411',23,'USER',30,0,'너구리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,23,23),
+(62,'2026-05-11 14:22:58.058230','2026-05-11 14:22:58.058230',23,'USER',16,0,'너구리 알',30,0,'너구리 알','HATCHED','egg hatched',NULL,23,23),
+(63,'2026-05-11 14:23:24.252151','2026-05-11 14:23:24.252151',23,'USER',16,0,'내가간다아들',16,0,'너구리 알','NAME_UPDATED','name updated',NULL,23,23),
+(64,'2026-05-11 14:23:29.050324','2026-05-11 14:23:29.050324',22,'USER',28,0,'한라봉 씨앗',NULL,NULL,NULL,'CREATED','egg received',NULL,24,22),
+(65,'2026-05-11 14:23:34.073176','2026-05-11 14:23:34.073176',22,'USER',10,0,'한라봉 씨앗',28,0,'한라봉 씨앗','HATCHED','egg hatched',NULL,24,22),
+(66,'2026-05-11 14:23:39.808329','2026-05-11 14:23:39.808329',22,'USER',10,0,'홍기',10,0,'한라봉 씨앗','NAME_UPDATED','name updated',NULL,24,22),
+(67,'2026-05-11 14:27:01.959614','2026-05-11 14:27:01.959614',21,'USER',7,0,'모찌',7,0,'코끼리 알','NAME_UPDATED','name updated',NULL,22,21),
+(68,'2026-05-11 14:30:24.056722','2026-05-11 14:30:24.056722',24,'USER',27,0,'코끼리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,25,24),
+(69,'2026-05-11 14:30:28.426934','2026-05-11 14:30:28.426934',24,'USER',7,0,'코끼리 알',27,0,'코끼리 알','HATCHED','egg hatched',NULL,25,24),
+(70,'2026-05-11 14:38:57.982393','2026-05-11 14:38:57.982393',25,'USER',27,0,'코끼리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,26,25),
+(71,'2026-05-11 14:39:02.581325','2026-05-11 14:39:02.581325',25,'USER',7,0,'코끼리 알',27,0,'코끼리 알','HATCHED','egg hatched',NULL,26,25),
+(72,'2026-05-11 14:39:09.897595','2026-05-11 14:39:09.897595',25,'USER',7,0,'이래롬',7,0,'코끼리 알','NAME_UPDATED','name updated',NULL,26,25),
+(73,'2026-05-11 14:41:10.735050','2026-05-11 14:41:10.735050',28,'USER',28,0,'한라봉 씨앗',NULL,NULL,NULL,'CREATED','egg received',NULL,27,28),
+(74,'2026-05-11 14:41:22.635156','2026-05-11 14:41:22.635156',28,'USER',10,0,'한라봉 씨앗',28,0,'한라봉 씨앗','HATCHED','egg hatched',NULL,27,28),
+(75,'2026-05-11 14:41:27.529589','2026-05-11 14:41:27.529589',28,'USER',10,0,'정예성',10,0,'한라봉 씨앗','NAME_UPDATED','name updated',NULL,27,28),
+(76,'2026-05-11 14:45:55.951101','2026-05-11 14:45:55.951101',29,'USER',28,0,'한라봉 씨앗',NULL,NULL,NULL,'CREATED','egg received',NULL,28,29),
+(77,'2026-05-11 14:46:01.039517','2026-05-11 14:46:01.039517',29,'USER',10,0,'한라봉 씨앗',28,0,'한라봉 씨앗','HATCHED','egg hatched',NULL,28,29),
+(78,'2026-05-11 14:46:07.625790','2026-05-11 14:46:07.625790',29,'USER',10,0,'찬이',10,0,'한라봉 씨앗','NAME_UPDATED','name updated',NULL,28,29),
+(79,'2026-05-11 15:20:01.022611','2026-05-11 15:20:01.022611',25,'USER',8,0,'이래롬',7,100,'이래롬','EVOLVED','evolved',NULL,26,25),
+(80,'2026-05-11 15:24:16.580880','2026-05-11 15:24:16.580880',30,'USER',7,0,'뚜잇이',27,0,'뚜잇이','HATCHED','egg hatched',NULL,29,30),
+(81,'2026-05-11 15:24:21.335623','2026-05-11 15:24:21.335623',30,'USER',7,0,'말랑이',7,0,'뚜잇이','NAME_UPDATED','name updated',NULL,29,30),
+(82,'2026-05-11 15:29:47.286035','2026-05-11 15:29:47.286035',31,'USER',26,0,'오리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,30,31),
+(83,'2026-05-11 15:29:52.032672','2026-05-11 15:29:52.032672',31,'USER',4,0,'오리 알',26,0,'오리 알','HATCHED','egg hatched',NULL,30,31),
+(84,'2026-05-11 15:30:26.633351','2026-05-11 15:30:26.633351',31,'USER',4,0,'래로',4,0,'오리 알','NAME_UPDATED','name updated',NULL,30,31),
+(85,'2026-05-11 15:40:10.890645','2026-05-11 15:40:10.890645',32,'USER',26,0,'오리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,31,32),
+(86,'2026-05-11 15:40:15.524148','2026-05-11 15:40:15.524148',32,'USER',4,0,'오리 알',26,0,'오리 알','HATCHED','egg hatched',NULL,31,32),
+(87,'2026-05-11 15:40:30.482423','2026-05-11 15:40:30.482423',32,'USER',4,0,'둥이',4,0,'오리 알','NAME_UPDATED','name updated',NULL,31,32),
+(88,'2026-05-11 16:17:28.587636','2026-05-11 16:17:28.587636',33,'USER',27,0,'코끼리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,32,33),
+(89,'2026-05-11 16:17:32.532067','2026-05-11 16:17:32.532067',33,'USER',7,0,'코끼리 알',27,0,'코끼리 알','HATCHED','egg hatched',NULL,32,33),
+(90,'2026-05-11 16:20:21.870921','2026-05-11 16:20:21.870921',34,'USER',26,0,'오리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,33,34),
+(91,'2026-05-11 16:20:24.302953','2026-05-11 16:20:24.302953',34,'USER',4,0,'오리 알',26,0,'오리 알','HATCHED','egg hatched',NULL,33,34),
+(92,'2026-05-11 16:20:35.822337','2026-05-11 16:20:35.822337',34,'USER',4,0,'귀요밍',4,0,'오리 알','NAME_UPDATED','name updated',NULL,33,34),
+(93,'2026-05-11 17:20:42.129192','2026-05-11 17:20:42.129192',35,'USER',28,0,'한라봉 씨앗',NULL,NULL,NULL,'CREATED','egg received',NULL,34,35),
+(94,'2026-05-11 17:44:06.562446','2026-05-11 17:44:06.562446',29,'USER',17,0,'찬이',16,100,'찬이','EVOLVED','evolved',NULL,28,29),
+(95,'2026-05-11 18:02:33.769115','2026-05-11 18:02:33.769115',36,'USER',26,0,'오리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,35,36),
+(96,'2026-05-11 18:02:42.642853','2026-05-11 18:02:42.642853',36,'USER',4,0,'오리 알',26,0,'오리 알','HATCHED','egg hatched',NULL,35,36),
+(97,'2026-05-11 18:02:53.806355','2026-05-11 18:02:53.806355',36,'USER',4,0,'못생긴찬이',4,0,'오리 알','NAME_UPDATED','name updated',NULL,35,36),
+(98,'2026-05-11 18:05:24.362290','2026-05-11 18:05:24.362290',36,'USER',17,0,'못생긴찬이',16,100,'못생긴찬이','EVOLVED','evolved',NULL,35,36),
+(99,'2026-05-11 18:06:42.479156','2026-05-11 18:06:42.479156',36,'USER',18,0,'못생긴찬이',17,200,'못생긴찬이','EVOLVED','evolved',NULL,35,36),
+(100,'2026-05-11 18:07:52.710372','2026-05-11 18:07:52.710372',36,'USER',28,0,'못생긴찬이',18,300,'못생긴찬이','FAREWELL','independence approved',NULL,36,36),
+(101,'2026-05-11 18:07:59.660093','2026-05-11 18:07:59.660093',36,'USER',10,0,'못생긴찬이',28,0,'못생긴찬이','HATCHED','egg hatched',NULL,36,36),
+(102,'2026-05-11 18:08:08.670041','2026-05-11 18:08:08.670041',36,'USER',10,0,'꺼져',10,0,'못생긴찬이','NAME_UPDATED','name updated',NULL,36,36),
+(103,'2026-05-11 20:23:34.666142','2026-05-11 20:23:34.666142',38,'USER',10,0,'뚜잇이',28,0,'뚜잇이','HATCHED','egg hatched',NULL,37,38),
+(104,'2026-05-11 20:23:44.962593','2026-05-11 20:23:44.962593',38,'USER',10,0,'벤치',10,0,'뚜잇이','NAME_UPDATED','name updated',NULL,37,38),
+(105,'2026-05-11 21:43:16.843857','2026-05-11 21:43:16.843857',39,'USER',27,0,'코끼리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,38,39),
+(106,'2026-05-12 00:31:01.456221','2026-05-12 00:31:01.456221',40,'USER',28,0,'한라봉 씨앗',NULL,NULL,NULL,'CREATED','egg received',NULL,39,40),
+(107,'2026-05-12 09:06:17.924642','2026-05-12 09:06:17.924642',23,'USER',17,0,'내가간다아들',16,100,'내가간다아들','EVOLVED','evolved',NULL,23,23),
+(108,'2026-05-12 09:09:00.958567','2026-05-12 09:09:00.958567',41,'USER',28,0,'한라봉 씨앗',NULL,NULL,NULL,'CREATED','egg received',NULL,40,41),
+(109,'2026-05-12 09:09:05.735213','2026-05-12 09:09:05.735213',41,'USER',10,0,'한라봉 씨앗',28,0,'한라봉 씨앗','HATCHED','egg hatched',NULL,40,41),
+(110,'2026-05-12 09:09:11.241298','2026-05-12 09:09:11.241298',41,'USER',10,0,'전차정',10,0,'한라봉 씨앗','NAME_UPDATED','name updated',NULL,40,41),
+(111,'2026-05-12 10:11:31.272158','2026-05-12 10:11:31.272158',42,'USER',28,0,'한라봉 씨앗',NULL,NULL,NULL,'CREATED','egg received',NULL,41,42),
+(112,'2026-05-12 10:11:37.418468','2026-05-12 10:11:37.418468',42,'USER',10,0,'한라봉 씨앗',28,0,'한라봉 씨앗','HATCHED','egg hatched',NULL,41,42),
+(113,'2026-05-12 10:12:15.213840','2026-05-12 10:12:15.213840',42,'USER',10,0,'정현',10,0,'한라봉 씨앗','NAME_UPDATED','name updated',NULL,41,42),
+(114,'2026-05-12 10:37:34.285369','2026-05-12 10:37:34.285369',43,'USER',26,0,'오리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,42,43),
+(115,'2026-05-12 10:37:39.361146','2026-05-12 10:37:39.361146',43,'USER',4,0,'오리 알',26,0,'오리 알','HATCHED','egg hatched',NULL,42,43),
+(116,'2026-05-12 10:37:59.909528','2026-05-12 10:37:59.909528',43,'USER',4,0,'추동순',4,0,'오리 알','NAME_UPDATED','name updated',NULL,42,43),
+(117,'2026-05-12 10:41:15.262559','2026-05-12 10:41:15.262559',44,'USER',26,0,'오리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,43,44),
+(118,'2026-05-12 10:41:20.873190','2026-05-12 10:41:20.873190',44,'USER',4,0,'오리 알',26,0,'오리 알','HATCHED','egg hatched',NULL,43,44),
+(119,'2026-05-12 10:41:29.038176','2026-05-12 10:41:29.038176',44,'USER',4,0,'달이',4,0,'오리 알','NAME_UPDATED','name updated',NULL,43,44),
+(120,'2026-05-12 10:49:23.796019','2026-05-12 10:49:23.796019',45,'USER',26,0,'오리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,44,45),
+(121,'2026-05-12 10:49:28.751983','2026-05-12 10:49:28.751983',45,'USER',4,0,'오리 알',26,0,'오리 알','HATCHED','egg hatched',NULL,44,45),
+(122,'2026-05-12 10:49:35.555644','2026-05-12 10:49:35.555644',45,'USER',4,0,'창쫀쿠',4,0,'오리 알','NAME_UPDATED','name updated',NULL,44,45),
+(123,'2026-05-12 13:03:40.242546','2026-05-12 13:03:40.242546',46,'USER',26,0,'오리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,45,46),
+(124,'2026-05-12 13:04:23.953898','2026-05-12 13:04:23.953898',46,'USER',4,0,'오리 알',26,0,'오리 알','HATCHED','egg hatched',NULL,45,46),
+(125,'2026-05-12 13:04:35.169962','2026-05-12 13:04:35.169962',46,'USER',4,0,'돌돌이',4,0,'오리 알','NAME_UPDATED','name updated',NULL,45,46),
+(126,'2026-05-12 13:42:44.169287','2026-05-12 13:42:44.169287',47,'USER',4,0,'뚜잇이',26,0,'뚜잇이','HATCHED','egg hatched',NULL,46,47),
+(127,'2026-05-12 13:42:47.778133','2026-05-12 13:42:47.778133',47,'USER',4,0,'밤이',4,0,'뚜잇이','NAME_UPDATED','name updated',NULL,46,47),
+(128,'2026-05-12 14:19:58.356081','2026-05-12 14:19:58.356081',48,'USER',26,0,'오리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,47,48),
+(129,'2026-05-12 14:20:03.703811','2026-05-12 14:20:03.703811',48,'USER',4,0,'오리 알',26,0,'오리 알','HATCHED','egg hatched',NULL,47,48),
+(130,'2026-05-12 14:23:02.371896','2026-05-12 14:23:02.371896',48,'USER',4,0,'말랑콩떡',4,0,'오리 알','NAME_UPDATED','name updated',NULL,47,48),
+(131,'2026-05-12 14:45:12.293300','2026-05-12 14:45:12.293300',49,'USER',27,0,'코끼리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,48,49),
+(132,'2026-05-12 14:45:16.760011','2026-05-12 14:45:16.760011',49,'USER',7,0,'코끼리 알',27,0,'코끼리 알','HATCHED','egg hatched',NULL,48,49),
+(133,'2026-05-12 14:45:46.462465','2026-05-12 14:45:46.462465',49,'USER',7,0,'황예찬',7,0,'코끼리 알','NAME_UPDATED','name updated',NULL,48,49),
+(134,'2026-05-12 16:17:29.684985','2026-05-12 16:17:29.684985',50,'USER',30,0,'너구리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,49,50),
+(135,'2026-05-12 16:17:33.604948','2026-05-12 16:17:33.604948',50,'USER',16,0,'너구리 알',30,0,'너구리 알','HATCHED','egg hatched',NULL,49,50),
+(136,'2026-05-12 16:17:44.455626','2026-05-12 16:17:44.455626',50,'USER',16,0,'호빵',16,0,'너구리 알','NAME_UPDATED','name updated',NULL,49,50),
+(137,'2026-05-12 16:20:25.469325','2026-05-12 16:20:25.469325',7,'USER',11,0,'찹쌀떡',10,100,'찹쌀떡','EVOLVED','evolved',NULL,6,7),
+(138,'2026-05-12 17:55:14.237931','2026-05-12 17:55:14.237931',52,'USER',28,0,'한라봉 씨앗',NULL,NULL,NULL,'CREATED','egg received',NULL,51,52),
+(139,'2026-05-12 17:55:19.495798','2026-05-12 17:55:19.495798',52,'USER',10,0,'한라봉 씨앗',28,0,'한라봉 씨앗','HATCHED','egg hatched',NULL,51,52),
+(140,'2026-05-12 17:56:23.488284','2026-05-12 17:56:23.488284',52,'USER',10,0,'99대장강지석',10,0,'한라봉 씨앗','NAME_UPDATED','name updated',NULL,51,52),
+(141,'2026-05-13 01:22:30.216732','2026-05-13 01:22:30.216732',53,'USER',26,0,'오리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,52,53),
+(142,'2026-05-13 01:22:34.682569','2026-05-13 01:22:34.682569',53,'USER',4,0,'오리 알',26,0,'오리 알','HATCHED','egg hatched',NULL,52,53),
+(143,'2026-05-13 01:23:22.668958','2026-05-13 01:23:22.668958',53,'USER',4,0,'말자하는ㄹㅇ꿀챔',4,0,'오리 알','NAME_UPDATED','name updated',NULL,52,53),
+(144,'2026-05-13 10:58:18.647942','2026-05-13 10:58:18.647942',4,'USER',11,0,'몽둥이',10,100,'몽둥이','EVOLVED','evolved',NULL,2,4),
+(145,'2026-05-13 11:00:36.396947','2026-05-13 11:00:36.396947',4,'USER',12,0,'몽둥이',11,200,'몽둥이','EVOLVED','evolved',NULL,2,4),
+(146,'2026-05-13 15:11:27.705348','2026-05-13 15:11:27.705348',3,'USER',30,0,'상훈3',6,125,'상훈3','FAREWELL','independence approved',NULL,53,3),
+(147,'2026-05-13 15:11:31.637881','2026-05-13 15:11:31.637881',3,'USER',16,0,'상훈3',30,0,'상훈3','HATCHED','egg hatched',NULL,53,3),
+(148,'2026-05-13 15:11:36.241062','2026-05-13 15:11:36.241062',3,'USER',16,0,'상훈4',16,0,'상훈3','NAME_UPDATED','name updated',NULL,53,3),
+(149,'2026-05-14 00:34:26.961153','2026-05-14 00:34:26.961153',54,'USER',26,0,'오리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,54,54),
+(150,'2026-05-14 18:45:50.129749','2026-05-14 18:45:50.129749',56,'USER',27,0,'코끼리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,55,56),
+(151,'2026-05-14 18:45:59.802077','2026-05-14 18:45:59.802077',56,'USER',7,0,'코끼리 알',27,0,'코끼리 알','HATCHED','egg hatched',NULL,55,56),
+(152,'2026-05-14 18:46:08.807556','2026-05-14 18:46:08.807556',56,'USER',7,0,'냥냥먀',7,0,'코끼리 알','NAME_UPDATED','name updated',NULL,55,56),
+(153,'2026-05-15 10:07:30.974103','2026-05-15 10:07:30.974103',57,'USER',28,0,'한라봉 씨앗',NULL,NULL,NULL,'CREATED','egg received',NULL,56,57),
+(154,'2026-05-16 15:43:03.502874','2026-05-16 15:43:03.502874',15,'USER',5,0,'쫀득이',4,75,'쫀득이','EVOLVED','evolved',NULL,15,15),
+(155,'2026-05-16 15:53:14.122663','2026-05-16 15:53:14.122663',15,'USER',6,0,'쫀득이',5,100,'쫀득이','EVOLVED','evolved',NULL,15,15),
+(156,'2026-05-16 16:06:35.296915','2026-05-16 16:06:35.296915',15,'USER',30,0,'쫀득이',6,125,'쫀득이','FAREWELL','independence approved',NULL,57,15),
+(157,'2026-05-16 16:06:40.418686','2026-05-16 16:06:40.418686',15,'USER',16,0,'쫀득이',30,0,'쫀득이','HATCHED','egg hatched',NULL,57,15),
+(158,'2026-05-16 16:08:16.551904','2026-05-16 16:08:16.551904',15,'USER',16,0,'쫀득이 2세',16,0,'쫀득이','NAME_UPDATED','name updated',NULL,57,15),
+(159,'2026-05-16 18:51:26.428350','2026-05-16 18:51:26.428350',15,'USER',17,0,'쫀득이 2세',16,75,'쫀득이 2세','EVOLVED','evolved',NULL,57,15),
+(160,'2026-05-17 16:18:51.223761','2026-05-17 16:18:51.223761',15,'USER',18,0,'쫀득이 2세',17,100,'쫀득이 2세','EVOLVED','evolved',NULL,57,15),
+(161,'2026-05-17 16:24:41.482211','2026-05-17 16:24:41.482211',15,'USER',26,0,'쫀득이 2세',18,125,'쫀득이 2세','FAREWELL','independence approved',NULL,58,15),
+(162,'2026-05-17 16:24:45.338731','2026-05-17 16:24:45.338731',15,'USER',4,0,'쫀득이 2세',26,0,'쫀득이 2세','HATCHED','egg hatched',NULL,58,15),
+(163,'2026-05-17 16:25:12.167588','2026-05-17 16:25:12.167588',15,'USER',4,0,'쫀득이 3세',4,0,'쫀득이 2세','NAME_UPDATED','name updated',NULL,58,15),
+(164,'2026-05-17 16:27:32.657243','2026-05-17 16:27:32.657243',15,'USER',5,0,'쫀득이 3세',4,75,'쫀득이 3세','EVOLVED','evolved',NULL,58,15),
+(165,'2026-05-17 16:30:27.666867','2026-05-17 16:30:27.666867',15,'USER',6,0,'쫀득이 3세',5,100,'쫀득이 3세','EVOLVED','evolved',NULL,58,15),
+(166,'2026-05-17 16:35:29.311007','2026-05-17 16:35:29.311007',15,'USER',30,0,'쫀득이 3세',6,125,'쫀득이 3세','FAREWELL','independence approved',NULL,59,15),
+(167,'2026-05-17 16:35:50.167026','2026-05-17 16:35:50.167026',15,'USER',16,0,'쫀득이 3세',30,0,'쫀득이 3세','HATCHED','egg hatched',NULL,59,15),
+(168,'2026-05-17 16:36:26.707640','2026-05-17 16:36:26.707640',15,'USER',16,0,'쫀득이 4세',16,0,'쫀득이 3세','NAME_UPDATED','name updated',NULL,59,15),
+(169,'2026-05-17 16:37:34.671552','2026-05-17 16:37:34.671552',15,'USER',17,0,'쫀득이 4세',16,75,'쫀득이 4세','EVOLVED','evolved',NULL,59,15),
+(170,'2026-05-17 16:40:34.537856','2026-05-17 16:40:34.537856',15,'USER',18,0,'쫀득이 4세',17,100,'쫀득이 4세','EVOLVED','evolved',NULL,59,15),
+(171,'2026-05-17 16:43:57.230923','2026-05-17 16:43:57.230923',15,'USER',26,0,'쫀득이 4세',18,125,'쫀득이 4세','FAREWELL','independence approved',NULL,60,15),
+(172,'2026-05-17 16:44:00.008857','2026-05-17 16:44:00.008857',15,'USER',4,0,'쫀득이 4세',26,0,'쫀득이 4세','HATCHED','egg hatched',NULL,60,15),
+(173,'2026-05-17 16:44:23.513382','2026-05-17 16:44:23.513382',15,'USER',4,0,'쫀득이 5세',4,0,'쫀득이 4세','NAME_UPDATED','name updated',NULL,60,15),
+(174,'2026-05-17 16:46:06.225296','2026-05-17 16:46:06.225296',15,'USER',5,0,'쫀득이 5세',4,75,'쫀득이 5세','EVOLVED','evolved',NULL,60,15),
+(175,'2026-05-17 16:47:55.319158','2026-05-17 16:47:55.319158',15,'USER',6,0,'쫀득이 5세',5,100,'쫀득이 5세','EVOLVED','evolved',NULL,60,15),
+(176,'2026-05-17 16:50:15.298904','2026-05-17 16:50:15.298904',15,'USER',27,0,'쫀득이 5세',6,125,'쫀득이 5세','FAREWELL','independence approved',NULL,61,15),
+(177,'2026-05-17 16:50:18.393425','2026-05-17 16:50:18.393425',15,'USER',7,0,'쫀득이 5세',27,0,'쫀득이 5세','HATCHED','egg hatched',NULL,61,15),
+(178,'2026-05-17 16:50:36.890918','2026-05-17 16:50:36.890918',15,'USER',7,0,'쫀득이 6세',7,0,'쫀득이 5세','NAME_UPDATED','name updated',NULL,61,15),
+(179,'2026-05-17 16:51:50.126034','2026-05-17 16:51:50.126034',15,'USER',8,0,'쫀득이 6세',7,75,'쫀득이 6세','EVOLVED','evolved',NULL,61,15),
+(180,'2026-05-17 16:58:41.967965','2026-05-17 16:58:41.967965',58,'USER',16,0,'뚜잇이',30,0,'뚜잇이','HATCHED','egg hatched',NULL,62,58),
+(181,'2026-05-17 16:59:02.452894','2026-05-17 16:59:02.452894',58,'USER',16,0,'말라이 1세',16,0,'뚜잇이','NAME_UPDATED','name updated',NULL,62,58),
+(182,'2026-05-17 17:01:03.611544','2026-05-17 17:01:03.611544',58,'USER',17,0,'말라이 1세',16,75,'말라이 1세','EVOLVED','evolved',NULL,62,58),
+(183,'2026-05-17 17:03:08.559330','2026-05-17 17:03:08.559330',58,'USER',18,0,'말라이 1세',17,100,'말라이 1세','EVOLVED','evolved',NULL,62,58),
+(184,'2026-05-17 17:03:29.918786','2026-05-17 17:03:29.918786',15,'USER',9,0,'쫀득이 6세',8,100,'쫀득이 6세','EVOLVED','evolved',NULL,61,15),
+(185,'2026-05-17 17:06:14.232021','2026-05-17 17:06:14.232021',58,'USER',26,0,'말라이 1세',18,125,'말라이 1세','FAREWELL','independence approved',NULL,63,58),
+(186,'2026-05-17 17:06:15.598759','2026-05-17 17:06:15.598759',15,'USER',27,0,'쫀득이 6세',9,125,'쫀득이 6세','FAREWELL','independence approved',NULL,64,15),
+(187,'2026-05-17 17:06:18.367667','2026-05-17 17:06:18.367667',58,'USER',4,0,'말라이 1세',26,0,'말라이 1세','HATCHED','egg hatched',NULL,63,58),
+(188,'2026-05-17 17:06:19.212103','2026-05-17 17:06:19.212103',15,'USER',7,0,'쫀득이 6세',27,0,'쫀득이 6세','HATCHED','egg hatched',NULL,64,15),
+(189,'2026-05-17 17:06:34.249581','2026-05-17 17:06:34.249581',15,'USER',7,0,'쫀득이 7세',7,0,'쫀득이 6세','NAME_UPDATED','name updated',NULL,64,15),
+(190,'2026-05-17 17:06:34.972867','2026-05-17 17:06:34.972867',58,'USER',4,0,'말라이2세',4,0,'말라이 1세','NAME_UPDATED','name updated',NULL,63,58),
+(191,'2026-05-17 17:08:00.860872','2026-05-17 17:08:00.860872',58,'USER',5,0,'말라이2세',4,75,'말라이2세','EVOLVED','evolved',NULL,63,58),
+(192,'2026-05-17 17:10:57.320587','2026-05-17 17:10:57.320587',58,'USER',6,0,'말라이2세',5,100,'말라이2세','EVOLVED','evolved',NULL,63,58),
+(193,'2026-05-17 17:13:46.328225','2026-05-17 17:13:46.328225',58,'USER',26,0,'말라이2세',6,125,'말라이2세','FAREWELL','independence approved',NULL,65,58),
+(194,'2026-05-17 17:13:52.686329','2026-05-17 17:13:52.686329',58,'USER',4,0,'말라이2세',26,0,'말라이2세','HATCHED','egg hatched',NULL,65,58),
+(195,'2026-05-17 17:14:22.727393','2026-05-17 17:14:22.727393',58,'USER',4,0,'말라이 3세',4,0,'말라이2세','NAME_UPDATED','name updated',NULL,65,58),
+(196,'2026-05-17 17:16:38.157868','2026-05-17 17:16:38.157868',58,'USER',5,0,'말라이 3세',4,75,'말라이 3세','EVOLVED','evolved',NULL,65,58),
+(197,'2026-05-17 17:20:28.070991','2026-05-17 17:20:28.070991',58,'USER',6,0,'말라이 3세',5,100,'말라이 3세','EVOLVED','evolved',NULL,65,58),
+(198,'2026-05-17 17:25:22.432800','2026-05-17 17:25:22.432800',58,'USER',28,0,'말라이 3세',6,125,'말라이 3세','FAREWELL','independence approved',NULL,66,58),
+(199,'2026-05-17 17:25:30.905973','2026-05-17 17:25:30.905973',58,'USER',10,0,'말라이 3세',28,0,'말라이 3세','HATCHED','egg hatched',NULL,66,58),
+(200,'2026-05-17 17:25:43.286498','2026-05-17 17:25:43.286498',58,'USER',10,0,'말랑이4세',10,0,'말라이 3세','NAME_UPDATED','name updated',NULL,66,58),
+(201,'2026-05-17 19:30:25.749393','2026-05-17 19:30:25.749393',58,'USER',11,0,'말랑이4세',10,75,'말랑이4세','EVOLVED','evolved',NULL,66,58),
+(202,'2026-05-17 19:32:42.839117','2026-05-17 19:32:42.839117',58,'USER',12,0,'말랑이4세',11,100,'말랑이4세','EVOLVED','evolved',NULL,66,58),
+(203,'2026-05-17 19:35:27.870053','2026-05-17 19:35:27.870053',58,'USER',27,0,'말랑이4세',12,125,'말랑이4세','FAREWELL','independence approved',NULL,67,58),
+(204,'2026-05-17 19:35:31.486302','2026-05-17 19:35:31.486302',58,'USER',7,0,'말랑이4세',27,0,'말랑이4세','HATCHED','egg hatched',NULL,67,58),
+(205,'2026-05-17 19:35:41.753068','2026-05-17 19:35:41.753068',58,'USER',7,0,'말랑이5세',7,0,'말랑이4세','NAME_UPDATED','name updated',NULL,67,58),
+(206,'2026-05-17 19:36:35.626730','2026-05-17 19:36:35.626730',58,'USER',8,0,'말랑이5세',7,75,'말랑이5세','EVOLVED','evolved',NULL,67,58),
+(207,'2026-05-17 19:38:54.852464','2026-05-17 19:38:54.852464',58,'USER',9,0,'말랑이5세',8,100,'말랑이5세','EVOLVED','evolved',NULL,67,58),
+(208,'2026-05-17 19:41:17.246049','2026-05-17 19:41:17.246049',58,'USER',26,0,'말랑이5세',9,125,'말랑이5세','FAREWELL','independence approved',NULL,68,58),
+(209,'2026-05-17 19:41:20.967511','2026-05-17 19:41:20.967511',58,'USER',4,0,'말랑이5세',26,0,'말랑이5세','HATCHED','egg hatched',NULL,68,58),
+(210,'2026-05-17 19:41:32.266255','2026-05-17 19:41:32.266255',58,'USER',4,0,'말ㄹㅇ이6세',4,0,'말랑이5세','NAME_UPDATED','name updated',NULL,68,58),
+(211,'2026-05-18 08:07:34.924910','2026-05-18 08:07:34.924910',59,'USER',4,0,'뚜잇이',26,0,'뚜잇이','HATCHED','egg hatched',NULL,69,59),
+(212,'2026-05-18 08:08:29.707133','2026-05-18 08:08:29.707133',59,'USER',4,0,'スライム',4,0,'뚜잇이','NAME_UPDATED','name updated',NULL,69,59),
+(213,'2026-05-19 15:31:02.477097','2026-05-19 15:31:02.477097',3,'USER',17,0,'상훈4',16,75,'상훈4','EVOLVED','evolved',NULL,53,3),
+(214,'2026-05-19 15:31:31.273037','2026-05-19 15:31:31.273037',3,'USER',18,0,'상훈4',17,100,'상훈4','EVOLVED','evolved',NULL,53,3),
+(215,'2026-05-19 15:33:00.670680','2026-05-19 15:33:00.670680',3,'USER',26,0,'상훈4',18,125,'상훈4','FAREWELL','independence approved',NULL,70,3),
+(216,'2026-05-19 15:33:04.425105','2026-05-19 15:33:04.425105',3,'USER',4,0,'상훈4',26,0,'상훈4','HATCHED','egg hatched',NULL,70,3),
+(217,'2026-05-19 15:33:06.220768','2026-05-19 15:33:06.220768',3,'USER',4,0,'푸딩이',4,0,'상훈4','NAME_UPDATED','name updated',NULL,70,3),
+(218,'2026-05-19 15:33:32.758929','2026-05-19 15:33:32.758929',3,'USER',5,0,'푸딩이',4,75,'푸딩이','EVOLVED','evolved',NULL,70,3),
+(219,'2026-05-19 15:33:40.755130','2026-05-19 15:33:40.755130',3,'USER',6,0,'푸딩이',5,100,'푸딩이','EVOLVED','evolved',NULL,70,3),
+(220,'2026-05-19 15:33:49.395725','2026-05-19 15:33:49.395725',3,'USER',26,0,'푸딩이',6,125,'푸딩이','FAREWELL','independence approved',NULL,71,3),
+(221,'2026-05-19 15:51:56.367132','2026-05-19 15:51:56.367132',3,'USER',4,0,'푸딩이',26,0,'푸딩이','HATCHED','egg hatched',NULL,71,3),
+(222,'2026-05-19 15:51:57.913540','2026-05-19 15:51:57.913540',3,'USER',4,0,'콩이',4,0,'푸딩이','NAME_UPDATED','name updated',NULL,71,3),
+(223,'2026-05-19 16:48:04.309084','2026-05-19 16:48:04.309084',3,'USER',5,0,'콩이',4,75,'콩이','EVOLVED','evolved',NULL,71,3),
+(224,'2026-05-19 17:04:21.620750','2026-05-19 17:04:21.620750',60,'USER',30,0,'너구리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,72,60),
+(225,'2026-05-19 17:04:25.095230','2026-05-19 17:04:25.095230',60,'USER',16,0,'너구리 알',30,0,'너구리 알','HATCHED','egg hatched',NULL,72,60),
+(226,'2026-05-19 17:04:26.772185','2026-05-19 17:04:26.772185',60,'USER',16,0,'오둥이',16,0,'너구리 알','NAME_UPDATED','name updated',NULL,72,60),
+(227,'2026-05-19 17:32:39.869784','2026-05-19 17:32:39.869784',3,'USER',4,0,'오리 알',26,0,'오리 알','HATCHED','egg hatched',NULL,73,3),
+(228,'2026-05-19 17:32:47.370847','2026-05-19 17:32:47.370847',3,'USER',4,0,'말랑이',4,0,'오리 알','NAME_UPDATED','name updated',NULL,73,3),
+(229,'2026-05-19 17:33:15.743107','2026-05-19 17:33:15.743107',3,'USER',5,0,'말랑이',4,75,'말랑이','EVOLVED','evolved',NULL,73,3),
+(230,'2026-05-19 17:33:22.467535','2026-05-19 17:33:22.467535',3,'USER',6,0,'말랑이',5,100,'말랑이','EVOLVED','evolved',NULL,73,3),
+(231,'2026-05-19 17:33:30.231560','2026-05-19 17:33:30.231560',3,'USER',28,0,'말랑이',6,125,'말랑이','FAREWELL','independence approved',NULL,74,3),
+(232,'2026-05-19 17:33:45.543312','2026-05-19 17:33:45.543312',3,'USER',10,0,'말랑이',28,0,'말랑이','HATCHED','egg hatched',NULL,74,3),
+(233,'2026-05-19 17:33:46.939595','2026-05-19 17:33:46.939595',3,'USER',10,0,'콩이',10,0,'말랑이','NAME_UPDATED','name updated',NULL,74,3),
+(234,'2026-05-19 17:40:44.405563','2026-05-19 17:40:44.405563',61,'USER',27,0,'코끼리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,75,61),
+(235,'2026-05-20 11:56:01.080612','2026-05-20 11:56:01.080612',3,'USER',10,0,'한라봉 씨앗',28,0,'한라봉 씨앗','HATCHED','egg hatched',NULL,76,3),
+(236,'2026-05-20 11:56:07.673262','2026-05-20 11:56:07.673262',3,'USER',10,0,'콩이',10,0,'한라봉 씨앗','NAME_UPDATED','name updated',NULL,76,3),
+(237,'2026-05-20 12:09:27.793172','2026-05-20 12:09:27.793172',3,'USER',11,0,'콩이',10,75,'콩이','EVOLVED','evolved',NULL,76,3),
+(238,'2026-05-20 12:09:34.441469','2026-05-20 12:09:34.441469',3,'USER',12,0,'콩이',11,100,'콩이','EVOLVED','evolved',NULL,76,3),
+(239,'2026-05-20 12:09:46.532390','2026-05-20 12:09:46.532390',3,'USER',30,0,'콩이',12,125,'콩이','FAREWELL','independence approved',NULL,77,3),
+(240,'2026-05-20 12:11:01.834405','2026-05-20 12:11:01.834405',3,'USER',16,0,'콩이',30,0,'콩이','HATCHED','egg hatched',NULL,77,3),
+(241,'2026-05-20 12:14:29.235778','2026-05-20 12:14:29.235778',3,'USER',17,0,'콩이',16,75,'콩이','EVOLVED','evolved',NULL,77,3),
+(242,'2026-05-20 12:14:46.616276','2026-05-20 12:14:46.616276',3,'USER',18,0,'콩이',17,100,'콩이','EVOLVED','evolved',NULL,77,3),
+(243,'2026-05-20 12:15:04.657200','2026-05-20 12:15:04.657200',3,'USER',26,0,'콩이',18,125,'콩이','FAREWELL','independence approved',NULL,78,3),
+(244,'2026-05-20 12:15:17.463673','2026-05-20 12:15:17.463673',3,'USER',4,0,'콩이',26,0,'콩이','HATCHED','egg hatched',NULL,78,3),
+(245,'2026-05-20 12:15:26.341857','2026-05-20 12:15:26.341857',3,'USER',4,0,'쫀득이',4,0,'콩이','NAME_UPDATED','name updated',NULL,78,3),
+(246,'2026-05-20 12:25:07.584880','2026-05-20 12:25:07.584880',3,'USER',10,0,'한라봉 씨앗',28,0,'한라봉 씨앗','HATCHED','egg hatched',NULL,79,3),
+(247,'2026-05-20 12:25:14.185566','2026-05-20 12:25:14.185566',3,'USER',10,0,'미치비',10,0,'한라봉 씨앗','NAME_UPDATED','name updated',NULL,79,3),
+(248,'2026-05-20 13:04:07.095406','2026-05-20 13:04:07.095406',62,'USER',26,0,'오리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,80,62),
+(249,'2026-05-20 13:04:57.983545','2026-05-20 13:04:57.983545',63,'USER',26,0,'오리 알',NULL,NULL,NULL,'CREATED','egg received',NULL,81,63),
+(250,'2026-05-20 13:05:02.108795','2026-05-20 13:05:02.108795',63,'USER',4,0,'오리 알',26,0,'오리 알','HATCHED','egg hatched',NULL,81,63),
+(251,'2026-05-20 13:07:24.262072','2026-05-20 13:07:24.262072',63,'USER',4,0,'밤이',4,0,'오리 알','NAME_UPDATED','name updated',NULL,81,63),
+(252,'2026-05-20 16:24:32.313299','2026-05-20 16:24:32.313299',9,'USER',5,0,'라봉봉',4,75,'라봉봉','EVOLVED','evolved',NULL,8,9);
+/*!40000 ALTER TABLE `user_character_history` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `user_furnitures`
+--
+
+DROP TABLE IF EXISTS `user_furnitures`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_furnitures` (
+  `user_furniture_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `furniture_id` bigint(20) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`user_furniture_id`),
+  UNIQUE KEY `uk_user_furnitures_user_furniture` (`user_id`,`furniture_id`),
+  KEY `idx_user_furnitures_user_id` (`user_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=446 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_furnitures`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `user_furnitures` WRITE;
+/*!40000 ALTER TABLE `user_furnitures` DISABLE KEYS */;
+INSERT INTO `user_furnitures` VALUES
+(1,'2026-05-11 13:43:34.150681','2026-05-11 13:43:34.150681',61,9),
+(3,'2026-05-11 14:09:32.266570','2026-05-11 14:09:32.266570',190,9),
+(4,'2026-05-11 14:09:45.102133','2026-05-11 14:09:45.102133',74,9),
+(5,'2026-05-11 14:20:02.669787','2026-05-11 14:20:02.669787',61,14),
+(6,'2026-05-11 14:20:34.023152','2026-05-11 14:20:34.023152',61,21),
+(7,'2026-05-11 14:22:18.304993','2026-05-11 14:22:18.304993',4,14),
+(8,'2026-05-11 14:22:18.304993','2026-05-11 14:22:18.304993',11,14),
+(9,'2026-05-11 14:22:18.304993','2026-05-11 14:22:18.304993',18,14),
+(10,'2026-05-11 14:22:18.304993','2026-05-11 14:22:18.304993',25,14),
+(11,'2026-05-11 14:22:18.304993','2026-05-11 14:22:18.304993',32,14),
+(12,'2026-05-11 14:22:18.304993','2026-05-11 14:22:18.304993',39,14),
+(13,'2026-05-11 14:22:18.304993','2026-05-11 14:22:18.304993',53,14),
+(14,'2026-05-11 14:22:18.304993','2026-05-11 14:22:18.304993',199,14),
+(15,'2026-05-11 14:22:40.681829','2026-05-11 14:22:40.681829',61,22),
+(16,'2026-05-11 14:22:41.041514','2026-05-11 14:22:41.041514',61,23),
+(17,'2026-05-11 14:28:36.126981','2026-05-11 14:28:36.126981',61,24),
+(18,'2026-05-11 14:36:32.701821','2026-05-11 14:36:32.701821',194,23),
+(19,'2026-05-11 14:37:07.862875','2026-05-11 14:37:07.862875',63,23),
+(20,'2026-05-11 14:37:17.203410','2026-05-11 14:37:17.203410',96,23),
+(21,'2026-05-11 14:37:20.639115','2026-05-11 14:37:20.639115',176,23),
+(22,'2026-05-11 14:37:25.847716','2026-05-11 14:37:25.847716',80,23),
+(23,'2026-05-11 14:37:37.360200','2026-05-11 14:37:37.360200',144,23),
+(24,'2026-05-11 14:37:39.777606','2026-05-11 14:37:39.777606',112,23),
+(25,'2026-05-11 14:37:43.417996','2026-05-11 14:37:43.417996',128,23),
+(26,'2026-05-11 14:37:57.498118','2026-05-11 14:37:57.498118',61,25),
+(29,'2026-05-11 14:41:01.086729','2026-05-11 14:41:01.086729',61,28),
+(30,'2026-05-11 14:44:51.823052','2026-05-11 14:44:51.823052',211,23),
+(31,'2026-05-11 14:45:02.803894','2026-05-11 14:45:02.803894',61,29),
+(32,'2026-05-11 14:46:37.409673','2026-05-11 14:46:37.409673',72,25),
+(33,'2026-05-11 14:46:37.409673','2026-05-11 14:46:37.409673',88,25),
+(34,'2026-05-11 14:46:37.409673','2026-05-11 14:46:37.409673',104,25),
+(35,'2026-05-11 14:46:37.409673','2026-05-11 14:46:37.409673',120,25),
+(36,'2026-05-11 14:46:37.409673','2026-05-11 14:46:37.409673',136,25),
+(37,'2026-05-11 14:46:37.409673','2026-05-11 14:46:37.409673',152,25),
+(38,'2026-05-11 14:46:37.409673','2026-05-11 14:46:37.409673',184,25),
+(39,'2026-05-11 14:46:37.409673','2026-05-11 14:46:37.409673',208,25),
+(40,'2026-05-11 14:48:20.475593','2026-05-11 14:48:20.475593',212,23),
+(41,'2026-05-11 15:23:58.392767','2026-05-11 15:23:58.392767',61,30),
+(42,'2026-05-11 15:27:05.418256','2026-05-11 15:27:05.418256',61,20),
+(43,'2026-05-11 15:29:31.057970','2026-05-11 15:29:31.057970',61,31),
+(44,'2026-05-11 15:31:14.457075','2026-05-11 15:31:14.457075',2,30),
+(45,'2026-05-11 15:31:14.457075','2026-05-11 15:31:14.457075',9,30),
+(46,'2026-05-11 15:31:14.457075','2026-05-11 15:31:14.457075',16,30),
+(47,'2026-05-11 15:31:14.457075','2026-05-11 15:31:14.457075',23,30),
+(48,'2026-05-11 15:31:14.457075','2026-05-11 15:31:14.457075',30,30),
+(49,'2026-05-11 15:31:14.457075','2026-05-11 15:31:14.457075',37,30),
+(50,'2026-05-11 15:31:14.457075','2026-05-11 15:31:14.457075',51,30),
+(51,'2026-05-11 15:31:14.457075','2026-05-11 15:31:14.457075',195,30),
+(52,'2026-05-11 15:39:55.094451','2026-05-11 15:39:55.094451',61,32),
+(53,'2026-05-11 16:17:20.389467','2026-05-11 16:17:20.389467',61,33),
+(54,'2026-05-11 16:20:15.649392','2026-05-11 16:20:15.649392',61,34),
+(55,'2026-05-11 16:58:34.864734','2026-05-11 16:58:34.864734',61,7),
+(56,'2026-05-11 17:14:29.506983','2026-05-11 17:14:29.506983',61,15),
+(57,'2026-05-11 17:14:59.075470','2026-05-11 17:14:59.075470',205,15),
+(58,'2026-05-11 17:16:10.698414','2026-05-11 17:16:10.698414',71,15),
+(59,'2026-05-11 17:16:33.743128','2026-05-11 17:16:33.743128',94,15),
+(60,'2026-05-11 17:16:45.409329','2026-05-11 17:16:45.409329',55,15),
+(61,'2026-05-11 17:18:24.158575','2026-05-11 17:18:24.158575',88,15),
+(62,'2026-05-11 17:18:32.213620','2026-05-11 17:18:32.213620',152,15),
+(63,'2026-05-11 17:18:36.875572','2026-05-11 17:18:36.875572',121,15),
+(64,'2026-05-11 17:18:42.744322','2026-05-11 17:18:42.744322',132,15),
+(65,'2026-05-11 17:20:11.577940','2026-05-11 17:20:11.577940',61,35),
+(66,'2026-05-11 17:45:58.487891','2026-05-11 17:45:58.487891',208,29),
+(67,'2026-05-11 17:46:08.350625','2026-05-11 17:46:08.350625',88,29),
+(68,'2026-05-11 17:46:20.577584','2026-05-11 17:46:20.577584',184,29),
+(69,'2026-05-11 17:46:39.319684','2026-05-11 17:46:39.319684',152,29),
+(70,'2026-05-11 17:46:46.528942','2026-05-11 17:46:46.528942',104,29),
+(71,'2026-05-11 17:46:48.632722','2026-05-11 17:46:48.632722',72,29),
+(72,'2026-05-11 17:46:51.595669','2026-05-11 17:46:51.595669',120,29),
+(73,'2026-05-11 17:46:53.076868','2026-05-11 17:46:53.076868',136,29),
+(74,'2026-05-11 18:02:19.375886','2026-05-11 18:02:19.375886',61,36),
+(75,'2026-05-11 20:20:01.869256','2026-05-11 20:20:01.869256',61,37),
+(76,'2026-05-11 20:23:13.203286','2026-05-11 20:23:13.203286',61,38),
+(77,'2026-05-11 20:46:42.261438','2026-05-11 20:46:42.261438',61,4),
+(78,'2026-05-11 21:43:03.078379','2026-05-11 21:43:03.078379',61,39),
+(79,'2026-05-12 00:30:43.279994','2026-05-12 00:30:43.279994',61,40),
+(80,'2026-05-12 09:07:55.533924','2026-05-12 09:07:55.533924',61,41),
+(81,'2026-05-12 10:10:24.403177','2026-05-12 10:10:24.403177',61,42),
+(82,'2026-05-12 10:37:19.986426','2026-05-12 10:37:19.986426',61,43),
+(83,'2026-05-12 10:41:01.760183','2026-05-12 10:41:01.760183',61,44),
+(84,'2026-05-12 10:48:35.119629','2026-05-12 10:48:35.119629',61,45),
+(85,'2026-05-12 10:52:51.082299','2026-05-12 10:52:51.082299',211,44),
+(86,'2026-05-12 10:53:00.930551','2026-05-12 10:53:00.930551',76,44),
+(87,'2026-05-12 10:53:03.461191','2026-05-12 10:53:03.461191',108,44),
+(88,'2026-05-12 10:53:08.966256','2026-05-12 10:53:08.966256',188,44),
+(89,'2026-05-12 10:53:12.670241','2026-05-12 10:53:12.670241',92,44),
+(90,'2026-05-12 10:53:15.622774','2026-05-12 10:53:15.622774',156,44),
+(91,'2026-05-12 10:53:19.047596','2026-05-12 10:53:19.047596',124,44),
+(92,'2026-05-12 10:53:22.749998','2026-05-12 10:53:22.749998',140,44),
+(93,'2026-05-12 11:00:20.383708','2026-05-12 11:00:20.383708',6,4),
+(94,'2026-05-12 11:00:20.383708','2026-05-12 11:00:20.383708',13,4),
+(95,'2026-05-12 11:00:20.383708','2026-05-12 11:00:20.383708',20,4),
+(96,'2026-05-12 11:00:20.383708','2026-05-12 11:00:20.383708',27,4),
+(97,'2026-05-12 11:00:20.383708','2026-05-12 11:00:20.383708',34,4),
+(98,'2026-05-12 11:00:20.383708','2026-05-12 11:00:20.383708',41,4),
+(99,'2026-05-12 11:00:20.383708','2026-05-12 11:00:20.383708',55,4),
+(100,'2026-05-12 11:00:20.383708','2026-05-12 11:00:20.383708',205,4),
+(101,'2026-05-12 13:01:27.206900','2026-05-12 13:01:27.206900',61,46),
+(102,'2026-05-12 13:42:20.798130','2026-05-12 13:42:20.798130',61,47),
+(103,'2026-05-12 14:18:20.531700','2026-05-12 14:18:20.531700',61,48),
+(104,'2026-05-12 14:44:56.788795','2026-05-12 14:44:56.788795',61,49),
+(105,'2026-05-12 14:51:00.163252','2026-05-12 14:51:00.163252',61,17),
+(106,'2026-05-12 15:14:16.224352','2026-05-12 15:14:16.224352',205,36),
+(107,'2026-05-12 15:14:27.916007','2026-05-12 15:14:27.916007',6,36),
+(108,'2026-05-12 15:14:29.983280','2026-05-12 15:14:29.983280',20,36),
+(109,'2026-05-12 15:14:31.467242','2026-05-12 15:14:31.467242',55,36),
+(110,'2026-05-12 15:14:34.063018','2026-05-12 15:14:34.063018',13,36),
+(111,'2026-05-12 15:14:35.661352','2026-05-12 15:14:35.661352',41,36),
+(112,'2026-05-12 15:14:42.313134','2026-05-12 15:14:42.313134',27,36),
+(113,'2026-05-12 15:14:44.144611','2026-05-12 15:14:44.144611',34,36),
+(114,'2026-05-12 15:15:29.084462','2026-05-12 15:15:29.084462',190,36),
+(115,'2026-05-12 15:15:35.718548','2026-05-12 15:15:35.718548',74,36),
+(116,'2026-05-12 15:15:37.133365','2026-05-12 15:15:37.133365',106,36),
+(117,'2026-05-12 15:15:38.472827','2026-05-12 15:15:38.472827',186,36),
+(118,'2026-05-12 15:15:40.533466','2026-05-12 15:15:40.533466',90,36),
+(119,'2026-05-12 15:15:42.512147','2026-05-12 15:15:42.512147',154,36),
+(120,'2026-05-12 15:15:44.732276','2026-05-12 15:15:44.732276',122,36),
+(121,'2026-05-12 15:15:47.051083','2026-05-12 15:15:47.051083',138,36),
+(122,'2026-05-12 15:57:10.820390','2026-05-12 15:57:10.820390',7,7),
+(123,'2026-05-12 15:57:25.858622','2026-05-12 15:57:25.858622',205,7),
+(124,'2026-05-12 15:57:37.645242','2026-05-12 15:57:37.645242',20,7),
+(125,'2026-05-12 15:57:40.549844','2026-05-12 15:57:40.549844',6,7),
+(126,'2026-05-12 15:58:09.930844','2026-05-12 15:58:09.930844',55,7),
+(127,'2026-05-12 15:58:15.994584','2026-05-12 15:58:15.994584',13,7),
+(128,'2026-05-12 15:58:18.509307','2026-05-12 15:58:18.509307',41,7),
+(129,'2026-05-12 15:58:21.429034','2026-05-12 15:58:21.429034',27,7),
+(130,'2026-05-12 15:58:24.180640','2026-05-12 15:58:24.180640',34,7),
+(131,'2026-05-12 16:17:16.565466','2026-05-12 16:17:16.565466',61,50),
+(132,'2026-05-12 16:41:24.589208','2026-05-12 16:41:24.589208',61,51),
+(133,'2026-05-12 17:54:57.417575','2026-05-12 17:54:57.417575',61,52),
+(134,'2026-05-12 18:15:30.396177','2026-05-12 18:15:30.396177',194,52),
+(135,'2026-05-12 18:15:54.675041','2026-05-12 18:15:54.675041',122,52),
+(136,'2026-05-13 01:22:15.771540','2026-05-13 01:22:15.771540',61,53),
+(137,'2026-05-13 17:49:53.380403','2026-05-13 17:49:53.380403',6,49),
+(138,'2026-05-13 17:50:05.833930','2026-05-13 17:50:05.833930',64,49),
+(139,'2026-05-13 17:50:12.205920','2026-05-13 17:50:12.205920',176,49),
+(140,'2026-05-13 17:50:16.037386','2026-05-13 17:50:16.037386',194,49),
+(141,'2026-05-14 00:33:04.526383','2026-05-14 00:33:04.526383',61,54),
+(142,'2026-05-14 12:03:21.358004','2026-05-14 12:03:21.358004',61,55),
+(400,'2026-05-14 15:58:56.188773','2026-05-14 15:58:56.188773',211,34),
+(401,'2026-05-14 15:59:01.671082','2026-05-14 15:59:01.671082',201,34),
+(402,'2026-05-14 15:59:42.383849','2026-05-14 15:59:42.383849',76,34),
+(403,'2026-05-14 15:59:47.843421','2026-05-14 15:59:47.843421',108,34),
+(404,'2026-05-14 15:59:51.382350','2026-05-14 15:59:51.382350',188,34),
+(405,'2026-05-14 15:59:55.802818','2026-05-14 15:59:55.802818',92,34),
+(406,'2026-05-14 15:59:58.424686','2026-05-14 15:59:58.424686',156,34),
+(407,'2026-05-14 16:00:02.497902','2026-05-14 16:00:02.497902',124,34),
+(408,'2026-05-14 16:00:04.970939','2026-05-14 16:00:04.970939',140,34),
+(409,'2026-05-14 18:44:59.864593','2026-05-14 18:44:59.864593',61,56),
+(410,'2026-05-15 10:06:52.520700','2026-05-15 10:06:52.520700',61,57),
+(411,'2026-05-15 23:06:41.572537','2026-05-15 23:06:41.572537',209,46),
+(412,'2026-05-15 23:07:03.337270','2026-05-15 23:07:03.337270',5,46),
+(413,'2026-05-15 23:07:40.865330','2026-05-15 23:07:40.865330',19,46),
+(414,'2026-05-15 23:08:08.774120','2026-05-15 23:08:08.774120',54,46),
+(415,'2026-05-16 15:25:02.882406','2026-05-16 15:25:02.882406',61,11),
+(416,'2026-05-16 15:44:30.945659','2026-05-16 15:44:30.945659',194,15),
+(417,'2026-05-17 16:58:16.269524','2026-05-17 16:58:16.269524',61,58),
+(418,'2026-05-18 08:07:17.829631','2026-05-18 08:07:17.829631',61,59),
+(419,'2026-05-18 09:41:27.753146','2026-05-18 09:41:27.753146',61,8),
+(420,'2026-05-19 17:04:15.530251','2026-05-19 17:04:15.530251',61,60),
+(421,'2026-05-19 17:20:54.000000','2026-05-19 17:20:54.000000',61,3),
+(423,'2026-05-19 17:40:36.688704','2026-05-19 17:40:36.688704',61,61),
+(424,'2026-05-20 11:56:15.866870','2026-05-20 11:56:15.866870',212,3),
+(425,'2026-05-20 12:26:09.075315','2026-05-20 12:26:09.075315',133,3),
+(426,'2026-05-20 12:26:09.078591','2026-05-20 12:26:09.078591',203,3),
+(427,'2026-05-20 12:26:09.079728','2026-05-20 12:26:09.079728',69,3),
+(428,'2026-05-20 12:26:09.080384','2026-05-20 12:26:09.080384',101,3),
+(429,'2026-05-20 12:26:09.081142','2026-05-20 12:26:09.081142',117,3),
+(430,'2026-05-20 12:26:09.081825','2026-05-20 12:26:09.081825',85,3),
+(431,'2026-05-20 12:26:09.082468','2026-05-20 12:26:09.082468',149,3),
+(432,'2026-05-20 12:26:09.083339','2026-05-20 12:26:09.083339',181,3),
+(433,'2026-05-20 13:03:45.446829','2026-05-20 13:03:45.446829',61,62),
+(434,'2026-05-20 13:04:36.087316','2026-05-20 13:04:36.087316',61,63),
+(435,'2026-05-20 13:32:26.284288','2026-05-20 13:32:26.284288',61,64),
+(436,'2026-05-20 13:46:19.105317','2026-05-20 13:46:19.105317',61,65),
+(437,'2026-05-20 13:49:13.231271','2026-05-20 13:49:13.231271',61,16),
+(438,'2026-05-20 14:44:16.021752','2026-05-20 14:44:16.021752',128,7),
+(439,'2026-05-20 14:44:16.022794','2026-05-20 14:44:16.022794',194,7),
+(440,'2026-05-20 14:44:16.023529','2026-05-20 14:44:16.023529',64,7),
+(441,'2026-05-20 14:44:16.027038','2026-05-20 14:44:16.027038',96,7),
+(442,'2026-05-20 14:44:16.027810','2026-05-20 14:44:16.027810',112,7),
+(443,'2026-05-20 14:44:16.028576','2026-05-20 14:44:16.028576',80,7),
+(444,'2026-05-20 14:44:16.029295','2026-05-20 14:44:16.029295',144,7),
+(445,'2026-05-20 14:44:16.030052','2026-05-20 14:44:16.030052',176,7);
+/*!40000 ALTER TABLE `user_furnitures` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `user_items`
+--
+
+DROP TABLE IF EXISTS `user_items`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_items` (
+  `user_item_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `acquired_at` datetime(6) NOT NULL,
+  `item_id` bigint(20) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`user_item_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_items`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `user_items` WRITE;
+/*!40000 ALTER TABLE `user_items` DISABLE KEYS */;
+/*!40000 ALTER TABLE `user_items` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `user_settings`
+--
+
+DROP TABLE IF EXISTS `user_settings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_settings` (
+  `user_id` bigint(20) NOT NULL,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `dnd_enabled` bit(1) NOT NULL,
+  `dnd_end_time` time(6) DEFAULT NULL,
+  `dnd_start_time` time(6) DEFAULT NULL,
+  `evening_reminder_enabled` bit(1) NOT NULL,
+  `evening_reminder_time` time(6) NOT NULL,
+  `tamagotchi_notification_enabled` tinyint(1) NOT NULL DEFAULT 1,
+  `home_screen_mode` enum('CALENDAR','HOME') NOT NULL,
+  `morning_reminder_enabled` bit(1) NOT NULL,
+  `morning_reminder_time` time(6) NOT NULL,
+  PRIMARY KEY (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_settings`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `user_settings` WRITE;
+/*!40000 ALTER TABLE `user_settings` DISABLE KEYS */;
+INSERT INTO `user_settings` VALUES
+(1,'2026-04-29 10:48:20.997252','2026-04-29 10:48:20.997252',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(2,'2026-04-29 10:50:40.784508','2026-04-29 10:50:40.784508',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(3,'2026-04-29 10:52:12.345072','2026-05-06 10:25:21.769359',0x00,NULL,NULL,0x00,'14:29:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(4,'2026-04-29 10:54:15.537400','2026-04-29 10:54:15.537400',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(5,'2026-04-29 10:57:07.386303','2026-04-29 10:57:07.386303',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(6,'2026-04-29 13:05:50.684578','2026-04-29 13:05:50.684578',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(7,'2026-04-29 14:04:35.550991','2026-04-29 14:04:35.550991',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(8,'2026-04-29 14:18:21.958537','2026-04-29 14:18:21.958537',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(9,'2026-04-29 14:42:49.387224','2026-04-29 14:42:49.387224',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(10,'2026-04-29 16:03:54.774299','2026-04-29 16:03:54.774299',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(11,'2026-04-29 16:28:10.498337','2026-04-29 16:28:10.498337',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(12,'2026-04-29 17:23:23.858972','2026-04-29 17:23:23.858972',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(13,'2026-04-30 08:46:00.260898','2026-04-30 08:46:00.260898',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(14,'2026-04-30 10:44:41.460053','2026-04-30 10:44:41.460053',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(15,'2026-04-30 11:48:24.006876','2026-04-30 11:48:24.006876',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(16,'2026-04-30 14:02:55.119420','2026-04-30 14:02:55.119420',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(17,'2026-05-01 18:40:22.742347','2026-05-01 18:41:41.944873',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(18,'2026-05-04 19:31:15.331012','2026-05-04 19:31:15.331012',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(20,'2026-05-11 13:36:35.436800','2026-05-11 13:36:35.436800',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(21,'2026-05-11 14:20:33.991997','2026-05-11 14:20:33.991997',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(22,'2026-05-11 14:22:40.666847','2026-05-11 14:22:40.666847',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(23,'2026-05-11 14:22:41.027970','2026-05-11 14:36:07.730428',0x00,'07:00:00.000000','22:00:00.000000',0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(24,'2026-05-11 14:28:36.112010','2026-05-11 15:17:57.887705',0x00,'21:00:00.000000','22:00:00.000000',0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(25,'2026-05-11 14:37:57.480877','2026-05-11 14:37:57.480877',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(28,'2026-05-11 14:41:01.072445','2026-05-11 14:41:01.072445',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(30,'2026-05-11 15:23:58.383208','2026-05-11 15:23:58.383208',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(31,'2026-05-11 15:29:31.051683','2026-05-11 15:29:31.051683',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(32,'2026-05-11 15:39:55.087128','2026-05-11 15:39:55.087128',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(34,'2026-05-11 16:20:15.642225','2026-05-11 16:20:15.642225',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(35,'2026-05-11 17:20:11.568589','2026-05-11 17:20:11.568589',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(36,'2026-05-11 18:02:19.364754','2026-05-11 18:02:19.364754',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(37,'2026-05-11 20:20:01.856237','2026-05-11 20:20:01.856237',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(38,'2026-05-11 20:23:13.197249','2026-05-11 20:23:13.197249',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(39,'2026-05-11 21:43:03.067787','2026-05-11 21:43:03.067787',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(40,'2026-05-12 00:30:43.264299','2026-05-12 00:30:43.264299',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(41,'2026-05-12 09:07:55.524510','2026-05-12 09:07:55.524510',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(42,'2026-05-12 10:10:24.396365','2026-05-12 10:10:24.396365',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(43,'2026-05-12 10:37:19.975616','2026-05-12 10:37:19.975616',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(44,'2026-05-12 10:41:01.752626','2026-05-12 10:41:01.752626',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(45,'2026-05-12 10:48:35.113686','2026-05-12 10:48:35.113686',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(46,'2026-05-12 13:01:27.195396','2026-05-12 13:01:27.195396',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(47,'2026-05-12 13:42:20.792965','2026-05-12 13:42:20.792965',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(48,'2026-05-12 14:18:20.489997','2026-05-12 14:36:31.003277',0x00,NULL,NULL,0x01,'22:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(49,'2026-05-12 14:44:56.746108','2026-05-12 14:44:56.746108',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(50,'2026-05-12 16:17:16.548456','2026-05-15 16:00:29.973535',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(51,'2026-05-12 16:41:24.578753','2026-05-12 16:41:24.578753',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(52,'2026-05-12 17:54:57.405180','2026-05-12 17:54:57.405180',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(53,'2026-05-13 01:22:15.750670','2026-05-13 01:26:57.260940',0x01,'07:00:00.000000','22:00:00.000000',0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(54,'2026-05-14 00:33:04.511871','2026-05-14 00:33:04.511871',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(55,'2026-05-14 12:03:21.345353','2026-05-14 12:03:21.345353',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(56,'2026-05-14 18:44:59.857372','2026-05-14 18:44:59.857372',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(57,'2026-05-15 10:06:52.512797','2026-05-15 10:06:52.512797',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(58,'2026-05-17 16:58:16.262634','2026-05-17 16:58:16.262634',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(59,'2026-05-18 08:07:17.824351','2026-05-18 08:07:17.824351',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(60,'2026-05-19 17:04:15.525212','2026-05-19 17:04:15.525212',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(61,'2026-05-19 17:40:36.681313','2026-05-19 17:40:36.681313',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(62,'2026-05-20 13:03:45.397623','2026-05-20 13:03:45.397623',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(63,'2026-05-20 13:04:36.067438','2026-05-20 13:04:36.067438',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(64,'2026-05-20 13:32:26.228435','2026-05-20 13:32:26.228435',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000'),
+(65,'2026-05-20 13:46:19.081659','2026-05-20 13:46:19.081659',0x00,NULL,NULL,0x00,'21:00:00.000000',1,'HOME',0x00,'08:00:00.000000');
+/*!40000 ALTER TABLE `user_settings` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `user_streaks`
+--
+
+DROP TABLE IF EXISTS `user_streaks`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_streaks` (
+  `user_streak_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `current_streak_count` int(11) NOT NULL,
+  `current_streak_start_date` date DEFAULT NULL,
+  `last_active_date` date DEFAULT NULL,
+  `longest_streak_count` int(11) NOT NULL,
+  `longest_streak_end_date` date DEFAULT NULL,
+  `longest_streak_start_date` date DEFAULT NULL,
+  `user_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`user_streak_id`),
+  UNIQUE KEY `uk_user_streaks_user_id` (`user_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=66 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_streaks`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `user_streaks` WRITE;
+/*!40000 ALTER TABLE `user_streaks` DISABLE KEYS */;
+INSERT INTO `user_streaks` VALUES
+(1,'2026-04-29 10:48:20.997577','2026-04-29 10:48:20.997577',0,NULL,NULL,0,NULL,NULL,1),
+(2,'2026-04-29 10:50:40.784738','2026-04-29 10:50:40.784738',0,NULL,NULL,0,NULL,NULL,2),
+(3,'2026-04-29 10:52:12.345524','2026-05-20 12:09:26.958568',6,'2026-05-15','2026-05-20',6,'2026-05-20','2026-05-15',3),
+(4,'2026-04-29 10:54:15.538210','2026-05-13 10:57:37.070842',1,'2026-05-13','2026-05-13',1,'2026-04-29','2026-04-29',4),
+(5,'2026-04-29 10:57:07.386503','2026-04-29 13:49:13.822421',1,'2026-04-29','2026-04-29',1,'2026-04-29','2026-04-29',5),
+(6,'2026-04-29 13:05:50.684763','2026-04-29 13:05:50.684763',0,NULL,NULL,0,NULL,NULL,6),
+(7,'2026-04-29 14:04:35.551186','2026-05-14 14:12:56.643661',4,'2026-05-11','2026-05-14',4,'2026-05-08','2026-05-05',7),
+(8,'2026-04-29 14:18:21.959192','2026-05-20 13:07:52.552593',1,'2026-05-20','2026-05-20',1,'2026-04-29','2026-04-29',8),
+(9,'2026-04-29 14:42:49.387399','2026-05-20 16:21:37.535787',1,'2026-05-20','2026-05-20',1,'2026-04-29','2026-04-29',9),
+(10,'2026-04-29 16:03:54.783264','2026-05-20 03:21:29.777978',1,'2026-05-20','2026-05-20',1,'2026-05-20','2026-05-20',10),
+(11,'2026-04-29 16:28:10.498678','2026-05-16 15:25:49.778446',1,'2026-05-16','2026-05-16',1,'2026-04-29','2026-04-29',11),
+(12,'2026-04-29 17:23:23.859247','2026-04-29 17:23:23.859247',0,NULL,NULL,0,NULL,NULL,12),
+(13,'2026-04-30 08:46:00.263728','2026-04-30 09:04:31.574735',1,'2026-04-30','2026-04-30',1,'2026-04-30','2026-04-30',13),
+(14,'2026-04-30 10:44:41.460405','2026-05-11 14:21:06.992787',1,'2026-05-11','2026-05-11',1,'2026-05-11','2026-05-11',14),
+(15,'2026-04-30 11:48:24.007162','2026-05-17 16:16:21.446038',2,'2026-05-16','2026-05-17',7,'2026-05-12','2026-05-06',15),
+(16,'2026-04-30 14:02:55.119737','2026-05-11 13:28:24.422204',1,'2026-05-11','2026-05-11',1,'2026-04-30','2026-04-30',16),
+(17,'2026-05-01 18:40:22.742616','2026-05-05 13:20:20.717904',1,'2026-05-05','2026-05-05',1,'2026-05-05','2026-05-05',17),
+(18,'2026-05-04 19:31:15.339950','2026-05-04 19:31:15.339950',0,NULL,NULL,0,NULL,NULL,18),
+(19,'2026-05-11 13:30:25.605963','2026-05-11 13:30:25.605963',0,NULL,NULL,0,NULL,NULL,19),
+(20,'2026-05-11 13:36:35.437180','2026-05-11 16:00:34.921231',1,'2026-05-11','2026-05-11',1,'2026-05-11','2026-05-11',20),
+(21,'2026-05-11 14:20:33.999256','2026-05-12 15:39:40.520793',1,'2026-05-12','2026-05-12',1,'2026-05-12','2026-05-12',21),
+(22,'2026-05-11 14:22:40.667224','2026-05-11 14:26:16.229029',1,'2026-05-11','2026-05-11',1,'2026-05-11','2026-05-11',22),
+(23,'2026-05-11 14:22:41.028284','2026-05-16 18:02:07.277009',2,'2026-05-15','2026-05-16',3,'2026-05-13','2026-05-11',23),
+(24,'2026-05-11 14:28:36.112787','2026-05-12 08:59:22.177659',2,'2026-05-11','2026-05-12',2,'2026-05-12','2026-05-11',24),
+(25,'2026-05-11 14:37:57.481264','2026-05-19 08:01:24.129430',1,'2026-05-19','2026-05-19',2,'2026-05-12','2026-05-11',25),
+(26,'2026-05-11 14:39:48.257718','2026-05-11 14:39:48.257718',0,NULL,NULL,0,NULL,NULL,26),
+(27,'2026-05-11 14:40:02.871902','2026-05-11 14:40:02.871902',0,NULL,NULL,0,NULL,NULL,27),
+(28,'2026-05-11 14:41:01.072781','2026-05-13 11:53:08.385469',3,'2026-05-11','2026-05-13',3,'2026-05-13','2026-05-11',28),
+(29,'2026-05-11 14:45:02.789854','2026-05-11 14:46:32.442592',1,'2026-05-11','2026-05-11',1,'2026-05-11','2026-05-11',29),
+(30,'2026-05-11 15:23:58.383456','2026-05-11 21:33:48.204783',1,'2026-05-11','2026-05-11',1,'2026-05-11','2026-05-11',30),
+(31,'2026-05-11 15:29:31.051912','2026-05-11 15:37:20.539745',1,'2026-05-11','2026-05-11',1,'2026-05-11','2026-05-11',31),
+(32,'2026-05-11 15:39:55.087351','2026-05-11 15:39:55.087351',0,NULL,NULL,0,NULL,NULL,32),
+(33,'2026-05-11 16:17:20.377570','2026-05-11 16:17:20.377570',0,NULL,NULL,0,NULL,NULL,33),
+(34,'2026-05-11 16:20:15.642545','2026-05-11 16:20:15.642545',0,NULL,NULL,0,NULL,NULL,34),
+(35,'2026-05-11 17:20:11.568859','2026-05-11 17:20:11.568859',0,NULL,NULL,0,NULL,NULL,35),
+(36,'2026-05-11 18:02:19.364945','2026-05-15 17:58:50.159017',1,'2026-05-15','2026-05-15',2,'2026-05-12','2026-05-11',36),
+(37,'2026-05-11 20:20:01.856599','2026-05-11 20:20:01.856599',0,NULL,NULL,0,NULL,NULL,37),
+(38,'2026-05-11 20:23:13.197440','2026-05-11 20:24:24.056000',1,'2026-05-11','2026-05-11',1,'2026-05-11','2026-05-11',38),
+(39,'2026-05-11 21:43:03.068078','2026-05-11 21:43:03.068078',0,NULL,NULL,0,NULL,NULL,39),
+(40,'2026-05-12 00:30:43.264634','2026-05-12 00:30:43.264634',0,NULL,NULL,0,NULL,NULL,40),
+(41,'2026-05-12 09:07:55.524741','2026-05-12 09:07:55.524741',0,NULL,NULL,0,NULL,NULL,41),
+(42,'2026-05-12 10:10:24.396604','2026-05-13 19:17:03.238741',2,'2026-05-12','2026-05-13',2,'2026-05-13','2026-05-12',42),
+(43,'2026-05-12 10:37:19.975819','2026-05-12 10:37:19.975819',0,NULL,NULL,0,NULL,NULL,43),
+(44,'2026-05-12 10:41:01.752843','2026-05-12 10:41:01.752843',0,NULL,NULL,0,NULL,NULL,44),
+(45,'2026-05-12 10:48:35.114126','2026-05-12 10:48:35.114126',0,NULL,NULL,0,NULL,NULL,45),
+(46,'2026-05-12 13:01:27.195641','2026-05-15 23:03:43.760912',1,'2026-05-15','2026-05-15',1,'2026-05-12','2026-05-12',46),
+(47,'2026-05-12 13:42:20.793139','2026-05-12 13:42:20.793139',0,NULL,NULL,0,NULL,NULL,47),
+(48,'2026-05-12 14:18:20.497940','2026-05-13 09:52:49.717012',2,'2026-05-12','2026-05-13',2,'2026-05-13','2026-05-12',48),
+(49,'2026-05-12 14:44:56.753725','2026-05-12 14:44:56.753725',0,NULL,NULL,0,NULL,NULL,49),
+(50,'2026-05-12 16:17:16.548947','2026-05-12 16:18:03.593807',1,'2026-05-12','2026-05-12',1,'2026-05-12','2026-05-12',50),
+(51,'2026-05-12 16:41:24.579068','2026-05-12 16:41:24.579068',0,NULL,NULL,0,NULL,NULL,51),
+(52,'2026-05-12 17:54:57.405458','2026-05-12 17:59:14.772611',1,'2026-05-12','2026-05-12',1,'2026-05-12','2026-05-12',52),
+(53,'2026-05-13 01:22:15.751033','2026-05-13 01:23:46.623824',1,'2026-05-13','2026-05-13',1,'2026-05-13','2026-05-13',53),
+(54,'2026-05-14 00:33:04.512176','2026-05-14 00:33:04.512176',0,NULL,NULL,0,NULL,NULL,54),
+(55,'2026-05-14 12:03:21.345674','2026-05-14 12:03:21.345674',0,NULL,NULL,0,NULL,NULL,55),
+(56,'2026-05-14 18:44:59.857905','2026-05-14 18:44:59.857905',0,NULL,NULL,0,NULL,NULL,56),
+(57,'2026-05-15 10:06:52.512984','2026-05-15 10:06:52.512984',0,NULL,NULL,0,NULL,NULL,57),
+(58,'2026-05-17 16:58:16.262799','2026-05-17 16:59:14.869986',1,'2026-05-17','2026-05-17',1,'2026-05-17','2026-05-17',58),
+(59,'2026-05-18 08:07:17.824525','2026-05-18 08:08:37.696042',1,'2026-05-18','2026-05-18',1,'2026-05-18','2026-05-18',59),
+(60,'2026-05-19 17:04:15.525370','2026-05-19 17:04:15.525370',0,NULL,NULL,0,NULL,NULL,60),
+(61,'2026-05-19 17:40:36.681440','2026-05-19 17:40:36.681440',0,NULL,NULL,0,NULL,NULL,61),
+(62,'2026-05-20 13:03:45.404898','2026-05-20 13:03:45.404898',0,NULL,NULL,0,NULL,NULL,62),
+(63,'2026-05-20 13:04:36.067798','2026-05-20 13:07:56.917779',1,'2026-05-20','2026-05-20',1,'2026-05-20','2026-05-20',63),
+(64,'2026-05-20 13:32:26.236394','2026-05-20 13:32:26.236394',0,NULL,NULL,0,NULL,NULL,64),
+(65,'2026-05-20 13:46:19.082123','2026-05-20 13:46:19.082123',0,NULL,NULL,0,NULL,NULL,65);
+/*!40000 ALTER TABLE `user_streaks` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `user_wallets`
+--
+
+DROP TABLE IF EXISTS `user_wallets`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_wallets` (
+  `wallet_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `balance` int(11) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`wallet_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=66 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_wallets`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `user_wallets` WRITE;
+/*!40000 ALTER TABLE `user_wallets` DISABLE KEYS */;
+INSERT INTO `user_wallets` VALUES
+(1,'2026-04-29 10:48:20.996304','2026-04-29 10:48:20.996304',0,1),
+(2,'2026-04-29 10:50:40.779712','2026-04-29 10:50:40.779712',0,2),
+(3,'2026-04-29 10:52:12.340188','2026-05-20 12:26:09.084431',5252,3),
+(4,'2026-04-29 10:54:15.535760','2026-05-14 16:42:45.573472',100070,4),
+(5,'2026-04-29 10:57:07.382369','2026-04-29 10:57:07.382369',0,5),
+(6,'2026-04-29 13:05:50.679390','2026-04-29 13:05:50.679390',0,6),
+(7,'2026-04-29 14:04:35.547463','2026-05-20 14:44:16.031160',6680,7),
+(8,'2026-04-29 14:18:21.956261','2026-05-20 13:07:52.542911',70,8),
+(9,'2026-04-29 14:42:49.383543','2026-05-20 16:24:41.675873',710,9),
+(10,'2026-04-29 16:03:54.762075','2026-05-20 03:22:57.627981',10,10),
+(11,'2026-04-29 16:28:10.494642','2026-05-16 15:25:05.850733',10,11),
+(12,'2026-04-29 17:23:23.857070','2026-04-29 17:23:23.857070',0,12),
+(13,'2026-04-30 08:46:00.254263','2026-04-30 08:46:00.254263',0,13),
+(14,'2026-04-30 10:44:41.456809','2026-05-14 12:49:06.382780',20010,14),
+(15,'2026-04-30 11:48:24.002580','2026-05-20 15:45:21.556446',10750,15),
+(16,'2026-04-30 14:02:55.114965','2026-05-20 13:49:13.352796',100,16),
+(17,'2026-05-01 18:40:22.738070','2026-05-01 18:40:22.738070',0,17),
+(18,'2026-05-04 19:31:15.319127','2026-05-04 19:31:15.319127',0,18),
+(20,'2026-05-11 13:36:35.431781','2026-05-11 21:46:10.195447',30,20),
+(21,'2026-05-11 14:20:33.985236','2026-05-12 15:39:42.066365',120,21),
+(22,'2026-05-11 14:22:40.665417','2026-05-11 14:41:35.622151',120,22),
+(23,'2026-05-11 14:22:41.024384','2026-05-16 18:02:09.267781',10550,23),
+(24,'2026-05-11 14:28:36.107177','2026-05-12 08:59:17.651673',120,24),
+(25,'2026-05-11 14:37:57.479546','2026-05-12 22:12:41.062074',3150,25),
+(28,'2026-05-11 14:41:01.070662','2026-05-12 12:22:53.777551',20160,28),
+(30,'2026-05-11 15:23:58.378191','2026-05-13 00:23:36.200314',1120,30),
+(31,'2026-05-11 15:29:31.050631','2026-05-17 21:13:06.238091',120,31),
+(32,'2026-05-11 15:39:55.083501','2026-05-12 10:55:42.105357',120,32),
+(34,'2026-05-11 16:20:15.641002','2026-05-15 09:42:11.658679',97820,34),
+(35,'2026-05-11 17:20:11.566818','2026-05-11 17:20:11.566818',100,35),
+(36,'2026-05-11 18:02:19.363658','2026-05-15 17:58:46.488195',80810,36),
+(37,'2026-05-11 20:20:01.854658','2026-05-11 20:20:01.854658',100,37),
+(38,'2026-05-11 20:23:13.190689','2026-05-20 12:41:42.976750',220,38),
+(39,'2026-05-11 21:43:03.066547','2026-05-11 21:43:03.066547',100,39),
+(40,'2026-05-12 00:30:43.260470','2026-05-12 00:30:43.260470',100,40),
+(41,'2026-05-12 09:07:55.523211','2026-05-12 09:09:13.569237',110,41),
+(42,'2026-05-12 10:10:24.392199','2026-05-14 00:03:41.964546',130,42),
+(43,'2026-05-12 10:37:19.974609','2026-05-12 10:38:02.170961',110,43),
+(44,'2026-05-12 10:41:01.749518','2026-05-12 10:53:22.750622',510,44),
+(45,'2026-05-12 10:48:35.112218','2026-05-12 10:50:14.380902',110,45),
+(46,'2026-05-12 13:01:27.190963','2026-05-16 13:20:41.800524',49070,46),
+(47,'2026-05-12 13:42:20.791090','2026-05-12 13:42:49.587802',110,47),
+(48,'2026-05-12 14:18:20.480766','2026-05-14 18:35:39.763447',130,48),
+(49,'2026-05-12 14:44:56.727647','2026-05-13 17:50:16.038168',8620,49),
+(50,'2026-05-12 16:17:16.544515','2026-05-15 16:00:20.480911',140,50),
+(51,'2026-05-12 16:41:24.574073','2026-05-12 16:41:24.593342',100,51),
+(52,'2026-05-12 17:54:57.403905','2026-05-15 14:05:56.814042',18540,52),
+(53,'2026-05-13 01:22:15.747440','2026-05-13 01:23:26.111714',110,53),
+(54,'2026-05-14 00:33:04.510511','2026-05-14 00:33:04.510511',100,54),
+(55,'2026-05-14 12:03:21.344392','2026-05-14 12:03:21.344392',100,55),
+(56,'2026-05-14 18:44:59.854575','2026-05-14 22:18:53.902075',110,56),
+(57,'2026-05-15 10:06:52.511900','2026-05-15 10:06:52.511900',100,57),
+(58,'2026-05-17 16:58:16.260219','2026-05-17 19:30:16.378527',160,58),
+(59,'2026-05-18 08:07:17.818010','2026-05-18 08:08:59.733854',110,59),
+(60,'2026-05-19 17:04:15.524444','2026-05-20 12:11:37.246522',200,60),
+(61,'2026-05-19 17:40:36.680652','2026-05-19 17:40:36.680652',100,61),
+(62,'2026-05-20 13:03:45.392101','2026-05-20 13:04:01.756730',1100,62),
+(63,'2026-05-20 13:04:36.065848','2026-05-20 13:07:56.904915',1120,63),
+(64,'2026-05-20 13:32:26.212336','2026-05-20 13:32:28.020608',1100,64),
+(65,'2026-05-20 13:46:19.078952','2026-05-20 13:46:20.071710',1100,65);
+/*!40000 ALTER TABLE `user_wallets` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `users`
+--
+
+DROP TABLE IF EXISTS `users`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `users` (
+  `user_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `is_deleted` bit(1) NOT NULL,
+  `password` varchar(255) DEFAULT NULL,
+  `username` varchar(50) DEFAULT NULL,
+  `birth_date` date DEFAULT NULL,
+  `marketing_agreed_at` datetime(6) DEFAULT NULL,
+  `privacy_agreed_at` datetime(6) DEFAULT NULL,
+  `terms_agreed_at` datetime(6) DEFAULT NULL,
+  `terms_version` varchar(20) DEFAULT NULL,
+  PRIMARY KEY (`user_id`),
+  UNIQUE KEY `UK6dotkott2kjsp8vw4d0m25fb7` (`email`),
+  UNIQUE KEY `UKr43af9ap4edm43mmtq01oddj6` (`username`)
+) ENGINE=InnoDB AUTO_INCREMENT=66 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `users`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `users` WRITE;
+/*!40000 ALTER TABLE `users` DISABLE KEYS */;
+INSERT INTO `users` VALUES
+(1,'2026-04-29 10:48:20.995277','2026-04-29 10:48:38.078390','fast999@naver.com',0x00,NULL,'성유성','1999-06-19',NULL,'2026-04-29 10:48:38.078153','2026-04-29 10:48:38.078153','1.0'),
+(2,'2026-04-29 10:50:40.778865','2026-04-29 10:50:49.680382','syin0322@nate.com',0x00,NULL,'서영인','1999-03-22','2026-04-29 10:50:49.680179','2026-04-29 10:50:49.680179','2026-04-29 10:50:49.680179','1.0'),
+(3,'2026-04-29 10:52:12.338732','2026-04-29 11:39:35.959286','gms07051@gmail.com',0x00,NULL,'전상훈','2000-07-11','2026-04-29 11:39:35.959047','2026-04-29 11:39:35.959047','2026-04-29 11:39:35.959047','1.0'),
+(4,'2026-04-29 10:54:15.535022','2026-04-29 10:54:20.705499','eric728066@gmail.com',0x00,NULL,'[구미_5반_신우혁]','1999-08-27',NULL,'2026-04-29 10:54:20.705279','2026-04-29 10:54:20.705279','1.0'),
+(5,'2026-04-29 10:57:07.381589','2026-04-29 13:47:04.488828','skh1205@naver.com',0x00,NULL,'경훈','1997-12-05',NULL,'2026-04-29 13:47:04.488630','2026-04-29 13:47:04.488630','1.0'),
+(6,'2026-04-29 13:05:50.677982','2026-04-29 13:06:00.309778','testpanda@gmail.com',0x00,'$2a$10$AQfEGrDwr2iRQKOyWB7pk.9zNpGSfftVnd8sLTHqfYN7ew4wXLxku','testid','1999-07-14','2026-04-29 13:06:00.309541','2026-04-29 13:06:00.309541','2026-04-29 13:06:00.309541','1.0'),
+(7,'2026-04-29 14:04:35.546730','2026-04-29 14:05:03.910455','whrudgh142@naver.com',0x00,NULL,'조경호','1999-06-16',NULL,'2026-04-29 14:05:03.910248','2026-04-29 14:05:03.910248','1.0'),
+(8,'2026-04-29 14:18:21.955039','2026-04-29 14:18:37.475710','skals7269@gmail.com',0x00,NULL,'황예찬','2000-08-03',NULL,'2026-04-29 14:18:37.475521','2026-04-29 14:18:37.475521','1.0'),
+(9,'2026-04-29 14:42:49.382772','2026-04-29 14:42:55.846933','cbkjh0225@naver.com',0x00,NULL,'김재환','1999-02-25','2026-04-29 14:42:55.846450','2026-04-29 14:42:55.846450','2026-04-29 14:42:55.846450','1.0'),
+(10,'2026-04-29 16:03:54.754293','2026-04-29 16:04:04.344547','nkloveu7@daum.net',0x00,NULL,'.','2002-01-07',NULL,'2026-04-29 16:04:04.344105','2026-04-29 16:04:04.344105','1.0'),
+(11,'2026-04-29 16:28:10.492873','2026-04-29 16:28:17.182039','tlsdngur7365@naver.com',0x00,NULL,'신우혁','1999-08-27',NULL,'2026-04-29 16:28:17.181655','2026-04-29 16:28:17.181655','1.0'),
+(12,'2026-04-29 17:23:23.855882','2026-04-29 17:23:49.481257','cbkjh0225@gmail.com',0x00,NULL,'JH','1999-02-25','2026-04-29 17:23:49.480939','2026-04-29 17:23:49.480939','2026-04-29 17:23:49.480939','1.0'),
+(13,'2026-04-30 08:46:00.246621','2026-04-30 08:46:14.663677','soyeezi517@gmail.com',0x00,NULL,'오예지','2002-05-17',NULL,'2026-04-30 08:46:14.663298','2026-04-30 08:46:14.663298','1.0'),
+(14,'2026-04-30 10:44:41.453206','2026-04-30 10:44:49.089511','rupi2223@gmail.com',0x00,NULL,'이새롬','2002-11-11','2026-04-30 10:44:49.089181','2026-04-30 10:44:49.089181','2026-04-30 10:44:49.089181','1.0'),
+(15,'2026-04-30 11:48:24.001245','2026-04-30 11:48:42.677355','hynamoh@gmail.com',0x00,NULL,'오형남','1980-07-16',NULL,'2026-04-30 11:48:42.677014','2026-04-30 11:48:42.677014','1.0'),
+(16,'2026-04-30 14:02:55.109580','2026-04-30 14:03:14.222772','onestore9818@gmail.com',0x00,NULL,'인프라컴즈','1998-09-01',NULL,'2026-04-30 14:03:14.222440','2026-04-30 14:03:14.222440','1.0'),
+(17,'2026-05-01 18:40:22.735560','2026-05-01 18:40:42.296712','otqale01@gmail.com',0x00,NULL,'예빈','2001-12-10',NULL,'2026-05-01 18:40:42.296425','2026-05-01 18:40:42.296425','1.0'),
+(18,'2026-05-04 19:31:15.308470','2026-05-04 19:32:13.065725','cocoyi00@hanmail.net',0x00,NULL,'이용문','2000-03-19',NULL,'2026-05-04 19:32:13.065315','2026-05-04 19:32:13.065315','1.0'),
+(19,'2026-05-11 13:30:25.582001','2026-05-11 13:34:30.617700','deleted_19_1778474070613@deleted.local',0x01,NULL,'deleted_19_1778474070613','2001-03-26',NULL,'2026-05-11 13:30:33.978130','2026-05-11 13:30:33.978130','1.0'),
+(20,'2026-05-11 13:36:35.426584','2026-05-11 13:36:52.899866','belivejs01@gmail.com',0x00,NULL,'최준서','2001-03-26',NULL,'2026-05-11 13:36:52.899530','2026-05-11 13:36:52.899530','1.0'),
+(21,'2026-05-11 14:20:33.979193','2026-05-11 14:20:46.710039','ssho1204@naver.com',0x00,NULL,'이승호','2000-08-05','2026-05-11 14:20:46.709690','2026-05-11 14:20:46.709690','2026-05-11 14:20:46.709690','1.0'),
+(22,'2026-05-11 14:22:40.664129','2026-05-11 14:23:10.040524','tdj3466@gmail.com',0x00,NULL,'홍현기','2000-02-19',NULL,'2026-05-11 14:23:10.040164','2026-05-11 14:23:10.040164','1.0'),
+(23,'2026-05-11 14:22:41.023199','2026-05-11 14:22:49.389744','cuzl159@jbnu.ac.kr',0x00,NULL,'정예성','2000-07-25',NULL,'2026-05-11 14:22:49.389394','2026-05-11 14:22:49.389394','1.0'),
+(24,'2026-05-11 14:28:36.105825','2026-05-11 14:30:01.425378','wjdgns9805@naver.com',0x00,NULL,'박정훈','1998-05-16',NULL,'2026-05-11 14:30:01.425080','2026-05-11 14:30:01.425080','1.0'),
+(25,'2026-05-11 14:37:57.478328','2026-05-11 14:38:29.007933','qh613@naver.com',0x00,NULL,'정후','1996-06-13',NULL,'2026-05-11 14:38:29.007605','2026-05-11 14:38:29.007605','1.0'),
+(28,'2026-05-11 14:41:01.069334','2026-05-11 14:41:06.282460','sabro0614@gmail.com',0x00,NULL,'최인혁','1998-06-14',NULL,'2026-05-11 14:41:06.282199','2026-05-11 14:41:06.282199','1.0'),
+(29,'2026-05-11 14:45:02.784684','2026-05-11 18:00:22.022993','deleted_29_1778490022022@deleted.local',0x01,NULL,'deleted_29_1778490022022','2002-09-02','2026-05-11 14:45:49.793884','2026-05-11 14:45:49.793884','2026-05-11 14:45:49.793884','1.0'),
+(30,'2026-05-11 15:23:58.376949','2026-05-11 15:24:03.417556','a@gmail.com',0x00,'$2a$10$a6vLCgATjJbw5ZI/t2.ml.qd/EcqPjiatLhDe2n.Ltyk2WjU3NRlu','aaaa','2002-11-08','2026-05-11 15:24:03.417285','2026-05-11 15:24:03.417285','2026-05-11 15:24:03.417285','1.0'),
+(31,'2026-05-11 15:29:31.049308','2026-05-11 15:29:41.660125','kmwpc@naver.com',0x00,NULL,'김민욱','1999-07-02','2026-05-11 15:29:41.659821','2026-05-11 15:29:41.659821','2026-05-11 15:29:41.659821','1.0'),
+(32,'2026-05-11 15:39:55.081398','2026-05-11 15:40:03.965368','dlfyd05680@gmail.com',0x00,NULL,'이성훈_구미1반_D107','2000-06-19',NULL,'2026-05-11 15:40:03.965164','2026-05-11 15:40:03.965164','1.0'),
+(33,'2026-05-11 16:17:20.375320','2026-05-11 16:18:19.302694','deleted_33_1778483899298@deleted.local',0x01,NULL,'deleted_33_1778483899298','2000-05-29',NULL,'2026-05-11 16:17:27.558592','2026-05-11 16:17:27.558592','1.0'),
+(34,'2026-05-11 16:20:15.640037','2026-05-11 16:20:21.032074','tnqls7043@naver.com',0x00,NULL,'황수빈','2000-05-29',NULL,'2026-05-11 16:20:21.031877','2026-05-11 16:20:21.031877','1.0'),
+(35,'2026-05-11 17:20:11.565952','2026-05-11 17:20:39.675943','kyoungho0616@gmail.com',0x00,NULL,'조경호_835b67','1999-06-16',NULL,'2026-05-11 17:20:39.675740','2026-05-11 17:20:39.675740','1.0'),
+(36,'2026-05-11 18:02:19.362559','2026-05-11 18:02:30.363574','lhe4528@hanmail.net',0x00,NULL,'이효은','2002-09-02','2026-05-11 18:02:30.363316','2026-05-11 18:02:30.363316','2026-05-11 18:02:30.363316','1.0'),
+(37,'2026-05-11 20:20:01.851115','2026-05-11 20:20:11.302690','chawoochan23@naver.com',0x00,NULL,'._887c29','2003-10-22',NULL,NULL,NULL,NULL),
+(38,'2026-05-11 20:23:13.189461','2026-05-11 20:23:22.361184','ddd73739@naver.com',0x00,'$2a$10$AM9bvEzomfRFYjDLY/vjwu57D1gWCFUCVvmkHrhB3mpHJSo8EqlmS','chawoochan23','2003-10-22',NULL,'2026-05-11 20:23:22.360995','2026-05-11 20:23:22.360995','1.0'),
+(39,'2026-05-11 21:43:03.065096','2026-05-11 21:43:12.225884','kjk991011@gmail.com',0x00,NULL,'김준규','1999-10-11',NULL,'2026-05-11 21:43:12.225654','2026-05-11 21:43:12.225654','1.0'),
+(40,'2026-05-12 00:30:43.256117','2026-05-12 00:31:00.715634','rddgbqvnhm@privaterelay.appleid.com',0x00,NULL,'rddgbqvnhm','1990-12-12','2026-05-12 00:31:00.715365','2026-05-12 00:31:00.715365','2026-05-12 00:31:00.715365','1.0'),
+(41,'2026-05-12 09:07:55.520764','2026-05-12 09:08:54.964734','mrt2000@naver.com',0x00,NULL,'정현','2000-07-25',NULL,'2026-05-12 09:08:54.964553','2026-05-12 09:08:54.964553','1.0'),
+(42,'2026-05-12 10:10:24.391422','2026-05-12 10:11:10.929633','rkdbg11752@naver.com',0x00,NULL,'강봉구','2000-10-11','2026-05-12 10:11:10.929398','2026-05-12 10:11:10.929398','2026-05-12 10:11:10.929398','1.0'),
+(43,'2026-05-12 10:37:19.973625','2026-05-12 10:37:29.722764','xtcc02332@naver.com',0x00,NULL,'권기범','2000-02-11',NULL,'2026-05-12 10:37:29.722562','2026-05-12 10:37:29.722562','1.0'),
+(44,'2026-05-12 10:41:01.748740','2026-05-12 10:41:09.801095','althtjr1127@naver.com',0x00,NULL,'강지석','2000-11-27',NULL,'2026-05-12 10:41:09.800907','2026-05-12 10:41:09.800907','1.0'),
+(45,'2026-05-12 10:48:35.111424','2026-05-12 10:48:49.347739','dhckdals1104@naver.com',0x00,NULL,'오창민','1997-06-07',NULL,'2026-05-12 10:48:49.347548','2026-05-12 10:48:49.347548','1.0'),
+(46,'2026-05-12 13:01:27.188248','2026-05-12 13:03:23.631420','eunhyoha2@naver.com',0x00,NULL,'장효빈','2003-03-29',NULL,'2026-05-12 13:03:23.631239','2026-05-12 13:03:23.631239','1.0'),
+(47,'2026-05-12 13:42:20.790083','2026-05-12 13:42:25.528731','qmanqman@qmanqman.com',0x00,'$2a$10$0qSlwPRYnDfFActEZCuhsurWm1ZAZ46vnvtqP7WS02PKeimVd.TeK','qmanqman','2000-07-11','2026-05-12 13:42:25.528543','2026-05-12 13:42:25.528543','2026-05-12 13:42:25.528543','1.0'),
+(48,'2026-05-12 14:18:20.474959','2026-05-12 14:18:45.638187','ssong24690@gmail.com',0x00,NULL,'Songlee Lee','2000-03-21','2026-05-12 14:18:45.637744','2026-05-12 14:18:45.637744','2026-05-12 14:18:45.637744','1.0'),
+(49,'2026-05-12 14:44:56.682391','2026-05-12 14:45:04.547625','dev.jkjin112@gmail.com',0x00,NULL,'진경석','2000-03-04',NULL,'2026-05-12 14:45:04.547173','2026-05-12 14:45:04.547173','1.0'),
+(50,'2026-05-12 16:17:16.540452','2026-05-12 16:17:23.308676','simonjiho@naver.com',0x00,NULL,'simonjiho','1999-10-11',NULL,'2026-05-12 16:17:23.308373','2026-05-12 16:17:23.308373','1.0'),
+(51,'2026-05-12 16:41:24.572741','2026-05-12 16:43:54.816801','10001000@10001000.com',0x00,'$2a$10$svR3qrQvsoCftCjV9/XvQOu0lHZXTuYr22Q4Xy8SqugT9WApxzeq6','100010000','1999-12-12','2026-05-12 16:43:54.816565','2026-05-12 16:43:54.816565','2026-05-12 16:43:54.816565','1.0'),
+(52,'2026-05-12 17:54:57.402582','2026-05-12 17:55:08.513157','99zidoll@gmail.com',0x00,NULL,'강지석_7688c2','1999-11-06',NULL,'2026-05-12 17:55:08.512912','2026-05-12 17:55:08.512912','1.0'),
+(53,'2026-05-13 01:22:15.740940','2026-05-13 01:22:24.780530','alphasobs@jbnu.ac.kr',0x00,NULL,'소부승','2001-03-23',NULL,'2026-05-13 01:22:24.780173','2026-05-13 01:22:24.780173','1.0'),
+(54,'2026-05-14 00:33:04.508067','2026-05-14 00:33:24.733299','dotoridreams@gmail.com',0x00,NULL,'Dream Dotori','1997-02-26',NULL,'2026-05-14 00:33:24.733119','2026-05-14 00:33:24.733119','1.0'),
+(55,'2026-05-14 12:03:21.342350','2026-05-14 12:03:27.612939','inhyuk04@gmail.com',0x00,NULL,'최인혁_0616ab','1998-06-14',NULL,NULL,NULL,NULL),
+(56,'2026-05-14 18:44:59.853764','2026-05-14 18:45:30.929862','tx8sh86pyw@privaterelay.appleid.com',0x00,NULL,'tx8sh86pyw','1995-12-24','2026-05-14 18:45:30.929663','2026-05-14 18:45:30.929663','2026-05-14 18:45:30.929663','1.0'),
+(57,'2026-05-15 10:06:52.511119','2026-05-15 10:07:15.916354','tofha1108@naver.com',0x00,NULL,'tofha1108','2002-11-08','2026-05-15 10:07:15.916178','2026-05-15 10:07:15.916178','2026-05-15 10:07:15.916178','1.0'),
+(58,'2026-05-17 16:58:16.259355','2026-05-17 16:58:27.254570','j584744920@naver.com',0x00,'$2a$10$kn1vFZSP8JGIKFI7CsNYtuFPZI6RXlfKo2ffagRvYZmgfOu.Sh6tS','oyoon','1986-10-10','2026-05-17 16:58:27.254358','2026-05-17 16:58:27.254358','2026-05-17 16:58:27.254358','1.0'),
+(59,'2026-05-18 08:07:17.817218','2026-05-18 08:07:25.058338','minchan@gmail.com',0x00,'$2a$10$qMrPcZ2sII1c4xigqt5AXOTpc0fzRybtXNOdUEB1ak2snUwLl3ePy','minchan','1996-07-22',NULL,'2026-05-18 08:07:25.058181','2026-05-18 08:07:25.058181','1.0'),
+(60,'2026-05-19 17:04:15.523891','2026-05-19 17:04:19.545037','wjstkdgns711@gmail.com',0x00,NULL,'전상훈_7f3e62','2000-07-11','2026-05-19 17:04:19.544876','2026-05-19 17:04:19.544876','2026-05-19 17:04:19.544876','1.0'),
+(61,'2026-05-19 17:40:36.680131','2026-05-19 17:40:42.152379','nosil711@gmail.com',0x00,NULL,'no sil','2000-07-11','2026-05-19 17:40:42.152221','2026-05-19 17:40:42.152221','2026-05-19 17:40:42.152221','1.0'),
+(62,'2026-05-20 13:03:45.387411','2026-05-20 13:04:04.856850','iamgayeong00@gmail.com',0x00,NULL,'전가영','1999-07-31','2026-05-20 13:04:04.856422','2026-05-20 13:04:04.856422','2026-05-20 13:04:04.856422','1.0'),
+(63,'2026-05-20 13:04:36.064419','2026-05-20 13:04:46.769242','goldkitegogo@gmail.com',0x00,NULL,'gold kite','1999-01-01','2026-05-20 13:04:46.768893','2026-05-20 13:04:46.768893','2026-05-20 13:04:46.768893','1.0'),
+(64,'2026-05-20 13:32:26.163717','2026-05-20 13:32:26.163717','faychapin.58776@gmail.com',0x00,NULL,'Fay Chapin',NULL,NULL,NULL,NULL,NULL),
+(65,'2026-05-20 13:46:19.077200','2026-05-20 13:46:19.077200','QGYAYVJAJ7ESBDNKH6YHLQ-LVL-00@cloudtestlabaccounts.com',0x00,NULL,'Nuage Laboratoire',NULL,NULL,NULL,NULL,NULL);
+/*!40000 ALTER TABLE `users` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+
+--
+-- Table structure for table `wallet_earn_logs`
+--
+
+DROP TABLE IF EXISTS `wallet_earn_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `wallet_earn_logs` (
+  `log_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `amount` int(11) NOT NULL,
+  `earned_at` datetime(6) NOT NULL,
+  `ref_id` bigint(20) DEFAULT NULL,
+  `source` enum('DAILY_ATTENDANCE','PET_TOUCH','POOP_CLEAR','SIGNUP_BONUS','STREAK_7DAY','TODO_COMPLETION') NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`log_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=175 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `wallet_earn_logs`
+--
+
+SET @OLD_AUTOCOMMIT=@@AUTOCOMMIT, @@AUTOCOMMIT=0;
+LOCK TABLES `wallet_earn_logs` WRITE;
+/*!40000 ALTER TABLE `wallet_earn_logs` DISABLE KEYS */;
+INSERT INTO `wallet_earn_logs` VALUES
+(1,'2026-05-11 13:43:40.246230','2026-05-11 13:43:40.246230',10,'2026-05-11 13:43:40.244807',6,'PET_TOUCH',3),
+(2,'2026-05-11 13:44:32.933303','2026-05-11 13:44:32.933303',10,'2026-05-11 13:44:32.933047',278,'TODO_COMPLETION',3),
+(3,'2026-05-11 14:23:42.109689','2026-05-11 14:23:42.109689',10,'2026-05-11 14:23:42.109466',10,'PET_TOUCH',22),
+(4,'2026-05-11 14:26:15.414722','2026-05-11 14:26:15.414722',10,'2026-05-11 14:26:15.414535',16,'PET_TOUCH',9),
+(5,'2026-05-11 14:27:07.275285','2026-05-11 14:27:07.275285',10,'2026-05-11 14:27:07.275103',7,'PET_TOUCH',21),
+(6,'2026-05-11 14:27:07.432120','2026-05-11 14:27:07.432120',10,'2026-05-11 14:27:07.431940',16,'PET_TOUCH',23),
+(7,'2026-05-11 14:31:56.669788','2026-05-11 14:31:56.669788',10,'2026-05-11 14:31:56.669553',7,'PET_TOUCH',24),
+(8,'2026-05-11 14:39:13.490656','2026-05-11 14:39:13.490656',10,'2026-05-11 14:39:13.490422',7,'PET_TOUCH',25),
+(9,'2026-05-11 14:41:35.621135','2026-05-11 14:41:35.621135',10,'2026-05-11 14:41:35.620930',284,'TODO_COMPLETION',22),
+(10,'2026-05-11 14:42:33.657806','2026-05-11 14:42:33.657806',10,'2026-05-11 14:42:33.657636',10,'PET_TOUCH',28),
+(11,'2026-05-11 14:48:21.828297','2026-05-11 14:48:21.828297',10,'2026-05-11 14:48:21.828135',294,'TODO_COMPLETION',28),
+(12,'2026-05-11 14:48:46.909554','2026-05-11 14:48:46.909554',10,'2026-05-11 14:48:46.909373',10,'PET_TOUCH',29),
+(13,'2026-05-11 15:14:21.633888','2026-05-11 15:14:21.633888',10,'2026-05-11 15:14:21.633696',304,'TODO_COMPLETION',23),
+(14,'2026-05-11 15:19:57.559908','2026-05-11 15:19:57.559908',10,'2026-05-11 15:19:57.559715',309,'TODO_COMPLETION',25),
+(15,'2026-05-11 15:23:58.382023','2026-05-11 15:23:58.382023',100,'2026-05-11 15:23:58.381889',NULL,'SIGNUP_BONUS',30),
+(16,'2026-05-11 15:26:16.918895','2026-05-11 15:26:16.918895',10,'2026-05-11 15:26:16.918748',10,'PET_TOUCH',30),
+(17,'2026-05-11 15:31:11.459706','2026-05-11 15:31:11.459706',10,'2026-05-11 15:31:11.459546',6,'PET_TOUCH',9),
+(18,'2026-05-11 15:32:52.657544','2026-05-11 15:32:52.657544',10,'2026-05-11 15:32:52.657375',4,'PET_TOUCH',31),
+(19,'2026-05-11 15:37:54.789795','2026-05-11 15:37:54.789795',10,'2026-05-11 15:37:54.789644',7,'PET_TOUCH',20),
+(20,'2026-05-11 15:40:32.894182','2026-05-11 15:40:32.894182',10,'2026-05-11 15:40:32.894042',4,'PET_TOUCH',32),
+(21,'2026-05-11 15:43:20.356306','2026-05-11 15:43:20.356306',10,'2026-05-11 15:43:20.356093',6,'PET_TOUCH',3),
+(22,'2026-05-11 16:17:37.766439','2026-05-11 16:17:37.766439',10,'2026-05-11 16:17:37.766315',7,'PET_TOUCH',33),
+(23,'2026-05-11 16:58:36.738254','2026-05-11 16:58:36.738254',10,'2026-05-11 16:58:36.738089',10,'PET_TOUCH',7),
+(24,'2026-05-11 16:59:07.834180','2026-05-11 16:59:07.834180',10,'2026-05-11 16:59:07.834059',326,'TODO_COMPLETION',7),
+(25,'2026-05-11 17:01:38.355277','2026-05-11 17:01:38.355277',10,'2026-05-11 17:01:38.355155',261,'TODO_COMPLETION',15),
+(26,'2026-05-11 17:01:47.309381','2026-05-11 17:01:47.309381',10,'2026-05-11 17:01:47.309269',4,'PET_TOUCH',15),
+(27,'2026-05-11 17:31:23.316076','2026-05-11 17:31:23.316076',10,'2026-05-11 17:31:23.315930',10,'PET_TOUCH',29),
+(28,'2026-05-11 17:36:00.503466','2026-05-11 17:36:00.503466',10,'2026-05-11 17:36:00.503339',10,'PET_TOUCH',28),
+(29,'2026-05-11 17:52:30.829677','2026-05-11 17:52:30.829677',10,'2026-05-11 17:52:30.829575',331,'TODO_COMPLETION',29),
+(30,'2026-05-11 18:02:55.445838','2026-05-11 18:02:55.445838',10,'2026-05-11 18:02:55.445736',4,'PET_TOUCH',36),
+(31,'2026-05-11 18:07:40.706367','2026-05-11 18:07:40.706367',10,'2026-05-11 18:07:40.706264',334,'TODO_COMPLETION',36),
+(32,'2026-05-11 19:03:08.279459','2026-05-11 19:03:08.279459',10,'2026-05-11 19:03:08.279291',7,'PET_TOUCH',20),
+(33,'2026-05-11 20:23:13.194972','2026-05-11 20:23:13.194972',100,'2026-05-11 20:23:13.194864',NULL,'SIGNUP_BONUS',38),
+(34,'2026-05-11 20:23:47.693180','2026-05-11 20:23:47.693180',10,'2026-05-11 20:23:47.693074',10,'PET_TOUCH',38),
+(35,'2026-05-11 20:46:43.919790','2026-05-11 20:46:43.919790',10,'2026-05-11 20:46:43.919682',10,'PET_TOUCH',4),
+(36,'2026-05-11 21:46:10.194527','2026-05-11 21:46:10.194527',10,'2026-05-11 21:46:10.194388',7,'PET_TOUCH',20),
+(37,'2026-05-11 22:34:04.200018','2026-05-11 22:34:04.200018',10,'2026-05-11 22:34:04.199881',8,'PET_TOUCH',25),
+(38,'2026-05-11 23:06:50.325385','2026-05-11 23:06:50.325385',10,'2026-05-11 23:06:50.325212',10,'PET_TOUCH',38),
+(39,'2026-05-12 08:59:17.649599','2026-05-12 08:59:17.649599',10,'2026-05-12 08:59:17.649463',7,'PET_TOUCH',24),
+(40,'2026-05-12 09:06:24.719937','2026-05-12 09:06:24.719937',10,'2026-05-12 09:06:24.719854',17,'PET_TOUCH',23),
+(41,'2026-05-12 09:09:13.568445','2026-05-12 09:09:13.568445',10,'2026-05-12 09:09:13.568358',10,'PET_TOUCH',41),
+(42,'2026-05-12 10:12:18.696340','2026-05-12 10:12:18.696340',10,'2026-05-12 10:12:18.696253',10,'PET_TOUCH',42),
+(43,'2026-05-12 10:37:33.182019','2026-05-12 10:37:33.182019',10,'2026-05-12 10:37:33.181920',6,'PET_TOUCH',3),
+(44,'2026-05-12 10:38:02.170162','2026-05-12 10:38:02.170162',10,'2026-05-12 10:38:02.170060',4,'PET_TOUCH',43),
+(45,'2026-05-12 10:41:31.335793','2026-05-12 10:41:31.335793',10,'2026-05-12 10:41:31.335669',4,'PET_TOUCH',44),
+(46,'2026-05-12 10:50:14.379880','2026-05-12 10:50:14.379880',10,'2026-05-12 10:50:14.379793',4,'PET_TOUCH',45),
+(47,'2026-05-12 10:55:42.104447','2026-05-12 10:55:42.104447',10,'2026-05-12 10:55:42.104345',4,'PET_TOUCH',32),
+(48,'2026-05-12 10:58:16.208707','2026-05-12 10:58:16.208707',10,'2026-05-12 10:58:16.208615',10,'PET_TOUCH',4),
+(49,'2026-05-12 12:16:49.562401','2026-05-12 12:16:49.562401',10,'2026-05-12 12:16:49.562311',10,'PET_TOUCH',28),
+(50,'2026-05-12 12:22:18.644585','2026-05-12 12:22:18.644585',10,'2026-05-12 12:22:18.644462',361,'TODO_COMPLETION',28),
+(51,'2026-05-12 12:22:53.776883','2026-05-12 12:22:53.776883',10,'2026-05-12 12:22:53.776769',364,'TODO_COMPLETION',28),
+(52,'2026-05-12 12:24:57.285744','2026-05-12 12:24:57.285744',10,'2026-05-12 12:24:57.285639',17,'PET_TOUCH',23),
+(53,'2026-05-12 12:40:07.700326','2026-05-12 12:40:07.700326',10,'2026-05-12 12:40:07.700209',349,'TODO_COMPLETION',3),
+(54,'2026-05-12 12:42:31.310807','2026-05-12 12:42:31.310807',10,'2026-05-12 12:42:31.310719',345,'TODO_COMPLETION',3),
+(55,'2026-05-12 12:43:22.517832','2026-05-12 12:43:22.517832',10,'2026-05-12 12:43:22.517711',367,'TODO_COMPLETION',3),
+(56,'2026-05-12 12:48:52.028705','2026-05-12 12:48:52.028705',10,'2026-05-12 12:48:52.028590',6,'PET_TOUCH',3),
+(57,'2026-05-12 13:04:37.265310','2026-05-12 13:04:37.265310',10,'2026-05-12 13:04:37.265224',4,'PET_TOUCH',46),
+(58,'2026-05-12 13:42:20.792096','2026-05-12 13:42:20.792096',100,'2026-05-12 13:42:20.792024',NULL,'SIGNUP_BONUS',47),
+(59,'2026-05-12 13:42:49.586562','2026-05-12 13:42:49.586562',10,'2026-05-12 13:42:49.586450',4,'PET_TOUCH',47),
+(60,'2026-05-12 14:23:04.838213','2026-05-12 14:23:04.838213',10,'2026-05-12 14:23:04.837035',4,'PET_TOUCH',48),
+(61,'2026-05-12 14:45:48.504909','2026-05-12 14:45:48.504909',10,'2026-05-12 14:45:48.503627',7,'PET_TOUCH',49),
+(62,'2026-05-12 15:11:10.766296','2026-05-12 15:11:10.766296',10,'2026-05-12 15:11:10.766105',10,'PET_TOUCH',36),
+(63,'2026-05-12 15:39:42.064594','2026-05-12 15:39:42.064594',10,'2026-05-12 15:39:42.064351',7,'PET_TOUCH',21),
+(64,'2026-05-12 15:56:55.042757','2026-05-12 15:56:55.042757',10,'2026-05-12 15:56:55.042567',10,'PET_TOUCH',7),
+(65,'2026-05-12 16:07:41.553625','2026-05-12 16:07:41.553625',10,'2026-05-12 16:07:41.553379',4,'PET_TOUCH',46),
+(66,'2026-05-12 16:08:12.114651','2026-05-12 16:08:12.114651',10,'2026-05-12 16:08:12.114446',4,'PET_TOUCH',15),
+(67,'2026-05-12 16:08:16.202044','2026-05-12 16:08:16.202044',200,'2026-05-12 16:08:16.201828',1,'STREAK_7DAY',15),
+(68,'2026-05-12 16:16:58.658779','2026-05-12 16:16:58.658779',10,'2026-05-12 16:16:58.658520',10,'PET_TOUCH',4),
+(69,'2026-05-12 16:17:46.238041','2026-05-12 16:17:46.238041',10,'2026-05-12 16:17:46.237784',16,'PET_TOUCH',50),
+(70,'2026-05-12 16:18:45.124899','2026-05-12 16:18:45.124899',10,'2026-05-12 16:18:45.124642',394,'TODO_COMPLETION',50),
+(71,'2026-05-12 16:19:57.146126','2026-05-12 16:19:57.146126',10,'2026-05-12 16:19:57.145869',414,'TODO_COMPLETION',7),
+(72,'2026-05-12 16:19:59.271382','2026-05-12 16:19:59.271382',10,'2026-05-12 16:19:59.271161',411,'TODO_COMPLETION',7),
+(73,'2026-05-12 16:20:00.631399','2026-05-12 16:20:00.631399',10,'2026-05-12 16:20:00.631142',408,'TODO_COMPLETION',7),
+(74,'2026-05-12 16:41:24.576397','2026-05-12 16:41:24.576397',100,'2026-05-12 16:41:24.576270',NULL,'SIGNUP_BONUS',51),
+(75,'2026-05-12 16:44:45.037889','2026-05-12 16:44:45.037889',10,'2026-05-12 16:44:45.037659',6,'PET_TOUCH',3),
+(76,'2026-05-12 17:20:49.854100','2026-05-12 17:20:49.854100',10,'2026-05-12 17:20:49.853774',10,'PET_TOUCH',4),
+(77,'2026-05-12 18:00:49.261647','2026-05-12 18:00:49.261647',10,'2026-05-12 18:00:49.261469',10,'PET_TOUCH',52),
+(78,'2026-05-12 21:25:09.821979','2026-05-12 21:25:09.821979',10,'2026-05-12 21:25:09.821694',391,'TODO_COMPLETION',15),
+(79,'2026-05-12 22:11:40.332934','2026-05-12 22:11:40.332934',10,'2026-05-12 22:11:40.332622',420,'TODO_COMPLETION',25),
+(80,'2026-05-12 22:12:41.060545','2026-05-12 22:12:41.060545',10,'2026-05-12 22:12:41.060310',8,'PET_TOUCH',25),
+(81,'2026-05-12 22:49:53.846771','2026-05-12 22:49:53.846771',10,'2026-05-12 22:49:53.846494',10,'PET_TOUCH',42),
+(82,'2026-05-12 23:19:18.465661','2026-05-12 23:19:18.465661',10,'2026-05-12 23:19:18.465418',4,'PET_TOUCH',46),
+(83,'2026-05-12 23:19:23.285526','2026-05-12 23:19:23.285526',10,'2026-05-12 23:19:23.285299',379,'TODO_COMPLETION',46),
+(84,'2026-05-13 00:23:36.198995','2026-05-13 00:23:36.198995',10,'2026-05-13 00:23:36.198816',10,'PET_TOUCH',30),
+(85,'2026-05-13 01:23:26.110240','2026-05-13 01:23:26.110240',10,'2026-05-13 01:23:26.110101',4,'PET_TOUCH',53),
+(86,'2026-05-13 07:52:33.975270','2026-05-13 07:52:33.975270',10,'2026-05-13 07:52:33.975110',6,'PET_TOUCH',3),
+(87,'2026-05-13 08:08:07.295528','2026-05-13 08:08:07.295528',10,'2026-05-13 08:08:07.295350',10,'PET_TOUCH',52),
+(88,'2026-05-13 09:53:09.665003','2026-05-13 09:53:09.665003',10,'2026-05-13 09:53:09.664837',4,'PET_TOUCH',48),
+(89,'2026-05-13 10:05:14.258395','2026-05-13 10:05:14.258395',10,'2026-05-13 10:05:14.258233',10,'PET_TOUCH',52),
+(90,'2026-05-13 10:57:21.133002','2026-05-13 10:57:21.133002',10,'2026-05-13 10:57:21.132860',10,'PET_TOUCH',4),
+(91,'2026-05-13 10:58:01.203677','2026-05-13 10:58:01.203677',10,'2026-05-13 10:58:01.203408',439,'TODO_COMPLETION',4),
+(92,'2026-05-13 10:58:03.537716','2026-05-13 10:58:03.537716',10,'2026-05-13 10:58:03.537554',442,'TODO_COMPLETION',4),
+(93,'2026-05-13 10:58:05.599227','2026-05-13 10:58:05.599227',10,'2026-05-13 10:58:05.599096',445,'TODO_COMPLETION',4),
+(94,'2026-05-13 13:04:43.301007','2026-05-13 13:04:43.301007',10,'2026-05-13 13:04:43.300493',11,'PET_TOUCH',7),
+(95,'2026-05-13 15:02:19.743456','2026-05-13 15:02:19.743456',10,'2026-05-13 15:02:19.743241',6,'PET_TOUCH',3),
+(96,'2026-05-13 15:11:39.702838','2026-05-13 15:11:39.702838',10,'2026-05-13 15:11:39.702677',426,'TODO_COMPLETION',3),
+(97,'2026-05-13 16:56:48.597460','2026-05-13 16:56:48.597460',10,'2026-05-13 16:56:48.597316',16,'PET_TOUCH',50),
+(98,'2026-05-13 17:49:13.465799','2026-05-13 17:49:13.465799',10,'2026-05-13 17:49:13.465619',7,'PET_TOUCH',49),
+(99,'2026-05-13 18:24:30.283052','2026-05-13 18:24:30.283052',10,'2026-05-13 18:24:30.282885',4,'PET_TOUCH',46),
+(100,'2026-05-14 00:03:41.962309','2026-05-14 00:03:41.962309',10,'2026-05-14 00:03:41.962139',10,'PET_TOUCH',42),
+(101,'2026-05-14 09:23:33.407724','2026-05-14 09:23:33.407724',10,'2026-05-14 09:23:33.407598',16,'PET_TOUCH',3),
+(102,'2026-05-14 09:57:49.301105','2026-05-14 09:57:49.301105',10,'2026-05-14 09:57:49.300996',4,'PET_TOUCH',15),
+(103,'2026-05-14 12:17:43.093349','2026-05-14 12:17:43.093349',10,'2026-05-14 12:17:43.093225',16,'PET_TOUCH',3),
+(104,'2026-05-14 12:49:06.381936','2026-05-14 12:49:06.381936',10,'2026-05-14 12:49:06.381807',16,'PET_TOUCH',14),
+(105,'2026-05-14 13:22:22.605949','2026-05-14 13:22:22.605949',10,'2026-05-14 13:22:22.605804',16,'PET_TOUCH',3),
+(106,'2026-05-14 14:12:52.574000','2026-05-14 14:12:52.574000',10,'2026-05-14 14:12:52.573888',11,'PET_TOUCH',7),
+(107,'2026-05-14 15:58:38.382776','2026-05-14 15:58:38.382776',10,'2026-05-14 15:58:38.382678',4,'PET_TOUCH',34),
+(108,'2026-05-14 16:42:45.572639','2026-05-14 16:42:45.572639',10,'2026-05-14 16:42:45.572538',12,'PET_TOUCH',4),
+(109,'2026-05-14 18:35:39.762629','2026-05-14 18:35:39.762629',10,'2026-05-14 18:35:39.762532',4,'PET_TOUCH',48),
+(110,'2026-05-14 22:18:53.901205','2026-05-14 22:18:53.901205',10,'2026-05-14 22:18:53.901108',7,'PET_TOUCH',56),
+(111,'2026-05-15 09:42:11.657756','2026-05-15 09:42:11.657756',10,'2026-05-15 09:42:11.657660',4,'PET_TOUCH',34),
+(112,'2026-05-15 14:05:56.813162','2026-05-15 14:05:56.813162',10,'2026-05-15 14:05:56.813062',10,'PET_TOUCH',52),
+(113,'2026-05-15 16:00:20.480041','2026-05-15 16:00:20.480041',10,'2026-05-15 16:00:20.479946',16,'PET_TOUCH',50),
+(114,'2026-05-15 17:58:46.487321','2026-05-15 17:58:46.487321',10,'2026-05-15 17:58:46.487223',10,'PET_TOUCH',36),
+(115,'2026-05-15 23:03:10.059029','2026-05-15 23:03:10.059029',10,'2026-05-15 23:03:10.058932',4,'PET_TOUCH',46),
+(116,'2026-05-16 11:46:38.244517','2026-05-16 11:46:38.244517',10,'2026-05-16 11:46:38.244401',4,'PET_TOUCH',15),
+(117,'2026-05-16 13:20:41.799726','2026-05-16 13:20:41.799726',10,'2026-05-16 13:20:41.799640',4,'PET_TOUCH',46),
+(118,'2026-05-16 15:25:05.849875','2026-05-16 15:25:05.849875',10,'2026-05-16 15:25:05.849786',4,'PET_TOUCH',11),
+(119,'2026-05-16 15:42:52.774601','2026-05-16 15:42:52.774601',10,'2026-05-16 15:42:52.774471',4,'PET_TOUCH',15),
+(120,'2026-05-16 15:42:59.831359','2026-05-16 15:42:59.831359',10,'2026-05-16 15:42:59.831277',552,'TODO_COMPLETION',15),
+(121,'2026-05-16 15:45:13.919690','2026-05-16 15:45:13.919690',10,'2026-05-16 15:45:13.919609',555,'TODO_COMPLETION',15),
+(122,'2026-05-16 15:45:52.334430','2026-05-16 15:45:52.334430',10,'2026-05-16 15:45:52.334342',558,'TODO_COMPLETION',15),
+(123,'2026-05-16 18:02:09.266874','2026-05-16 18:02:09.266874',10,'2026-05-16 18:02:09.266784',17,'PET_TOUCH',23),
+(124,'2026-05-16 18:54:11.784189','2026-05-16 18:54:11.784189',10,'2026-05-16 18:54:11.784100',17,'PET_TOUCH',15),
+(125,'2026-05-17 16:19:09.556762','2026-05-17 16:19:09.556762',10,'2026-05-17 16:19:09.556669',18,'PET_TOUCH',15),
+(126,'2026-05-17 16:22:55.427116','2026-05-17 16:22:55.427116',10,'2026-05-17 16:22:55.427026',650,'TODO_COMPLETION',15),
+(127,'2026-05-17 16:22:57.511928','2026-05-17 16:22:57.511928',10,'2026-05-17 16:22:57.511809',651,'TODO_COMPLETION',15),
+(128,'2026-05-17 16:22:59.346040','2026-05-17 16:22:59.346040',10,'2026-05-17 16:22:59.345924',656,'TODO_COMPLETION',15),
+(129,'2026-05-17 16:31:30.834305','2026-05-17 16:31:30.834305',10,'2026-05-17 16:31:30.834203',6,'PET_TOUCH',15),
+(130,'2026-05-17 16:40:48.691050','2026-05-17 16:40:48.691050',10,'2026-05-17 16:40:48.690963',18,'PET_TOUCH',15),
+(131,'2026-05-17 16:58:16.261661','2026-05-17 16:58:16.261661',100,'2026-05-17 16:58:16.261587',NULL,'SIGNUP_BONUS',58),
+(132,'2026-05-17 16:59:22.498183','2026-05-17 16:59:22.498183',10,'2026-05-17 16:59:22.498070',16,'PET_TOUCH',58),
+(133,'2026-05-17 16:59:56.495003','2026-05-17 16:59:56.495003',10,'2026-05-17 16:59:56.494919',875,'TODO_COMPLETION',58),
+(134,'2026-05-17 17:00:28.174639','2026-05-17 17:00:28.174639',10,'2026-05-17 17:00:28.174538',882,'TODO_COMPLETION',58),
+(135,'2026-05-17 17:03:05.997278','2026-05-17 17:03:05.997278',10,'2026-05-17 17:03:05.997176',919,'TODO_COMPLETION',58),
+(136,'2026-05-17 17:09:03.223044','2026-05-17 17:09:03.223044',10,'2026-05-17 17:09:03.222959',5,'PET_TOUCH',58),
+(137,'2026-05-17 19:30:16.377893','2026-05-17 19:30:16.377893',10,'2026-05-17 19:30:16.377812',10,'PET_TOUCH',58),
+(138,'2026-05-17 21:13:06.237420','2026-05-17 21:13:06.237420',10,'2026-05-17 21:13:06.237329',4,'PET_TOUCH',31),
+(139,'2026-05-18 00:06:17.331953','2026-05-18 00:06:17.331953',10,'2026-05-18 00:06:17.331878',7,'PET_TOUCH',15),
+(140,'2026-05-18 08:07:17.822803','2026-05-18 08:07:17.822803',100,'2026-05-18 08:07:17.822740',NULL,'SIGNUP_BONUS',59),
+(141,'2026-05-18 08:08:59.733227','2026-05-18 08:08:59.733227',10,'2026-05-18 08:08:59.733154',4,'PET_TOUCH',59),
+(142,'2026-05-18 09:53:21.579752','2026-05-18 09:53:21.579752',10,'2026-05-18 09:53:21.579669',7,'PET_TOUCH',15),
+(143,'2026-05-19 09:58:35.287374','2026-05-19 09:58:35.287374',10,'2026-05-19 09:58:35.287263',16,'PET_TOUCH',3),
+(144,'2026-05-19 15:33:31.496777','2026-05-19 15:33:31.496777',10,'2026-05-19 15:33:31.496707',1261,'TODO_COMPLETION',3),
+(145,'2026-05-19 16:48:10.114621','2026-05-19 16:48:10.114621',10,'2026-05-19 16:48:10.114546',5,'PET_TOUCH',3),
+(146,'2026-05-19 17:32:50.197672','2026-05-19 17:32:50.197672',10,'2026-05-19 17:32:50.197594',4,'PET_TOUCH',3),
+(147,'2026-05-19 18:28:15.889164','2026-05-19 18:28:15.889164',10,'2026-05-19 18:28:15.889086',7,'PET_TOUCH',15),
+(148,'2026-05-20 03:22:57.627240','2026-05-20 03:22:57.627240',10,'2026-05-20 03:22:57.627162',4,'PET_TOUCH',10),
+(149,'2026-05-20 12:03:54.280800','2026-05-20 12:03:54.280800',10,'2026-05-20 12:03:54.280729',10,'PET_TOUCH',3),
+(150,'2026-05-20 12:05:09.698697','2026-05-20 12:05:09.698697',100,'2026-05-20 12:05:09.697145',NULL,'DAILY_ATTENDANCE',3),
+(151,'2026-05-20 12:09:26.939051','2026-05-20 12:09:26.939051',20,'2026-05-20 12:09:26.938765',1440,'TODO_COMPLETION',3),
+(152,'2026-05-20 12:09:33.623417','2026-05-20 12:09:33.623417',20,'2026-05-20 12:09:33.623128',1441,'TODO_COMPLETION',3),
+(153,'2026-05-20 12:09:44.408095','2026-05-20 12:09:44.408095',20,'2026-05-20 12:09:44.407814',1442,'TODO_COMPLETION',3),
+(154,'2026-05-20 12:11:25.562383','2026-05-20 12:11:25.562383',50,'2026-05-20 12:11:25.562138',16,'PET_TOUCH',3),
+(155,'2026-05-20 12:11:37.245178','2026-05-20 12:11:37.245178',100,'2026-05-20 12:11:37.244932',NULL,'DAILY_ATTENDANCE',60),
+(156,'2026-05-20 12:14:26.249330','2026-05-20 12:14:26.249330',20,'2026-05-20 12:14:26.249092',1443,'TODO_COMPLETION',3),
+(157,'2026-05-20 12:14:45.062206','2026-05-20 12:14:45.062206',20,'2026-05-20 12:14:45.061917',1444,'TODO_COMPLETION',3),
+(158,'2026-05-20 12:41:42.936110','2026-05-20 12:41:42.936110',100,'2026-05-20 12:41:42.917437',NULL,'DAILY_ATTENDANCE',38),
+(159,'2026-05-20 12:51:48.604071','2026-05-20 12:51:48.604071',50,'2026-05-20 12:51:48.603818',10,'PET_TOUCH',8),
+(160,'2026-05-20 13:04:01.755337','2026-05-20 13:04:01.755337',100,'2026-05-20 13:04:01.755036',NULL,'DAILY_ATTENDANCE',62),
+(161,'2026-05-20 13:04:36.695028','2026-05-20 13:04:36.695028',100,'2026-05-20 13:04:36.694730',NULL,'DAILY_ATTENDANCE',63),
+(162,'2026-05-20 13:07:52.541747','2026-05-20 13:07:52.541747',20,'2026-05-20 13:07:52.541464',268,'TODO_COMPLETION',8),
+(163,'2026-05-20 13:07:56.903617','2026-05-20 13:07:56.903617',20,'2026-05-20 13:07:56.903292',1454,'TODO_COMPLETION',63),
+(164,'2026-05-20 13:32:28.016061','2026-05-20 13:32:28.016061',100,'2026-05-20 13:32:28.014785',NULL,'DAILY_ATTENDANCE',64),
+(165,'2026-05-20 13:46:20.070227','2026-05-20 13:46:20.070227',100,'2026-05-20 13:46:20.069989',NULL,'DAILY_ATTENDANCE',65),
+(166,'2026-05-20 13:49:13.351515','2026-05-20 13:49:13.351515',100,'2026-05-20 13:49:13.351238',NULL,'DAILY_ATTENDANCE',16),
+(167,'2026-05-20 13:59:29.185930','2026-05-20 13:59:29.185930',100,'2026-05-20 13:59:29.185608',NULL,'DAILY_ATTENDANCE',15),
+(168,'2026-05-20 14:01:38.916670','2026-05-20 14:01:38.916670',100,'2026-05-20 14:01:38.916321',NULL,'DAILY_ATTENDANCE',9),
+(169,'2026-05-20 14:43:04.762961','2026-05-20 14:43:04.762961',100,'2026-05-20 14:43:04.762640',NULL,'DAILY_ATTENDANCE',7),
+(170,'2026-05-20 14:43:44.721563','2026-05-20 14:43:44.721563',50,'2026-05-20 14:43:44.721287',11,'PET_TOUCH',7),
+(171,'2026-05-20 15:45:21.555383','2026-05-20 15:45:21.555383',50,'2026-05-20 15:45:21.555141',7,'PET_TOUCH',15),
+(172,'2026-05-20 16:21:37.529678','2026-05-20 16:21:37.529678',20,'2026-05-20 16:21:37.529416',1460,'TODO_COMPLETION',9),
+(173,'2026-05-20 16:24:29.279417','2026-05-20 16:24:29.279417',20,'2026-05-20 16:24:29.279211',1461,'TODO_COMPLETION',9),
+(174,'2026-05-20 16:24:41.674825','2026-05-20 16:24:41.674825',50,'2026-05-20 16:24:41.674574',5,'PET_TOUCH',9);
+/*!40000 ALTER TABLE `wallet_earn_logs` ENABLE KEYS */;
+UNLOCK TABLES;
+COMMIT;
+SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
+
+-- Dump completed on 2026-05-20 16:27:10
