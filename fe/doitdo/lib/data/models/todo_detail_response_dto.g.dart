@@ -31,6 +31,9 @@ _$TodoDetailResponseDtoImpl _$$TodoDetailResponseDtoImplFromJson(
       const <String>[],
   masterTodoId: (json['masterTodoId'] as num?)?.toInt(),
   recurrenceGroupId: (json['recurrenceGroupId'] as num?)?.toInt(),
+  earnedCoin: (json['earnedCoin'] as num?)?.toInt() ?? 0,
+  rewarded: json['rewarded'] as bool? ?? false,
+  walletBalance: (json['walletBalance'] as num?)?.toInt() ?? 0,
 );
 
 Map<String, dynamic> _$$TodoDetailResponseDtoImplToJson(
@@ -52,4 +55,7 @@ Map<String, dynamic> _$$TodoDetailResponseDtoImplToJson(
   'excludedDates': instance.excludedDates,
   'masterTodoId': instance.masterTodoId,
   'recurrenceGroupId': instance.recurrenceGroupId,
+  'earnedCoin': instance.earnedCoin,
+  'rewarded': instance.rewarded,
+  'walletBalance': instance.walletBalance,
 };

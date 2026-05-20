@@ -1,3 +1,5 @@
+// ignore_for_file: invalid_annotation_target
+
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'todo_detail_response_dto.freezed.dart';
@@ -12,7 +14,7 @@ class TodoDetailResponseDto with _$TodoDetailResponseDto {
     required String status,
     String? category,
     String? colorHex,
-    int? categoryId,          // ← 이 줄 추가
+    int? categoryId, // ← 이 줄 추가
     required String type,
     required int priority,
     String? startDate,
@@ -32,6 +34,9 @@ class TodoDetailResponseDto with _$TodoDetailResponseDto {
     // - 일반 NORMAL/PERIOD/SOMEDAY: null
     // - 백필 안 된 레거시 RECURRING: null (자연 폴백)
     int? recurrenceGroupId,
+    @Default(0) int earnedCoin,
+    @Default(false) bool rewarded,
+    @Default(0) int walletBalance,
   }) = _TodoDetailResponseDto;
 
   factory TodoDetailResponseDto.fromJson(Map<String, dynamic> json) =>
