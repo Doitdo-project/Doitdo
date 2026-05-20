@@ -18,11 +18,11 @@ import 'package:doitdo/presentation/providers/app_data_providers.dart';
 /// 아직 없는 말풍선 / 화면 전용 인터랙션 상태만 남아있다.
 class TamagochiViewModel extends StateNotifier<TamagochiState> {
   TamagochiViewModel(this._characterRepository)
-      : super(
-          // 진입 직후엔 캐릭터 탭이 가능한지를 사용자가 모르기 때문에 가벼운
-          // 가이드 문구를 깔아두고, 실제 탭이 오면 랜덤 풀로 교체한다.
-          const TamagochiState(speechBubble: '나를 한 번 눌러봐!'),
-        );
+    : super(
+        // 진입 직후엔 캐릭터 탭이 가능한지를 사용자가 모르기 때문에 가벼운
+        // 가이드 문구를 깔아두고, 실제 탭이 오면 랜덤 풀로 교체한다.
+        const TamagochiState(speechBubble: '나를 한 번 눌러봐!'),
+      );
 
   final CharacterRepository _characterRepository;
 
@@ -33,14 +33,33 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
   /// action gif 를 [_actionDuration] 동안만 보여주고 정적 png 로 되돌릴 때 쓰는 타이머.
   /// 재탭/새 응답이 오면 cancel 후 다시 스케줄해서 항상 "마지막 응답 기준 N초" 가 되게 한다.
   Timer? _revertTimer;
+  Timer? _passiveSleepTimer;
   static const Duration _actionDuration = Duration(seconds: 2);
+  static const String _passiveSleepActionType = 'SLEEP';
 
   static final Random _rng = Random();
+  bool _passiveSleepEnabled = false;
+  bool _passiveActionRunning = false;
+  bool _sleeping = false;
 
   @override
   void dispose() {
     _revertTimer?.cancel();
+    _passiveSleepTimer?.cancel();
     super.dispose();
+  }
+
+  void setPassiveSleepEnabled(bool enabled) {
+    if (_passiveSleepEnabled == enabled) return;
+    _passiveSleepEnabled = enabled;
+    _passiveSleepTimer?.cancel();
+    _passiveSleepTimer = null;
+    if (!enabled && _sleeping) {
+      _wakeFromSleep();
+    }
+    if (enabled) {
+      _schedulePassiveSleep(initial: true);
+    }
   }
 
   /// 홈 캐릭터 슬롯이 탭됐을 때 호출.
@@ -71,11 +90,22 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
     final message = _pickSpeechBubble(remainingTodayTodos);
     state = state.copyWith(speechBubble: message);
 
+    if (_sleeping) {
+      _wakeFromSleep();
+      _schedulePassiveSleep();
+      return;
+    }
+
     if (_tapping) return;
     _tapping = true;
-    _triggerActionAsync(CharacterAction.idle, tapOrigin: tapOrigin)
-        .whenComplete(() => _tapping = false);
+    _triggerActionAsync(
+      _pickTapAction(),
+      tapOrigin: tapOrigin,
+    ).whenComplete(() => _tapping = false);
   }
+
+  CharacterAction _pickTapAction() =>
+      _rng.nextBool() ? CharacterAction.happy : CharacterAction.idle;
 
   /// 다음 [CharacterTapGain.tick] 값. action 응답마다 단조증가시켜 같은 amount
   /// 라도 위젯 key 가 바뀌어 floating 인스턴스가 재생성되게 한다.
@@ -101,11 +131,17 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
   Future<void> _triggerActionAsync(
     CharacterAction action, {
     required Offset tapOrigin,
+  }) => _triggerActionTypeAsync(action.serverValue, tapOrigin: tapOrigin);
+
+  Future<void> _triggerActionTypeAsync(
+    String actionType, {
+    Offset? tapOrigin,
   }) async {
     try {
-      final result = await _characterRepository.triggerAction(action);
+      final result = await _characterRepository.triggerActionType(actionType);
       if (!mounted) return;
       final url = result.url;
+      final isSleepAction = _isSleepActionType(actionType);
       // 코인 보상은 gif 응답 유무와 독립적으로 처리 — 빈 url 이라도 earnedAmount
       // 가 있으면 floating 시그널은 띄운다.
       if (url.isNotEmpty) {
@@ -120,13 +156,16 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
         );
         // 응답 도착 시점부터 2초 카운트 — 재탭/새 응답이 오면 새 타이머로 교체된다.
         _revertTimer?.cancel();
-        _revertTimer = Timer(_actionDuration, () {
-          if (!mounted) return;
-          if (state.actionUrl == null) return;
-          state = state.copyWith(clearActionUrl: true);
-        });
+        _sleeping = isSleepAction;
+        if (!isSleepAction) {
+          _revertTimer = Timer(_actionDuration, () {
+            if (!mounted) return;
+            if (state.actionUrl == null) return;
+            state = state.copyWith(clearActionUrl: true);
+          });
+        }
       }
-      if (result.earnedAmount > 0) {
+      if (result.earnedAmount > 0 && tapOrigin != null) {
         _gainTick += 1;
         state = state.copyWith(
           lastGain: CharacterTapGain(
@@ -140,7 +179,7 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
       // 인터랙션 핑이라 실패해도 사용자 알림은 안 띄운다 — 무한 스팸 방지 +
       // 화면이 멀쩡히 동작하는데 에러만 뜨는 어색함을 피하려는 의도.
       appLogger.d(
-        'character action ping failed: ${action.serverValue}',
+        'character action ping failed: $actionType',
         error: e,
         stackTrace: st,
       );
@@ -154,10 +193,60 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
   /// 실제 표시에 [CachedNetworkImage] 를 쓰므로, 사전 디코드도 같은 provider
   /// ([CachedNetworkImageProvider]) 로 해야 동일 캐시 키에 적재된다. `NetworkImage`
   /// 를 쓰면 키가 달라 precache 가 무효가 된다.
+  void _wakeFromSleep() {
+    _sleeping = false;
+    _revertTimer?.cancel();
+    state = state.copyWith(clearActionUrl: true);
+  }
+
+  void _schedulePassiveSleep({bool initial = false}) {
+    _passiveSleepTimer?.cancel();
+    if (!_passiveSleepEnabled) return;
+    _passiveSleepTimer = Timer(
+      _pickPassiveSleepDelay(DateTime.now(), initial: initial),
+      () => _maybeTriggerPassiveSleep(initial: initial),
+    );
+  }
+
+  Duration _pickPassiveSleepDelay(DateTime now, {required bool initial}) {
+    final night = _isNight(now);
+    final minSeconds = initial ? (night ? 20 : 60) : (night ? 35 : 120);
+    final maxSeconds = initial ? (night ? 50 : 120) : (night ? 90 : 300);
+    return Duration(
+      seconds: minSeconds + _rng.nextInt(maxSeconds - minSeconds + 1),
+    );
+  }
+
+  Future<void> _maybeTriggerPassiveSleep({bool initial = false}) async {
+    try {
+      if (!mounted || !_passiveSleepEnabled) return;
+      if (_tapping || _cleaningPoop || _passiveActionRunning) return;
+      if (state.actionUrl != null && state.actionUrl!.isNotEmpty) return;
+
+      final now = DateTime.now();
+      final chance = _isNight(now) ? 0.70 : 0.12;
+      if (_rng.nextDouble() >= chance) return;
+
+      _passiveActionRunning = true;
+      await _triggerActionTypeAsync(_passiveSleepActionType);
+    } finally {
+      _passiveActionRunning = false;
+      if (mounted && _passiveSleepEnabled) {
+        _schedulePassiveSleep();
+      }
+    }
+  }
+
+  bool _isNight(DateTime now) => now.hour >= 22 || now.hour < 7;
+
+  bool _isSleepActionType(String actionType) =>
+      actionType.trim().toUpperCase() == _passiveSleepActionType;
+
   Future<void> _precacheNetworkImage(String url) async {
     final completer = Completer<void>();
-    final stream =
-        CachedNetworkImageProvider(url).resolve(ImageConfiguration.empty);
+    final stream = CachedNetworkImageProvider(
+      url,
+    ).resolve(ImageConfiguration.empty);
     late ImageStreamListener listener;
     listener = ImageStreamListener(
       (_, _) {
@@ -222,5 +311,5 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
 
 final tamagochiViewModelProvider =
     StateNotifierProvider.autoDispose<TamagochiViewModel, TamagochiState>(
-  (ref) => TamagochiViewModel(ref.watch(characterRepositoryProvider)),
-);
+      (ref) => TamagochiViewModel(ref.watch(characterRepositoryProvider)),
+    );

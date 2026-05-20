@@ -393,9 +393,11 @@ class CharacterCard extends StatelessWidget {
     final overrideUrl = state.actionUrl;
     final isAction = overrideUrl != null && overrideUrl.isNotEmpty;
     final imageUrl = isAction ? overrideUrl : c.thumbnailUrl;
+    final placeholderUrl = isAction ? c.thumbnailUrl : null;
     return _GrownCharacter(
       key: ValueKey('grown-$imageUrl-${c.characterId}-${state.actionTick}'),
       thumbnailUrl: imageUrl,
+      placeholderUrl: placeholderUrl,
       eyeGifCharacterId: isAction ? null : c.characterId,
       imageHeight: _grownCharacterImageDesignHeight.h,
       // 액션 중에는 walking 으로 보이면 안 된다(공용 10.gif 대신 액션 gif 가
@@ -572,13 +574,19 @@ class _SpeechBubbleTailPainter extends CustomPainter {
 /// 캐시 hit 시 페이드 인 애니메이션은 제거 — 즉시 그려져야 캐릭터 카드가
 /// 끊김없이 채워진다.
 class _CachedCharacterImage extends StatelessWidget {
-  const _CachedCharacterImage({required this.url, required this.height});
+  const _CachedCharacterImage({
+    required this.url,
+    required this.height,
+    this.placeholderUrl,
+  });
 
   final String url;
   final double height;
+  final String? placeholderUrl;
 
   @override
   Widget build(BuildContext context) {
+    final fallbackUrl = placeholderUrl;
     return CachedNetworkImage(
       imageUrl: url,
       height: height,
@@ -588,7 +596,9 @@ class _CachedCharacterImage extends StatelessWidget {
       memCacheHeight: 320,
       fadeInDuration: Duration.zero,
       fadeOutDuration: Duration.zero,
-      placeholder: (_, _) => const SizedBox.shrink(),
+      placeholder: (_, _) => fallbackUrl == null || fallbackUrl.isEmpty
+          ? const SizedBox.shrink()
+          : _CachedCharacterImage(url: fallbackUrl, height: height),
       errorWidget: (_, _, _) => const _CharacterPlaceholder(),
     );
   }
@@ -761,11 +771,13 @@ class _GrownCharacter extends StatefulWidget {
     super.key,
     required this.thumbnailUrl,
     required this.imageHeight,
+    this.placeholderUrl,
     this.eyeGifCharacterId,
     this.isWalking = false,
   });
 
   final String thumbnailUrl;
+  final String? placeholderUrl;
   final double imageHeight;
   final int? eyeGifCharacterId;
 
@@ -1069,6 +1081,7 @@ class _GrownCharacterState extends State<_GrownCharacter> {
           : _CachedCharacterImage(
               url: widget.thumbnailUrl,
               height: widget.imageHeight,
+              placeholderUrl: widget.placeholderUrl,
             );
     }
 
