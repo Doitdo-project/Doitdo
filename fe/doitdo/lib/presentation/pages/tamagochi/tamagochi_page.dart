@@ -140,22 +140,28 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   void _syncPassiveSleep(Character? character) {
     final enabled =
         character != null &&
-            !character.isEgg &&
-            !_evolving &&
-            !_farewellAnimating &&
-            _activeEvolution == null;
-    ref
-        .read(tamagochiViewModelProvider.notifier)
-        .setPassiveSleepEnabled(enabled);
+        !character.isEgg &&
+        !_evolving &&
+        !_farewellAnimating &&
+        _activeEvolution == null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref
+          .read(tamagochiViewModelProvider.notifier)
+          .setPassiveSleepEnabled(enabled);
+    });
   }
 
   void _syncReturnSad(Character? character) {
     final hasCharacter = character != null && !character.isEgg;
-    unawaited(
-      ref
-          .read(tamagochiViewModelProvider.notifier)
-          .checkReturnSad(hasCharacter: hasCharacter),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(
+        ref
+            .read(tamagochiViewModelProvider.notifier)
+            .checkReturnSad(hasCharacter: hasCharacter),
+      );
+    });
   }
 
   void _pickRandomPoopPosition() {
@@ -278,7 +284,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     ).resolve(ImageConfiguration.empty);
     late ImageStreamListener listener;
     listener = ImageStreamListener(
-          (_, _) {
+      (_, _) {
         stream.removeListener(listener);
         if (!completer.isCompleted) completer.complete();
       },
@@ -437,7 +443,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       context: context,
       title: '독립 시키기',
       message:
-      '$name가 떠날 준비가 됐어요.\n'
+          '$name가 떠날 준비가 됐어요.\n'
           '배웅하면 되돌릴 수 없고 바로 새 알이 도착해요.',
       confirmLabel: '배웅하기',
       cancelLabel: '취소',
@@ -513,7 +519,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       context: context,
       title: '진화 시키기',
       message:
-      '$name가 다음 단계로 진화할 준비가 됐어요.\n'
+          '$name가 다음 단계로 진화할 준비가 됐어요.\n'
           '진화하면 모습이 바뀌고 다시 처음부터 자라요.',
       confirmLabel: '진화시키기',
       cancelLabel: '취소',
@@ -660,9 +666,9 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     // 캐릭터 fetch 에러 스낵바. 진화 트리거는 더 이상 자동이 아님 — 캐릭터
     // 카드의 액션 뱃지(canEvolve/canFarewell) 탭 → 다이얼로그 흐름으로 대체됨.
     ref.listen<AsyncValue<Character?>>(characterViewModelProvider, (
-        prev,
-        next,
-        ) {
+      prev,
+      next,
+    ) {
       // 첫 로드(loading→error) 는 dio 의 토큰 refresh / 자동 재시도가 끼어들면서
       // 잠깐 error 로 빠졌다 곧 회복되는 경우가 많다. 깜빡 떴다 사라지는 스낵바를
       // 막기 위해, "한 번이라도 데이터를 보여준 적이 있는데 다시 실패" 한 경우
@@ -680,9 +686,9 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     // 청소 phase 2 ([_suppressLocalPoop]) 동안은 character.poop 이 여전히 true 라
     // listener 가 안 흔들려 위치가 그대로 유지된다 — brush 가 같은 자리에서 마무리.
     ref.listen<AsyncValue<Character?>>(characterViewModelProvider, (
-        prev,
-        next,
-        ) {
+      prev,
+      next,
+    ) {
       final wasPoop = prev?.valueOrNull?.poop ?? false;
       final nowPoop = next.valueOrNull?.poop ?? false;
       if (nowPoop && _poopLeftRatio == null) {
@@ -710,9 +716,9 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       _maybeShowAttendanceCelebration();
     });
     ref.listen<AsyncValue<List<RoomFurniturePlacement>>>(myRoomProvider, (
-        _,
-        _,
-        ) {
+      _,
+      _,
+    ) {
       _maybeShowAttendanceCelebration();
     });
 
@@ -748,7 +754,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
 
       final hasTodoShapeChange =
           prev.allTodos.length != next.allTodos.length ||
-              prev.allSomedayTodos.length != next.allSomedayTodos.length;
+          prev.allSomedayTodos.length != next.allSomedayTodos.length;
       if (hasTodoShapeChange) {
         ref
             .read(tamagochiViewModelProvider.notifier)
@@ -758,7 +764,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       final rewardGain = next.lastRewardGain;
       if (rewardGain != null && prev.lastRewardGain?.tick != rewardGain.tick) {
         final box =
-        _overlayKey.currentContext?.findRenderObject() as RenderBox?;
+            _overlayKey.currentContext?.findRenderObject() as RenderBox?;
         if (box != null && box.attached) {
           final size = box.size;
           setState(() {
@@ -814,15 +820,15 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: visible
               ? const SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.light,
-            statusBarBrightness: Brightness.dark,
-          )
+                  statusBarColor: Colors.transparent,
+                  statusBarIconBrightness: Brightness.light,
+                  statusBarBrightness: Brightness.dark,
+                )
               : const SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.dark,
-            statusBarBrightness: Brightness.light,
-          ),
+                  statusBarColor: Colors.transparent,
+                  statusBarIconBrightness: Brightness.dark,
+                  statusBarBrightness: Brightness.light,
+                ),
           child: child!,
         );
       },
@@ -866,17 +872,17 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                 isCharacterLoading: isCharacterLoading,
                                 evolution: _activeEvolution,
                                 beforeEvolutionImageUrl:
-                                _beforeEvolutionImageUrl,
+                                    _beforeEvolutionImageUrl,
                                 beforeEvolutionCharacterId:
-                                _beforeEvolutionCharacterId,
+                                    _beforeEvolutionCharacterId,
                                 afterEvolutionCharacterId:
-                                _afterEvolutionCharacterId,
+                                    _afterEvolutionCharacterId,
                                 onEvolutionAnimationStart:
-                                _onEvolutionAnimationStart,
+                                    _onEvolutionAnimationStart,
                                 onEvolutionComplete: _onEvolutionComplete,
                                 isFarewellAnimating: _farewellAnimating,
                                 onFarewellComplete:
-                                _handleFarewellAnimationComplete,
+                                    _handleFarewellAnimationComplete,
                                 topSafePadding: topInset,
                                 onTapShop: () =>
                                     context.push(AppRoutes.tamagochiShop),
@@ -889,15 +895,19 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                 poopLeftRatio: _poopLeftRatio,
                                 poopBottomRatio: _poopBottomRatio,
                                 onCharacterTap: (tapOrigin) {
+                                  final currentCharacter = character;
+                                  if (currentCharacter == null) return;
                                   final remaining = todayTodos
                                       .where((t) => !t.isDone)
                                       .length;
                                   ref
                                       .read(tamagochiViewModelProvider.notifier)
                                       .onCharacterTap(
-                                    remainingTodayTodos: remaining,
-                                    tapOrigin: tapOrigin,
-                                  );
+                                        remainingTodayTodos: remaining,
+                                        characterId:
+                                            currentCharacter.characterId,
+                                        tapOrigin: tapOrigin,
+                                      );
                                 },
                               ),
                               if (character != null &&
@@ -920,14 +930,14 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                     // 하기 위한 신호. canClaim=false + 블록 종료
                                     // 시점에만 true.
                                     isRewardClaimed:
-                                    !streak.canClaim && streak.isAtBlockEnd,
+                                        !streak.canClaim && streak.isAtBlockEnd,
                                     isClaimingReward: _claimingReward,
                                     claimSuccessFlash: _claimSuccessFlash,
                                     onClaimReward: _handleClaimReward,
                                     onTapEvolve: _handleEvolveTap,
                                     onTapFarewell: _handleFarewellTap,
                                     actionBusy:
-                                    _evolving ||
+                                        _evolving ||
                                         _farewelling ||
                                         _farewellAnimating,
                                   ),
@@ -1017,7 +1027,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                               if (!mounted) return;
                               setState(() {
                                 _floatingGains.removeWhere(
-                                      (e) => e.tick == g.tick,
+                                  (e) => e.tick == g.tick,
                                 );
                               });
                             },
@@ -1074,10 +1084,10 @@ class _PendingFloatingGain {
 /// [excludedOccurrences] 는 scope=only 로 삭제된 반복 발생 키 집합
 /// ("${todoId}_${yyyy-MM-dd}"). 반복 일정에서 오늘이 여기 들어있으면 제외한다.
 bool _isTodayTodo(
-    Todo todo,
-    DateTime today, [
-      Set<String> excludedOccurrences = const {},
-    ]) {
+  Todo todo,
+  DateTime today, [
+  Set<String> excludedOccurrences = const {},
+]) {
   bool sameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
   bool onOrBefore(DateTime a, DateTime b) => a.isBefore(b) || sameDay(a, b);
@@ -1089,7 +1099,7 @@ bool _isTodayTodo(
       return false;
 
     case TodoDateType.range:
-    // ✅ fetchTodos에서 시작일은 todo.date에 저장됨 (rangeStart는 null)
+      // ✅ fetchTodos에서 시작일은 todo.date에 저장됨 (rangeStart는 null)
       final start = todo.date ?? todo.rangeStart;
       final end = todo.rangeEnd;
       if (start == null) return false;
@@ -1098,7 +1108,7 @@ bool _isTodayTodo(
       return onOrBefore(today, end);
 
     case TodoDateType.repeat:
-    // ✅ fetchTodos에서 시작일은 todo.date에 저장됨 (repeatStartDate는 null)
+      // ✅ fetchTodos에서 시작일은 todo.date에 저장됨 (repeatStartDate는 null)
       final start = todo.date ?? todo.repeatStartDate;
       final end = todo.repeatEndDate;
       if (start == null) return false;
@@ -1414,7 +1424,7 @@ class _CrossSectionTodoListState extends ConsumerState<_CrossSectionTodoList> {
             ),
           ),
         if (totalCount > 0)
-        // ✅ Listener로 드래그 중 포인터 위치 감지 → 자동 스크롤
+          // ✅ Listener로 드래그 중 포인터 위치 감지 → 자동 스크롤
           Listener(
             onPointerMove: (event) {
               final screenHeight = MediaQuery.of(context).size.height;

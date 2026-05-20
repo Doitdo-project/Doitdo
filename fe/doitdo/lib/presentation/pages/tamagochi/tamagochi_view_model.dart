@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:doitdo/core/utils/app_logger.dart';
 import 'package:doitdo/domain/entities/character.dart';
 import 'package:doitdo/domain/repositories/character_repository.dart';
+import 'package:doitdo/presentation/pages/tamagochi/tamagochi_animation_resolver.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
 import 'package:flutter/painting.dart';
@@ -124,6 +125,7 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
   /// "+N" 위젯을 띄운다.
   void onCharacterTap({
     required int remainingTodayTodos,
+    required int? characterId,
     required Offset tapOrigin,
   }) {
     if (_sad) {
@@ -145,6 +147,7 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
     _tapping = true;
     _triggerActionAsync(
       _pickTapAction(),
+      characterId: characterId,
       tapOrigin: tapOrigin,
     ).whenComplete(() => _tapping = false);
   }
@@ -180,28 +183,46 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
 
   Future<void> _triggerActionAsync(
     CharacterAction action, {
+    int? characterId,
     required Offset tapOrigin,
-  }) => _triggerActionTypeAsync(action.serverValue, tapOrigin: tapOrigin);
+  }) => _triggerActionTypeAsync(
+    action.serverValue,
+    characterId: characterId,
+    tapOrigin: tapOrigin,
+  );
 
   Future<void> _triggerActionTypeAsync(
     String actionType, {
+    int? characterId,
     Offset? tapOrigin,
   }) async {
     try {
-      final result = await _characterRepository.triggerActionType(actionType);
-      if (!mounted) return;
-      final url = result.url;
       final isSleepAction = _isSleepActionType(actionType);
       final isSadAction = _isSadActionType(actionType);
+      final localAssetPath = resolveLocalCharacterActionAsset(
+        characterId: characterId,
+        actionType: actionType,
+      );
+      var earnedAmount = 0;
+      String? url;
+      if (localAssetPath == null) {
+        final result = await _characterRepository.triggerActionType(actionType);
+        if (!mounted) return;
+        url = result.url;
+        earnedAmount = result.earnedAmount;
+      }
       // 코인 보상은 gif 응답 유무와 독립적으로 처리 — 빈 url 이라도 earnedAmount
       // 가 있으면 floating 시그널은 띄운다.
-      if (url.isNotEmpty) {
+      if (localAssetPath != null || (url?.isNotEmpty ?? false)) {
         // gif 를 ImageCache 에 먼저 적재 → state 를 바꿔 위젯이 mount 될 때
         // Image.network 가 즉시 첫 프레임을 그려 빈 영역(깜빡임) 이 안 생긴다.
-        await _precacheNetworkImage(url);
-        if (!mounted) return;
+        if (url != null && url.isNotEmpty) {
+          await _precacheNetworkImage(url);
+          if (!mounted) return;
+        }
         // 같은 url 이 다시 와도 위젯 key 가 바뀌면 gif 가 처음부터 재생된다.
         state = state.copyWith(
+          actionAssetPath: localAssetPath,
           actionUrl: url,
           actionTick: state.actionTick + 1,
         );
@@ -222,16 +243,16 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
         } else {
           _revertTimer = Timer(_actionDuration, () {
             if (!mounted) return;
-            if (state.actionUrl == null) return;
-            state = state.copyWith(clearActionUrl: true);
+            if (!state.hasActiveActionVisual) return;
+            state = state.copyWith(clearActionVisual: true);
           });
         }
       }
-      if (result.earnedAmount > 0 && tapOrigin != null) {
+      if (earnedAmount > 0 && tapOrigin != null) {
         _gainTick += 1;
         state = state.copyWith(
           lastGain: CharacterTapGain(
-            amount: result.earnedAmount,
+            amount: earnedAmount,
             origin: tapOrigin,
             tick: _gainTick,
           ),
@@ -269,7 +290,7 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
     state = state.copyWith(
       speechBubble: speechBubble,
       speechBubblePinned: false,
-      clearActionUrl: true,
+      clearActionVisual: true,
     );
   }
 
@@ -295,7 +316,7 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
     try {
       if (!mounted || !_passiveSleepEnabled) return;
       if (_tapping || _cleaningPoop || _passiveActionRunning) return;
-      if (state.actionUrl != null && state.actionUrl!.isNotEmpty) return;
+      if (state.hasActiveActionVisual) return;
 
       final now = DateTime.now();
       final chance = _isNight(now) ? 0.70 : 0.12;
