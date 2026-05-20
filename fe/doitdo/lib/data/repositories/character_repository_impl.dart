@@ -25,31 +25,41 @@ class CharacterRepositoryImpl extends BaseRepository
 
   @override
   Future<Character> renameCharacter(String name) => safeApiCall(
-        () => _api.renameCharacter({'name': name}),
-      ).then((dto) => dto.toEntity());
+    () => _api.renameCharacter({'name': name}),
+  ).then((dto) => dto.toEntity());
 
   @override
-  Future<Evolution> evolveCharacter(int userCharacterId) =>
-      safeApiCall(() => _api.evolveCharacter(userCharacterId))
-          .then((dto) => dto.toEntity());
+  Future<Evolution> evolveCharacter(int userCharacterId) => safeApiCall(
+    () => _api.evolveCharacter(userCharacterId),
+  ).then((dto) => dto.toEntity());
 
   @override
   Future<({String url, int earnedAmount})> triggerAction(
     CharacterAction action,
-  ) =>
-      safeApiCall(() => _api.triggerCharacterAction(action.serverValue)).then(
-        (dto) => (url: dto.actionUrl, earnedAmount: dto.earnedAmount),
-      );
+  ) => triggerActionType(action.serverValue);
+
+  @override
+  Future<({String url, int earnedAmount})> triggerActionType(
+    String actionType,
+  ) {
+    final normalized =
+        CharacterAction.tryParseServerValue(actionType)?.serverValue ??
+        actionType.trim().toUpperCase();
+    return safeApiCall(
+      () => _api.triggerCharacterAction(normalized),
+    ).then((dto) => (url: dto.actionUrl, earnedAmount: dto.earnedAmount));
+  }
 
   @override
   Future<List<CollectionEntry>> getEncyclopedia() => safeApiCall(
-        () => _api.getEncyclopedia(),
-      ).then((dto) => dto.items.map((item) => item.toEntry()).toList());
+    () => _api.getEncyclopedia(),
+  ).then((dto) => dto.items.map((item) => item.toEntry()).toList());
 
   @override
   Future<EncyclopediaDetail> getEncyclopediaDetail(String species) =>
-      safeApiCall(() => _api.getEncyclopediaDetail(species))
-          .then((dto) => dto.toEntity());
+      safeApiCall(
+        () => _api.getEncyclopediaDetail(species),
+      ).then((dto) => dto.toEntity());
 
   @override
   Future<void> approveFarewell({required bool approved}) =>

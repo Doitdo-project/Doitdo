@@ -128,6 +128,15 @@ enum CharacterAction {
   sad,
   poop;
 
+  static CharacterAction? tryParseServerValue(String raw) {
+    final normalized = raw.trim().toLowerCase();
+    if (normalized.isEmpty) return null;
+    for (final action in CharacterAction.values) {
+      if (action.name == normalized) return action;
+    }
+    return null;
+  }
+
   /// 서버 path param 직렬화 값. enum 그대로 대문자.
   String get serverValue => name.toUpperCase();
 }

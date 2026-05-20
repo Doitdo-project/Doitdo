@@ -39,6 +39,12 @@ abstract class CharacterRepository {
     CharacterAction action,
   );
 
+  /// 서버 actionType 문자열을 그대로 호출한다.
+  ///
+  /// FE enum 업데이트보다 BE actionType 이 먼저 배포되는 경우에도 호출 경로를
+  /// 유지하기 위한 escape hatch 이다. 호출자는 빈 문자열만 피하면 된다.
+  Future<({String url, int earnedAmount})> triggerActionType(String actionType);
+
   /// 도감 목록. 미해금 항목은 species/thumbnailUrl 은 들어와도 UI 에서 가린다.
   Future<List<CollectionEntry>> getEncyclopedia();
 

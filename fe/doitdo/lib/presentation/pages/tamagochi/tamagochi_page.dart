@@ -137,6 +137,27 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
   double? _poopBottomRatio;
   final Random _poopRng = Random();
 
+  void _syncPassiveSleep(Character? character) {
+    final enabled =
+        character != null &&
+        !character.isEgg &&
+        !_evolving &&
+        !_farewellAnimating &&
+        _activeEvolution == null;
+    ref
+        .read(tamagochiViewModelProvider.notifier)
+        .setPassiveSleepEnabled(enabled);
+  }
+
+  void _syncReturnSad(Character? character) {
+    final hasCharacter = character != null && !character.isEgg;
+    unawaited(
+      ref
+          .read(tamagochiViewModelProvider.notifier)
+          .checkReturnSad(hasCharacter: hasCharacter),
+    );
+  }
+
   void _pickRandomPoopPosition() {
     const left = RoomLayer.safePoopLeftMin;
     const leftRange = RoomLayer.safePoopLeftMax - RoomLayer.safePoopLeftMin;
@@ -416,7 +437,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
       context: context,
       title: '독립 시키기',
       message:
-      '$name가 떠날 준비가 됐어요.\n'
+          '$name가 떠날 준비가 됐어요.\n'
           '배웅하면 되돌릴 수 없고 바로 새 알이 도착해요.',
       confirmLabel: '배웅하기',
       cancelLabel: '취소',
@@ -725,9 +746,17 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     ref.listen<TodoState>(todoViewModelProvider, (prev, next) {
       if (prev == null) return;
 
+      final hasTodoShapeChange =
+          prev.allTodos.length != next.allTodos.length ||
+          prev.allSomedayTodos.length != next.allSomedayTodos.length;
+      if (hasTodoShapeChange || prev.doneCount != next.doneCount) {
+        ref
+            .read(tamagochiViewModelProvider.notifier)
+            .onTodoPositiveInteraction();
+      }
+
       final rewardGain = next.lastRewardGain;
-      if (rewardGain != null &&
-          prev.lastRewardGain?.tick != rewardGain.tick) {
+      if (rewardGain != null && prev.lastRewardGain?.tick != rewardGain.tick) {
         final box =
             _overlayKey.currentContext?.findRenderObject() as RenderBox?;
         if (box != null && box.attached) {
@@ -767,6 +796,8 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
 
     final character = characterAsync.valueOrNull;
     final isCharacterLoading = characterAsync.isLoading;
+    _syncReturnSad(character);
+    _syncPassiveSleep(character);
     final topInset = MediaQuery.paddingOf(context).top;
 
     final double headerHeight = _headerHeightExclTopInset.h + topInset;

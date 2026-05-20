@@ -236,7 +236,7 @@ class CharacterCard extends StatelessWidget {
                                 child: IgnorePointer(
                                   ignoring: !isWalking,
                                   child: Transform.translate(
-                                    offset: Offset(0, 10.h),
+                                    offset: Offset(0, 6.h),
                                     child: const _SpeechBubble(
                                       text: '키워줘서 고마워요!',
                                     ),
@@ -256,8 +256,11 @@ class CharacterCard extends StatelessWidget {
                           onCharacterTap: _isGrown ? onCharacterTap : null,
                           bubble: _speechText != null
                               ? Transform.translate(
-                                  offset: Offset(0, 10.h),
-                                  child: _AutoToggledBubble(text: _speechText!),
+                                  offset: Offset(0, 6.h),
+                                  child: _AutoToggledBubble(
+                                    text: _speechText!,
+                                    pinned: state.speechBubblePinned,
+                                  ),
                                 )
                               : null,
                           characterBuilder: (_, isWalking) =>
@@ -393,9 +396,11 @@ class CharacterCard extends StatelessWidget {
     final overrideUrl = state.actionUrl;
     final isAction = overrideUrl != null && overrideUrl.isNotEmpty;
     final imageUrl = isAction ? overrideUrl : c.thumbnailUrl;
+    final placeholderUrl = isAction ? c.thumbnailUrl : null;
     return _GrownCharacter(
       key: ValueKey('grown-$imageUrl-${c.characterId}-${state.actionTick}'),
       thumbnailUrl: imageUrl,
+      placeholderUrl: placeholderUrl,
       eyeGifCharacterId: isAction ? null : c.characterId,
       imageHeight: _grownCharacterImageDesignHeight.h,
       // 액션 중에는 walking 으로 보이면 안 된다(공용 10.gif 대신 액션 gif 가
@@ -479,9 +484,10 @@ class _SpeechBubble extends StatelessWidget {
 /// - Layout 슬롯은 항상 유지(opacity 만 토글). Column 의 character 위치가 흔들리지
 ///   않게 하기 위함.
 class _AutoToggledBubble extends StatefulWidget {
-  const _AutoToggledBubble({required this.text});
+  const _AutoToggledBubble({required this.text, this.pinned = false});
 
   final String text;
+  final bool pinned;
 
   @override
   State<_AutoToggledBubble> createState() => _AutoToggledBubbleState();
@@ -500,16 +506,16 @@ class _AutoToggledBubbleState extends State<_AutoToggledBubble> {
   @override
   void initState() {
     super.initState();
-    _scheduleHide();
+    _syncVisibility();
   }
 
   @override
   void didUpdateWidget(covariant _AutoToggledBubble old) {
     super.didUpdateWidget(old);
-    if (widget.text != old.text) {
+    if (widget.text != old.text || widget.pinned != old.pinned) {
       _hideTimer?.cancel();
       setState(() => _visible = true);
-      _scheduleHide();
+      _syncVisibility();
     }
   }
 
@@ -517,6 +523,14 @@ class _AutoToggledBubbleState extends State<_AutoToggledBubble> {
   void dispose() {
     _hideTimer?.cancel();
     super.dispose();
+  }
+
+  void _syncVisibility() {
+    if (widget.pinned) {
+      _hideTimer?.cancel();
+      return;
+    }
+    _scheduleHide();
   }
 
   void _scheduleHide() {
@@ -572,13 +586,19 @@ class _SpeechBubbleTailPainter extends CustomPainter {
 /// 캐시 hit 시 페이드 인 애니메이션은 제거 — 즉시 그려져야 캐릭터 카드가
 /// 끊김없이 채워진다.
 class _CachedCharacterImage extends StatelessWidget {
-  const _CachedCharacterImage({required this.url, required this.height});
+  const _CachedCharacterImage({
+    required this.url,
+    required this.height,
+    this.placeholderUrl,
+  });
 
   final String url;
   final double height;
+  final String? placeholderUrl;
 
   @override
   Widget build(BuildContext context) {
+    final fallbackUrl = placeholderUrl;
     return CachedNetworkImage(
       imageUrl: url,
       height: height,
@@ -588,7 +608,9 @@ class _CachedCharacterImage extends StatelessWidget {
       memCacheHeight: 320,
       fadeInDuration: Duration.zero,
       fadeOutDuration: Duration.zero,
-      placeholder: (_, _) => const SizedBox.shrink(),
+      placeholder: (_, _) => fallbackUrl == null || fallbackUrl.isEmpty
+          ? const SizedBox.shrink()
+          : _CachedCharacterImage(url: fallbackUrl, height: height),
       errorWidget: (_, _, _) => const _CharacterPlaceholder(),
     );
   }
@@ -761,11 +783,13 @@ class _GrownCharacter extends StatefulWidget {
     super.key,
     required this.thumbnailUrl,
     required this.imageHeight,
+    this.placeholderUrl,
     this.eyeGifCharacterId,
     this.isWalking = false,
   });
 
   final String thumbnailUrl;
+  final String? placeholderUrl;
   final double imageHeight;
   final int? eyeGifCharacterId;
 
@@ -1069,6 +1093,7 @@ class _GrownCharacterState extends State<_GrownCharacter> {
           : _CachedCharacterImage(
               url: widget.thumbnailUrl,
               height: widget.imageHeight,
+              placeholderUrl: widget.placeholderUrl,
             );
     }
 

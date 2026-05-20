@@ -44,6 +44,7 @@ class CharacterTapGain {
 class TamagochiState {
   const TamagochiState({
     this.speechBubble,
+    this.speechBubblePinned = false,
     this.actionUrl,
     this.actionTick = 0,
     this.lastGain,
@@ -51,6 +52,9 @@ class TamagochiState {
 
   /// 캐릭터 말풍선 문구. null 이면 말풍선 숨김.
   final String? speechBubble;
+
+  /// true 이면 [_AutoToggledBubble] 이 자동 fade-out 하지 않고 계속 노출한다.
+  final bool speechBubblePinned;
 
   /// 마지막 action 응답으로 받은 gif URL. null 이면 평상시(로컬 EYE gif) 사용.
   final String? actionUrl;
@@ -65,6 +69,7 @@ class TamagochiState {
 
   TamagochiState copyWith({
     String? speechBubble,
+    bool? speechBubblePinned,
     String? actionUrl,
     int? actionTick,
     bool clearActionUrl = false,
@@ -72,6 +77,7 @@ class TamagochiState {
   }) {
     return TamagochiState(
       speechBubble: speechBubble ?? this.speechBubble,
+      speechBubblePinned: speechBubblePinned ?? this.speechBubblePinned,
       // copyWith 의 nullable 파라미터는 null 을 "변경 없음" 으로 다루기 때문에
       // 명시적으로 null 로 되돌리려면 [clearActionUrl] 플래그를 사용한다.
       actionUrl: clearActionUrl ? null : (actionUrl ?? this.actionUrl),
