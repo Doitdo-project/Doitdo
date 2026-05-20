@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:doitdo/core/utils/app_logger.dart';
 import 'package:doitdo/domain/entities/character.dart';
@@ -17,7 +18,7 @@ import 'package:doitdo/presentation/providers/app_data_providers.dart';
 /// `todoViewModelProvider` 에서 직접 watch 한다. 이 ViewModel 에는 BE 엔드포인트가
 /// 아직 없는 말풍선 / 화면 전용 인터랙션 상태만 남아있다.
 class TamagochiViewModel extends StateNotifier<TamagochiState> {
-  TamagochiViewModel(this._characterRepository)
+  TamagochiViewModel(this._characterRepository, this._prefs)
     : super(
         // 진입 직후엔 캐릭터 탭이 가능한지를 사용자가 모르기 때문에 가벼운
         // 가이드 문구를 깔아두고, 실제 탭이 오면 랜덤 풀로 교체한다.
@@ -25,6 +26,7 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
       );
 
   final CharacterRepository _characterRepository;
+  final SharedPreferences _prefs;
 
   /// 캐릭터 탭 인터랙션 in-flight 여부. 빠른 연타 시 같은 action 으로 중복 핑이
   /// 나가지 않게 막는 용도(말풍선 자체는 매 탭마다 즉시 업데이트되므로 UX 손해 없음).
@@ -36,11 +38,21 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
   Timer? _passiveSleepTimer;
   static const Duration _actionDuration = Duration(seconds: 2);
   static const String _passiveSleepActionType = 'SLEEP';
+  static const String _returnSadActionType = 'SAD';
+  static const String _returnHappyActionType = 'HAPPY';
+  static const String _lastTamagochiVisitAtKey = 'tamagochi.lastVisitAt';
+  static const String _lastSadShownDateKey = 'tamagochi.lastSadShownDate';
+  static const Duration _sadReturnThreshold = Duration(hours: 24);
+  static const bool _forceReturnSadForDebug = bool.fromEnvironment(
+    'DOITDO_FORCE_TAMAGOCHI_SAD',
+  );
 
   static final Random _rng = Random();
   bool _passiveSleepEnabled = false;
   bool _passiveActionRunning = false;
   bool _sleeping = false;
+  bool _sad = false;
+  bool _returnSadChecked = false;
 
   @override
   void dispose() {
@@ -54,12 +66,40 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
     _passiveSleepEnabled = enabled;
     _passiveSleepTimer?.cancel();
     _passiveSleepTimer = null;
-    if (!enabled && _sleeping) {
-      _wakeFromSleep();
+    if (!enabled && _isHoldingAction) {
+      _clearHoldingAction();
     }
     if (enabled) {
       _schedulePassiveSleep(initial: true);
     }
+  }
+
+  Future<void> checkReturnSad({required bool hasCharacter}) async {
+    if (_returnSadChecked || !hasCharacter) return;
+    _returnSadChecked = true;
+
+    final now = DateTime.now();
+    final lastVisit = _forceReturnSadForDebug
+        ? now.subtract(_sadReturnThreshold + const Duration(hours: 1))
+        : DateTime.tryParse(_prefs.getString(_lastTamagochiVisitAtKey) ?? '');
+    await _prefs.setString(_lastTamagochiVisitAtKey, now.toIso8601String());
+
+    if (lastVisit == null) return;
+    if (now.difference(lastVisit) < _sadReturnThreshold) return;
+
+    final todayKey = _dateKey(now);
+    if (!_forceReturnSadForDebug &&
+        _prefs.getString(_lastSadShownDateKey) == todayKey) {
+      return;
+    }
+    await _prefs.setString(_lastSadShownDateKey, todayKey);
+
+    if (!mounted || _isHoldingAction) return;
+    state = state.copyWith(
+      speechBubble: _pickReturnSadMessage(),
+      speechBubblePinned: true,
+    );
+    await _triggerActionTypeAsync(_returnSadActionType);
   }
 
   /// 홈 캐릭터 슬롯이 탭됐을 때 호출.
@@ -87,14 +127,20 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
     required int remainingTodayTodos,
     required Offset tapOrigin,
   }) {
-    final message = _pickSpeechBubble(remainingTodayTodos);
-    state = state.copyWith(speechBubble: message);
-
-    if (_sleeping) {
-      _wakeFromSleep();
+    if (_sad) {
+      _resolveSadToHappy(message: _pickReturnHappyMessage());
       _schedulePassiveSleep();
       return;
     }
+
+    if (_sleeping) {
+      _clearHoldingAction(speechBubble: _pickSpeechBubble(remainingTodayTodos));
+      _schedulePassiveSleep();
+      return;
+    }
+
+    final message = _pickSpeechBubble(remainingTodayTodos);
+    state = state.copyWith(speechBubble: message, speechBubblePinned: false);
 
     if (_tapping) return;
     _tapping = true;
@@ -106,6 +152,11 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
 
   CharacterAction _pickTapAction() =>
       _rng.nextBool() ? CharacterAction.happy : CharacterAction.idle;
+
+  void onTodoPositiveInteraction() {
+    if (!_sad) return;
+    _resolveSadToHappy(message: _pickReturnHappyMessage());
+  }
 
   /// 다음 [CharacterTapGain.tick] 값. action 응답마다 단조증가시켜 같은 amount
   /// 라도 위젯 key 가 바뀌어 floating 인스턴스가 재생성되게 한다.
@@ -142,6 +193,7 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
       if (!mounted) return;
       final url = result.url;
       final isSleepAction = _isSleepActionType(actionType);
+      final isSadAction = _isSadActionType(actionType);
       // 코인 보상은 gif 응답 유무와 독립적으로 처리 — 빈 url 이라도 earnedAmount
       // 가 있으면 floating 시그널은 띄운다.
       if (url.isNotEmpty) {
@@ -157,7 +209,8 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
         // 응답 도착 시점부터 2초 카운트 — 재탭/새 응답이 오면 새 타이머로 교체된다.
         _revertTimer?.cancel();
         _sleeping = isSleepAction;
-        if (!isSleepAction) {
+        _sad = isSadAction;
+        if (!isSleepAction && !isSadAction) {
           _revertTimer = Timer(_actionDuration, () {
             if (!mounted) return;
             if (state.actionUrl == null) return;
@@ -193,10 +246,22 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
   /// 실제 표시에 [CachedNetworkImage] 를 쓰므로, 사전 디코드도 같은 provider
   /// ([CachedNetworkImageProvider]) 로 해야 동일 캐시 키에 적재된다. `NetworkImage`
   /// 를 쓰면 키가 달라 precache 가 무효가 된다.
-  void _wakeFromSleep() {
+  bool get _isHoldingAction => _sleeping || _sad;
+
+  void _resolveSadToHappy({required String message}) {
+    _clearHoldingAction(speechBubble: message);
+    unawaited(_triggerActionTypeAsync(_returnHappyActionType));
+  }
+
+  void _clearHoldingAction({String? speechBubble}) {
     _sleeping = false;
+    _sad = false;
     _revertTimer?.cancel();
-    state = state.copyWith(clearActionUrl: true);
+    state = state.copyWith(
+      speechBubble: speechBubble,
+      speechBubblePinned: false,
+      clearActionUrl: true,
+    );
   }
 
   void _schedulePassiveSleep({bool initial = false}) {
@@ -242,6 +307,15 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
   bool _isSleepActionType(String actionType) =>
       actionType.trim().toUpperCase() == _passiveSleepActionType;
 
+  bool _isSadActionType(String actionType) =>
+      actionType.trim().toUpperCase() == _returnSadActionType;
+
+  String _dateKey(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
+  }
+
   Future<void> _precacheNetworkImage(String url) async {
     final completer = Completer<void>();
     final stream = CachedNetworkImageProvider(
@@ -277,6 +351,12 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
     return pool[_rng.nextInt(pool.length)];
   }
 
+  String _pickReturnSadMessage() =>
+      _returnSadMessages[_rng.nextInt(_returnSadMessages.length)];
+
+  String _pickReturnHappyMessage() =>
+      _returnHappyMessages[_rng.nextInt(_returnHappyMessages.length)];
+
   // ─── 말풍선 풀 ──────────────────────────────────────────────────
   // 문구는 가볍게/짧게 유지(말풍선 폭이 좁음). 16~20자 이내.
 
@@ -307,9 +387,38 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
     '수고했어, 푹 쉬자~',
     '같이 빈둥거려볼까?',
   ];
+
+  static const List<String> _returnSadMessages = [
+    'ㅠ.ㅠ',
+    'ㅜ.ㅜ',
+    'ㅠ0ㅠ',
+    'ㅠ3ㅠ',
+    'ㅠㅁㅠ',
+    'ㅜㅁㅜ',
+    'ㅠ_ㅠ',
+    'ㅜ_ㅜ',
+    'ㅠoㅠ',
+    'ㅜoㅜ',
+    'ㅠ.ㅜ',
+    'ㅜ.ㅠ',
+    'ㅠ^ㅠ',
+    'ㅜ^ㅜ',
+    'ㅠ~ㅠ',
+    'ㅜ~ㅜ',
+  ];
+
+  static const List<String> _returnHappyMessages = [
+    '다시 왔네!',
+    '기다렸어!',
+    '이제 같이 놀자!',
+    '와줘서 고마워!',
+  ];
 }
 
 final tamagochiViewModelProvider =
     StateNotifierProvider.autoDispose<TamagochiViewModel, TamagochiState>(
-      (ref) => TamagochiViewModel(ref.watch(characterRepositoryProvider)),
+      (ref) => TamagochiViewModel(
+        ref.watch(characterRepositoryProvider),
+        ref.watch(sharedPreferencesProvider),
+      ),
     );

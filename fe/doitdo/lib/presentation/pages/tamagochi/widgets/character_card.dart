@@ -236,7 +236,7 @@ class CharacterCard extends StatelessWidget {
                                 child: IgnorePointer(
                                   ignoring: !isWalking,
                                   child: Transform.translate(
-                                    offset: Offset(0, 10.h),
+                                    offset: Offset(0, 6.h),
                                     child: const _SpeechBubble(
                                       text: '키워줘서 고마워요!',
                                     ),
@@ -256,8 +256,11 @@ class CharacterCard extends StatelessWidget {
                           onCharacterTap: _isGrown ? onCharacterTap : null,
                           bubble: _speechText != null
                               ? Transform.translate(
-                                  offset: Offset(0, 10.h),
-                                  child: _AutoToggledBubble(text: _speechText!),
+                                  offset: Offset(0, 6.h),
+                                  child: _AutoToggledBubble(
+                                    text: _speechText!,
+                                    pinned: state.speechBubblePinned,
+                                  ),
                                 )
                               : null,
                           characterBuilder: (_, isWalking) =>
@@ -481,9 +484,10 @@ class _SpeechBubble extends StatelessWidget {
 /// - Layout 슬롯은 항상 유지(opacity 만 토글). Column 의 character 위치가 흔들리지
 ///   않게 하기 위함.
 class _AutoToggledBubble extends StatefulWidget {
-  const _AutoToggledBubble({required this.text});
+  const _AutoToggledBubble({required this.text, this.pinned = false});
 
   final String text;
+  final bool pinned;
 
   @override
   State<_AutoToggledBubble> createState() => _AutoToggledBubbleState();
@@ -502,16 +506,16 @@ class _AutoToggledBubbleState extends State<_AutoToggledBubble> {
   @override
   void initState() {
     super.initState();
-    _scheduleHide();
+    _syncVisibility();
   }
 
   @override
   void didUpdateWidget(covariant _AutoToggledBubble old) {
     super.didUpdateWidget(old);
-    if (widget.text != old.text) {
+    if (widget.text != old.text || widget.pinned != old.pinned) {
       _hideTimer?.cancel();
       setState(() => _visible = true);
-      _scheduleHide();
+      _syncVisibility();
     }
   }
 
@@ -519,6 +523,14 @@ class _AutoToggledBubbleState extends State<_AutoToggledBubble> {
   void dispose() {
     _hideTimer?.cancel();
     super.dispose();
+  }
+
+  void _syncVisibility() {
+    if (widget.pinned) {
+      _hideTimer?.cancel();
+      return;
+    }
+    _scheduleHide();
   }
 
   void _scheduleHide() {

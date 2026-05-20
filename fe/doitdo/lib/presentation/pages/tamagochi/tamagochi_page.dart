@@ -149,6 +149,15 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
         .setPassiveSleepEnabled(enabled);
   }
 
+  void _syncReturnSad(Character? character) {
+    final hasCharacter = character != null && !character.isEgg;
+    unawaited(
+      ref
+          .read(tamagochiViewModelProvider.notifier)
+          .checkReturnSad(hasCharacter: hasCharacter),
+    );
+  }
+
   void _pickRandomPoopPosition() {
     const left = RoomLayer.safePoopLeftMin;
     const leftRange = RoomLayer.safePoopLeftMax - RoomLayer.safePoopLeftMin;
@@ -737,6 +746,15 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     ref.listen<TodoState>(todoViewModelProvider, (prev, next) {
       if (prev == null) return;
 
+      final hasTodoShapeChange =
+          prev.allTodos.length != next.allTodos.length ||
+          prev.allSomedayTodos.length != next.allSomedayTodos.length;
+      if (hasTodoShapeChange || prev.doneCount != next.doneCount) {
+        ref
+            .read(tamagochiViewModelProvider.notifier)
+            .onTodoPositiveInteraction();
+      }
+
       final rewardGain = next.lastRewardGain;
       if (rewardGain != null && prev.lastRewardGain?.tick != rewardGain.tick) {
         final box =
@@ -778,6 +796,7 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
 
     final character = characterAsync.valueOrNull;
     final isCharacterLoading = characterAsync.isLoading;
+    _syncReturnSad(character);
     _syncPassiveSleep(character);
     final topInset = MediaQuery.paddingOf(context).top;
 
