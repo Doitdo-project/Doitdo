@@ -725,6 +725,25 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
     ref.listen<TodoState>(todoViewModelProvider, (prev, next) {
       if (prev == null) return;
 
+      final rewardGain = next.lastRewardGain;
+      if (rewardGain != null &&
+          prev.lastRewardGain?.tick != rewardGain.tick) {
+        final box =
+            _overlayKey.currentContext?.findRenderObject() as RenderBox?;
+        if (box != null && box.attached) {
+          final size = box.size;
+          setState(() {
+            _floatingGains.add(
+              _PendingFloatingGain(
+                tick: rewardGain.tick,
+                amount: rewardGain.amount,
+                position: Offset(size.width / 2, size.height * 0.18),
+              ),
+            );
+          });
+        }
+      }
+
       // ✅ [수정 포인트] 초기 로딩 시 데이터가 쏟아져 들어오는 것을 방지
       // 이전 상태(prev)가 완전히 비어있었다면(초기 렌더링 직후),
       // 유저의 액션이 아니라 API 첫 응답이므로 무시합니다.
