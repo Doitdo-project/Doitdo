@@ -50,6 +50,9 @@ mixin _$TodoDetailResponseDto {
   // - 일반 NORMAL/PERIOD/SOMEDAY: null
   // - 백필 안 된 레거시 RECURRING: null (자연 폴백)
   int? get recurrenceGroupId => throw _privateConstructorUsedError;
+  int get earnedCoin => throw _privateConstructorUsedError;
+  bool get rewarded => throw _privateConstructorUsedError;
+  int get walletBalance => throw _privateConstructorUsedError;
 
   /// Serializes this TodoDetailResponseDto to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -85,6 +88,9 @@ abstract class $TodoDetailResponseDtoCopyWith<$Res> {
     List<String> excludedDates,
     int? masterTodoId,
     int? recurrenceGroupId,
+    int earnedCoin,
+    bool rewarded,
+    int walletBalance,
   });
 }
 
@@ -122,6 +128,9 @@ class _$TodoDetailResponseDtoCopyWithImpl<
     Object? excludedDates = null,
     Object? masterTodoId = freezed,
     Object? recurrenceGroupId = freezed,
+    Object? earnedCoin = null,
+    Object? rewarded = null,
+    Object? walletBalance = null,
   }) {
     return _then(
       _value.copyWith(
@@ -189,6 +198,18 @@ class _$TodoDetailResponseDtoCopyWithImpl<
                 ? _value.recurrenceGroupId
                 : recurrenceGroupId // ignore: cast_nullable_to_non_nullable
                       as int?,
+            earnedCoin: null == earnedCoin
+                ? _value.earnedCoin
+                : earnedCoin // ignore: cast_nullable_to_non_nullable
+                      as int,
+            rewarded: null == rewarded
+                ? _value.rewarded
+                : rewarded // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            walletBalance: null == walletBalance
+                ? _value.walletBalance
+                : walletBalance // ignore: cast_nullable_to_non_nullable
+                      as int,
           )
           as $Val,
     );
@@ -221,6 +242,9 @@ abstract class _$$TodoDetailResponseDtoImplCopyWith<$Res>
     List<String> excludedDates,
     int? masterTodoId,
     int? recurrenceGroupId,
+    int earnedCoin,
+    bool rewarded,
+    int walletBalance,
   });
 }
 
@@ -255,6 +279,9 @@ class __$$TodoDetailResponseDtoImplCopyWithImpl<$Res>
     Object? excludedDates = null,
     Object? masterTodoId = freezed,
     Object? recurrenceGroupId = freezed,
+    Object? earnedCoin = null,
+    Object? rewarded = null,
+    Object? walletBalance = null,
   }) {
     return _then(
       _$TodoDetailResponseDtoImpl(
@@ -322,6 +349,18 @@ class __$$TodoDetailResponseDtoImplCopyWithImpl<$Res>
             ? _value.recurrenceGroupId
             : recurrenceGroupId // ignore: cast_nullable_to_non_nullable
                   as int?,
+        earnedCoin: null == earnedCoin
+            ? _value.earnedCoin
+            : earnedCoin // ignore: cast_nullable_to_non_nullable
+                  as int,
+        rewarded: null == rewarded
+            ? _value.rewarded
+            : rewarded // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        walletBalance: null == walletBalance
+            ? _value.walletBalance
+            : walletBalance // ignore: cast_nullable_to_non_nullable
+                  as int,
       ),
     );
   }
@@ -347,6 +386,9 @@ class _$TodoDetailResponseDtoImpl implements _TodoDetailResponseDto {
     final List<String> excludedDates = const <String>[],
     this.masterTodoId,
     this.recurrenceGroupId,
+    this.earnedCoin = 0,
+    this.rewarded = false,
+    this.walletBalance = 0,
   }) : _daysOfWeek = daysOfWeek,
        _excludedDates = excludedDates;
 
@@ -415,10 +457,19 @@ class _$TodoDetailResponseDtoImpl implements _TodoDetailResponseDto {
   // - 백필 안 된 레거시 RECURRING: null (자연 폴백)
   @override
   final int? recurrenceGroupId;
+  @override
+  @JsonKey()
+  final int earnedCoin;
+  @override
+  @JsonKey()
+  final bool rewarded;
+  @override
+  @JsonKey()
+  final int walletBalance;
 
   @override
   String toString() {
-    return 'TodoDetailResponseDto(todoId: $todoId, title: $title, content: $content, status: $status, category: $category, colorHex: $colorHex, categoryId: $categoryId, type: $type, priority: $priority, startDate: $startDate, endDate: $endDate, daysOfWeek: $daysOfWeek, alarmTime: $alarmTime, excludedDates: $excludedDates, masterTodoId: $masterTodoId, recurrenceGroupId: $recurrenceGroupId)';
+    return 'TodoDetailResponseDto(todoId: $todoId, title: $title, content: $content, status: $status, category: $category, colorHex: $colorHex, categoryId: $categoryId, type: $type, priority: $priority, startDate: $startDate, endDate: $endDate, daysOfWeek: $daysOfWeek, alarmTime: $alarmTime, excludedDates: $excludedDates, masterTodoId: $masterTodoId, recurrenceGroupId: $recurrenceGroupId, earnedCoin: $earnedCoin, rewarded: $rewarded, walletBalance: $walletBalance)';
   }
 
   @override
@@ -455,7 +506,13 @@ class _$TodoDetailResponseDtoImpl implements _TodoDetailResponseDto {
             (identical(other.masterTodoId, masterTodoId) ||
                 other.masterTodoId == masterTodoId) &&
             (identical(other.recurrenceGroupId, recurrenceGroupId) ||
-                other.recurrenceGroupId == recurrenceGroupId));
+                other.recurrenceGroupId == recurrenceGroupId) &&
+            (identical(other.earnedCoin, earnedCoin) ||
+                other.earnedCoin == earnedCoin) &&
+            (identical(other.rewarded, rewarded) ||
+                other.rewarded == rewarded) &&
+            (identical(other.walletBalance, walletBalance) ||
+                other.walletBalance == walletBalance));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -478,6 +535,9 @@ class _$TodoDetailResponseDtoImpl implements _TodoDetailResponseDto {
     const DeepCollectionEquality().hash(_excludedDates),
     masterTodoId,
     recurrenceGroupId,
+    earnedCoin,
+    rewarded,
+    walletBalance,
   );
 
   /// Create a copy of TodoDetailResponseDto
@@ -516,6 +576,9 @@ abstract class _TodoDetailResponseDto implements TodoDetailResponseDto {
     final List<String> excludedDates,
     final int? masterTodoId,
     final int? recurrenceGroupId,
+    final int earnedCoin,
+    final bool rewarded,
+    final int walletBalance,
   }) = _$TodoDetailResponseDtoImpl;
 
   factory _TodoDetailResponseDto.fromJson(Map<String, dynamic> json) =
@@ -561,6 +624,12 @@ abstract class _TodoDetailResponseDto implements TodoDetailResponseDto {
   // - 백필 안 된 레거시 RECURRING: null (자연 폴백)
   @override
   int? get recurrenceGroupId;
+  @override
+  int get earnedCoin;
+  @override
+  bool get rewarded;
+  @override
+  int get walletBalance;
 
   /// Create a copy of TodoDetailResponseDto
   /// with the given fields replaced by the non-null parameter values.

@@ -50,6 +50,7 @@ class TodoViewModel extends StateNotifier<TodoState> {
 
   // 빠른 연속 토글 시 마지막 상태만 서버로 전송 — per-todo 디바운스.
   final Map<String, Timer> _toggleTimers = {};
+  int _rewardGainTick = 0;
 
   @override
   void dispose() {
@@ -547,6 +548,18 @@ class TodoViewModel extends StateNotifier<TodoState> {
     _updateDisplayedTodos();
   }
 
+  void _emitStatusRewardIfNeeded(TodoDetailResponseDto? dto) {
+    if (dto == null) return;
+    if (!dto.rewarded || dto.earnedCoin <= 0) return;
+    _rewardGainTick += 1;
+    state = state.copyWith(
+      lastRewardGain: TodoRewardGain(
+        amount: dto.earnedCoin,
+        tick: _rewardGainTick,
+      ),
+    );
+  }
+
   /// TodoDetailResponseDto → Todo 변환 헬퍼.
   /// fetchTodos 의 DTO 매핑 로직과 동일한 규칙을 따른다.
   Todo _dtoToTodo(TodoDetailResponseDto dto) {
@@ -662,6 +675,7 @@ class TodoViewModel extends StateNotifier<TodoState> {
           // 성공: 임시 인스턴스를 실제 서버 인스턴스로 교체
           final dto = result.value;
           if (dto != null) {
+            _emitStatusRewardIfNeeded(dto);
             final realTodo = Todo(
               id: dto.todoId.toString(),
               title: dto.title,
@@ -719,6 +733,8 @@ class TodoViewModel extends StateNotifier<TodoState> {
           );
           _updateCalendarEvents(state.allTodos);
           _updateDisplayedTodos();
+        } else {
+          _emitStatusRewardIfNeeded(result.value);
         }
       });
     }
