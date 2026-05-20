@@ -7,6 +7,7 @@ import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/domain/entities/character.dart';
 import 'package:doitdo/domain/entities/evolution.dart';
+import 'package:doitdo/presentation/pages/tamagochi/tamagochi_animation_resolver.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/character_evolution_view.dart';
 import 'package:doitdo/presentation/pages/tamagochi/widgets/room_layer.dart';
@@ -15,12 +16,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
-const Set<int> _characterWalkAssetIds = {6, 9, 18};
-const Set<int> _characterWalkIntroAssetIds = {6, 18};
-const Set<int> _characterWalkOutroAssetIds = {6, 18};
-const Set<int> _horizontalWalkCharacterIds = {6, 12, 18};
-const Set<int> _naturalFacingWalkCharacterIds = {6};
-const Set<int> _reverseFacingWalkCharacterIds = {12};
 const Duration _characterWalkIntroDuration = Duration(milliseconds: 240);
 const Duration _characterWalkOutroDuration = Duration(milliseconds: 220);
 const Duration _characterWalkOutroBlinkDuration = Duration(seconds: 2);
@@ -53,6 +48,7 @@ class CharacterCard extends StatelessWidget {
     this.onTapCollection,
     this.onEggTap,
     this.onCharacterTap,
+    this.onWalkPhaseChanged,
     this.onPoopTap,
     this.isCleaningPoop = false,
     this.suppressPoop = false,
@@ -107,6 +103,7 @@ class CharacterCard extends StatelessWidget {
   /// 부화 이후 캐릭터 본체를 탭했을 때 호출. 인자는 사용자가 탭한 글로벌 좌표로,
   /// 호출자(page) 가 그 위치에서 floating "+코인" 위젯을 띄우는 데 사용한다.
   final ValueChanged<Offset>? onCharacterTap;
+  final ValueChanged<bool>? onWalkPhaseChanged;
 
   /// 방 안 똥을 탭했을 때 호출. 인자는 사용자가 탭한 글로벌 좌표(손가락 위치).
   /// 페이지가 brush.gif 오버레이 2초 + POOP action 호출을 함께 처리하고, 응답의
@@ -254,6 +251,7 @@ class CharacterCard extends StatelessWidget {
                           walkStartDelay: _walkStartDelay,
                           walkRestartDelay: _walkRestartDelay,
                           onCharacterTap: _isGrown ? onCharacterTap : null,
+                          onWalkPhaseChanged: onWalkPhaseChanged,
                           bubble: _speechText != null
                               ? Transform.translate(
                                   offset: Offset(0, 6.h),
@@ -317,25 +315,24 @@ class CharacterCard extends StatelessWidget {
   /// 채 액션 gif 가 재생되게 한다.
   bool get _shouldWalk {
     if (!_isGrown) return false;
-    final url = state.actionUrl;
-    return url == null || url.isEmpty;
+    return !state.hasActiveActionVisual;
   }
 
   bool get _hasWalkAsset {
     final id = character?.characterId;
-    return id != null && _characterWalkAssetIds.contains(id);
+    return id != null && kCharacterWalkAssetIds.contains(id);
   }
 
   bool get _shouldUseHorizontalWalkMotion {
     final id = character?.characterId;
-    return id != null && _horizontalWalkCharacterIds.contains(id);
+    return id != null && kHorizontalWalkCharacterIds.contains(id);
   }
 
   bool get _shouldReverseMotionFacing {
     final id = character?.characterId;
     if (id == null) return false;
-    if (_naturalFacingWalkCharacterIds.contains(id)) return false;
-    if (_reverseFacingWalkCharacterIds.contains(id)) return true;
+    if (kNaturalFacingWalkCharacterIds.contains(id)) return false;
+    if (kReverseFacingWalkCharacterIds.contains(id)) return true;
     return _hasWalkAsset;
   }
 
@@ -346,7 +343,7 @@ class CharacterCard extends StatelessWidget {
 
   Duration get _walkStartDelay {
     final id = character?.characterId;
-    if (id == null || !_characterWalkIntroAssetIds.contains(id)) {
+    if (id == null || !kCharacterWalkIntroAssetIds.contains(id)) {
       return Duration.zero;
     }
     return _characterWalkIntroDuration;
@@ -354,7 +351,7 @@ class CharacterCard extends StatelessWidget {
 
   Duration get _walkRestartDelay {
     final id = character?.characterId;
-    if (id == null || !_characterWalkOutroAssetIds.contains(id)) {
+    if (id == null || !kCharacterWalkOutroAssetIds.contains(id)) {
       return Duration.zero;
     }
     return _characterWalkOutroDuration + _characterWalkOutroBlinkDuration;
@@ -393,13 +390,17 @@ class CharacterCard extends StatelessWidget {
     }
     // 평상시 정적 thumbnailUrl(png) + 3-5초 간격 랜덤 깜빡임 (로컬 EYE gif).
     // 탭 후 서버가 내려준 동작 gif (idle 등) 가 있으면 그 url 로 잠시 swap.
+    final overrideAssetPath = state.actionAssetPath;
     final overrideUrl = state.actionUrl;
-    final isAction = overrideUrl != null && overrideUrl.isNotEmpty;
-    final imageUrl = isAction ? overrideUrl : c.thumbnailUrl;
+    final isAction = state.hasActiveActionVisual;
+    final imageUrl = overrideUrl != null && overrideUrl.isNotEmpty
+        ? overrideUrl
+        : c.thumbnailUrl;
     final placeholderUrl = isAction ? c.thumbnailUrl : null;
     return _GrownCharacter(
       key: ValueKey('grown-$imageUrl-${c.characterId}-${state.actionTick}'),
       thumbnailUrl: imageUrl,
+      actionAssetPath: overrideAssetPath,
       placeholderUrl: placeholderUrl,
       eyeGifCharacterId: isAction ? null : c.characterId,
       imageHeight: _grownCharacterImageDesignHeight.h,
@@ -783,12 +784,14 @@ class _GrownCharacter extends StatefulWidget {
     super.key,
     required this.thumbnailUrl,
     required this.imageHeight,
+    this.actionAssetPath,
     this.placeholderUrl,
     this.eyeGifCharacterId,
     this.isWalking = false,
   });
 
   final String thumbnailUrl;
+  final String? actionAssetPath;
   final String? placeholderUrl;
   final double imageHeight;
   final int? eyeGifCharacterId;
@@ -856,7 +859,8 @@ class _GrownCharacterState extends State<_GrownCharacter> {
     super.didUpdateWidget(old);
     final assetChanged =
         widget.eyeGifCharacterId != old.eyeGifCharacterId ||
-        widget.thumbnailUrl != old.thumbnailUrl;
+        widget.thumbnailUrl != old.thumbnailUrl ||
+        widget.actionAssetPath != old.actionAssetPath;
     if (assetChanged) {
       _cancelTimers();
       _blinkAsset = null;
@@ -922,8 +926,8 @@ class _GrownCharacterState extends State<_GrownCharacter> {
     final id = widget.eyeGifCharacterId;
     final shouldIntro =
         id != null &&
-        _characterWalkIntroAssetIds.contains(id) &&
-        _characterWalkAssetIds.contains(id);
+        kCharacterWalkIntroAssetIds.contains(id) &&
+        kCharacterWalkAssetIds.contains(id);
     _showWalkIntro = shouldIntro;
     if (!shouldIntro) return;
 
@@ -941,7 +945,7 @@ class _GrownCharacterState extends State<_GrownCharacter> {
 
     final id = widget.eyeGifCharacterId;
     final shouldOutro =
-        fromWalking && id != null && _characterWalkOutroAssetIds.contains(id);
+        fromWalking && id != null && kCharacterWalkOutroAssetIds.contains(id);
     _showWalkOutro = shouldOutro;
     if (!shouldOutro) {
       _scheduleNextBlink(immediate: fromWalking);
@@ -972,6 +976,12 @@ class _GrownCharacterState extends State<_GrownCharacter> {
         context,
       ).catchError((_) {});
     }
+    if (widget.actionAssetPath != null && widget.actionAssetPath!.isNotEmpty) {
+      precacheImage(
+        AssetImage(widget.actionAssetPath!),
+        context,
+      ).catchError((_) {});
+    }
     // 보행 중 base 로 쓰는 캐릭터별 idle gif. walking ↔ idling swap 시 디코드
     // 지연으로 한 frame 비는 걸 막기 위해 미리 디코드. 일부 캐릭터는 idle gif
     // 가 아직 없을 수 있어 실패는 무시.
@@ -980,19 +990,19 @@ class _GrownCharacterState extends State<_GrownCharacter> {
         AssetImage('assets/animations/idle/$id.gif'),
         context,
       ).catchError((_) {});
-      if (_characterWalkAssetIds.contains(id)) {
+      if (kCharacterWalkAssetIds.contains(id)) {
         precacheImage(
           AssetImage('assets/animations/walk/$id.gif'),
           context,
         ).catchError((_) {});
       }
-      if (_characterWalkIntroAssetIds.contains(id)) {
+      if (kCharacterWalkIntroAssetIds.contains(id)) {
         precacheImage(
           AssetImage('assets/animations/up/$id.gif'),
           context,
         ).catchError((_) {});
       }
-      if (_characterWalkOutroAssetIds.contains(id)) {
+      if (kCharacterWalkOutroAssetIds.contains(id)) {
         precacheImage(
           AssetImage('assets/animations/down/$id.gif'),
           context,
@@ -1055,9 +1065,9 @@ class _GrownCharacterState extends State<_GrownCharacter> {
     final Widget base;
     if (widget.isWalking && id != null) {
       final assetPath =
-          _showWalkIntro && _characterWalkIntroAssetIds.contains(id)
+          _showWalkIntro && kCharacterWalkIntroAssetIds.contains(id)
           ? 'assets/animations/up/$id.gif'
-          : _characterWalkAssetIds.contains(id)
+          : kCharacterWalkAssetIds.contains(id)
           ? 'assets/animations/walk/$id.gif'
           : 'assets/animations/idle/$id.gif';
       base = Image.asset(
@@ -1085,6 +1095,22 @@ class _GrownCharacterState extends State<_GrownCharacter> {
             : _CachedCharacterImage(
                 url: widget.thumbnailUrl,
                 height: widget.imageHeight,
+              ),
+      );
+    } else if (widget.actionAssetPath != null &&
+        widget.actionAssetPath!.isNotEmpty) {
+      base = Image.asset(
+        widget.actionAssetPath!,
+        height: widget.imageHeight,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.medium,
+        gaplessPlayback: true,
+        errorBuilder: (_, _, _) => widget.thumbnailUrl.isEmpty
+            ? const _CharacterPlaceholder()
+            : _CachedCharacterImage(
+                url: widget.thumbnailUrl,
+                height: widget.imageHeight,
+                placeholderUrl: widget.placeholderUrl,
               ),
       );
     } else {
@@ -1401,7 +1427,7 @@ class _FarewellBundleOverlayState extends State<_FarewellBundleOverlay>
             opacity: _showSwap ? 1.0 : 0.0,
             duration: const Duration(milliseconds: 180),
             child: Transform.scale(
-              scale: 3.0,
+              scale: 2.5,
               child: Image.asset(
                 'assets/animations/farewell_swap.gif',
                 fit: BoxFit.contain,
@@ -1426,6 +1452,7 @@ class _WalkingSlot extends StatefulWidget {
     required this.characterBuilder,
     this.bubble,
     this.onCharacterTap,
+    this.onWalkPhaseChanged,
   });
 
   /// true 면 캐릭터가 방 안을 자유 보행. false 면 transform 없이 가운데 고정.
@@ -1443,6 +1470,7 @@ class _WalkingSlot extends StatefulWidget {
 
   /// 캐릭터 본체 탭 콜백. 인자는 글로벌 좌표(손가락 위치). null 이면 탭 영역 자체가 비활성.
   final ValueChanged<Offset>? onCharacterTap;
+  final ValueChanged<bool>? onWalkPhaseChanged;
 
   @override
   State<_WalkingSlot> createState() => _WalkingSlotState();
@@ -1521,6 +1549,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
   // 에서 이미 한 번 추첨했으니 이 첫 콜백은 무시한다. 두 번째부터 진짜 화면 전환.
   bool _firstVisibilityCallback = true;
   bool _isVisible = true;
+  bool? _lastReportedWalkPhase;
 
   @override
   void initState() {
@@ -1537,6 +1566,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
       _pickNextWalkTarget();
       _startWalkController(fromStart: true);
     }
+    _notifyWalkPhaseChanged();
   }
 
   @override
@@ -1566,6 +1596,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
       _cancelWalkStartDelayTimer();
       _phase = _WalkPhase.idling;
     }
+    _notifyWalkPhaseChanged();
   }
 
   @override
@@ -1590,6 +1621,15 @@ class _WalkingSlotState extends State<_WalkingSlot>
   void _cancelWalkStartDelayTimer() {
     _walkStartDelayTimer?.cancel();
     _walkStartDelayTimer = null;
+  }
+
+  void _notifyWalkPhaseChanged() {
+    final cb = widget.onWalkPhaseChanged;
+    if (cb == null) return;
+    final isWalking = widget.enableWalk && _phase == _WalkPhase.walking;
+    if (_lastReportedWalkPhase == isWalking) return;
+    _lastReportedWalkPhase = isWalking;
+    cb(isWalking);
   }
 
   void _startWalkController({required bool fromStart}) {
@@ -1664,6 +1704,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
       _walkFrom = _walkTo;
       _phase = _WalkPhase.idling;
     });
+    _notifyWalkPhaseChanged();
     _startIdleTimer();
   }
 
@@ -1711,6 +1752,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
         _phase = _WalkPhase.idling;
       }
     });
+    _notifyWalkPhaseChanged();
   }
 
   void _startPreparedSession() {
@@ -1739,6 +1781,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
         _phase = _WalkPhase.walking;
         _pickNextWalkTarget();
       });
+      _notifyWalkPhaseChanged();
       _startWalkController(fromStart: true);
     });
   }
@@ -1762,6 +1805,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
       _tapPaused = true;
       _phase = _WalkPhase.idling;
     });
+    _notifyWalkPhaseChanged();
     _cancelTapPauseTimer();
     _tapPauseTimer = Timer(_tapPauseTimeout, () {
       if (!mounted || !_tapPaused) return;
@@ -1771,9 +1815,11 @@ class _WalkingSlotState extends State<_WalkingSlot>
           _phase = _WalkPhase.walking;
           _pickNextWalkTarget();
         });
+        _notifyWalkPhaseChanged();
         _startWalkController(fromStart: true);
       } else {
         setState(() {});
+        _notifyWalkPhaseChanged();
       }
     });
     cb(globalPosition);
