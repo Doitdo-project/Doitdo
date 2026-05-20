@@ -2,15 +2,14 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/painting.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:doitdo/core/utils/app_logger.dart';
 import 'package:doitdo/domain/entities/character.dart';
 import 'package:doitdo/domain/repositories/character_repository.dart';
 import 'package:doitdo/presentation/pages/tamagochi/tamagochi_state.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
+import 'package:flutter/painting.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// 다마고치 메인 화면의 ViewModel.
 ///
@@ -210,7 +209,17 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
         _revertTimer?.cancel();
         _sleeping = isSleepAction;
         _sad = isSadAction;
-        if (!isSleepAction && !isSadAction) {
+        if (isSleepAction) {
+          state = state.copyWith(
+            speechBubble: _pickSleepMessage(),
+            speechBubblePinned: true,
+          );
+        } else if (isSadAction) {
+          state = state.copyWith(
+            speechBubble: _pickReturnSadMessage(),
+            speechBubblePinned: true,
+          );
+        } else {
           _revertTimer = Timer(_actionDuration, () {
             if (!mounted) return;
             if (state.actionUrl == null) return;
@@ -357,6 +366,9 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
   String _pickReturnHappyMessage() =>
       _returnHappyMessages[_rng.nextInt(_returnHappyMessages.length)];
 
+  String _pickSleepMessage() =>
+      _sleepMessages[_rng.nextInt(_sleepMessages.length)];
+
   // ─── 말풍선 풀 ──────────────────────────────────────────────────
   // 문구는 가볍게/짧게 유지(말풍선 폭이 좁음). 16~20자 이내.
 
@@ -365,6 +377,9 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
     '쓰담쓰담 좋아~',
     '여기 눌러봐, 반응할게!',
     '심심하면 또 눌러줘',
+    'ʕ •ɷ•ʔฅ',
+    '(╭☞•́⍛•̀)╭☞',
+    'ฅ ʕ•ᴥ•ʔ',
   ];
 
   static const List<String> _moodMessages = [
@@ -372,6 +387,9 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
     '같이 있어서 좋아!',
     '졸린 듯... 말 듯...',
     '뭔가 신난다!',
+    '(๑￫ܫ￩๑)',
+    '(♡´౪♡)',
+    '(❁´▽❁)',
   ];
 
   static const List<String> _remainingMessages = [
@@ -379,32 +397,35 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
     '할 일 끝내고 같이 놀자!',
     '오늘도 화이팅이야!',
     '조금만 더 힘내봐~',
+    '( •̀ω•́ )✧',
+    'ᕙ(•̀‸•́‶)ᕗ',
+    'ᕦ(ò_óˇ)ᕤ',
+    '(๑•̀ㅂ•́)و✧',
+    '=͟͟͞͞( •̀д•́)))',
+    '⋌༼ •̀ ⌂ •́ ༽⋋',
   ];
 
   static const List<String> _allDoneMessages = [
     '오늘 할 일 다 끝냈네!',
-    '오늘 정말 멋졌어!',
     '수고했어, 푹 쉬자~',
     '같이 빈둥거려볼까?',
+    'ლ(╹◡╹ლ)',
+    'ლ(◞‿◟ლ)',
+    '♡(๑•̀ڡ•́๑)',
+    '(๑・ω-)～♥”',
+    '(੭ ˃̶̀ロ˂̶́)੭⁾',
   ];
 
   static const List<String> _returnSadMessages = [
-    'ㅠ.ㅠ',
     'ㅜ.ㅜ',
-    'ㅠ0ㅠ',
-    'ㅠ3ㅠ',
-    'ㅠㅁㅠ',
     'ㅜㅁㅜ',
-    'ㅠ_ㅠ',
-    'ㅜ_ㅜ',
-    'ㅠoㅠ',
     'ㅜoㅜ',
-    'ㅠ.ㅜ',
-    'ㅜ.ㅠ',
-    'ㅠ^ㅠ',
     'ㅜ^ㅜ',
-    'ㅠ~ㅠ',
-    'ㅜ~ㅜ',
+    '(｡•́︿•̀｡)',
+    '(｡T ω T｡)',
+    '˃̣̣̣̣̣︿˂̣̣̣̣̣',
+    'ŏ̥̥̥̥םŏ̥̥̥̥',
+    '•᷄⌓•᷅',
   ];
 
   static const List<String> _returnHappyMessages = [
@@ -412,6 +433,24 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
     '기다렸어!',
     '이제 같이 놀자!',
     '와줘서 고마워!',
+    '₍ᐢ..ᐢ₎♡',
+    'ฅ՞•ﻌ•՞ฅ',
+    'ʕ •ɷ•ʔฅ',
+    'ꈍㅅꈍ✿',
+    '(ღ˘⌣˘ღ)',
+    '(๑°꒵°๑)·♡',
+    '(ღゝ◡╹)ノ♡',
+    '(♥ω♥ ) ~♪',
+  ];
+
+  static const List<String> _sleepMessages = [
+    'zzz...',
+    '( ˘Θ˘)',
+    '(๑ᵕ⌓ᵕ̤)',
+    '(ᴗ˳ᴗ)',
+    '(˘ㅂ˘ )',
+    '(　-ⓞ-)',
+    '( ˘﹃˘ )',
   ];
 }
 
