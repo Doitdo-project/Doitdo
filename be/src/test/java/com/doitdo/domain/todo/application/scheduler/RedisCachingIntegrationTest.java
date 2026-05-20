@@ -27,7 +27,9 @@ import com.doitdo.domain.todo.entity.Todo.TodoType;
 import com.doitdo.domain.todo.repository.CategoryRepository;
 import com.doitdo.domain.todo.repository.TodoRepository;
 import com.doitdo.domain.user.entity.User;
+import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.repository.UserRepository;
+import com.doitdo.domain.user.repository.UserWalletRepository;
 import com.redis.testcontainers.RedisContainer;
 import jakarta.persistence.EntityManagerFactory;
 import java.time.LocalDate;
@@ -89,6 +91,9 @@ class RedisCachingIntegrationTest {
 	private UserRepository userRepository;
 
 	@Autowired
+	private UserWalletRepository userWalletRepository;
+
+	@Autowired
 	private CharacterRepository characterRepository;
 
 	@Autowired
@@ -110,26 +115,22 @@ class RedisCachingIntegrationTest {
 		statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
 		statistics.setStatisticsEnabled(true);
 		flushRedis();
-		deleteRows("streak_reward_logs", "user_streaks", "snooze_history", "todos", "categories",
+		deleteRows("wallet_earn_logs", "user_wallets", "streak_reward_logs", "user_streaks", "snooze_history", "todos", "categories",
 				"user_character_history", "character_unlocks", "user_character", "characters", "users");
 		statistics.clear();
 	}
 
 	@Test
-	void cacheHitForHomeQueriesDoesNotIssueSqlOnSecondCall() {
+	void cacheHitForCacheableHomeQueriesDoesNotIssueSqlOnSecondCall() {
 		Long userId = createUser("home");
 		saveTodo(userId, "today", TodoType.NORMAL, LocalDate.now(SEOUL), null);
 		saveTodo(userId, "someday", TodoType.SOMEDAY, null, null);
-		saveActiveCharacter(userId, 0);
 
 		todoService.list(userId, todayReq());
 		assertNoSql(() -> todoService.list(userId, todayReq()));
 
 		todoService.list(userId, somedayReq());
 		assertNoSql(() -> todoService.list(userId, somedayReq()));
-
-		tamagotchiService.getCurrentCharacter(userId);
-		assertNoSql(() -> tamagotchiService.getCurrentCharacter(userId));
 	}
 
 	@Test
@@ -143,12 +144,12 @@ class RedisCachingIntegrationTest {
 
 		todoService.list(userId, todayReq());
 		todoService.create(userId, new TodoCreateReq(
-				"created", null, null, TodoType.NORMAL, LocalDate.now(SEOUL), null, null, 1, null));
+				"created", null, null, null, TodoType.NORMAL, LocalDate.now(SEOUL), null, null, 1, null));
 		assertThat(titles(todoService.list(userId, todayReq()))).contains("created");
 
 		todoService.list(userId, todayReq());
 		todoService.update(userId, updateTodoId, new TodoUpdateReq(
-				"update-after", null, null, null, null, null, null, null, false));
+				"update-after", null, null, null, null, null, null, null, null, false));
 		assertThat(titles(todoService.list(userId, todayReq()))).contains("update-after").doesNotContain("update-before");
 
 		todoService.detail(userId, priorityTodoId);
@@ -178,7 +179,7 @@ class RedisCachingIntegrationTest {
 
 		todoService.list(userB, todayReq());
 		todoService.create(userA, new TodoCreateReq(
-				"a-new", null, null, TodoType.NORMAL, LocalDate.now(SEOUL), null, null, 1, null));
+				"a-new", null, null, null, TodoType.NORMAL, LocalDate.now(SEOUL), null, null, 1, null));
 
 		AtomicReference<TodoListResp> userBResp = new AtomicReference<>();
 		assertNoSql(() -> userBResp.set(todoService.list(userB, todayReq())));
@@ -225,9 +226,10 @@ class RedisCachingIntegrationTest {
 		todoService.list(userId, todayReq());
 		categoryService.delete(userId, work.getCategoryId());
 		assertThat(categoryNames(categoryService.list(userId))).doesNotContain("work-new");
+		// 정책: 카테고리 삭제 후에도 todo 에는 카테고리 이름 스냅샷이 그대로 잔여.
 		assertThat(todoService.list(userId, todayReq()).items())
 				.extracting(item -> item.category())
-				.containsNull();
+				.containsExactly("work-new");
 	}
 
 	@Test
@@ -276,13 +278,19 @@ class RedisCachingIntegrationTest {
 				"redis-cache-" + suffix + "@example.com",
 				"encoded-password",
 				"redis-cache-" + suffix));
+		userWalletRepository.saveAndFlush(UserWallet.createEmpty(user.getUserId()));
 		return user.getUserId();
 	}
 
 	private Todo saveTodo(Long userId, String title, TodoType type, LocalDate startDate, Long categoryId) {
+		Category category = categoryId == null
+				? null
+				: categoryRepository.findById(categoryId).orElse(null);
 		return todoRepository.saveAndFlush(Todo.create(
 				userId,
 				categoryId,
+				category != null ? category.getCategoryName() : null,
+				category != null ? category.getColorId() : null,
 				title,
 				null,
 				type,
@@ -296,6 +304,8 @@ class RedisCachingIntegrationTest {
 	private void saveRecurringMaster(Long userId, String title, LocalDate startDate) {
 		todoRepository.saveAndFlush(Todo.create(
 				userId,
+				null,
+				null,
 				null,
 				title,
 				null,
@@ -312,7 +322,7 @@ class RedisCachingIntegrationTest {
 				.species("SLIME")
 				.name("slime")
 				.stage(Character.Stage.BABY)
-				.requiredExp(100)
+				.requiredExp(75)
 				.thumbnailUrl("https://cdn.example.com/slime.png")
 				.build());
 		userCharacterRepository.saveAndFlush(UserCharacter.builder()

@@ -35,13 +35,14 @@ class TamagotchiCurrentCharacterControllerTest {
 			"saesangi",
 			"BABY",
 			"https://cdn.example.com/slime.png",
+			60,
 			45,
-			45,
-			100,
+			75,
 			false,
 			false,
 			42L,
-			10L
+			10L,
+			false
 		);
 
 		given(tamagotchiService.getCurrentCharacter(1L)).willReturn(serviceResp);

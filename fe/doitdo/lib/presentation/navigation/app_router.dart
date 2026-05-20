@@ -6,6 +6,7 @@ import 'package:doitdo/presentation/pages/setting/bug_report/bug_report_page.dar
 import 'package:doitdo/presentation/pages/auth/find_password_page.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_page.dart';
 import 'package:doitdo/presentation/pages/notification/notification_page.dart';
+import 'package:doitdo/presentation/pages/setting/notice/notice_list_page.dart';
 import 'package:doitdo/presentation/pages/setting/notification/notification_settings_page.dart';
 import 'package:doitdo/presentation/pages/auth/login_page.dart';
 import 'package:doitdo/presentation/pages/auth/register_page.dart';
@@ -47,6 +48,7 @@ class AppRoutes {
   static const String account = '/setting/account';
   static const String category = '/setting/category';
   static const String notification = '/setting/notification';
+  static const String notice = '/setting/notice';
   static const String bugReport = '/setting/bug-report';
   static const String notifications = '/todo/notifications';
   static const String tutorial = '/tutorial';
@@ -129,7 +131,9 @@ final GoRouter appRouter = GoRouter(
     // 인증 플로우 (탭 셸 바깥)
     GoRoute(
       path: AppRoutes.welcome,
-      builder: (context, state) => const WelcomePage(),
+      // splash → welcome 도 트랜지션 제거. (login/register 등 후속은 일반 전환 유지)
+      pageBuilder: (context, state) =>
+          const NoTransitionPage(child: WelcomePage()),
     ),
     GoRoute(
       path: AppRoutes.login,
@@ -145,7 +149,15 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: AppRoutes.resetPassword,
-      builder: (context, state) => const ResetPasswordPage(),
+      // FindPasswordPage 의 인증번호 검증 단계에서 발급된 1회용 resetToken 을
+      // extra 로 전달받는다. 직접 진입(예: 딥링크)으로 extra 가 없는 경우는
+      // 토큰이 없어서 의미가 없으므로 비밀번호 찾기 시작 화면으로 되돌린다.
+      redirect: (context, state) {
+        if (state.extra is! String) return AppRoutes.findPassword;
+        return null;
+      },
+      builder: (context, state) =>
+          ResetPasswordPage(resetToken: state.extra as String),
     ),
 
     // 튜토리얼 (첫 진입 시 메인 탭 진입 전 1회 표시).
@@ -169,10 +181,15 @@ final GoRouter appRouter = GoRouter(
     ),
 
     // 메인 탭 셸. 각 브랜치가 고유의 네비게이션 스택을 가진다.
+    //
+    // pageBuilder 로 [NoTransitionPage] 를 반환해 splash → 메인 탭 진입 시 기본
+    // 페이지 트랜지션(슬라이드/페이드 ~300ms) 을 없앤다. splash 종료 후 흰 화면이
+    // 한 번 비치고 들어오는 인상을 제거 — 데이터/이미지가 prime 으로 이미 준비된
+    // 상태라 트랜지션 없이 곧장 노출하는 게 더 자연스럽다.
     StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) {
-        return DoitdoShell(navigationShell: navigationShell);
-      },
+      pageBuilder: (context, state, navigationShell) => NoTransitionPage(
+        child: DoitdoShell(navigationShell: navigationShell),
+      ),
       branches: [
         StatefulShellBranch(
           navigatorKey: _todoNavigatorKey,
@@ -255,6 +272,11 @@ final GoRouter appRouter = GoRouter(
                   path: 'notification',
                   builder: (context, state) =>
                       const NotificationSettingsPage(),
+                ),
+                // '/setting/notice' — 공지사항 목록.
+                GoRoute(
+                  path: 'notice',
+                  builder: (context, state) => const NoticeListPage(),
                 ),
                 // '/setting/bug-report' — 버그 신고.
                 GoRoute(

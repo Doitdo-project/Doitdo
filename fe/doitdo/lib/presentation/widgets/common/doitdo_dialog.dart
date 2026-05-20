@@ -82,7 +82,9 @@ class DoitdoDialog extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        textStyle: AppTextStyles.bodyLarge,
+                        textStyle: AppTextStyles.bodyLarge.copyWith(
+                          fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+                        ),
                       ),
                       child: Text(cancelLabel!),
                     ),

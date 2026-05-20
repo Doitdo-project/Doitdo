@@ -72,7 +72,43 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 
 (성공 응답에서는 `code` 키가 없다.)
 
-## 6. `TodoDetailResp` 필드 (참고)
+## 6. `UserInfoResp` 필드
+
+로그인 / 소셜 로그인 / `GET /api/users/me` / 온보딩 응답에서 공통으로 쓰는 사용자 요약 정보.
+출석 보상 자동 적립은 `GET /api/users/me` 응답에서만 발생한다.
+
+| 필드 | 타입 | 비고 |
+|---|---|---|
+| `userId` | `Long` | 사용자 ID |
+| `username` | `String` | 닉네임 |
+| `email` | `String` | 이메일 |
+| `hasPassword` | `boolean` | 일반 비밀번호 보유 여부. 소셜 전용 계정은 `false` |
+| `birthDateRegistered` | `boolean` | 생년월일 등록 여부 |
+| `agreementsAccepted` | `boolean` | 필수 약관 동의 완료 여부 |
+| `dailyAttendanceClaimed` | `boolean` | `GET /api/users/me` 호출 이전에 오늘 출석 보상을 이미 받았는지 여부. `false` 는 이번 호출에서 100 뚜레딧이 자동 적립됐음을 의미하고, `true` 는 이미 수령해 변동 없음을 의미 |
+
+## 6-1. `CurrentCharacterResp` 필드
+
+`GET /api/characters/me` 응답:
+
+| 필드 | 타입 | 비고 |
+|---|---|---|
+| `characterId` | `Long` | 원본 캐릭터 식별자 |
+| `name` | `String` | 현재 캐릭터 이름 |
+| `stage` | `String` | EGG / BABY / TEEN / ADULT |
+| `thumbnailUrl` | `String` | 대표 이미지 URL |
+| `growthPercent` | `Integer` | 현재 단계 진행률 |
+| `currentExp` | `Integer` | 현재 단계 EXP |
+| `requiredExp` | `Integer` | 현재 단계 필요 EXP |
+| `canEvolve` | `Boolean` | 진화 가능 여부 |
+| `canFarewell` | `Boolean` | 독립 가능 여부 |
+| `equippedUserItemId` | `Long` | 장착 아이템 row ID, nullable |
+| `userCharacterId` | `Long` | 사용자가 실제로 키우는 활성 다마고치 row ID |
+| `poop` | `Boolean` | 오늘 똥치우기 미션 활성 여부. `poop_time` 도래 후이고 오늘 아직 치우지 않았으면 `true` |
+
+`poop_time` 은 `GET /api/characters/me` 호출 시 Asia/Seoul 기준 날짜가 바뀌었을 때 10:00~22:00 사이 분 단위 시각으로 Lazy 결정된다.
+
+## 7. `TodoDetailResp` 필드 (참고)
 
 모든 TODO 단건/목록/검색 응답 공통 필드:
 
@@ -81,7 +117,8 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `todoId` | `Long` | |
 | `title` | `String` | |
 | `content` | `String` | nullable |
-| `category` | `String` | 카테고리 이름, nullable |
+| `category` | `String` | 카테고리 이름 스냅샷, nullable. 카테고리가 삭제되어도 todo 에 남아있던 이름이 그대로 노출된다. |
+| `colorHex` | `String` | 카테고리 색상 hex (예: `"#FF8888"`), nullable. 동일 이름의 활성 카테고리가 있으면 그 색이 우선되고, 없으면 todo 의 스냅샷 색이 사용된다. |
 | `type` | `TodoType` | NORMAL / RECURRING / PERIOD |
 | `priority` | `Integer` | |
 | `startDate` | `LocalDate` | |
@@ -89,11 +126,68 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `daysOfWeek` | `String` | nullable. RECURRING 타입만 채워짐. 요일 CSV (예: `"MON,WED,FRI"`) |
 | `status` | `TodoStatus` | TODO / IN_PROGRESS / DONE |
 | `updatedAt` | `LocalDateTime` | |
+| `masterTodoId` | `Long` | nullable. 반복 마스터에서 파생된 NORMAL 인스턴스면 원본 RECURRING 마스터 ID |
+| `recurrenceGroupId` | `Long` | nullable. 같은 반복 흐름에서 파생된 RECURRING 마스터/인스턴스 그룹 ID |
+| `occurrenceDate` | `LocalDate` | nullable. 반복 파생 NORMAL 인스턴스면 해당 발생일. 일반 TODO / RECURRING 마스터는 null |
 | `snoozedDays` | `int` | 이 TODO 를 미룬 누적 횟수. `snooze_history` 테이블 COUNT 파생 (todos DDL 변경 없음) |
+| `excludedDates` | `List<LocalDate>` | RECURRING 마스터에서 `scope=only` 로 삭제된 occurrence 날짜 목록. RECURRING 이 아니면 `[]` |
+| `earnedCoin` | `Integer` | `PATCH /api/todos/{todoId}/status` 로 TODO 가 새로 DONE 처리될 때 적립된 뚜레딧. 미적립/일일 상한/기본 응답은 `0` |
+| `rewarded` | `Boolean` | TODO 완료 적립 성공 여부 |
+| `walletBalance` | `Integer` | 적립을 시도한 TODO 완료 응답의 현재 지갑 잔액. 기본 TODO 조회/목록/검색 응답에서는 `null` |
 
 `TodoListResp.items[]` 와 `TodoSearchResp.items[]` 도 동일한 `TodoDetailResp` 구조를 사용한다.
 
-## 7. `TodoCalendarResp` 필드
+`PATCH /api/todos/{todoId}/status` 에서 `status=DONE` 으로 새로 전이되면 완료 1건당 20 뚜레딧 적립을 즉시 시도한다. 일일 상한 도달이나 재시도 실패 시 `earnedCoin=0`, `rewarded=false`, `walletBalance=현재 잔액` 으로 응답하며 TODO 완료 자체는 유지한다.
+
+### `DELETE /api/todos/{todoId}` 반복 scope
+
+| Query | 응답 | 비고 |
+|---|---|---|
+| 없음 | 204 | 해당 row 단건 soft delete |
+| `scope=all` | 204 | RECURRING 마스터면 활성 파생 인스턴스도 함께 soft delete |
+| `scope=only&occurrenceDate=YYYY-MM-DD` | 204 | 해당 occurrence를 NORMAL 인스턴스로 실체화 후 soft delete |
+| `scope=from&occurrenceDate=YYYY-MM-DD` | 204 | 마스터 `endDate`를 `occurrenceDate - 1`로 줄이고, 이후 파생 인스턴스 중 `status != DONE` 인 항목만 soft delete |
+
+`scope=only` 로 삭제된 NORMAL 파생 인스턴스는 `isDeleted=true` 상태로 남아 캘린더 가상 occurrence 생성을 차단한다. 응답에는 포함되지 않는다.
+`scope=from` 삭제는 완료된 NORMAL 파생 인스턴스(`status=DONE`)를 완료 기록으로 보존한다.
+
+### `PATCH /api/todos/{todoId}` 반복 scope
+
+기본 응답은 `TodoDetailResp` 이다.
+
+| Query | 응답 대상 | 비고 |
+|---|---|---|
+| 없음 | 수정된 기존 TODO | RECURRING 마스터면 일괄수정 |
+| `scope=only&occurrenceDate=YYYY-MM-DD` | 수정된 NORMAL 인스턴스 | 해당 occurrence만 실체화 후 수정 |
+| `scope=from&occurrenceDate=YYYY-MM-DD` | 수정된 RECURRING 마스터 | 2026-05-15 변경: 새 마스터를 만들지 않고 일괄수정으로 처리 |
+
+RECURRING 마스터 수정은 기존 마스터 TODO 를 직접 수정한다. 이미 실체화된 NORMAL 파생 인스턴스는 `status != DONE` 인 항목만 마스터의 제목/내용/카테고리/알림 스냅샷으로 갱신하고, `DONE` 인 항목은 완료 당시 기록 보존을 위해 수정하지 않는다.
+기존 `scope=from` 의 "기존 마스터 종료 + 새 마스터 생성" 동작은 2026-05-15 기준 폐기됐다.
+TODO 생성/수정 Request body 의 카테고리 입력은 `categoryId`(Long) 와 `category`(String 이름)를 모두 지원하며, 둘 다 전달되면 `categoryId` 가 우선한다.
+
+### 카테고리 스냅샷 정책 (2026-05-12 도입)
+
+- **저장**: `todos.category_name` / `todos.category_color_id` 두 컬럼에 카테고리 이름·색 스냅샷을 저장한다.
+- **rename / 색 변경**: 카테고리 update 시 해당 카테고리를 쓰는 활성 todo 들의 스냅샷이 일괄 update 된다.
+- **삭제**: 카테고리 delete 시 `category_id` 는 NULL 로 detach 되고 이름·색 스냅샷은 잔여 → todo 응답의 `category` 는 그대로 유지된다.
+- **응답 colorHex**: 동일 이름의 활성 카테고리가 있으면 그 카테고리의 색이 override, 없으면 todo 의 스냅샷 색.
+- **필터**: `GET /api/todos?category=공부` 는 `todos.category_name` 스냅샷 기반으로 매칭. 동일 이름의 카테고리를 다시 만들면 옛 todo 도 함께 잡힌다 (의도된 동작).
+
+### `PATCH /api/todos/{todoId}/status` 요청
+
+```json
+{
+  "status": "DONE",
+  "occurrenceDate": "2026-05-12"
+}
+```
+
+| 필드 | 타입 | 비고 |
+|---|---|---|
+| `status` | `TodoStatus` | 필수. TODO / IN_PROGRESS / DONE |
+| `occurrenceDate` | `LocalDate` | nullable. `todoId` 가 RECURRING 마스터일 때만 필수이며, 해당 날짜의 NORMAL 인스턴스를 찾거나 생성한 뒤 상태를 변경한다. NORMAL/PERIOD/SOMEDAY 요청에서는 무시된다. |
+
+## 8. `TodoCalendarResp` 필드
 
 `GET /api/todos/calendar` 응답:
 
@@ -116,11 +210,13 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 |---|---|---|
 | `todoId` | `Long` | 실체 TODO ID. 가상 인스턴스는 `null` |
 | `masterTodoId` | `Long` | RECURRING 마스터 ID. 일반 NORMAL/PERIOD 는 `null` |
+| `recurrenceGroupId` | `Long` | nullable. 같은 반복 흐름에서 파생된 RECURRING 마스터/인스턴스 그룹 ID |
 | `occurrenceDate` | `LocalDate` | RECURRING 발생일. 일반 NORMAL/PERIOD 는 `null` |
 | `isVirtual` | `boolean` | DB row 없는 가상 인스턴스 여부 |
 | `title` | `String` | |
 | `content` | `String` | nullable |
-| `category` | `String` | 카테고리 이름, nullable |
+| `category` | `String` | 카테고리 이름 스냅샷, nullable. 삭제된 카테고리도 todo 에 남아있던 이름이 노출된다. |
+| `colorHex` | `String` | 카테고리 색상 hex, nullable. 동일 이름의 활성 카테고리 색이 우선, 없으면 스냅샷 색. |
 | `type` | `TodoType` | NORMAL / RECURRING / PERIOD |
 | `priority` | `Integer` | |
 | `startDate` | `LocalDate` | 가상 인스턴스는 occurrenceDate 와 동일 |
@@ -130,23 +226,29 @@ public GlobalApiResponse<LoginResp> login(@Valid @RequestBody LoginReq req) {
 | `updatedAt` | `LocalDateTime` | 가상 인스턴스는 마스터 `updatedAt` |
 | `snoozedDays` | `int` | 가상 인스턴스는 `0` |
 
-## 8. `CharacterActionUrlResp` 필드 (뚜레딧 적립 Stage 3+)
+반복 TODO의 가상 인스턴스 생성 차단 규칙:
 
-`GET /api/characters/me/actions/{actionType}` 응답:
+- `type=NORMAL`, `master_todo_id=<RECURRING 마스터 ID>`, `start_date=<occurrenceDate>` 인 파생 row가 있으면 해당 날짜의 가상 인스턴스를 만들지 않는다.
+- 이 차단 판단에는 `isDeleted=true` row도 포함한다.
+- `isDeleted=true` row는 응답 `items[]` 에 포함하지 않는다.
+
+## 9. `CharacterActionUrlResp` 필드 (뚜레딧 적립 Stage 3+)
+
+`POST /api/characters/me/actions/{actionType}` 응답:
 
 | 필드 | 타입 | 비고 |
 |---|---|---|
-| `actionUrl` | `String` | 재생할 캐릭터 애니메이션 URL. 쿨다운/cap 관계없이 항상 정상 반환 |
+| `actionUrl` | `String` | 재생할 캐릭터 애니메이션 URL. 일반 액션은 쿨다운/cap 관계없이 정상 반환. `POOP` 은 등록된 애니메이션 row 가 없으면 `null` |
 | `earnedAmount` | `int` | 이번 호출에서 지급된 뚜레딧 (적립 불가 시 0) |
 | `balanceAfter` | `int` | 호출 직후 지갑 잔액 |
-| `dailyTouchCount` | `int` | 오늘 적립된 터치 횟수 (최대 3) |
-| `nextAvailableAt` | `LocalDateTime` | 다음 적립 가능 시각. 오늘 cap 소진 시 내일 자정, 쿨다운 중이면 `lastTouchedAt + 1h` |
 
-`actionType` 이 `AnimationAction` enum 에 포함되고 활성 캐릭터의 `character_actions` row 가 등록되어 있으면 모든 액션이 동일한 적립 흐름에 진입한다. 쿨다운/cap 으로 적립되지 않는 경우에도 `actionUrl` 은 반환하고 `earnedAmount=0` 으로 응답한다.
+`actionType` 이 캐릭터 액션 enum 에 포함되고 활성 캐릭터의 `character_actions` row 가 등록되어 있으면 등록 액션은 터치 적립 흐름에 진입한다. 쿨다운/cap 으로 적립되지 않는 경우에도 `actionUrl` 은 반환하고 `earnedAmount=0` 으로 응답한다.
+
+`actionType=POOP` 은 `CurrentCharacterResp.poop=true` 일 때만 50 뚜레딧을 `POOP_CLEAR` 로 적립하고, 오늘 처리 완료로 바꾼다. 활성 시각 전이거나 이미 치운 상태이면 409 `M09-004` 를 반환한다.
 
 enum 에는 있지만 해당 캐릭터의 `character_actions` row 가 없는 액션은 404 `M09-002` 를 반환한다.
 
-## 9. `UserStreakResp` 필드
+## 10. `UserStreakResp` 필드
 
 `GET /api/users/me/streak` 응답:
 
@@ -162,7 +264,29 @@ enum 에는 있지만 해당 캐릭터의 `character_actions` row 가 없는 액
 
 `canClaim` 은 현재 연속 달성 일수가 7의 배수이고, 같은 `currentStreakStartDate` / `currentStreakCount` 로 보상 수령 기록이 없을 때만 `true` 다.
 
-## 10. 관련 문서
+## 11. `NoticePopupResp` / `NoticeResp` 필드
+
+`GET /api/notices/latest-popup` 응답:
+
+| 필드 | 타입 | 비고 |
+|---|---|---|
+| `show` | `boolean` | 초기 진입 공지 모달 표시 여부 |
+| `notice` | `NoticeResp` | `show=false` 이면 `null` |
+
+`NoticeResp` 필드:
+
+| 필드 | 타입 | 비고 |
+|---|---|---|
+| `noticeId` | `Long` | 공지사항 ID |
+| `title` | `String` | 제목 |
+| `content` | `String` | 본문 |
+| `startedAt` | `LocalDateTime` | 노출 시작 시각, nullable |
+| `endedAt` | `LocalDateTime` | 노출 종료 시각, nullable |
+| `createdAt` | `LocalDateTime` | 등록 시각 |
+
+`GET /api/notices` 는 `NoticeListResp.items[]` 로 `NoticeResp` 목록을 반환한다.
+
+## 12. 관련 문서
 
 - 에러 코드 정의/네이밍: [`error-codes.md`](error-codes.md)
 - Swagger 문서화: [`swagger.md`](swagger.md)

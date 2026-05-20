@@ -3,6 +3,7 @@ import 'package:retrofit/retrofit.dart';
 
 import 'package:doitdo/core/network/api_response.dart';
 import 'package:doitdo/data/models/furniture_shop_resp_dto.dart';
+import 'package:doitdo/data/models/furniture_theme_resp_dto.dart';
 import 'package:doitdo/data/models/purchase_furniture_resp_dto.dart';
 import 'package:doitdo/data/models/room_resp_dto.dart';
 import 'package:doitdo/data/models/shop_entry_resp_dto.dart';
@@ -50,6 +51,37 @@ abstract class ShopApi {
   @GET('/api/shop/furnitures/{furnitureId}/preview-room')
   Future<ApiResponse<RoomRespDto>> previewRoom(
     @Path('furnitureId') int furnitureId,
+  );
+
+  /// 가구 테마 목록. 상점의 "테마" 탭에서 카드로 노출한다.
+  /// `is_active = true` 한정, `display_order ASC` 정렬은 BE 가 내려준 순서를 그대로 따른다.
+  /// 응답에는 사용자별 보유/결제 메타(ownedCount, purchasePrice, alreadyOwned, furnitures[])
+  /// 가 포함되어 카드 표시 + 구매 다이얼로그가 추가 호출 없이 열린다.
+  @GET('/api/shop/themes')
+  Future<ApiResponse<FurnitureThemeListRespDto>> listThemes();
+
+  /// 테마 전체 방 미리보기. 단일 가구 [previewRoom] 의 세트 버전 — 테마에 속한
+  /// 여러 카테고리 가구를 내 실제 방에 저장 없이 합성해서 돌려준다. 응답은
+  /// 기존 [RoomRespDto] 와 동일하며, 테마 가구만 `preview=true` 로 표시된다.
+  @GET('/api/shop/themes/{themeCode}/preview-room')
+  Future<ApiResponse<RoomRespDto>> previewThemeRoom(
+    @Path('themeCode') String themeCode,
+  );
+
+  /// 테마 세트 일괄 구매. 미보유 가구만 결제하고 자동 배치는 하지 않는다.
+  /// `S03-003 THEME_EMPTY` / `S03-010 THEME_ALREADY_OWNED` /
+  /// `S00-003 INSUFFICIENT_BALANCE` 가 주요 실패 분기.
+  @POST('/api/shop/themes/{themeCode}/purchase')
+  Future<ApiResponse<ThemePurchaseRespDto>> purchaseTheme(
+    @Path('themeCode') String themeCode,
+  );
+
+  /// 보유한 테마 가구를 한 번에 방에 배치한다. 같은 카테고리 기존 배치는 자동
+  /// 교체. 일부라도 미보유 가구가 있으면 `S03-011 THEME_NOT_FULLY_OWNED` —
+  /// 호출자가 [purchaseTheme] 를 먼저 호출해야 한다.
+  @POST('/api/users/me/room/themes/{themeCode}/placements')
+  Future<ApiResponse<ThemePlacementRespDto>> placeTheme(
+    @Path('themeCode') String themeCode,
   );
 
   /// 내 방 현재 배치.

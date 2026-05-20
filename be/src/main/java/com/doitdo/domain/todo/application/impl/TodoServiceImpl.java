@@ -15,6 +15,7 @@ import com.doitdo.domain.todo.api.dto.resp.TodoSearchResp;
 import com.doitdo.domain.todo.application.RecurrenceService;
 import com.doitdo.domain.todo.application.TodoService;
 import com.doitdo.domain.todo.entity.Category;
+import com.doitdo.domain.todo.entity.PaletteColor;
 import com.doitdo.domain.todo.entity.SnoozeHistory;
 import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.entity.Todo.TodoStatus;
@@ -22,13 +23,18 @@ import com.doitdo.domain.todo.entity.Todo.TodoType;
 import com.doitdo.domain.todo.event.TodoCompletedEvent;
 import com.doitdo.domain.todo.event.TodoSnoozedEvent;
 import com.doitdo.domain.todo.repository.CategoryRepository;
+import com.doitdo.domain.todo.repository.PaletteColorRepository;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository;
 import com.doitdo.domain.todo.repository.SnoozeHistoryRepository.SnoozeCountProjection;
 import com.doitdo.domain.todo.repository.TodoRepository;
+import com.doitdo.domain.todo.repository.TodoRepository.ExcludedDateProjection;
 import com.doitdo.domain.todo.repository.TodoListQueryRepository;
 import com.doitdo.domain.todo.repository.TodoSpecifications;
 import com.doitdo.domain.todo.repository.projection.TodoListRow;
 import com.doitdo.domain.streak.application.UserStreakService;
+import com.doitdo.domain.user.application.CreditEarnService;
+import com.doitdo.domain.user.application.dto.EarnResult;
+import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.global.cache.CacheEvictHelper;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.TodoErrorCode;
@@ -61,13 +67,16 @@ import org.springframework.util.StringUtils;
 public class TodoServiceImpl implements TodoService {
 
 	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+	private static final int TODO_COMPLETION_CREDIT = 20;
 
 	private final TodoRepository todoRepository;
 	private final TodoListQueryRepository todoListQueryRepository;
 	private final CategoryRepository categoryRepository;
+	private final PaletteColorRepository paletteColorRepository;
 	private final SnoozeHistoryRepository snoozeHistoryRepository;
 	private final RecurrenceService recurrenceService;
 	private final UserStreakService userStreakService;
+	private final CreditEarnService creditEarnService;
 	private final ApplicationEventPublisher eventPublisher;
 	private final CacheEvictHelper cacheEvictHelper;
 
@@ -97,8 +106,19 @@ public class TodoServiceImpl implements TodoService {
 				req.q(),
 				req.sort());
 
+		Map<String, Integer> activeColorByName = buildActiveCategoryColorIdByName(userId);
+		Map<Integer, String> hexByColorId = buildPaletteHexByColorId();
+
+		Map<Long, List<LocalDate>> excludedDatesByMasterId = findExcludedDatesByMasterId(
+				userId,
+				rows.stream()
+						.filter(row -> row.type() == TodoType.RECURRING)
+						.map(TodoListRow::todoId)
+						.toList());
+
 		return new TodoListResp(rows.stream()
-				.map(TodoServiceImpl::toTodoDetailResp)
+				.map(row -> toTodoDetailResp(row, activeColorByName, hexByColorId,
+						excludedDatesByMasterId.getOrDefault(row.todoId(), List.of())))
 				.toList());
 	}
 
@@ -108,12 +128,19 @@ public class TodoServiceImpl implements TodoService {
 		return recurrenceService.calendar(userId, req);
 	}
 
-	private static TodoDetailResp toTodoDetailResp(TodoListRow row) {
+	private static TodoDetailResp toTodoDetailResp(
+			TodoListRow row,
+			Map<String, Integer> activeColorIdByName,
+			Map<Integer, String> hexByColorId,
+			List<LocalDate> excludedDates) {
+		String colorHex = resolveColorHex(
+				row.categoryName(), row.categoryColorId(), activeColorIdByName, hexByColorId);
 		return new TodoDetailResp(
 				row.todoId(),
 				row.title(),
 				row.content(),
 				row.categoryName(),
+				colorHex,
 				row.type(),
 				row.priority(),
 				row.alertTime(),
@@ -122,8 +149,84 @@ public class TodoServiceImpl implements TodoService {
 				toDaysOfWeekCodes(row.daysOfWeekRaw()),
 				row.status(),
 				row.updatedAt(),
-				(int) row.snoozeCount()
+				row.masterTodoId(),
+				row.recurrenceGroupId(),
+				row.masterTodoId() != null ? row.startDate() : null,
+				(int) row.snoozeCount(),
+				row.type() == TodoType.RECURRING ? excludedDates : List.of()
 		);
+	}
+
+	private Map<Long, List<LocalDate>> findExcludedDatesByMasterId(Long userId, List<Long> masterTodoIds) {
+		if (masterTodoIds.isEmpty()) {
+			return Map.of();
+		}
+		return todoRepository.findExcludedDatesByMasterTodoIds(userId, masterTodoIds).stream()
+				.collect(Collectors.groupingBy(
+						ExcludedDateProjection::getMasterTodoId,
+						Collectors.mapping(ExcludedDateProjection::getOccurrenceDate, Collectors.toList())
+				));
+	}
+
+	private TodoDetailResp withExcludedDates(Long userId, Todo todo, String categoryName, String colorHex, int snoozedDays) {
+		List<LocalDate> excludedDates = todo.getType() == TodoType.RECURRING && todo.getTodoId() != null
+				? findExcludedDatesByMasterId(userId, List.of(todo.getTodoId()))
+						.getOrDefault(todo.getTodoId(), List.of())
+				: List.of();
+		return TodoDetailResp.from(todo, categoryName, colorHex, snoozedDays, excludedDates);
+	}
+
+	/**
+	 * 카테고리 색상 결정 규칙 (다건 응답 빌드 시 사용).
+	 * - todo.categoryName 이 null 이면 hex 도 null.
+	 * - 같은 이름의 활성 카테고리가 있으면 그 색상이 todo 의 스냅샷 색을 override.
+	 * - 활성 카테고리에 같은 이름이 없으면 스냅샷 색을 사용 (삭제된 카테고리 정책).
+	 */
+	private static String resolveColorHex(
+			String categoryName,
+			Integer snapshotColorId,
+			Map<String, Integer> activeColorIdByName,
+			Map<Integer, String> hexByColorId) {
+		if (categoryName == null) {
+			return null;
+		}
+		Integer colorId = activeColorIdByName.get(categoryName);
+		if (colorId == null) {
+			colorId = snapshotColorId;
+		}
+		if (colorId == null) {
+			return null;
+		}
+		return hexByColorId.get(colorId);
+	}
+
+	private Map<String, Integer> buildActiveCategoryColorIdByName(Long userId) {
+		return categoryRepository.findAllByUserIdOrderByCategoryIdAsc(userId).stream()
+				.collect(Collectors.toMap(Category::getCategoryName, Category::getColorId, (a, b) -> a));
+	}
+
+	private Map<Integer, String> buildPaletteHexByColorId() {
+		return paletteColorRepository.findAll().stream()
+				.collect(Collectors.toMap(PaletteColor::getColorId, PaletteColor::getColor));
+	}
+
+	/**
+	 * 단건 응답 빌드 시 색상 결정.
+	 * 활성 카테고리 lookup 1회 + 팔레트 lookup 1회 (최대 2 쿼리).
+	 */
+	private String resolveColorHexForTodo(Long userId, Todo todo) {
+		if (todo.getCategoryName() == null) {
+			return null;
+		}
+		Integer colorId = categoryRepository.findByCategoryNameAndUserId(todo.getCategoryName(), userId)
+				.map(Category::getColorId)
+				.orElse(todo.getCategoryColorId());
+		if (colorId == null) {
+			return null;
+		}
+		return paletteColorRepository.findById(colorId)
+				.map(PaletteColor::getColor)
+				.orElse(null);
 	}
 
 	private static List<String> toDaysOfWeekCodes(String daysOfWeekRaw) {
@@ -150,15 +253,9 @@ public class TodoServiceImpl implements TodoService {
 			throw new CustomException(TodoErrorCode.T00_003);
 		}
 
-		String categoryName = null;
-		if (todo.getCategoryId() != null) {
-			categoryName = categoryRepository.findById(todo.getCategoryId())
-					.map(Category::getCategoryName)
-					.orElse(null);
-		}
-
+		String colorHex = resolveColorHexForTodo(userId, todo);
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
-		return TodoDetailResp.from(todo, categoryName, count);
+		return withExcludedDates(userId, todo, todo.getCategoryName(), colorHex, count);
 	}
 
 	@Override
@@ -175,35 +272,87 @@ public class TodoServiceImpl implements TodoService {
 
 		Long categoryId = null;
 		String categoryName = null;
-		if (StringUtils.hasText(req.category())) {
+		Integer categoryColorId = null;
+		if (req.categoryId() != null) {
+			Category category = categoryRepository.findByCategoryIdAndUserId(req.categoryId(), userId)
+					.orElseThrow(() -> new CustomException(TodoErrorCode.T06_003));
+			categoryId = category.getCategoryId();
+			categoryName = category.getCategoryName();
+			categoryColorId = category.getColorId();
+		} else if (StringUtils.hasText(req.category())) {
 			Category category = categoryRepository.findByCategoryNameAndUserId(req.category(), userId)
 					.orElseThrow(() -> new CustomException(TodoErrorCode.T06_003));
 			categoryId = category.getCategoryId();
 			categoryName = category.getCategoryName();
+			categoryColorId = category.getColorId();
 		}
 
-		int priority = req.priority() != null ? req.priority() : 1;
+		int priority = req.priority() != null ? req.priority() : nextPriority(userId, type);
 
 		Todo todo = todoRepository.save(
-				Todo.create(userId, categoryId, req.title(), req.content(),
+				Todo.create(userId, categoryId, categoryName, categoryColorId,
+						req.title(), req.content(),
 						type, priority, req.alertTime(), startDate, req.endDate(), daysOfWeek)
 		);
+		if (todo.getType() == TodoType.RECURRING) {
+			todo.assignOwnRecurrenceGroupIdIfAbsent();
+		}
 
 		log.info("event=TODO_CREATED userId={} todoId={}", userId, todo.getTodoId());
 		cacheEvictHelper.evictUserTodosAfterCommit(userId);
 
+		// 방금 카테고리에서 색을 가져왔으므로 추가 lookup 없이 hex 만 변환.
+		String colorHex = categoryColorId != null
+				? paletteColorRepository.findById(categoryColorId).map(PaletteColor::getColor).orElse(null)
+				: null;
 		// 새 TODO 이므로 snooze 이력 없음 — count=0 하드코딩 (DB 조회 불필요)
-		return TodoDetailResp.from(todo, categoryName, 0);
+		return withExcludedDates(userId, todo, categoryName, colorHex, 0);
+	}
+
+	private int nextPriority(Long userId, TodoType type) {
+		int maxPriority = type == TodoType.SOMEDAY
+				? todoRepository.findMaxPriorityForSomeday(userId)
+				: todoRepository.findMaxPriorityForNonSomeday(userId);
+		return maxPriority + 1;
 	}
 
 	@Override
 	@Transactional
 	public void delete(Long userId, Long todoId, String scope) {
+		delete(userId, todoId, scope, null);
+	}
+
+	@Override
+	@Transactional
+	public void delete(Long userId, Long todoId, String scope, LocalDate occurrenceDate) {
 		Todo todo = todoRepository.findByTodoIdAndIsDeletedFalse(todoId)
 				.orElseThrow(() -> new CustomException(TodoErrorCode.T01_001));
 
 		if (!todo.getUserId().equals(userId)) {
 			throw new CustomException(TodoErrorCode.T01_003);
+		}
+
+		if (todo.getType() == TodoType.RECURRING && isOnlyScope(scope)) {
+			Todo instance = recurrenceService.materializeRecurringOccurrence(userId, todo, occurrenceDate);
+			instance.softDelete();
+			log.info("event=TODO_RECURRING_OCCURRENCE_DELETED userId={} masterTodoId={} instanceTodoId={} occurrenceDate={}",
+					userId, todo.getTodoId(), instance.getTodoId(), occurrenceDate);
+			cacheEvictHelper.evictUserTodosAfterCommit(userId);
+			cacheEvictHelper.evictTodoItemAfterCommit(userId, todoId);
+			cacheEvictHelper.evictTodoItemAfterCommit(userId, instance.getTodoId());
+			return;
+		}
+
+		if (todo.getType() == TodoType.RECURRING && isFromScope(scope)) {
+			validateOccurrenceOfMaster(todo, occurrenceDate);
+			List<Todo> affectedMasters = findRecurringMastersOverlappingFromDate(userId, todo, occurrenceDate);
+			cutOrDeleteRecurringMastersFromDate(affectedMasters, occurrenceDate);
+			softDeleteMaterializedInstancesFromDate(userId, affectedMasters, occurrenceDate);
+			log.info("event=TODO_RECURRING_FROM_DELETED userId={} masterTodoId={} occurrenceDate={}",
+					userId, todo.getTodoId(), occurrenceDate);
+			cacheEvictHelper.evictUserTodosAfterCommit(userId);
+			cacheEvictHelper.evictTodoItemAfterCommit(userId, todoId);
+			return;
 		}
 
 		todo.softDelete();
@@ -219,6 +368,12 @@ public class TodoServiceImpl implements TodoService {
 	@Override
 	@Transactional
 	public TodoDetailResp update(Long userId, Long todoId, TodoUpdateReq req) {
+		return update(userId, todoId, req, null, null);
+	}
+
+	@Override
+	@Transactional
+	public TodoDetailResp update(Long userId, Long todoId, TodoUpdateReq req, String scope, LocalDate occurrenceDate) {
 		Todo todo = todoRepository.findByTodoIdAndIsDeletedFalse(todoId)
 				.orElseThrow(() -> new CustomException(TodoErrorCode.T04_001));
 
@@ -226,23 +381,39 @@ public class TodoServiceImpl implements TodoService {
 			throw new CustomException(TodoErrorCode.T04_003);
 		}
 
+		if (todo.getType() == TodoType.RECURRING && isOnlyScope(scope)) {
+			Todo instance = recurrenceService.materializeRecurringOccurrence(userId, todo, occurrenceDate);
+			return updateSingleTodo(userId, instance, normalizeRecurringOnlyUpdateReq(req), todoId);
+		}
+
+		if (todo.getType() == TodoType.RECURRING) {
+			return updateRecurringBatch(userId, todo, req, todoId);
+		}
+
+		return updateSingleTodo(userId, todo, req, todoId);
+	}
+
+	private TodoDetailResp updateSingleTodo(Long userId, Todo todo, TodoUpdateReq req, Long requestedTodoId) {
+
 		if (todo.getStatus() == TodoStatus.IN_PROGRESS || todo.getStatus() == TodoStatus.DONE) {
 			throw new CustomException(TodoErrorCode.T04_004);
 		}
 
 		Long categoryId = todo.getCategoryId();
-		String categoryName = null;
-		if (req.category() != null && StringUtils.hasText(req.category())) {
+		String categoryName = todo.getCategoryName();
+		Integer categoryColorId = todo.getCategoryColorId();
+		if (req.categoryId() != null) {
+			Category category = categoryRepository.findByCategoryIdAndUserId(req.categoryId(), userId)
+					.orElseThrow(() -> new CustomException(TodoErrorCode.T04_005));
+			categoryId = category.getCategoryId();
+			categoryName = category.getCategoryName();
+			categoryColorId = category.getColorId();
+		} else if (req.category() != null && StringUtils.hasText(req.category())) {
 			Category category = categoryRepository.findByCategoryNameAndUserId(req.category(), userId)
 					.orElseThrow(() -> new CustomException(TodoErrorCode.T04_005));
 			categoryId = category.getCategoryId();
 			categoryName = category.getCategoryName();
-		} else {
-			if (todo.getCategoryId() != null) {
-				categoryName = categoryRepository.findById(todo.getCategoryId())
-						.map(Category::getCategoryName)
-						.orElse(null);
-			}
+			categoryColorId = category.getColorId();
 		}
 
 		Set<DayOfWeek> requestedDaysOfWeek = req.daysOfWeek() != null ? parseDaysOfWeek(req.daysOfWeek()) : null;
@@ -250,12 +421,17 @@ public class TodoServiceImpl implements TodoService {
 		LocalDate finalStartDate = normalizeStartDate(finalType, req.startDate() != null ? req.startDate() : todo.getStartDate());
 		Set<DayOfWeek> finalDaysOfWeek = requestedDaysOfWeek != null ? requestedDaysOfWeek : todo.getDaysOfWeek();
 		validateStartDate(finalType, finalStartDate, false);
-		validateRecurringDays(finalType, finalStartDate, finalDaysOfWeek);
+		LocalDate recurringValidationStartDate = todo.getType() == TodoType.RECURRING && req.startDate() == null
+				? null
+				: finalStartDate;
+		validateRecurringDays(finalType, recurringValidationStartDate, finalDaysOfWeek);
 
 		todo.update(
 				req.title(),
 				req.content(),
 				categoryId,
+				categoryName,
+				categoryColorId,
 				finalType,
 				finalStartDate,
 				req.endDate(),
@@ -268,10 +444,74 @@ public class TodoServiceImpl implements TodoService {
 
 		log.info("event=TODO_UPDATED userId={} todoId={}", userId, todo.getTodoId());
 		cacheEvictHelper.evictUserTodosAfterCommit(userId);
-		cacheEvictHelper.evictTodoItemAfterCommit(userId, todoId);
+		cacheEvictHelper.evictTodoItemAfterCommit(userId, requestedTodoId);
+		if (!requestedTodoId.equals(todo.getTodoId())) {
+			cacheEvictHelper.evictTodoItemAfterCommit(userId, todo.getTodoId());
+		}
 
+		String colorHex = resolveColorHexForTodo(userId, todo);
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
-		return TodoDetailResp.from(todo, categoryName, count);
+		return withExcludedDates(userId, todo, todo.getCategoryName(), colorHex, count);
+	}
+
+	private TodoDetailResp updateRecurringBatch(Long userId, Todo master, TodoUpdateReq req, Long requestedTodoId) {
+		TodoDetailResp resp = updateSingleTodo(userId, master, req, requestedTodoId);
+
+		todoRepository.findAllByUserIdAndMasterTodoIdAndIsDeletedFalse(userId, master.getTodoId()).stream()
+				.filter(instance -> instance.getStatus() != TodoStatus.DONE)
+				.forEach(instance -> {
+					instance.applyRecurringMasterSnapshot(master);
+					cacheEvictHelper.evictTodoItemAfterCommit(userId, instance.getTodoId());
+				});
+		log.info("event=TODO_RECURRING_BATCH_UPDATED userId={} masterTodoId={}", userId, master.getTodoId());
+		return resp;
+	}
+
+	private Long resolveRecurrenceGroupId(Todo master) {
+		return master.getRecurrenceGroupId() != null ? master.getRecurrenceGroupId() : master.getTodoId();
+	}
+
+	private List<Todo> findRecurringMastersOverlappingFromDate(Long userId, Todo master, LocalDate occurrenceDate) {
+		List<Todo> masters = todoRepository.findRecurringMastersOverlappingFromDate(
+				userId,
+				resolveRecurrenceGroupId(master),
+				occurrenceDate);
+		return masters == null || masters.isEmpty() ? List.of(master) : masters;
+	}
+
+	private void cutOrDeleteRecurringMastersFromDate(List<Todo> masters, LocalDate occurrenceDate) {
+		for (Todo affected : masters) {
+			if (affected.getStartDate().isBefore(occurrenceDate)) {
+				affected.changeEndDate(occurrenceDate.minusDays(1));
+			} else {
+				affected.softDelete();
+			}
+		}
+	}
+
+	private void softDeleteMaterializedInstancesFromDate(Long userId, List<Todo> masters, LocalDate occurrenceDate) {
+		List<Long> masterIds = masters.stream()
+				.map(Todo::getTodoId)
+				.toList();
+		if (masterIds.isEmpty()) {
+			return;
+		}
+		todoRepository.findMaterializedInstancesByMasterTodoIdInFromDate(userId, masterIds, occurrenceDate)
+				.forEach(Todo::softDelete);
+	}
+
+	private TodoUpdateReq normalizeRecurringOnlyUpdateReq(TodoUpdateReq req) {
+		return new TodoUpdateReq(
+				req.title(),
+				req.content(),
+				req.category(),
+				req.categoryId(),
+				TodoType.NORMAL,
+				req.startDate(),
+				req.endDate(),
+				null,
+				req.alertTime(),
+				req.clearAlertTime());
 	}
 
 	@Override
@@ -285,19 +525,36 @@ public class TodoServiceImpl implements TodoService {
 		}
 
 		if (todo.getType() == TodoType.RECURRING) {
-			throw new CustomException(TodoErrorCode.T03_004);
+			if (req.occurrenceDate() == null) {
+				throw new CustomException(TodoErrorCode.T03_004);
+			}
+			todo = recurrenceService.materializeRecurringOccurrence(userId, todo, req.occurrenceDate());
 		}
 
 		TodoStatus beforeStatus = todo.getStatus();
 		todo.changeStatus(req.status());
 
-		// DONE 으로 새로 진입한 경우에만 streak 갱신 + Tamagotchi exp 이벤트 발행.
+		EarnResult earnResult = null;
+
+		// DONE 으로 새로 진입한 경우에만 streak 갱신 + 뚜레딧 적립 + Tamagotchi exp 이벤트 발행.
 		// - streak: UserStreakService 가 동기 갱신. 엔티티 내부에서도 당일 중복 no-op.
+		// - credit: 직접 호출하되 REQUIRES_NEW + retry 로 Todo DONE 롤백과 분리.
 		// - exp: 리스너가 AFTER_COMMIT + REQUIRES_NEW 로 처리 (멱등성은 Todo.expGranted 로 보장).
 		// - 가산 실패해도 Todo DONE 은 커밋 유지 (사용자 UX 우선)
 		if (beforeStatus != TodoStatus.DONE && req.status() == TodoStatus.DONE) {
-			todo.markFirstCompletedIfAbsent(LocalDate.now(SEOUL));
+			LocalDate today = LocalDate.now(SEOUL);
+			boolean firstCompletion = todo.getFirstCompletedDate() == null;
+			todo.markFirstCompletedIfAbsent(today);
 			userStreakService.recordActivity(userId);
+			if (firstCompletion && isRewardEligible(todo, today)) {
+				earnResult = creditEarnService.tryEarn(
+						userId,
+						WalletEarnSource.TODO_COMPLETION,
+						TODO_COMPLETION_CREDIT,
+						todo.getTodoId(),
+						false
+				);
+			}
 			eventPublisher.publishEvent(new TodoCompletedEvent(userId, todo.getTodoId()));
 			log.info("event=TODO_COMPLETED userId={} todoId={}", userId, todo.getTodoId());
 		}
@@ -307,15 +564,22 @@ public class TodoServiceImpl implements TodoService {
 		cacheEvictHelper.evictTodoItemAfterCommit(userId, todoId);
 		cacheEvictHelper.evictTamagotchiCurrentAfterCommit(userId);
 
-		String categoryName = null;
-		if (todo.getCategoryId() != null) {
-			categoryName = categoryRepository.findById(todo.getCategoryId())
-					.map(Category::getCategoryName)
-					.orElse(null);
-		}
-
+		String colorHex = resolveColorHexForTodo(userId, todo);
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
-		return TodoDetailResp.from(todo, categoryName, count);
+		TodoDetailResp resp = withExcludedDates(userId, todo, todo.getCategoryName(), colorHex, count);
+		if (earnResult == null) {
+			return resp;
+		}
+		return resp.withReward(earnResult.earnedAmount(), earnResult.rewarded(), earnResult.balance());
+	}
+
+	private boolean isRewardEligible(Todo todo, LocalDate today) {
+		LocalDate criteriaDate = switch (todo.getType()) {
+			case SOMEDAY -> null;
+			case PERIOD -> todo.getEndDate() != null ? todo.getEndDate() : todo.getStartDate();
+			default -> todo.getStartDate();
+		};
+		return criteriaDate == null || !criteriaDate.isBefore(today);
 	}
 
 	@Override
@@ -343,15 +607,9 @@ public class TodoServiceImpl implements TodoService {
 		cacheEvictHelper.evictUserTodosAfterCommit(userId);
 		cacheEvictHelper.evictTodoItemAfterCommit(userId, todoId);
 
-		String categoryName = null;
-		if (todo.getCategoryId() != null) {
-			categoryName = categoryRepository.findById(todo.getCategoryId())
-					.map(Category::getCategoryName)
-					.orElse(null);
-		}
-
+		String colorHex = resolveColorHexForTodo(userId, todo);
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
-		return TodoDetailResp.from(todo, categoryName, count);
+		return withExcludedDates(userId, todo, todo.getCategoryName(), colorHex, count);
 	}
 
 	@Override
@@ -372,16 +630,9 @@ public class TodoServiceImpl implements TodoService {
 		// 페이지네이션 조회
 		Page<Todo> pageResult = todoRepository.findAll(spec, PageRequest.of(page, size, sort));
 
-		// 카테고리 벌크 조회 (N+1 방지)
-		Set<Long> categoryIds = pageResult.getContent().stream()
-				.map(Todo::getCategoryId)
-				.filter(id -> id != null)
-				.collect(Collectors.toSet());
-
-		Map<Long, String> categoryNameById = categoryIds.isEmpty()
-				? Map.of()
-				: categoryRepository.findAllById(categoryIds).stream()
-						.collect(Collectors.toMap(Category::getCategoryId, Category::getCategoryName));
+		// 카테고리 색상 결정용 맵 (활성 카테고리 + 팔레트 hex)
+		Map<String, Integer> activeColorByName = buildActiveCategoryColorIdByName(userId);
+		Map<Integer, String> hexByColorId = buildPaletteHexByColorId();
 
 		// snooze 횟수 벌크 조회
 		Set<Long> todoIds = pageResult.getContent().stream()
@@ -396,12 +647,38 @@ public class TodoServiceImpl implements TodoService {
 								p -> p.getCnt().intValue()
 						));
 
-		return TodoSearchResp.from(pageResult, categoryNameById, snoozeCountByTodoId);
+		Map<Long, List<LocalDate>> excludedDatesByMasterId = findExcludedDatesByMasterId(
+				userId,
+				pageResult.getContent().stream()
+						.filter(todo -> todo.getType() == TodoType.RECURRING)
+						.map(Todo::getTodoId)
+						.toList());
+
+		List<TodoDetailResp> items = pageResult.getContent().stream()
+				.map(todo -> TodoDetailResp.from(
+						todo,
+						todo.getCategoryName(),
+						resolveColorHex(todo.getCategoryName(), todo.getCategoryColorId(),
+								activeColorByName, hexByColorId),
+						snoozeCountByTodoId.getOrDefault(todo.getTodoId(), 0),
+						todo.getType() == TodoType.RECURRING
+								? excludedDatesByMasterId.getOrDefault(todo.getTodoId(), List.of())
+								: List.of()
+				))
+				.toList();
+
+		return new TodoSearchResp(
+				items,
+				pageResult.getNumber(),
+				pageResult.getSize(),
+				pageResult.getTotalElements(),
+				pageResult.getTotalPages()
+		);
 	}
 
 	private Sort resolveSearchSort(String sortParam) {
 		return switch (sortParam.toLowerCase()) {
-			case "category" -> Sort.by(Order.asc("categoryId"), Order.asc("startDate"), Order.asc("todoId"));
+			case "category" -> Sort.by(Order.asc("categoryName"), Order.asc("startDate"), Order.asc("todoId"));
 			default -> Sort.by(Order.asc("startDate"), Order.asc("todoId"));
 		};
 	}
@@ -434,17 +711,37 @@ public class TodoServiceImpl implements TodoService {
 		}
 
 		int count = (int) snoozeHistoryRepository.countByTodoId(todo.getTodoId());
-		String categoryName = null;
-		if (todo.getCategoryId() != null) {
-			categoryName = categoryRepository.findById(todo.getCategoryId())
-					.map(Category::getCategoryName)
-					.orElse(null);
-		}
-		return TodoDetailResp.from(todo, categoryName, count);
+		String colorHex = resolveColorHexForTodo(userId, todo);
+		return withExcludedDates(userId, todo, todo.getCategoryName(), colorHex, count);
 	}
 
 	private boolean isAllScope(String scope) {
 		return StringUtils.hasText(scope) && "all".equalsIgnoreCase(scope);
+	}
+
+	private boolean isOnlyScope(String scope) {
+		return StringUtils.hasText(scope) && "only".equalsIgnoreCase(scope);
+	}
+
+	private boolean isFromScope(String scope) {
+		return StringUtils.hasText(scope) && "from".equalsIgnoreCase(scope);
+	}
+
+	private void validateOccurrenceOfMaster(Todo master, LocalDate occurrenceDate) {
+		if (occurrenceDate == null
+				|| occurrenceDate.isBefore(master.getStartDate())
+				|| (master.getEndDate() != null && occurrenceDate.isAfter(master.getEndDate()))
+				|| !master.getDaysOfWeek().contains(occurrenceDate.getDayOfWeek())) {
+			throw new CustomException(TodoErrorCode.T03_004);
+		}
+	}
+
+	private void validateCutDateOfMaster(Todo master, LocalDate occurrenceDate) {
+		if (occurrenceDate == null
+				|| occurrenceDate.isBefore(master.getStartDate())
+				|| (master.getEndDate() != null && occurrenceDate.isAfter(master.getEndDate()))) {
+			throw new CustomException(TodoErrorCode.T03_004);
+		}
 	}
 
 	private Set<DayOfWeek> parseDaysOfWeek(Set<String> daysOfWeek) {

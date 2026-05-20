@@ -8,6 +8,7 @@ import 'package:doitdo/core/theme/app_theme.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/providers/current_user_provider.dart';
+import 'package:doitdo/presentation/providers/font_family_provider.dart';
 import 'package:doitdo/presentation/providers/font_scale_provider.dart';
 import 'package:doitdo/presentation/providers/theme_mode_provider.dart';
 import 'package:doitdo/presentation/widgets/shell/doitdo_web_preview_shell.dart';
@@ -52,6 +53,7 @@ class _DoitdoAppState extends ConsumerState<DoitdoApp>
       // 사이 frame 안의 provider refresh 가 unmount 중인 widget(defunct element) 의
       // listener 를 호출해 framework.dart 5340 어설션 → cascade 어설션으로 release
       // 빌드에서 회색 화면이 뜬다.
+      if (!ref.exists(currentUserProvider)) return;
       final user = ref.read(currentUserProvider).valueOrNull;
       if (user == null) return;
       unawaited(ref.read(todoViewModelProvider.notifier).fetchTodos());
@@ -62,18 +64,19 @@ class _DoitdoAppState extends ConsumerState<DoitdoApp>
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
     final fontScale = ref.watch(fontScaleProvider);
+    final fontFamily = ref.watch(fontFamilyProvider);
 
     final app = MaterialApp.router(
       title: 'doitdo',
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      theme: AppTheme.light(fontFamily: fontFamily.family),
+      darkTheme: AppTheme.dark(fontFamily: fontFamily.family),
       themeMode: themeMode,
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
       builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(
-          textScaler: TextScaler.linear(fontScale),
-        ),
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(fontScale)),
         child: child!,
       ),
     );

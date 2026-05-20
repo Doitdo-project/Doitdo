@@ -8,35 +8,35 @@
 
 /// 서버 type enum 값 → 알림 유형.
 ///
-/// 서버 swagger `NotificationResp.type` 와 일치 (2025-04 기준):
-/// REMINDER_EVENING / REMINDER_MORNING /
+/// 서버 swagger `NotificationResp.type` 와 일치:
+/// REMINDER_EVENING / REMINDER_MORNING / REMINDER_STREAK_TODO_EMPTY /
 /// TODO_DONE / TODO_REMINDER / TODO_SNOOZED /
 /// TAMAGOTCHI_FAREWELL / TAMAGOTCHI_GROWTH
 ///
 /// `unknown` 은 서버가 새 type 을 도입했을 때 안전 폴백.
-/// 기존엔 모르는 type 을 `reminderEvening` 으로 잘못 잡고 있어서
-/// 화면에 "할 일 완료" 알림이 "저녁 회고" 라벨로 보이는 버그가 있었다.
 enum NotificationTypeDto {
-  reminderEvening,    // REMINDER_EVENING
-  reminderMorning,    // REMINDER_MORNING
-  todoDone,           // TODO_DONE
-  todoReminder,       // TODO_REMINDER
-  todoSnoozed,        // TODO_SNOOZED
-  tamagochiFarewell,  // TAMAGOTCHI_FAREWELL
-  tamagochiGrowth,    // TAMAGOTCHI_GROWTH
-  unknown,            // 미래 type 안전 폴백
+  reminderEvening,         // REMINDER_EVENING
+  reminderMorning,         // REMINDER_MORNING
+  reminderStreakTodoEmpty, // REMINDER_STREAK_TODO_EMPTY — 연속달성 todo 비어있을 때
+  todoDone,                // TODO_DONE
+  todoReminder,            // TODO_REMINDER
+  todoSnoozed,             // TODO_SNOOZED
+  tamagochiFarewell,       // TAMAGOTCHI_FAREWELL
+  tamagochiGrowth,         // TAMAGOTCHI_GROWTH
+  unknown,                 // 미래 type 안전 폴백
 }
 
 NotificationTypeDto _parseType(String raw) {
   switch (raw) {
-    case 'REMINDER_EVENING':    return NotificationTypeDto.reminderEvening;
-    case 'REMINDER_MORNING':    return NotificationTypeDto.reminderMorning;
-    case 'TODO_DONE':           return NotificationTypeDto.todoDone;
-    case 'TODO_REMINDER':       return NotificationTypeDto.todoReminder;
-    case 'TODO_SNOOZED':        return NotificationTypeDto.todoSnoozed;
-    case 'TAMAGOTCHI_FAREWELL': return NotificationTypeDto.tamagochiFarewell;
-    case 'TAMAGOTCHI_GROWTH':   return NotificationTypeDto.tamagochiGrowth;
-    default:                    return NotificationTypeDto.unknown;
+    case 'REMINDER_EVENING':           return NotificationTypeDto.reminderEvening;
+    case 'REMINDER_MORNING':           return NotificationTypeDto.reminderMorning;
+    case 'REMINDER_STREAK_TODO_EMPTY': return NotificationTypeDto.reminderStreakTodoEmpty;
+    case 'TODO_DONE':                  return NotificationTypeDto.todoDone;
+    case 'TODO_REMINDER':              return NotificationTypeDto.todoReminder;
+    case 'TODO_SNOOZED':               return NotificationTypeDto.todoSnoozed;
+    case 'TAMAGOTCHI_FAREWELL':        return NotificationTypeDto.tamagochiFarewell;
+    case 'TAMAGOTCHI_GROWTH':          return NotificationTypeDto.tamagochiGrowth;
+    default:                           return NotificationTypeDto.unknown;
   }
 }
 

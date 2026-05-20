@@ -41,10 +41,14 @@ class AuthInterceptor extends Interceptor {
   static const _kRefresh = 'auth_refresh_token';
 
   /// 인증 헤더 주입을 건너뛸 경로들.
+  /// 비밀번호 재설정 3단계는 모두 로그인 전에 호출되므로 access token 없이 보낸다.
   static const _unauthenticatedPaths = <String>{
     '/api/auth/login',
     '/api/auth/signup',
     '/api/auth/refresh',
+    '/api/auth/password/reset-request',
+    '/api/auth/password/reset/verify-code',
+    '/api/auth/password/reset',
     '/api/users/check-email',
     '/api/users/check-username',
   };

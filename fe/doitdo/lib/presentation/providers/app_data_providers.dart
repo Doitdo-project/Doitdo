@@ -25,18 +25,21 @@ import 'package:doitdo/data/repositories/todo_repository_impl.dart';
 import 'package:doitdo/domain/repositories/todo_repository.dart';
 import 'package:doitdo/data/datasources/category_api.dart';
 import 'package:doitdo/data/datasources/character_api.dart';
+import 'package:doitdo/data/datasources/notice_api.dart';
 import 'package:doitdo/data/datasources/notification_api.dart';
 import 'package:doitdo/data/datasources/setting_api.dart';
 import 'package:doitdo/data/datasources/shop_api.dart';
 import 'package:doitdo/data/datasources/streak_api.dart';
 import 'package:doitdo/data/repositories/category_repository_impl.dart';
 import 'package:doitdo/data/repositories/character_repository_impl.dart';
+import 'package:doitdo/data/repositories/notice_repository_impl.dart';
 import 'package:doitdo/data/repositories/notification_repository_impl.dart';
 import 'package:doitdo/data/repositories/setting_repository_impl.dart';
 import 'package:doitdo/data/repositories/shop_repository_impl.dart';
 import 'package:doitdo/data/repositories/streak_repository_impl.dart';
 import 'package:doitdo/domain/repositories/category_repository.dart';
 import 'package:doitdo/domain/repositories/character_repository.dart';
+import 'package:doitdo/domain/repositories/notice_repository.dart';
 import 'package:doitdo/domain/repositories/notification_repository.dart';
 import 'package:doitdo/domain/repositories/setting_repository.dart';
 import 'package:doitdo/domain/repositories/shop_repository.dart';
@@ -54,17 +57,20 @@ final dioProvider = Provider<Dio>((ref) {
   // Bearer 토큰 주입 + 401 자동 refresh 재시도는 AuthInterceptor 에 일임.
   // refresh 성공 시 위젯 SharedPreferences 도 동기화 — 인터셉터가 갱신한 토큰이
   // 위젯에 전달되지 않으면 위젯이 만료된 refresh token 으로 재시도해 로그인 필요 상태가 됨.
-  dio.interceptors.add(AuthInterceptor(
-    dio: dio,
-    storage: storage,
-    onTokenRefreshed: (access, refresh) {
-      widgetSync.syncAuthTokens(
-        accessToken: access,
-        refreshToken: refresh,
-        apiBaseUrl: AppConfig.apiBaseUrl,
-      );
-    },
-  ));
+  dio.interceptors.insert(
+    0,
+    AuthInterceptor(
+      dio: dio,
+      storage: storage,
+      onTokenRefreshed: (access, refresh) {
+        widgetSync.syncAuthTokens(
+          accessToken: access,
+          refreshToken: refresh,
+          apiBaseUrl: AppConfig.apiBaseUrl,
+        );
+      },
+    ),
+  );
   return dio;
 });
 
@@ -128,11 +134,11 @@ final userRepositoryProvider = Provider<UserRepository>(
 
 // ─── Todo: retrofit API → Repository ───────────────────────────
 final todoApiProvider = Provider<TodoApi>(
-      (ref) => TodoApi(ref.watch(dioProvider)), // 진짜 서버 주소와 토큰이 들어간 dio 적용
+  (ref) => TodoApi(ref.watch(dioProvider)), // 진짜 서버 주소와 토큰이 들어간 dio 적용
 );
 
 final todoRepositoryProvider = Provider<TodoRepository>(
-      (ref) => TodoRepositoryImpl(ref.watch(todoApiProvider)),
+  (ref) => TodoRepositoryImpl(ref.watch(todoApiProvider)),
 );
 
 // ─── Category: retrofit API → Repository ───────────────────────
@@ -169,6 +175,15 @@ final notificationApiProvider = Provider<NotificationApi>(
 
 final notificationRepositoryProvider = Provider<NotificationRepository>(
   (ref) => NotificationRepositoryImpl(ref.watch(notificationApiProvider)),
+);
+
+// ─── Notice: retrofit API → Repository ─────────────────────────
+final noticeApiProvider = Provider<NoticeApi>(
+  (ref) => NoticeApi(ref.watch(dioProvider)),
+);
+
+final noticeRepositoryProvider = Provider<NoticeRepository>(
+  (ref) => NoticeRepositoryImpl(ref.watch(noticeApiProvider)),
 );
 
 // ─── Streak: retrofit API → Repository ─────────────────────────

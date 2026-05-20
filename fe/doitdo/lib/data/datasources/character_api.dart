@@ -48,9 +48,11 @@ abstract class CharacterApi {
 
   /// 캐릭터 액션 트리거. path 의 `{actionType}` 은 IDLE/EYE/EAT/SLEEP/HAPPY/SAD
   /// 중 하나(대문자). 홈 화면 캐릭터 탭으로 호출되는 상호작용 핑.
-  /// 응답 `data` 는 `{actionUrl: "...gif"}` 형태로, 호출자가 thumbnail 을 잠시
-  /// 이 gif 로 swap 해 동작을 재생한다.
-  @GET('/api/characters/me/actions/{actionType}')
+  /// 응답 `data` 는 `{actionUrl, earnedAmount, balanceAfter}` — 호출자는 [actionUrl]
+  /// 로 thumbnail 을 잠시 swap 해 동작을 재생하고, [earnedAmount] > 0 이면 floating
+  /// "+N" 코인 보상 표시를 띄운다. BE 가 보상 상태를 변경하므로(잔액/일일 한도)
+  /// 메서드는 POST.
+  @POST('/api/characters/me/actions/{actionType}')
   Future<ApiResponse<CharacterActionDto>> triggerCharacterAction(
     @Path('actionType') String actionType,
   );

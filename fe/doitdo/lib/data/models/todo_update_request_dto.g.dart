@@ -11,7 +11,7 @@ _$TodoUpdateRequestDtoImpl _$$TodoUpdateRequestDtoImplFromJson(
 ) => _$TodoUpdateRequestDtoImpl(
   title: json['title'] as String,
   content: json['content'] as String?,
-  category: json['category'] as String?,
+  categoryId: (json['categoryId'] as num?)?.toInt(),
   type: json['type'] as String,
   startDate: json['startDate'] as String?,
   endDate: json['endDate'] as String?,
@@ -27,11 +27,11 @@ Map<String, dynamic> _$$TodoUpdateRequestDtoImplToJson(
 ) => <String, dynamic>{
   'title': instance.title,
   'content': instance.content,
-  'category': instance.category,
+  if (instance.categoryId case final value?) 'categoryId': value,
   'type': instance.type,
   'startDate': instance.startDate,
   'endDate': instance.endDate,
-  'daysOfWeek': instance.daysOfWeek?.toList(),
+  if (instance.daysOfWeek?.toList() case final value?) 'daysOfWeek': value,
   'alertTime': instance.alarmTime,
   if (instance.clearAlertTime case final value?) 'clearAlertTime': value,
 };

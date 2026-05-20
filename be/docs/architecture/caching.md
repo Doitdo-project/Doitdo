@@ -2,7 +2,9 @@
 
 ## 범위
 
-홈 화면의 반복 조회 비용을 줄이기 위해 TODO 목록, TODO 단건, 현재 다마고치, 카테고리 목록을 Redis cache로 저장한다. Mutation은 트랜잭션 커밋 이후 사용자 단위로 evict해 stale data 노출을 막는다.
+홈 화면의 반복 조회 비용을 줄이기 위해 TODO 목록, TODO 단건, 카테고리 목록을 Redis cache로 저장한다. Mutation은 트랜잭션 커밋 이후 사용자 단위로 evict해 stale data 노출을 막는다.
+
+현재 다마고치 조회(`GET /api/characters/me`)는 `poop` 활성 여부가 현재 시각과 `poop_cleared_date` 에 따라 바뀌므로 Redis cache 대상에서 제외한다.
 
 ## Cache Names
 
@@ -10,7 +12,6 @@
 |---|---|---|
 | `todos:list` | `{userId}:{view}:{type}:{status}:{category}:{sort}:{qHash}:{effectiveDate}` | 1h |
 | `todos:item` | `{userId}:{todoId}` | 5min |
-| `tamagotchi:current` | `{userId}` | 30min |
 | `categories` | `{userId}` | 1h |
 
 Redis key prefix는 cache name 기준으로 붙는다. 예: `todos:list::123:today:X:X:X:X:X:2026-05-04`.
@@ -33,11 +34,14 @@ TODO 목록 키에는 요청 `date`가 있으면 그 날짜, 없으면 Asia/Seou
 |---|---|
 | TODO create | `todos:list::{userId}:*` |
 | TODO update/delete/changePriority/snooze | `todos:list::{userId}:*`, `todos:item::{userId}:{todoId}` |
-| TODO changeStatus | TODO evict + `tamagotchi:current::{userId}` |
+| RECURRING scope only update/delete | `todos:list::{userId}:*`, requested master `todos:item::{userId}:{masterTodoId}`, materialized instance `todos:item::{userId}:{instanceTodoId}` |
+| RECURRING scope from update | `todos:list::{userId}:*`, master `todos:item::{userId}:{masterTodoId}`, non-DONE materialized instance items |
+| RECURRING scope from delete | `todos:list::{userId}:*`, old master `todos:item::{userId}:{masterTodoId}` |
+| TODO changeStatus | TODO evict |
 | Category create/update/delete | `categories::{userId}`, `todos:list::{userId}:*` |
-| Tamagotchi updateName/hatch/evolve/farewell | `tamagotchi:current::{userId}` |
 | RecurrenceMaterializeScheduler | created instance owners' `todos:list::{userId}:*` |
-| TodoCompletionExpListener | `tamagotchi:current::{userId}` after EXP commit |
+
+`tamagotchi:current` 는 Stage 4 똥치우기 미션 도입 후 신규 캐싱하지 않는다. 배포 전후 남아 있을 수 있는 레거시 키는 기존 `CacheEvictHelper` 호출로 삭제될 수 있지만, 신규 조회 경로는 이 캐시를 읽지 않는다.
 
 Mutation 서비스는 `TransactionSynchronizationManager`로 AFTER_COMMIT evict를 예약한다. 커밋 전에 cache miss가 발생해 미커밋 DB 상태를 다시 캐싱하는 상황을 피하기 위한 규칙이다.
 

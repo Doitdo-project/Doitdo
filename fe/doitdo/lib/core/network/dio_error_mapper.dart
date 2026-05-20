@@ -14,13 +14,15 @@ Exception mapDioException(DioException error) {
 
     case DioExceptionType.badResponse:
       final statusCode = error.response?.statusCode ?? -1;
-      final message = _extractServerMessage(error.response?.data) ??
-          _defaultMessageFor(statusCode);
-      
+      final body = error.response?.data;
+      final message =
+          _extractServerMessage(body) ?? _defaultMessageFor(statusCode);
+      final code = _extractServerCode(body);
+
       if (statusCode == 401) {
         return UnauthorizedException(message);
       }
-      return ServerException(message, statusCode: statusCode);
+      return ServerException(message, statusCode: statusCode, code: code);
 
     case DioExceptionType.cancel:
       return const UnknownException('요청이 취소되었어요.');
@@ -34,6 +36,14 @@ Exception mapDioException(DioException error) {
 String? _extractServerMessage(Object? responseData) {
   if (responseData is Map<String, dynamic>) {
     final value = responseData['message'];
+    if (value is String && value.isNotEmpty) return value;
+  }
+  return null;
+}
+
+String? _extractServerCode(Object? responseData) {
+  if (responseData is Map<String, dynamic>) {
+    final value = responseData['code'];
     if (value is String && value.isNotEmpty) return value;
   }
   return null;

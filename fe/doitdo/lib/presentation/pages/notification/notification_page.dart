@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
+import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/notification/notification_view_model.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
 import 'package:doitdo/presentation/widgets/common/doitdo_dialog.dart';
@@ -97,6 +98,47 @@ class _NotificationPageState extends ConsumerState<NotificationPage>
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 80) {
       ref.read(notificationViewModelProvider.notifier).loadMore();
+    }
+  }
+
+  /// 알림 아이템 탭 시:
+  ///   1) 안 읽음이면 읽음 처리
+  ///   2) 타입별로 관련 화면으로 이동 (알림 페이지는 닫힘)
+  ///
+  /// 경로 매핑:
+  ///   - TODO_*           → 캘린더(/todo)
+  ///   - REMINDER_*       → 캘린더(/todo) — 리마인드는 대부분 할 일 관련
+  ///   - TAMAGOTCHI_*     → 다마고치 홈(/tamagochi)
+  ///   - unknown          → 이동 안 함, 읽음 처리만
+  void _handleItemTap(
+    BuildContext context,
+    NotificationViewModel vm,
+    NotificationItem item,
+  ) {
+    if (!item.isRead) vm.markAsRead(item.id);
+
+    final destination = _routeForType(item.type);
+    if (destination == null) return;
+
+    // /todo/notifications 풀스크린에서 진입한 상태. context.go 로 탭 전환.
+    // (context.pop 후 context.push 하면 셸 외부에서 한 번 더 stack 이 쌓여 자연스럽지 않음.)
+    context.go(destination);
+  }
+
+  String? _routeForType(NotificationType type) {
+    switch (type) {
+      case NotificationType.todoDone:
+      case NotificationType.todoReminder:
+      case NotificationType.todoSnoozed:
+      case NotificationType.evening:
+      case NotificationType.morning:
+      case NotificationType.streakTodoEmpty:
+        return AppRoutes.todo;
+      case NotificationType.tamagochiFarewell:
+      case NotificationType.tamagochiGrowth:
+        return AppRoutes.tamagochi;
+      case NotificationType.unknown:
+        return null;
     }
   }
 
@@ -249,9 +291,7 @@ class _NotificationPageState extends ConsumerState<NotificationPage>
             onDismissed: (_) => vm.deleteNotification(item.id),
             child: _NotiItem(
               item: item,
-              onTap: () {
-                if (!item.isRead) vm.markAsRead(item.id);
-              },
+              onTap: () => _handleItemTap(context, vm, item),
             ),
           );
 
@@ -696,6 +736,14 @@ _NotiTypeInfo _typeInfo(NotificationType type) {
         chipColor: Color(0xFFFFE9B8),
         chipTextColor: Color(0xFF8A5A00),
         iconData: Icons.wb_sunny_rounded,
+      );
+    case NotificationType.streakTodoEmpty:
+      return const _NotiTypeInfo(
+        bgColor: Color(0xFFFFF4E5),
+        dotColor: Color(0xFFFF8A1F),
+        chipColor: Color(0xFFFFE1BD),
+        chipTextColor: Color(0xFFB35A00),
+        iconData: Icons.local_fire_department_rounded,
       );
     case NotificationType.todoDone:
       return const _NotiTypeInfo(

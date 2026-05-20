@@ -16,6 +16,8 @@ public record TodoUpdateReq(
 
 		String category,
 
+		Long categoryId,
+
 		TodoType type,
 
 		LocalDate startDate,

@@ -6,6 +6,7 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/core/utils/error_message_mapper.dart';
 import 'package:doitdo/data/models/category_dto.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
+import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
 import 'package:doitdo/presentation/pages/setting/category/widgets/category_add_sheet.dart';
 import 'package:doitdo/presentation/pages/setting/category/widgets/palette_selector_sheet.dart';
 import 'package:doitdo/presentation/providers/active_palette_provider.dart';
@@ -99,11 +100,31 @@ class CategoryPage extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     CategoryResp category,
+    int categoryCount,
   ) async {
+    if (categoryCount <= 1) {
+      await showDoitdoDialog(
+        context: context,
+        title: '삭제할 수 없어요',
+        message: '카테고리는 최소 1개 이상 있어야 해요.',
+        confirmLabel: '확인',
+      );
+      return;
+    }
+    final todoState = ref.read(todoViewModelProvider);
+    final todoCount = [
+      ...todoState.allTodos,
+      ...todoState.allSomedayTodos,
+    ].where((t) => t.category.name == category.categoryName).length;
+
+    final message = todoCount > 0
+        ? '"${category.categoryName}" 카테고리가 제거됩니다.\n이 카테고리로 분류된 $todoCount개의 할 일은 그대로 유지됩니다.'
+        : '"${category.categoryName}" 카테고리가 제거됩니다.';
+
     final ok = await showDoitdoDialog(
       context: context,
       title: '카테고리를 삭제할까요?',
-      message: '"${category.categoryName}" 카테고리가 제거됩니다.',
+      message: message,
       confirmLabel: '삭제',
       cancelLabel: '취소',
     );
@@ -161,7 +182,7 @@ class CategoryPage extends ConsumerWidget {
               _CategoryCard(
                 categories: categories,
                 onEdit: (c) => _handleEdit(context, ref, c),
-                onDelete: (c) => _handleDelete(context, ref, c),
+                onDelete: (c) => _handleDelete(context, ref, c, categories.length),
                 onAddTap: () => _handleAdd(context, ref),
               ),
               const SizedBox(height: 40),
@@ -375,6 +396,9 @@ class _PaletteSelector extends ConsumerWidget {
     final colors = context.colors;
     final palette = ref.watch(paletteProvider);
     final activeId = ref.watch(activePaletteProvider);
+    // 카테고리도 watch 해서 데이터 도착 시 즉시 재계산되도록 함 (read 로 하면
+    // 카테고리가 늦게 로드돼도 자동 감지가 다시 안 돌아 옛 팔레트 이름이 남음).
+    final cats = ref.watch(categoryViewModelProvider).valueOrNull ?? const [];
 
     return palette.when(
       loading: () => const SizedBox(
@@ -417,28 +441,36 @@ class _PaletteSelector extends ConsumerWidget {
         final palettes = paletteList.items;
         if (palettes.isEmpty) return const SizedBox.shrink();
 
-        var currentIndex = palettes.indexWhere((p) => p.paletteId == activeId);
-        if (currentIndex < 0) currentIndex = 0;
+        // ── 활성 팔레트 결정 (source of truth = 카테고리의 실제 colorId) ──
+        // 1) 카테고리가 로드되어 있으면 첫 카테고리 colorId 가 속한 팔레트를 찾는다.
+        //    이게 "지금 실제로 적용된 팔레트" 이므로 SharedPreferences 값보다 우선.
+        // 2) 카테고리가 아직 안 와 있으면 SharedPreferences 의 activeId 로 폴백.
+        // 3) 둘 다 안 맞으면 첫 팔레트 (마지막 방어).
+        //
+        // 첫 진입 시 잘못된 팔레트 이름이 잠깐 보였다가 바뀌는 현상을 막기 위해
+        // build 내에서 즉시 detectedIndex 를 사용한다. (addPostFrameCallback 후
+        // setState 를 기다리지 않음)
+        int? detectedIndex;
+        if (cats.isNotEmpty) {
+          final firstColorId = cats.first.colorId;
+          final idx = palettes.indexWhere(
+            (p) => p.colors.any((pc) => pc.colorId == firstColorId),
+          );
+          if (idx >= 0) detectedIndex = idx;
+        }
 
-        // activePaletteProvider 가 null 이면(= 로그아웃 후 첫 진입 등)
-        // 서버 카테고리의 colorId 로 실제 팔레트를 역추론해 설정한다.
-        // 단순히 첫 팔레트(기본)로 고정하면 서버 색상과 선택된 팔레트 이름이
-        // 어긋나는 현상이 발생하기 때문.
-        if (activeId == null) {
-          final cats = ref.read(categoryViewModelProvider).valueOrNull ?? [];
-          if (cats.isNotEmpty) {
-            final firstColorId = cats.first.colorId;
-            int base = 1;
-            for (int i = 0; i < palettes.length; i++) {
-              final p = palettes[i];
-              if (firstColorId >= base && firstColorId < base + p.colors.length) {
-                currentIndex = i;
-                break;
-              }
-              base += p.colors.length;
-            }
-          }
-          final detectedId = palettes[currentIndex].paletteId;
+        int currentIndex;
+        if (detectedIndex != null) {
+          currentIndex = detectedIndex;
+        } else {
+          currentIndex = palettes.indexWhere((p) => p.paletteId == activeId);
+          if (currentIndex < 0) currentIndex = 0;
+        }
+
+        // SharedPreferences 값이 실제(detected) 와 어긋나면 백그라운드로 동기화.
+        // 화면 표시는 이미 detectedIndex 기반으로 끝났으므로 사용자에게는 영향 없음.
+        final detectedId = palettes[currentIndex].paletteId;
+        if (activeId != detectedId) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!context.mounted) return;
             ref.read(activePaletteProvider.notifier).set(detectedId);

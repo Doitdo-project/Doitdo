@@ -53,6 +53,10 @@ public class UserSetting extends BaseTimeEntity {
 	@Column(name = "evening_reminder_time", nullable = false)
 	private LocalTime eveningReminderTime;
 
+	@Builder.Default
+	@Column(name = "tamagotchi_notification_enabled", nullable = false)
+	private Boolean tamagotchiNotificationEnabled = true;
+
 	@Enumerated(EnumType.STRING)
 	@Column(name = "home_screen_mode", nullable = false, length = 10)
 	private HomeScreenMode homeScreenMode;
@@ -65,6 +69,7 @@ public class UserSetting extends BaseTimeEntity {
 				.morningReminderTime(LocalTime.of(8, 0))
 				.eveningReminderEnabled(false)
 				.eveningReminderTime(LocalTime.of(21, 0))
+				.tamagotchiNotificationEnabled(true)
 				.homeScreenMode(HomeScreenMode.HOME)
 				.build();
 	}
@@ -76,6 +81,9 @@ public class UserSetting extends BaseTimeEntity {
 		this.eveningReminderTime = truncate(this.eveningReminderTime);
 		this.dndStartTime        = truncate(this.dndStartTime);
 		this.dndEndTime          = truncate(this.dndEndTime);
+		if (this.tamagotchiNotificationEnabled == null) {
+			this.tamagotchiNotificationEnabled = true;
+		}
 	}
 
 	private static LocalTime truncate(LocalTime t) {
@@ -93,7 +101,8 @@ public class UserSetting extends BaseTimeEntity {
 			Boolean morningReminderEnabled,
 			LocalTime morningReminderTime,
 			Boolean eveningReminderEnabled,
-			LocalTime eveningReminderTime
+			LocalTime eveningReminderTime,
+			Boolean tamagotchiNotificationEnabled
 	) {
 		if (dndEnabled != null) this.dndEnabled = dndEnabled;
 		if (dndStartTime != null) this.dndStartTime = dndStartTime;
@@ -102,5 +111,6 @@ public class UserSetting extends BaseTimeEntity {
 		if (morningReminderTime != null) this.morningReminderTime = morningReminderTime;
 		if (eveningReminderEnabled != null) this.eveningReminderEnabled = eveningReminderEnabled;
 		if (eveningReminderTime != null) this.eveningReminderTime = eveningReminderTime;
+		if (tamagotchiNotificationEnabled != null) this.tamagotchiNotificationEnabled = tamagotchiNotificationEnabled;
 	}
 }

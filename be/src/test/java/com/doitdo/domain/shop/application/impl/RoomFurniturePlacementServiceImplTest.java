@@ -16,12 +16,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.doitdo.domain.shop.api.dto.req.UpdateRoomFurniturePlacementReq;
+import com.doitdo.domain.shop.api.dto.resp.PlaceThemeResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomFurniturePlacementResp;
 import com.doitdo.domain.shop.application.DefaultFurnitureRegistrar;
 import com.doitdo.domain.shop.entity.Furniture;
+import com.doitdo.domain.shop.entity.FurnitureTheme;
 import com.doitdo.domain.shop.entity.RoomFurniturePlacement;
 import com.doitdo.domain.shop.entity.UserFurniture;
 import com.doitdo.domain.shop.repository.FurnitureRepository;
+import com.doitdo.domain.shop.repository.FurnitureThemeRepository;
 import com.doitdo.domain.shop.repository.RoomFurniturePlacementRepository;
 import com.doitdo.domain.shop.repository.UserFurnitureRepository;
 import com.doitdo.global.exception.CustomException;
@@ -40,6 +43,9 @@ class RoomFurniturePlacementServiceImplTest {
 	private FurnitureRepository furnitureRepository;
 
 	@Mock
+	private FurnitureThemeRepository furnitureThemeRepository;
+
+	@Mock
 	private DefaultFurnitureRegistrar defaultFurnitureRegistrar;
 
 	private RoomFurniturePlacementServiceImpl buildService() {
@@ -47,6 +53,7 @@ class RoomFurniturePlacementServiceImplTest {
 			roomFurniturePlacementRepository,
 			userFurnitureRepository,
 			furnitureRepository,
+			furnitureThemeRepository,
 			defaultFurnitureRegistrar
 		);
 	}
@@ -222,11 +229,76 @@ class RoomFurniturePlacementServiceImplTest {
 			.isEqualTo(ShopErrorCode.USER_FURNITURE_NOT_FOUND);
 	}
 
+	@Test
+	void placeTheme_replacesSameCategoryPlacementsWithOwnedThemeFurnitures() {
+		RoomFurniturePlacementServiceImpl service = buildService();
+		Long userId = 1L;
+		FurnitureTheme moon = furnitureTheme("MOON", "달빛");
+		Furniture oldBed = furniture(10L, "기존 침대", "BED");
+		Furniture moonBed = furniture(11L, "달빛 침대", "BED");
+		Furniture moonDesk = furniture(12L, "달빛 책상", "DESK");
+		UserFurniture oldBedUserFurniture = userFurniture(20L, userId, 10L);
+		UserFurniture moonBedUserFurniture = userFurniture(21L, userId, 11L);
+		UserFurniture moonDeskUserFurniture = userFurniture(22L, userId, 12L);
+		RoomFurniturePlacement oldBedPlacement = placement(30L, userId, 20L, 100, 200, 1, 0);
+		RoomFurniturePlacement savedBedPlacement = placement(31L, userId, 21L, 120, 300, 5, 0);
+		RoomFurniturePlacement savedDeskPlacement = placement(32L, userId, 22L, 120, 300, 5, 0);
+
+		given(furnitureThemeRepository.findByThemeCodeAndIsActiveTrue("MOON")).willReturn(Optional.of(moon));
+		given(furnitureRepository.findAllByThemeCodeAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc("MOON"))
+			.willReturn(List.of(moonBed, moonDesk));
+		given(userFurnitureRepository.findAllByUserIdOrderByUserFurnitureIdAsc(userId))
+			.willReturn(List.of(oldBedUserFurniture, moonBedUserFurniture, moonDeskUserFurniture));
+		given(roomFurniturePlacementRepository.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId))
+			.willReturn(List.of(oldBedPlacement));
+		given(furnitureRepository.findAllById(any())).willReturn(List.of(oldBed, moonBed, moonDesk));
+		given(roomFurniturePlacementRepository.save(any(RoomFurniturePlacement.class)))
+			.willReturn(savedBedPlacement, savedDeskPlacement);
+
+		PlaceThemeResp resp = service.placeTheme(userId, "moon");
+
+		verify(roomFurniturePlacementRepository).delete(oldBedPlacement);
+		assertThat(resp.themeCode()).isEqualTo("MOON");
+		assertThat(resp.themeName()).isEqualTo("달빛");
+		assertThat(resp.placedCount()).isEqualTo(2);
+		assertThat(resp.items()).extracting(RoomFurniturePlacementResp::userFurnitureId)
+			.containsExactly(21L, 22L);
+	}
+
+	@Test
+	void placeTheme_rejectsWhenThemeFurnitureIsNotOwned() {
+		RoomFurniturePlacementServiceImpl service = buildService();
+		Long userId = 1L;
+		FurnitureTheme moon = furnitureTheme("MOON", "달빛");
+		Furniture moonBed = furniture(11L, "달빛 침대", "BED");
+
+		given(furnitureThemeRepository.findByThemeCodeAndIsActiveTrue("MOON")).willReturn(Optional.of(moon));
+		given(furnitureRepository.findAllByThemeCodeAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc("MOON"))
+			.willReturn(List.of(moonBed));
+		given(userFurnitureRepository.findAllByUserIdOrderByUserFurnitureIdAsc(userId)).willReturn(List.of());
+
+		assertThatThrownBy(() -> service.placeTheme(userId, "MOON"))
+			.isInstanceOf(CustomException.class)
+			.extracting(ex -> ((CustomException)ex).getErrorCode())
+			.isEqualTo(ShopErrorCode.THEME_NOT_FULLY_OWNED);
+		verify(roomFurniturePlacementRepository, never()).save(any(RoomFurniturePlacement.class));
+	}
+
 	private UserFurniture userFurniture(Long userFurnitureId, Long userId, Long furnitureId) {
 		return UserFurniture.builder()
 			.userFurnitureId(userFurnitureId)
 			.userId(userId)
 			.furnitureId(furnitureId)
+			.build();
+	}
+
+	private FurnitureTheme furnitureTheme(String themeCode, String themeName) {
+		return FurnitureTheme.builder()
+			.themeCode(themeCode)
+			.themeName(themeName)
+			.thumbnailUrl("https://cdn.example.com/" + themeCode + ".png")
+			.displayOrder(1)
+			.isActive(true)
 			.build();
 	}
 

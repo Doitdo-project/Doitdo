@@ -10,6 +10,7 @@ public record TodoListRow(
 		String title,
 		String content,
 		String categoryName,
+		Integer categoryColorId,
 		TodoType type,
 		Integer priority,
 		String alertTime,
@@ -18,6 +19,8 @@ public record TodoListRow(
 		String daysOfWeekRaw,
 		TodoStatus status,
 		LocalDateTime updatedAt,
+		Long masterTodoId,
+		Long recurrenceGroupId,
 		long snoozeCount
 ) {
 }

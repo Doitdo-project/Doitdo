@@ -60,7 +60,9 @@ class ShopItemCard extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Container(
         decoration: BoxDecoration(
-          color: isPlaced ? AppColors.streakBg : colors.surface,
+          // placed 카드는 시맨틱 토큰(streakCardBg) 사용 — 고정 크림(#FFF8F2)을
+          // 쓰면 다크모드에서 textPrimary(거의 흰색)가 깔려 가구명이 안 보인다.
+          color: isPlaced ? colors.streakCardBg : colors.surface,
           borderRadius: BorderRadius.circular(16.r),
           border: Border.all(color: borderColor, width: borderWidth),
         ),
@@ -292,7 +294,10 @@ class _ActionButton extends StatelessWidget {
                 ? BorderSide(color: colors.border)
                 : BorderSide.none,
           ),
-          textStyle: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w700),
+          textStyle: AppTextStyles.labelLarge.copyWith(
+            fontWeight: FontWeight.w700,
+            fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+          ),
         ),
         child: Text(label),
       ),

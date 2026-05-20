@@ -5,8 +5,10 @@
 /// - CategoryListResp : { items: List<CategoryResp> }
 ///
 /// swagger `/api/palettes` 스펙 기준:
-/// - PaletteResp     : { paletteId, paletteName, colors: List<String> }
-/// - PaletteListResp : List<PaletteResp> 를 data 배열로 직접 반환
+/// - PaletteResp      : { paletteId, paletteName, colors: List<PaletteColorResp> }
+/// - PaletteColorResp : { colorId, color }   ← BE MR(`be/fix/palette-resp-color-id`) 로 colorId 노출됨.
+///                                            FE 가 더 이상 colorId 를 추측 계산하지 않는다.
+/// - PaletteListResp  : List<PaletteResp> 를 data 배열로 직접 반환
 
 import 'package:flutter/material.dart';
 
@@ -62,13 +64,39 @@ class PaletteResp {
   final int paletteId;
   final String paletteName;
 
-  /// 서버가 내려주는 hex 문자열 목록 (예: ["#A8C5E8", "#F2B23A", ...]).
-  final List<String> colors;
+  /// 서버가 내려주는 { colorId, color } 객체 목록.
+  /// colorOrder 오름차순으로 정렬되어 있음.
+  final List<PaletteColorResp> colors;
 
   factory PaletteResp.fromJson(Map<String, dynamic> json) => PaletteResp(
         paletteId: (json['paletteId'] as num).toInt(),
         paletteName: json['paletteName'] as String,
-        colors: (json['colors'] as List<dynamic>).cast<String>(),
+        colors: (json['colors'] as List<dynamic>)
+            .map((e) => PaletteColorResp.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
+/// 팔레트 단일 색상.
+///
+/// BE 가 colorId 를 명시적으로 내려주므로, 카테고리 색상 변경 PATCH 시 이 값을
+/// 그대로 보내면 된다 (추측 계산 X). 키 이름은 BE 의 `PaletteColor` 엔티티
+/// 컬럼명과 맞추기 위해 `color` 를 사용한다.
+class PaletteColorResp {
+  const PaletteColorResp({
+    required this.colorId,
+    required this.color,
+  });
+
+  final int colorId;
+
+  /// hex 문자열 (예: "#1B2A41").
+  final String color;
+
+  factory PaletteColorResp.fromJson(Map<String, dynamic> json) =>
+      PaletteColorResp(
+        colorId: (json['colorId'] as num).toInt(),
+        color: json['color'] as String,
       );
 }
 

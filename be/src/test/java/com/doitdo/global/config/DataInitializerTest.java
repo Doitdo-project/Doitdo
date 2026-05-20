@@ -1,12 +1,14 @@
 package com.doitdo.global.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.doitdo.domain.shop.entity.Furniture;
 import com.doitdo.domain.shop.repository.FurnitureRepository;
+import com.doitdo.domain.todo.entity.Palette;
 import com.doitdo.domain.todo.repository.PaletteColorRepository;
 import com.doitdo.domain.todo.repository.PaletteRepository;
 import java.util.Optional;
@@ -35,7 +37,7 @@ class DataInitializerTest {
 				paletteColorRepository,
 				furnitureRepository
 		);
-		given(paletteRepository.count()).willReturn(1L);
+		given(paletteRepository.findByPaletteName(any())).willReturn(Optional.of(Palette.create("이미존재", 1)));
 		given(furnitureRepository.findByCodeAndIsDeletedFalse("DEFAULT_BACKGROUND")).willReturn(Optional.empty());
 
 		initializer.run();

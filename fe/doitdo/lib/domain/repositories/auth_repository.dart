@@ -54,6 +54,24 @@ abstract class AuthRepository {
   /// 회원탈퇴처럼 서버가 이미 토큰을 무효화한 경우에 사용한다.
   Future<void> signOut({bool skipServerLogout = false});
 
+  // ── 비밀번호 재설정 (비로그인 상태에서 호출하는 3단계 플로우) ──────────
+
+  /// 1단계 — 입력한 이메일로 인증번호(OTP) 발송 요청.
+  Future<void> requestPasswordResetCode(String email);
+
+  /// 2단계 — 인증번호 검증. 성공 시 3단계에서 쓸 1회용 `resetToken` 반환.
+  Future<String> verifyPasswordResetCode({
+    required String email,
+    required String code,
+  });
+
+  /// 3단계 — `resetToken` 으로 새 비밀번호 설정.
+  /// 성공해도 세션은 만들지 않는다 — 호출측이 로그인 화면으로 보내야 한다.
+  Future<void> confirmPasswordReset({
+    required String resetToken,
+    required String newPassword,
+  });
+
   // 이메일/닉네임 중복체크는 `/api/users/*` 경로라 UserRepository 쪽에 둔다
   // (URL prefix 와 일치). AuthRepository 에서 제공하지 않음.
 }

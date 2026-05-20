@@ -85,10 +85,16 @@ class _TodoApi implements TodoApi {
   @override
   Future<ApiResponse<TodoUpdateResponseDto>> updateTodo(
     int todoId,
-    TodoUpdateRequestDto request,
-  ) async {
+    TodoUpdateRequestDto request, {
+    String? scope,
+    String? occurrenceDate,
+  }) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'scope': scope,
+      r'occurrenceDate': occurrenceDate,
+    };
+    queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     final _data = request;
     final _options = _setStreamType<ApiResponse<TodoUpdateResponseDto>>(
@@ -237,9 +243,16 @@ class _TodoApi implements TodoApi {
   }
 
   @override
-  Future<void> deleteTodo(int todoId, String? scope) async {
+  Future<void> deleteTodo(
+    int todoId,
+    String? scope, {
+    String? occurrenceDate,
+  }) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{r'scope': scope};
+    final queryParameters = <String, dynamic>{
+      r'scope': scope,
+      r'occurrenceDate': occurrenceDate,
+    };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;

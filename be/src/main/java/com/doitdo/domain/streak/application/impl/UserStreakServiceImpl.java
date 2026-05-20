@@ -8,12 +8,14 @@ import com.doitdo.domain.streak.entity.UserStreak;
 import com.doitdo.domain.streak.repository.StreakRewardLogRepository;
 import com.doitdo.domain.streak.repository.UserStreakRepository;
 import com.doitdo.domain.user.application.CreditEarnService;
+import com.doitdo.domain.user.application.dto.EarnResult;
 import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.repository.UserWalletRepository;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.UserErrorCode;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserStreakServiceImpl implements UserStreakService {
 
 	private static final int REWARD_INTERVAL_DAYS = 7;
-	private static final int SEVEN_DAY_REWARD_AMOUNT = 200;
+	private static final int SEVEN_DAY_REWARD_AMOUNT = 500;
+	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
 	private final UserStreakRepository userStreakRepository;
 	private final UserWalletRepository userWalletRepository;
@@ -35,7 +38,7 @@ public class UserStreakServiceImpl implements UserStreakService {
 	public void recordActivity(Long userId) {
 		UserStreak streak = userStreakRepository.findByUserId(userId)
 				.orElseGet(() -> userStreakRepository.save(UserStreak.create(userId)));
-		streak.recordActivity(LocalDate.now());
+		streak.recordActivity(LocalDate.now(SEOUL));
 	}
 
 	@Override
@@ -72,7 +75,7 @@ public class UserStreakServiceImpl implements UserStreakService {
 				streakCount,
 				SEVEN_DAY_REWARD_AMOUNT
 		));
-		int earnedAmount = creditEarnService.tryEarn(
+		EarnResult earnResult = creditEarnService.tryEarn(
 				userId,
 				WalletEarnSource.STREAK_7DAY,
 				SEVEN_DAY_REWARD_AMOUNT,
@@ -82,7 +85,7 @@ public class UserStreakServiceImpl implements UserStreakService {
 		UserWallet wallet = userWalletRepository.findByUserId(userId)
 				.orElseThrow(() -> new CustomException(UserErrorCode.U06_004));
 
-		return StreakRewardResp.rewarded(streakCount, earnedAmount, wallet.getBalance());
+		return StreakRewardResp.rewarded(streakCount, earnResult.earnedAmount(), wallet.getBalance());
 	}
 
 	private boolean isRewardable(UserStreak streak) {

@@ -14,12 +14,14 @@ import com.doitdo.domain.streak.repository.UserStreakRepository;
 import com.doitdo.domain.tamagotchi.application.TamagotchiService;
 import com.doitdo.domain.tamagotchi.api.dto.resp.CharacterActionUrlResp;
 import com.doitdo.domain.tamagotchi.entity.Character;
+import com.doitdo.domain.tamagotchi.entity.CharacterActionType;
 import com.doitdo.domain.tamagotchi.entity.CharacterAction;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
 import com.doitdo.domain.tamagotchi.repository.CharacterActionRepository;
 import com.doitdo.domain.tamagotchi.repository.CharacterRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.todo.api.dto.req.TodoStatusChangeReq;
+import com.doitdo.domain.todo.api.dto.resp.TodoDetailResp;
 import com.doitdo.domain.todo.application.TodoService;
 import com.doitdo.domain.todo.entity.Todo;
 import com.doitdo.domain.todo.entity.Todo.TodoStatus;
@@ -36,7 +38,7 @@ import com.doitdo.domain.user.repository.WalletEarnLogRepository;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.ShopErrorCode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -56,12 +58,14 @@ import org.springframework.test.context.ActiveProfiles;
  * 뚜레딧 적립 시스템 통합 테스트 (Stage 5).
  *
  * <p>모든 테스트는 @Transactional 을 붙이지 않는다.
- * TodoCompletionCreditListener 가 AFTER_COMMIT 이벤트를 구독하므로,
- * 테스트 메서드 자체가 트랜잭션을 열면 커밋이 일어나지 않아 이벤트가 발행되지 않는다.
+ * TODO 완료 적립은 TodoServiceImpl 에서 직접 호출하지만,
+ * Tamagotchi exp 리스너는 AFTER_COMMIT 이벤트를 구독하므로 테스트 메서드 자체 트랜잭션은 피한다.
  */
 @SpringBootTest
 @ActiveProfiles("test")
 class DoreditEarningSystemIntegrationTest {
+
+    private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
     // ── 서비스 ─────────────────────────────────────────────────────────────
     @Autowired private AuthService         authService;
@@ -91,11 +95,11 @@ class DoreditEarningSystemIntegrationTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // Case 1: 회원가입 → 잔액 100 + SIGNUP_BONUS 로그
+    // Case 1: 회원가입 → 잔액 1000 + SIGNUP_BONUS 로그
     // ══════════════════════════════════════════════════════════════════════
     @Test
-    @DisplayName("Case 1: 회원가입 시 100 뚜레딧 적립 및 SIGNUP_BONUS 로그 생성")
-    void case01_signupGrantsHundredCreditAndLog() {
+    @DisplayName("Case 1: 회원가입 시 1000 뚜레딧 적립 및 SIGNUP_BONUS 로그 생성")
+    void case01_signupGrantsInitialCreditAndLog() {
         // EGG 캐릭터가 없으면 signup() 이 예외를 던지므로 미리 seed.
         seedEggCharacter("슬라임");
 
@@ -106,33 +110,33 @@ class DoreditEarningSystemIntegrationTest {
         UserWallet wallet = userWalletRepository.findByUserId(user.getUserId())
                 .orElseThrow(() -> new AssertionError("지갑이 없음"));
 
-        assertThat(wallet.getBalance()).isEqualTo(100);
+        assertThat(wallet.getBalance()).isEqualTo(1000);
 
         List<WalletEarnLog> logs = walletEarnLogRepository.findAll().stream()
                 .filter(l -> l.getUserId().equals(user.getUserId()))
                 .toList();
         assertThat(logs).hasSize(1);
         assertThat(logs.get(0).getSource()).isEqualTo(WalletEarnSource.SIGNUP_BONUS);
-        assertThat(logs.get(0).getAmount()).isEqualTo(100);
+        assertThat(logs.get(0).getAmount()).isEqualTo(1000);
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // Case 2: 7일 스트릭 → +200, 일일 cap 무시, STREAK_7DAY 로그
+    // Case 2: 7일 스트릭 → +500, 일일 cap 무시, STREAK_7DAY 로그
     // ══════════════════════════════════════════════════════════════════════
     @Test
-    @DisplayName("Case 2: 7일 연속 스트릭 보상 → +200 적립, 일일 cap 무시")
-    void case02_streakSevenDayGrantsTwoHundred() {
+    @DisplayName("Case 2: 7일 연속 스트릭 보상 → +500 적립, 일일 cap 무시")
+    void case02_streakSevenDayGrantsFiveHundred() {
         Long userId = createUserWithWallet("user2@test.com", "user2");
 
         // streak 을 7일로 세팅 (recordActivity를 7일 연속으로 호출하면 DB에 반영됨)
         UserStreak streak = userStreakRepository.findByUserId(userId)
                 .orElseThrow(() -> new AssertionError("streak 없음"));
-        LocalDate start = LocalDate.now().minusDays(6);
+        LocalDate start = LocalDate.now(SEOUL).minusDays(6);
         // 직접 DB 조작으로 streak 상태 세팅
         jdbcTemplate.update(
                 "UPDATE user_streaks SET current_streak_count=7, current_streak_start_date=?, last_active_date=? WHERE user_id=?",
                 java.sql.Date.valueOf(start),
-                java.sql.Date.valueOf(LocalDate.now()),
+                java.sql.Date.valueOf(LocalDate.now(SEOUL)),
                 userId
         );
 
@@ -140,60 +144,66 @@ class DoreditEarningSystemIntegrationTest {
         userStreakService.claimSevenDayReward(userId);
         int balanceAfter = walletBalance(userId);
 
-        assertThat(balanceAfter - balanceBefore).isEqualTo(200);
+        assertThat(balanceAfter - balanceBefore).isEqualTo(500);
 
         List<WalletEarnLog> logs = walletEarnLogRepository.findAll().stream()
                 .filter(l -> l.getUserId().equals(userId) && l.getSource() == WalletEarnSource.STREAK_7DAY)
                 .toList();
         assertThat(logs).hasSize(1);
-        assertThat(logs.get(0).getAmount()).isEqualTo(200);
+        assertThat(logs.get(0).getAmount()).isEqualTo(500);
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // Case 3: IDLE 3회 터치 → +30; 4번째 터치: actionUrl 정상, earnedAmount=0, nextAvailableAt 설정
+    // Case 3: IDLE 2회 터치 → +100; 3번째 터치: actionUrl 정상, earnedAmount=0
     // ══════════════════════════════════════════════════════════════════════
     @Test
-    @DisplayName("Case 3: IDLE 3회 적립 후 4번째 호출 시 earnedAmount=0, nextAvailableAt 설정")
-    void case03_threeIdleEarnsThenFourthEarnsNothing() {
+    @DisplayName("Case 3: IDLE 2회 적립 후 3번째 호출 시 earnedAmount=0")
+    void case03_twoIdleEarnsThenThirdEarnsNothing() {
         Long userId = createUserWithWallet("user3@test.com", "user3");
         UserCharacter uc = seedCharacterWithAction(userId, "IDLE");
 
-        // 1-hour cooldown 우회: 직전 터치 시각을 2시간 전으로 DB에 세팅하면서 3번 적립
-        for (int i = 0; i < 3; i++) {
+        // 2-hour cooldown 우회: 직전 터치 시각을 3시간 전으로 DB에 세팅하면서 2번 적립
+        for (int i = 0; i < 2; i++) {
             // 매 호출마다 lastTouchedAt 을 충분히 과거로 세팅
-            resetLastTouchedAt(uc.getUserCharacterId(), 2);
-            CharacterActionUrlResp resp = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
-            assertThat(resp.earnedAmount()).isEqualTo(10);
+            resetLastTouchedAt(uc.getUserCharacterId(), 3);
+            CharacterActionUrlResp resp = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
+            assertThat(resp.earnedAmount()).isEqualTo(50);
         }
 
-        // 4번째: dailyTouchCount=3 이므로 cap 도달 → earn=0, nextAvailableAt 설정됨
-        CharacterActionUrlResp fourth = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
-        assertThat(fourth.earnedAmount()).isZero();
-        assertThat(fourth.actionUrl()).isNotBlank();
-        assertThat(fourth.nextAvailableAt()).isNotNull();
-        assertThat(fourth.dailyTouchCount()).isEqualTo(3);
+        // 3번째: dailyTouchCount=2 이므로 cap 도달 → earn=0
+        CharacterActionUrlResp third = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
+        assertThat(third.earnedAmount()).isZero();
+        assertThat(third.actionUrl()).isNotBlank();
+        assertThat(userCharacterRepository.findById(uc.getUserCharacterId()).orElseThrow().getDailyTouchCount())
+                .isEqualTo(2);
 
         int totalEarned = walletEarnLogsBySource(userId, WalletEarnSource.PET_TOUCH).stream()
                 .mapToInt(WalletEarnLog::getAmount).sum();
-        assertThat(totalEarned).isEqualTo(30);
+        assertThat(totalEarned).isEqualTo(100);
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // Case 4: 1시간 cooldown — 첫 번째 IDLE 직후 즉시 재호출 → earnedAmount=0
+    // Case 4: 2시간 cooldown — 첫 번째 IDLE 직후 즉시 재호출 → earnedAmount=0, 2시간 후 가능
     // ══════════════════════════════════════════════════════════════════════
     @Test
-    @DisplayName("Case 4: 1시간 미경과 시 두 번째 IDLE 호출 → earnedAmount=0")
-    void case04_cooldownPreventsSecondEarnWithinAnHour() {
+    @DisplayName("Case 4: 2시간 미경과 시 두 번째 IDLE 호출 → earnedAmount=0, 2시간 후 재적립")
+    void case04_cooldownPreventsSecondEarnWithinTwoHours() {
         Long userId = createUserWithWallet("user4@test.com", "user4");
-        seedCharacterWithAction(userId, "IDLE");
+        UserCharacter uc = seedCharacterWithAction(userId, "IDLE");
 
-        CharacterActionUrlResp first = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
-        assertThat(first.earnedAmount()).isEqualTo(10);
+        CharacterActionUrlResp first = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
+        assertThat(first.earnedAmount()).isEqualTo(50);
 
         // 즉시 재호출: lastTouchedAt 이 방금 전이므로 cooldown 미경과
-        CharacterActionUrlResp second = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
+        CharacterActionUrlResp second = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
         assertThat(second.earnedAmount()).isZero();
         assertThat(second.actionUrl()).isNotBlank();
+
+        // 경계값(정확히 2시간)은 DB NOW()와 애플리케이션 now 사이 정밀도 차이로 흔들릴 수 있어
+        // cooldown 이 충분히 지난 상태를 검증한다.
+        resetLastTouchedAt(uc.getUserCharacterId(), 3);
+        CharacterActionUrlResp third = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
+        assertThat(third.earnedAmount()).isEqualTo(50);
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -206,8 +216,8 @@ class DoreditEarningSystemIntegrationTest {
         UserCharacter uc = seedCharacterWithAction(userId, "IDLE");
 
         // 1회 적립
-        CharacterActionUrlResp first = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
-        assertThat(first.earnedAmount()).isEqualTo(10);
+        CharacterActionUrlResp first = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
+        assertThat(first.earnedAmount()).isEqualTo(50);
 
         // DB 직접 조작으로 어제 날짜 + 25시간 전으로 세팅
         jdbcTemplate.update(
@@ -216,62 +226,75 @@ class DoreditEarningSystemIntegrationTest {
         );
 
         // 재적립: 새 날짜이므로 dailyTouchCount 리셋 → 적립 가능
-        CharacterActionUrlResp second = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
-        assertThat(second.earnedAmount()).isEqualTo(10);
-        assertThat(second.dailyTouchCount()).isEqualTo(1);
+        CharacterActionUrlResp second = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
+        assertThat(second.earnedAmount()).isEqualTo(50);
+        assertThat(userCharacterRepository.findById(uc.getUserCharacterId()).orElseThrow().getDailyTouchCount())
+                .isEqualTo(1);
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // Case 6: TODO 9개 완료 → +30 적립; 10번째 → earnedAmount=0
+    // Case 6: TODO 5개 완료 → +100 적립; 6번째 → earnedAmount=0
     // ══════════════════════════════════════════════════════════════════════
     @Test
-    @DisplayName("Case 6: 서로 다른 TODO 9개 완료 → 30 적립, 10번째 TODO → 0")
-    void case06_nineDistinctTodosEarnThirty() throws InterruptedException {
+    @DisplayName("Case 6: 서로 다른 TODO 5개 완료 → 100 적립, 6번째 TODO → 0")
+    void case06_fiveDistinctTodosEarnHundred() throws InterruptedException {
         Long userId = createUserWithWallet("user6@test.com", "user6");
-        // TodoCompletionCreditListener 가 tamagotchi exp 이벤트도 처리하므로
         // UserCharacter 가 없어도 exp 리스너는 no-op (skip) 처리됨. 지갑만 있으면 됨.
 
-        // 9개 TODO 생성 & 완료
-        for (int i = 0; i < 9; i++) {
+        // 5개 TODO 생성 & 완료
+        for (int i = 0; i < 5; i++) {
             Long todoId = saveTodo(userId, "todo-" + i);
-            todoService.changeStatus(userId, todoId, new TodoStatusChangeReq(TodoStatus.DONE));
+            TodoDetailResp resp = todoService.changeStatus(userId, todoId, new TodoStatusChangeReq(TodoStatus.DONE));
+            assertThat(resp.earnedCoin()).isEqualTo(20);
+            assertThat(resp.rewarded()).isTrue();
+            assertThat(resp.walletBalance()).isEqualTo((i + 1) * 20);
             // AFTER_COMMIT 이벤트가 비동기로 처리되므로 짧게 대기
             Thread.sleep(100);
         }
 
         int totalEarned = walletEarnLogsBySource(userId, WalletEarnSource.TODO_COMPLETION).stream()
                 .mapToInt(WalletEarnLog::getAmount).sum();
-        assertThat(totalEarned).isEqualTo(30); // 3, 6, 9번째 완료 시 각 10 적립
+        assertThat(totalEarned).isEqualTo(100); // 1개 완료 시마다 20 적립, 일일 5회
 
-        // 10번째 TODO: todayDistinctFirstCompleted=9, earnCount=3 → threshold=(3+1)*3=12 > 9 → skip
-        Long tenthId = saveTodo(userId, "todo-9");
+        // 6번째 TODO: source daily cap 100 도달로 skip
+        Long sixthId = saveTodo(userId, "todo-5");
         int balanceBefore = walletBalance(userId);
-        todoService.changeStatus(userId, tenthId, new TodoStatusChangeReq(TodoStatus.DONE));
+        TodoDetailResp sixthResp = todoService.changeStatus(userId, sixthId, new TodoStatusChangeReq(TodoStatus.DONE));
         Thread.sleep(100);
         int balanceAfter = walletBalance(userId);
 
+        assertThat(sixthResp.earnedCoin()).isZero();
+        assertThat(sixthResp.rewarded()).isFalse();
+        assertThat(sixthResp.walletBalance()).isEqualTo(balanceBefore);
         assertThat(balanceAfter - balanceBefore).isZero();
     }
 
     @Test
-    @DisplayName("Case 6-1: 과거 TODO 완료는 뚜레딧 적립 및 3개 임계값 카운트에서 제외")
+    @DisplayName("Case 6-1: 과거 TODO 완료는 뚜레딧 적립 및 오늘 완료 카운트에서 제외")
     void case06_1_pastTodosDoNotEarnOrContributeToThreshold() throws InterruptedException {
         Long userId = createUserWithWallet("user6-1@test.com", "user6-1");
-        LocalDate yesterday = LocalDate.now().minusDays(1);
+        LocalDate yesterday = LocalDate.now(SEOUL).minusDays(1);
 
         for (int i = 0; i < 2; i++) {
             Long todoId = saveTodo(userId, "past-todo-" + i, yesterday);
-            todoService.changeStatus(userId, todoId, new TodoStatusChangeReq(TodoStatus.DONE));
+            TodoDetailResp resp = todoService.changeStatus(userId, todoId, new TodoStatusChangeReq(TodoStatus.DONE));
+            assertThat(resp.earnedCoin()).isZero();
+            assertThat(resp.rewarded()).isFalse();
             Thread.sleep(100);
         }
 
         Long firstTodayTodo = saveTodo(userId, "today-todo-0");
-        todoService.changeStatus(userId, firstTodayTodo, new TodoStatusChangeReq(TodoStatus.DONE));
+        TodoDetailResp firstTodayResp = todoService.changeStatus(
+                userId,
+                firstTodayTodo,
+                new TodoStatusChangeReq(TodoStatus.DONE));
+        assertThat(firstTodayResp.earnedCoin()).isEqualTo(20);
+        assertThat(firstTodayResp.rewarded()).isTrue();
         Thread.sleep(100);
 
         int earnedAfterTwoPastAndOneToday = walletEarnLogsBySource(userId, WalletEarnSource.TODO_COMPLETION).stream()
                 .mapToInt(WalletEarnLog::getAmount).sum();
-        assertThat(earnedAfterTwoPastAndOneToday).isZero();
+        assertThat(earnedAfterTwoPastAndOneToday).isEqualTo(20);
 
         for (int i = 1; i < 3; i++) {
             Long todoId = saveTodo(userId, "today-todo-" + i);
@@ -281,21 +304,28 @@ class DoreditEarningSystemIntegrationTest {
 
         int earnedAfterThreeTodayTodos = walletEarnLogsBySource(userId, WalletEarnSource.TODO_COMPLETION).stream()
                 .mapToInt(WalletEarnLog::getAmount).sum();
-        assertThat(earnedAfterThreeTodayTodos).isEqualTo(10);
+        assertThat(earnedAfterThreeTodayTodos).isEqualTo(60);
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // Case 7: TODO undo→redo 5회 토글 → firstCompletedDate 1회만 기록, distinct=1, earn=0
+    // Case 7: TODO undo→redo 5회 토글 → firstCompletedDate 1회만 기록, distinct=1, earn=1회
     // ══════════════════════════════════════════════════════════════════════
     @Test
-    @DisplayName("Case 7: TODO undo/redo 5회 반복 시 firstCompletedDate 최초 1회만 기록")
+    @DisplayName("Case 7: TODO undo/redo 5회 반복 시 firstCompletedDate 최초 1회만 기록하고 1회만 적립")
     void case07_undoRedoTogglesPreserveFirstCompletedDate() throws InterruptedException {
         Long userId = createUserWithWallet("user7@test.com", "user7");
         Long todoId = saveTodo(userId, "toggle-todo");
 
         // 5회 DONE / TODO 반복
         for (int i = 0; i < 5; i++) {
-            todoService.changeStatus(userId, todoId, new TodoStatusChangeReq(TodoStatus.DONE));
+            TodoDetailResp resp = todoService.changeStatus(userId, todoId, new TodoStatusChangeReq(TodoStatus.DONE));
+            if (i == 0) {
+                assertThat(resp.earnedCoin()).isEqualTo(20);
+                assertThat(resp.rewarded()).isTrue();
+            } else {
+                assertThat(resp.earnedCoin()).isZero();
+                assertThat(resp.rewarded()).isFalse();
+            }
             Thread.sleep(100);
             todoService.changeStatus(userId, todoId, new TodoStatusChangeReq(TodoStatus.TODO));
         }
@@ -308,30 +338,30 @@ class DoreditEarningSystemIntegrationTest {
         long distinct = todoRepository.countByUserIdAndFirstCompletedDate(userId, todo.getFirstCompletedDate());
         assertThat(distinct).isEqualTo(1L);
 
-        // 1개 distinct 이므로 threshold=(0+1)*3=3 > 1 → earn=0
+        // 동일 TODO 는 firstCompletedDate 1개만 가지므로 1회만 적립
         int totalEarned = walletEarnLogsBySource(userId, WalletEarnSource.TODO_COMPLETION).stream()
                 .mapToInt(WalletEarnLog::getAmount).sum();
-        assertThat(totalEarned).isZero();
+        assertThat(totalEarned).isEqualTo(20);
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // Case 8: PET_TOUCH 30 + TODO_COMPLETION 30 → combined=60 → 다음 적립=0
+    // Case 8: PET_TOUCH 100 + TODO_COMPLETION 100 → combined=200 → 다음 적립=0
     // ══════════════════════════════════════════════════════════════════════
     @Test
-    @DisplayName("Case 8: PET_TOUCH 30 + TODO_COMPLETION 30 combined cap 60 도달 후 추가 적립=0")
-    void case08_combinedCapSixtyBlocksSubsequentEarns() throws InterruptedException {
+    @DisplayName("Case 8: PET_TOUCH 100 + TODO_COMPLETION 100 combined cap 200 도달 후 추가 적립=0")
+    void case08_combinedCapTwoHundredBlocksSubsequentEarns() throws InterruptedException {
         Long userId = createUserWithWallet("user8@test.com", "user8");
         UserCharacter uc = seedCharacterWithAction(userId, "IDLE");
 
-        // PET_TOUCH 30: 3회 IDLE (각 10, 각각 cooldown 우회)
-        for (int i = 0; i < 3; i++) {
-            resetLastTouchedAt(uc.getUserCharacterId(), 2);
-            CharacterActionUrlResp resp = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
-            assertThat(resp.earnedAmount()).isEqualTo(10);
+        // PET_TOUCH 100: 2회 IDLE (각 50, 각각 cooldown 우회)
+        for (int i = 0; i < 2; i++) {
+            resetLastTouchedAt(uc.getUserCharacterId(), 3);
+            CharacterActionUrlResp resp = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
+            assertThat(resp.earnedAmount()).isEqualTo(50);
         }
 
-        // TODO_COMPLETION 30: 9개 TODO 완료
-        for (int i = 0; i < 9; i++) {
+        // TODO_COMPLETION 100: 5개 TODO 완료
+        for (int i = 0; i < 5; i++) {
             Long todoId = saveTodo(userId, "cap-todo-" + i);
             todoService.changeStatus(userId, todoId, new TodoStatusChangeReq(TodoStatus.DONE));
             Thread.sleep(100);
@@ -342,14 +372,17 @@ class DoreditEarningSystemIntegrationTest {
                 .mapToInt(WalletEarnLog::getAmount).sum();
         int todoEarned = walletEarnLogsBySource(userId, WalletEarnSource.TODO_COMPLETION).stream()
                 .mapToInt(WalletEarnLog::getAmount).sum();
-        assertThat(petEarned).isEqualTo(30);
-        assertThat(todoEarned).isEqualTo(30);
+        assertThat(petEarned).isEqualTo(100);
+        assertThat(todoEarned).isEqualTo(100);
 
-        // combined=60 → 추가 TODO 적립 시도 → 0
+        // combined=200 → 추가 TODO 적립 시도 → 0
         Long extraTodo = saveTodo(userId, "cap-todo-extra");
         int balanceBefore = walletBalance(userId);
-        todoService.changeStatus(userId, extraTodo, new TodoStatusChangeReq(TodoStatus.DONE));
+        TodoDetailResp extraResp = todoService.changeStatus(userId, extraTodo, new TodoStatusChangeReq(TodoStatus.DONE));
         Thread.sleep(100);
+        assertThat(extraResp.earnedCoin()).isZero();
+        assertThat(extraResp.rewarded()).isFalse();
+        assertThat(extraResp.walletBalance()).isEqualTo(balanceBefore);
         assertThat(walletBalance(userId) - balanceBefore).isZero();
     }
 
@@ -378,19 +411,19 @@ class DoreditEarningSystemIntegrationTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // Case 10: 동시 IDLE 5회 → 락으로 보호 → 일일 cap(3회, 30크레딧) 초과 없음
+    // Case 10: 동시 IDLE 5회 → 락으로 보호 → 일일 cap(2회, 100크레딧) 초과 없음
     //
-    // [중요 편차 — 명세 "정확히 3회"와 다름]
-    // 명세는 "5개 동시 발사 → 정확히 3회"를 요구한다.
-    // 그러나 canEarnTouchCredit() 은 dailyTouchCount < 3 AND 1시간 cooldown 을 모두 요구한다.
+    // [중요 편차 — 동시 호출에서 정확한 성공 횟수보다 cap 초과 방지가 핵심]
+    // 명세는 "5개 동시 발사 → 최대 2회"를 요구한다.
+    // 그러나 canEarnTouchCredit() 은 dailyTouchCount < 2 AND 2시간 cooldown 을 모두 요구한다.
     // PESSIMISTIC_WRITE 로 직렬화된 이후:
     //   - H2 인메모리 DB 는 row-level lock 완전 지원이 보장되지 않아 실제 직렬화 순서가
-    //     달라질 수 있다. 중요한 것은 "데이터 무결성 — dailyTouchCount ≤ 3, 총 적립 ≤ 30" 이다.
-    //   - dailyTouchCount < 3 가드로 인해 earn 횟수는 절대 3을 넘지 않는다.
+    //     달라질 수 있다. 중요한 것은 "데이터 무결성 — dailyTouchCount ≤ 2, 총 적립 ≤ 100" 이다.
+    //   - dailyTouchCount < 2 가드로 인해 earn 횟수는 절대 2를 넘지 않는다.
     //   - 이 테스트는 동시 호출에서도 이중 적립(cap 초과)이 발생하지 않음을 증명한다.
     // ══════════════════════════════════════════════════════════════════════
     @Test
-    @DisplayName("Case 10: 동시 IDLE 5회 → PESSIMISTIC_WRITE 락으로 일일 cap(30크레딧) 초과 없음")
+    @DisplayName("Case 10: 동시 IDLE 5회 → PESSIMISTIC_WRITE 락으로 일일 cap(100크레딧) 초과 없음")
     void case10_concurrentIdleCallsNeverExceedDailyCap() throws InterruptedException {
         Long userId = createUserWithWallet("user10@test.com", "user10");
         seedCharacterWithAction(userId, "IDLE");
@@ -407,7 +440,7 @@ class DoreditEarningSystemIntegrationTest {
                 ready.countDown();
                 try {
                     start.await();
-                    CharacterActionUrlResp resp = tamagotchiService.getMyCharacterActionUrl(userId, "IDLE");
+                    CharacterActionUrlResp resp = tamagotchiService.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
                     if (resp.earnedAmount() > 0) {
                         successCount.incrementAndGet();
                     }
@@ -425,14 +458,14 @@ class DoreditEarningSystemIntegrationTest {
         }
         executor.shutdown();
 
-        // dailyTouchCount < 3 가드로 인해 earn 횟수는 절대 3을 초과할 수 없다.
+        // dailyTouchCount < 2 가드로 인해 earn 횟수는 절대 2를 초과할 수 없다.
         // (H2 에서 PESSIMISTIC_WRITE 직렬화가 완벽하지 않아도 애플리케이션 수준 cap 은 유지됨)
-        assertThat(successCount.get()).isLessThanOrEqualTo(3);
+        assertThat(successCount.get()).isLessThanOrEqualTo(2);
 
         int totalPetEarned = walletEarnLogsBySource(userId, WalletEarnSource.PET_TOUCH).stream()
                 .mapToInt(WalletEarnLog::getAmount).sum();
-        // 잠금이 정상이라면 일일 cap 30 을 초과하지 않는다.
-        assertThat(totalPetEarned).isLessThanOrEqualTo(30);
+        // 잠금이 정상이라면 일일 cap 100 을 초과하지 않는다.
+        assertThat(totalPetEarned).isLessThanOrEqualTo(100);
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -493,7 +526,7 @@ class DoreditEarningSystemIntegrationTest {
                 .species("SLIME")
                 .name("슬라임")
                 .stage(Character.Stage.BABY)
-                .requiredExp(100)
+                .requiredExp(75)
                 .thumbnailUrl("https://cdn.example.com/slime.png")
                 .build());
 
@@ -535,12 +568,12 @@ class DoreditEarningSystemIntegrationTest {
     }
 
     private Long saveTodo(Long userId, String title) {
-        return saveTodo(userId, title, LocalDate.now());
+        return saveTodo(userId, title, LocalDate.now(SEOUL));
     }
 
     private Long saveTodo(Long userId, String title, LocalDate startDate) {
         return todoRepository.saveAndFlush(Todo.create(
-                userId, null, title, null, TodoType.NORMAL, 1, null,
+                userId, null, null, null, title, null, TodoType.NORMAL, 1, null,
                 startDate, null, null
         )).getTodoId();
     }

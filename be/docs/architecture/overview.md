@@ -64,7 +64,7 @@ com.doitdo
 ## 응답/에러 표준
 
 - 모든 응답: `GlobalApiResponse<T>` ([`../api/response-format.md`](../api/response-format.md))
-- 에러 코드: 10개 도메인 enum + `ErrorCodeRegistry` 인덱스 ([`../api/error-codes.md`](../api/error-codes.md))
+- 에러 코드: 11개 도메인 enum + `ErrorCodeRegistry` 인덱스 ([`../api/error-codes.md`](../api/error-codes.md))
 - 컨트롤러 작성: [`../api/swagger.md`](../api/swagger.md)
 
 ## 알림 플로우
@@ -76,7 +76,8 @@ com.doitdo
 |---|---|---|---|---|
 | 저녁 미완료 리마인더 | `REMINDER_EVENING` | `EveningReminderScheduler` → `NotificationService.sendEveningReminder` | null | 매분 cron, `UserSetting.eveningReminderTime` 일치 유저 대상, 미완료 TODO > 0 조건. 플래그: `notification.evening-reminder.enabled` |
 | 아침 TODO 리마인더 | `REMINDER_MORNING` | `MorningReminderScheduler` → `NotificationService.sendMorningReminder` | null | 매분 cron, `UserSetting.morningReminderTime` 일치 유저 대상, 미완료 TODO > 0 조건. 플래그: `notification.morning-reminder.enabled` |
-| TODO 완료 | `TODO_DONE` | `TodoServiceImpl.changeStatus()` → `TodoCompletedEvent` → `TodoCompletedNotificationListener` | todoId | DONE 전이 시 1회 발행. 기존 `TodoCompletionExpListener` 와 분리 |
+| 아침 스트릭 유지 유도 | `REMINDER_STREAK_TODO_EMPTY` | `MorningReminderScheduler` → `NotificationService.sendStreakTodoEmptyReminder` | null | 아침 리마인더 시각에 오늘 대상 TODO 가 0개이고, 어제까지 이어진 스트릭이 있으면 1일 1회 발송. |
+| TODO 완료 | `TODO_DONE` | `TodoServiceImpl.changeStatus()` → `TodoCompletedEvent` → `TodoCompletionExpListener` / `TodoCompletedNotificationListener` | todoId | DONE 전이 시 1회 발행. 뚜레딧 적립은 이벤트를 구독하지 않고 `TodoServiceImpl.changeStatus()` 에서 직접 호출 |
 | TODO 알림 시각 | `TODO_REMINDER` | `TodoAlertScheduler` → `NotificationService.sendTodoAlert` | todoId | 매분 cron, `Todo.alertTime` 일치 + 당일 대상. 기존 FCM 직접 호출을 NotificationService 경유로 교체 (DB 저장 추가) |
 | TODO 미루기 | `TODO_SNOOZED` | `TodoSnoozedNotificationListener` | todoId | 비활성화. Bean 과 이벤트 리스너 메서드는 유지하되 본문은 no-op |
 | 다마고치 독립 준비 완료 | `TAMAGOTCHI_FAREWELL` | `TodoCompletionExpListener` 에서 ADULT cap 도달 시 `farewellAvailableAt = now()` 즉시 예약 → `FarewellAvailabilityScheduler` → `NotificationService.sendTamagotchiFarewell` | userCharacterId (준비 완료된 ADULT) | 매분 cron, `farewell_available_at <= now`, `farewell_notified = false`, 활성/미삭제 대상. 플래그: `notification.farewell-available.enabled` |

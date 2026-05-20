@@ -26,7 +26,7 @@ public interface ErrorCode {
 
 예: `A00-001` (auth / 로그인 카테고리 / 1번)
 
-## 3. 도메인 enum (10개)
+## 3. 도메인 enum (11개)
 
 | Enum | 접두 letter | 도메인 |
 |---|---|---|
@@ -40,12 +40,17 @@ public interface ErrorCode {
 | `NotificationErrorCode` | `N` | notification |
 | `SettingErrorCode` | `C` | setting |
 | `BugReportErrorCode` | `B` | bugreport |
+| `NoticeErrorCode` | `O` | notice |
 
 각 enum 의 실제 값 (코드/status/메시지) 은 enum 파일 자체가 SSOT.
 
 > **T05-004 재정의 (2026-04-22):** `TodoErrorCode.T05_004` 메시지를
 > "반복 TODO 는 현재 미루기 미지원 (인스턴스 설계 후 추가 예정)" → "반복 TODO 미루기 시 occurrenceDate 필수" 로 변경.
 > RECURRING 타입 TODO 에 snooze 를 시도할 때 `occurrenceDate` 가 없거나 유효한 발생일이 아니면 422 + T05-004 가 반환된다.
+>
+> **T03-004 반복 상태 변경 (2026-05-12):** `PATCH /api/todos/{todoId}/status` 에서
+> `todoId` 가 RECURRING 마스터이면 `occurrenceDate` 가 필요하다. 값이 있으면 해당 날짜의 NORMAL 인스턴스를
+> 찾거나 생성한 뒤 상태를 변경하고, 값이 없거나 반복 규칙에 맞지 않으면 422 + T03-004 를 반환한다.
 
 대표 예시:
 
@@ -69,6 +74,7 @@ public interface ErrorCode {
 | `A00_002` | `A00-002` | 423 | 잠긴 계정 |
 | `A01_001` | `A01-001` | 401 | 리프레시 토큰 무효 |
 | `A03_003` | `A03-003` | 409 | 이미 가입된 소셜 계정 |
+| `A04_001` | `A04-001` | 410 | 유효하지 않거나 만료된 비밀번호 재설정 요청 |
 
 전체는 `AuthErrorCode.java` 참고. 다른 도메인 enum 도 동일한 형식.
 
@@ -105,7 +111,7 @@ public interface ErrorCode {
 
 위치: `com.doitdo.global.exception.ErrorCodeRegistry`
 
-부팅 시점에 위 9개 enum 을 모두 모아 `Map<String, ErrorCode>` 로 인덱싱한다. **중복 코드가 있으면 부팅 실패** (조기 발견).
+부팅 시점에 위 enum 을 모두 모아 `Map<String, ErrorCode>` 로 인덱싱한다. **중복 코드가 있으면 부팅 실패** (조기 발견).
 
 API:
 
@@ -152,12 +158,31 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 |---|---|---|---|
 | `U05_001` | `U05-001` | 404 | 지갑 데이터를 찾을 수 없음 |
 
+### 뚜레딧 적립 정책값 (2026-05-13 Stage 1)
+
+Stage 1 신규 에러코드는 없다. `PET_TOUCH`, `TODO_COMPLETION` 의 쿨타임 또는 일일 한도 초과는 예외가 아니라 `earnedAmount=0` 으로 처리한다.
+Stage 5 출석 보상은 `GET /api/users/me` 호출 시 자동 적립하며, 이미 받은 날에는 에러 없이 `dailyAttendanceClaimed=true` 를 반환한다 (Stage 2 의 `POST /api/users/me/attendance` + `U07-001` 은 제거됨).
+Stage 4 똥치우기 미션은 활성 시각 전이거나 이미 치운 상태에서 `POOP` action 을 호출하면 409 + `M09-004` 를 반환한다.
+
+| 항목 | 정책값 |
+|---|---|
+| 7일 스트릭 보상 | 500 뚜레딧, 일일 cap 우회 |
+| TODO 완료 보상 | 20 뚜레딧 / 1개당, 일일 5회 = 100 뚜레딧 |
+| 캐릭터 터치 보상 | 50 뚜레딧 / 1회, 2시간 쿨타임, 일일 2회 = 100 뚜레딧 |
+| 출석 보상 | 100 뚜레딧 / 1일 1회, 일일 cap 우회 |
+| 똥치우기 보상 | 50 뚜레딧 / 1일 1회, 일일 cap 우회 |
+| cap 대상 합산 한도 | `PET_TOUCH` + `TODO_COMPLETION` 일일 200 뚜레딧 |
+
 ### `TodoErrorCode` 추가 코드 (alert/recurrence redesign, 2026-04)
 
 | 상수 | code | HTTP | 의미 |
 |---|---|---|---|
 | `TODO_RECURRING_DAYS_OF_WEEK_REQUIRED` | `T14-001` | 400 | 반복 TODO는 daysOfWeek가 필요함 |
 | `TODO_RECURRING_START_DATE_DAY_MISMATCH` | `T14-002` | 400 | 반복 TODO의 startDate 요일이 daysOfWeek에 포함되어야 함 |
+
+> **T14-002 수정 예외 (2026-05-15):** 기존 RECURRING 마스터 수정에서 `startDate` 를 보내지 않고
+> `daysOfWeek` 만 변경하는 경우에는 기존 `startDate` 요일이 새 `daysOfWeek` 에 없어도 허용한다.
+> `startDate` 는 반복 시작 경계로 유지되고, 캘린더 occurrence 는 그 이후 새 요일 기준으로 생성된다.
 
 ### `TamagotchiErrorCode` 추가 코드 (character action url, 2026-04)
 
@@ -166,6 +191,7 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 | `M09_001` | `M09-001` | 401 | 인증 토큰이 없거나 유효하지 않음 |
 | `M09_002` | `M09-002` | 404 | 해당 캐릭터의 요청 액션을 찾을 수 없음 |
 | `M09_003` | `M09-003` | 500 | 서버 내부 오류 |
+| `M09_004` | `M09-004` | 409 | 캐릭터 똥 활성화 시간이 아님 |
 
 `AnimationAction` enum 전환 후에도 enum 에는 있지만 `character_actions` row 가 등록되지 않은 액션 호출은 `M09_002` 를 재사용한다. enum 자체에 없는 `actionType` 은 컨트롤러 바인딩 단계의 400 으로 처리한다.
 
@@ -180,6 +206,38 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 | `WALLET_NOT_FOUND` | `S00-005` | 404 | 월렛을 찾을 수 없음 |
 | `USER_FURNITURE_NOT_FOUND` | `S01-001` | 404 | 보유 가구를 찾을 수 없음 |
 | `PLACEMENT_NOT_FOUND` | `S02-001` | 404 | 배치 정보를 찾을 수 없음 |
+| `THEME_NOT_FOUND` | `S03-001` | 404 | 테마를 찾을 수 없음 |
+| `THEME_CATEGORY_DUPLICATED` | `S03-002` | 409 | 테마에 같은 카테고리 가구가 중복됨 |
+| `THEME_EMPTY` | `S03-003` | 422 | 테마에 구매/배치할 가구가 없음 |
+| `THEME_ALREADY_OWNED` | `S03-010` | 409 | 이미 테마 풀세트를 보유함 |
+| `THEME_NOT_FULLY_OWNED` | `S03-011` | 409 | 테마 가구를 모두 보유하지 않음 |
+
+### `AuthErrorCode` 추가 코드 (비밀번호 재설정 OTP, 2026-05)
+
+A04 그룹은 OTP 6자리 인증번호 흐름에서 사용한다:
+1. `POST /api/auth/password/reset-request` — 이메일로 OTP 발송
+2. `POST /api/auth/password/reset/verify-code` — 이메일+OTP 검증 후 reset 토큰 발급
+3. `POST /api/auth/password/reset` — reset 토큰으로 비번 변경
+
+보안상 *invalid* 와 *expired* 를 A04-001 하나로 통합한다 (구분하면 추측 공격에 정보 제공).
+시도 횟수 초과 시 OTP 키를 삭제하고 A04-005 로 응답해 사용자가 재요청하도록 강제한다.
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `A04_001` | `A04-001` | 410 | 유효하지 않거나 만료된 재설정 요청 (OTP 미존재 또는 resetToken 무효/만료) |
+| `A04_002` | `A04-002` | 422 | 필수 파라미터 누락 (email/code 또는 resetToken/newPassword) |
+| `A04_003` | `A04-003` | 500 | 서버 내부 오류 |
+| `A04_004` | `A04-004` | 410 | 인증번호 불일치 (attempts 카운트 +1) |
+| `A04_005` | `A04-005` | 410 | 인증번호 시도 횟수 초과 → 키 삭제, 재요청 필요 |
+| `A04_006` | `A04-006` | 409 | 소셜 계정으로 가입된 이메일 — 해당 IdP 로 로그인 안내 |
+| `A04_007` | `A04-007` | 404 | 가입되지 않은 이메일 — 이메일 확인 또는 회원가입 안내 |
+
+> **응답 정책** (`POST /password/reset-request` 기준 — UX 우선, 한국 모바일 앱 컨벤션):
+> - 일반 가입자 → 200 OK + 메일 발송
+> - 미가입 이메일 / 탈퇴 사용자(익명화돼있어 미가입과 사실상 동일) → 404 + A04-007
+> - 소셜 가입자(password=null) → 409 + A04-006
+> - account enumeration 일부 노출 트레이드오프 인지 — MVP·시연 단계에서 CS 감소 및 사용자 친화도 우선
+> - 메일 발송 실패는 `@Async` Executor 내부에서 swallow 되고 사용자 응답에는 영향이 없다 — 발송 모니터링은 로그(`event=PASSWORD_RESET_MAIL_FAILED`)로 한다.
 
 ### `BugReportErrorCode` 신규 enum (bugreport, 2026-04, JIRA S14P31D107-442)
 
@@ -190,6 +248,14 @@ ErrorCodeRegistry.sources()              // List<Class<? extends ErrorCode>>
 | `B00_001` | `B00-001` | 500 | 버그 신고 처리 중 서버 오류 |
 
 > MVP 단계에서 비즈니스 검증 에러(`G00-006` 자동 부착)로 충분. Rate Limit(`B00-003` 429) 등은 후속 이슈에서 추가.
+
+### `NoticeErrorCode` 신규 enum (notice, 2026-05)
+
+접두 letter `O`. `ErrorCodeRegistry.SOURCES` 에 등록됨.
+
+| 상수 | code | HTTP | 의미 |
+|---|---|---|---|
+| `O00_001` | `O00-001` | 404 | 공지사항을 찾을 수 없음 |
 
 ## 5. 새 코드 추가 절차
 

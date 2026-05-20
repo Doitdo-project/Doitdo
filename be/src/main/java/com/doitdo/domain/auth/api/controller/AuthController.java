@@ -2,10 +2,14 @@ package com.doitdo.domain.auth.api.controller;
 
 import com.doitdo.domain.auth.api.dto.req.LoginReq;
 import com.doitdo.domain.auth.api.dto.req.OAuthLoginReq;
+import com.doitdo.domain.auth.api.dto.req.PasswordResetReq;
+import com.doitdo.domain.auth.api.dto.req.PasswordResetRequestReq;
+import com.doitdo.domain.auth.api.dto.req.PasswordResetVerifyCodeReq;
 import com.doitdo.domain.auth.api.dto.req.RefreshTokenReq;
 import com.doitdo.domain.auth.api.dto.req.SignupReq;
 import com.doitdo.domain.auth.api.dto.resp.LoginResp;
 import com.doitdo.domain.auth.api.dto.resp.OAuthLoginResp;
+import com.doitdo.domain.auth.api.dto.resp.PasswordResetVerifyCodeResp;
 import com.doitdo.domain.auth.api.dto.resp.SignupResp;
 import com.doitdo.domain.auth.api.dto.resp.TokenResp;
 import com.doitdo.domain.auth.application.AuthService;
@@ -13,6 +17,7 @@ import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.auth.application.OAuthService;
 import com.doitdo.domain.auth.entity.OAuthProvider;
 import com.doitdo.global.api.response.GlobalApiResponse;
+import com.doitdo.global.swagger.ApiErrorCodes;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -68,5 +73,38 @@ public class AuthController {
 			@PathVariable OAuthProvider provider,
 			@Valid @RequestBody OAuthLoginReq req) {
 		return GlobalApiResponse.ok("소셜 로그인 성공", oauthService.login(provider, req));
+	}
+
+	@Operation(
+			summary = "비밀번호 재설정 요청",
+			description = "이메일로 6자리 인증번호(OTP)를 발송. 미가입자는 404 A04-007, 소셜 가입자는 409 A04-006."
+	)
+	@ApiErrorCodes({"A04-006", "A04-007"})
+	@PostMapping("/password/reset-request")
+	public GlobalApiResponse<Void> requestPasswordReset(@Valid @RequestBody PasswordResetRequestReq req) {
+		authService.requestPasswordReset(req);
+		return GlobalApiResponse.ok("비밀번호 재설정 인증번호를 발송했습니다.", null);
+	}
+
+	@Operation(
+			summary = "비밀번호 재설정 코드 검증",
+			description = "이메일·6자리 OTP 검증. 성공 시 새 비밀번호 설정에 사용할 짧은 reset 토큰을 반환."
+	)
+	@ApiErrorCodes({"A04-001", "A04-004", "A04-005"})
+	@PostMapping("/password/reset/verify-code")
+	public GlobalApiResponse<PasswordResetVerifyCodeResp> verifyPasswordResetCode(
+			@Valid @RequestBody PasswordResetVerifyCodeReq req) {
+		return GlobalApiResponse.ok("인증번호가 확인되었습니다.", authService.verifyCode(req));
+	}
+
+	@Operation(
+			summary = "비밀번호 재설정",
+			description = "verify-code 에서 발급받은 resetToken 으로 새 비밀번호로 변경. 성공 시 기존 모든 기기 로그아웃."
+	)
+	@ApiErrorCodes({"A04-001"})
+	@PostMapping("/password/reset")
+	public GlobalApiResponse<Void> resetPassword(@Valid @RequestBody PasswordResetReq req) {
+		authService.resetPassword(req);
+		return GlobalApiResponse.ok("비밀번호가 변경되었습니다.", null);
 	}
 }

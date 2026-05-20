@@ -1,6 +1,7 @@
 package com.doitdo.domain.notification.repository;
 
 import com.doitdo.domain.notification.entity.Notification;
+import com.doitdo.domain.notification.entity.Notification.NotificationType;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -17,6 +18,12 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 	Page<Notification> findAllByUserIdAndIsDeletedFalse(Long userId, Pageable pageable);
 
 	Page<Notification> findAllByUserIdAndIsDeletedFalseAndIsRead(Long userId, Boolean isRead, Pageable pageable);
+
+	boolean existsByUserIdAndTypeAndCreatedAtBetweenAndIsDeletedFalse(
+			Long userId,
+			NotificationType type,
+			LocalDateTime from,
+			LocalDateTime to);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("""

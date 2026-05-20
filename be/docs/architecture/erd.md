@@ -27,6 +27,8 @@
 | user_wallets | [tables/user_wallets.png](../imgs/tables/user_wallets.png) |
 | users | [tables/users.png](../imgs/tables/users.png) |
 | wallet_earn_logs | 신규 테이블 (2026-05-07) |
+| notices | 신규 테이블 (2026-05-15) |
+| notice_dismissals | 신규 테이블 (2026-05-15) |
 
 ## 도메인 ↔ 테이블 매핑
 
@@ -37,18 +39,29 @@
 | `todo` | todos, categories, palettes, palette_colors, snooze_history |
 | `tamagotchi` | characters, character_actions, character_unlocks, user_character |
 | `inventory` | items, user_items |
-| `shop` | purchase_logs, furnitures, user_furnitures, furniture_purchase_logs, room_furniture_placements |
+| `shop` | purchase_logs, furnitures, furniture_themes, user_furnitures, furniture_purchase_logs, room_furniture_placements |
 | `notification` | device_tokens |
 | `setting` | user_settings |
 | `bugreport` | bug_reports |
+| `notice` | notices, notice_dismissals |
 
 신규 테이블/도메인이 생기면 이 표를 갱신한다.
+
+## notice 도메인 추가 테이블 (공지사항)
+
+| 테이블 | 주요 컬럼 | 비고 |
+|---|---|---|
+| `notices` | `notice_id`, `title`, `content`, `is_active`, `started_at`, `ended_at`, `created_at`, `updated_at` | DB 직접 등록 대상. 활성 공지 중 최신 1개를 초기 팝업 후보로 사용 |
+| `notice_dismissals` | `notice_dismissal_id`, `user_id`, `notice_id`, `created_at`, `updated_at` | 사용자별 "이 공지사항 다시 안보기" 기록. `(user_id, notice_id)` unique |
 
 ## todo 도메인 변경 컬럼
 
 | 테이블 | 컬럼 | 비고 |
 |---|---|---|
-| `todos` | `first_completed_date DATE NULL` | TODO 완료 3개당 뚜레딧 적립 계산용 최초 완료일. 취소·재완료 시 보존 |
+| `todos` | `first_completed_date DATE NULL` | TODO 완료 1개당 20 뚜레딧 적립 계산용 최초 완료일. 취소·재완료 시 보존 |
+| `todos` | `category_name VARCHAR(10) NULL` | 카테고리 이름 스냅샷. rename 시 전파, 삭제 시 잔여. 필터/응답의 카테고리 매칭 키. |
+| `todos` | `category_color_id INT NULL` | 카테고리 색상(`palette_colors.color_id`) 스냅샷. 동일 이름의 활성 카테고리가 있으면 응답 시 그 색이 override. |
+| `todos` | `idx_todos_list_category_name` | 인덱스 `(user_id, is_deleted, category_name, start_date, todo_id)` — 이름 기반 필터 lookup. |
 
 ## user 도메인 추가 테이블 (뚜레딧 적립 이력)
 
@@ -62,6 +75,34 @@
 - `STREAK_7DAY`
 - `PET_TOUCH`
 - `TODO_COMPLETION`
+- `DAILY_ATTENDANCE`
+- `POOP_CLEAR`
+
+보상 정책 (2026-05-13 Stage 1 개정 + Stage 5 출석 자동 적립 + Stage 4 똥치우기 반영):
+
+| source | 금액 | 일일 한도 | 비고 |
+|---|---:|---:|---|
+| `SIGNUP_BONUS` | 100 | 없음 | `bypassDailyCap=true` |
+| `STREAK_7DAY` | 500 | 없음 | 7일 단위 스트릭 보상, `bypassDailyCap=true` |
+| `PET_TOUCH` | 50 | 2회 / 100 | 쿨타임 2시간 |
+| `TODO_COMPLETION` | 20 | 5회 / 100 | 당일 보상 대상 TODO 1개 완료당 1회 |
+| `DAILY_ATTENDANCE` | 100 | 1회 / 100 | `GET /api/users/me` 호출 시 자동 적립, `bypassDailyCap=true`, Asia/Seoul 자정 기준 |
+| `POOP_CLEAR` | 50 | 1회 / 50 | 캐릭터 똥치우기 미션, `bypassDailyCap=true`, Asia/Seoul 자정 기준 |
+
+`PET_TOUCH` + `TODO_COMPLETION` 합산 일일 한도는 200 뚜레딧이다. `DAILY_ATTENDANCE` 는 `wallet_earn_logs` 당일 SUM 조회로 자동 적립 여부를 판단하고, `POOP_CLEAR` 는 `user_character.poop_cleared_date` 로 중복 수령을 막아, 둘 다 이 합산 cap 에 포함하지 않는다.
+
+## tamagotchi 도메인 성장 EXP 정책
+
+`characters.required_exp` 는 현재 단계에서 다음 상태 전환 또는 독립 가능 판정에 필요한 EXP 기준값이다.
+
+| stage | required_exp | 비고 |
+|---|---:|---|
+| `EGG` | 0 | 부화 전 단계. TODO 완료 EXP 누적 대상 아님 |
+| `BABY` | 75 | `current_exp >= 75` 이면 TEEN 진화 가능 |
+| `TEEN` | 100 | `current_exp >= 100` 이면 ADULT 진화 가능 |
+| `ADULT` | 125 | `current_exp >= 125` 이면 독립 가능 판정 대상 |
+
+TODO 완료 1건당 캐릭터 EXP 보상은 3~7 랜덤이며, `UserCharacter.gainExp` 에서 현재 단계의 `required_exp` 를 cap 으로 사용한다.
 
 ## tamagotchi 도메인 변경 컬럼 (다마고치 터치 적립)
 
@@ -70,6 +111,9 @@
 | `user_character` | `last_touched_at` | `TIMESTAMP NULL` | 마지막 터치 적립 성공 시각 |
 | `user_character` | `daily_touch_count` | `INT NOT NULL DEFAULT 0` | 해당 일자 터치 적립 성공 횟수 |
 | `user_character` | `daily_touch_date` | `DATE NULL` | `daily_touch_count` 기준 일자 |
+| `user_character` | `poop_time` | `TIME NULL` | 오늘 똥 활성 시각. 10:00~22:00 KST 사이 분 단위 랜덤 |
+| `user_character` | `poop_time_date` | `DATE NULL` | `poop_time` 을 마지막으로 결정한 일자. 날짜가 다르면 `GET /api/characters/me` 에서 Lazy 갱신 |
+| `user_character` | `poop_cleared_date` | `DATE NULL` | 마지막 똥치우기 처리 일자. 오늘이면 `poop=false` |
 
 ## DDL 정책
 

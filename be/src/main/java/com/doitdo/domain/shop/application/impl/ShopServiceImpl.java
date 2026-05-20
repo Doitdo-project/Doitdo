@@ -3,7 +3,9 @@ package com.doitdo.domain.shop.application.impl;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -11,7 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.doitdo.domain.shop.api.dto.resp.FurnitureShopItemResp;
 import com.doitdo.domain.shop.api.dto.resp.FurnitureShopResp;
+import com.doitdo.domain.shop.api.dto.resp.FurnitureThemeListResp;
+import com.doitdo.domain.shop.api.dto.resp.FurnitureThemeResp;
 import com.doitdo.domain.shop.api.dto.resp.PurchaseFurnitureResp;
+import com.doitdo.domain.shop.api.dto.resp.PurchaseThemeFurnitureResp;
+import com.doitdo.domain.shop.api.dto.resp.PurchaseThemeResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomFurniturePlacementResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomResp;
 import com.doitdo.domain.shop.api.dto.resp.UserFurnitureItemResp;
@@ -19,10 +25,12 @@ import com.doitdo.domain.shop.api.dto.resp.UserFurnitureResp;
 import com.doitdo.domain.shop.application.ShopService;
 import com.doitdo.domain.shop.entity.Furniture;
 import com.doitdo.domain.shop.entity.FurniturePurchaseLog;
+import com.doitdo.domain.shop.entity.FurnitureTheme;
 import com.doitdo.domain.shop.entity.RoomFurniturePlacement;
 import com.doitdo.domain.shop.entity.UserFurniture;
 import com.doitdo.domain.shop.repository.FurniturePurchaseLogRepository;
 import com.doitdo.domain.shop.repository.FurnitureRepository;
+import com.doitdo.domain.shop.repository.FurnitureThemeRepository;
 import com.doitdo.domain.shop.repository.RoomFurniturePlacementRepository;
 import com.doitdo.domain.shop.repository.UserFurnitureRepository;
 import com.doitdo.domain.user.entity.UserWallet;
@@ -37,6 +45,7 @@ import lombok.RequiredArgsConstructor;
 public class ShopServiceImpl implements ShopService {
 
 	private final FurnitureRepository furnitureRepository;
+	private final FurnitureThemeRepository furnitureThemeRepository;
 	private final UserFurnitureRepository userFurnitureRepository;
 	private final FurniturePurchaseLogRepository furniturePurchaseLogRepository;
 	private final UserWalletRepository userWalletRepository;
@@ -60,6 +69,29 @@ public class ShopServiceImpl implements ShopService {
 			.toList();
 
 		return new FurnitureShopResp(items);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public FurnitureThemeListResp listThemes(Long userId) {
+		Set<Long> ownedFurnitureIds = new HashSet<>(userFurnitureRepository.findFurnitureIdsByUserId(userId));
+		List<FurnitureTheme> themes = furnitureThemeRepository.findAllByIsActiveTrueOrderByDisplayOrderAscThemeCodeAsc();
+		List<String> themeCodes = themes.stream()
+			.map(FurnitureTheme::getThemeCode)
+			.toList();
+		Map<String, List<Furniture>> furnituresByThemeCode = themeCodes.isEmpty()
+			? Map.of()
+			: furnitureRepository.findAllByThemeCodeInAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc(themeCodes)
+				.stream()
+				.collect(Collectors.groupingBy(Furniture::getThemeCode));
+		List<FurnitureThemeResp> items = themes
+			.stream()
+			.map(theme -> FurnitureThemeResp.from(theme,
+				furnituresByThemeCode.getOrDefault(theme.getThemeCode(), List.of()),
+				ownedFurnitureIds))
+			.toList();
+
+		return new FurnitureThemeListResp(items);
 	}
 
 	@Override
@@ -97,6 +129,70 @@ public class ShopServiceImpl implements ShopService {
 	}
 
 	@Override
+	@Transactional
+	public PurchaseThemeResp purchaseTheme(Long userId, String themeCode) {
+		String normalizedThemeCode = themeCode.trim().toUpperCase(Locale.ROOT);
+		FurnitureTheme theme = furnitureThemeRepository.findByThemeCodeAndIsActiveTrue(normalizedThemeCode)
+			.orElseThrow(() -> new CustomException(ShopErrorCode.THEME_NOT_FOUND));
+		List<Furniture> themeFurnitures = furnitureRepository
+			.findAllByThemeCodeAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc(normalizedThemeCode);
+		if (themeFurnitures.isEmpty()) {
+			throw new CustomException(ShopErrorCode.THEME_EMPTY);
+		}
+		validateUniqueCategories(themeFurnitures);
+
+		Set<Long> ownedFurnitureIds = new HashSet<>(userFurnitureRepository.findFurnitureIdsByUserId(userId));
+		List<Furniture> toBuy = themeFurnitures.stream()
+			.filter(furniture -> !ownedFurnitureIds.contains(furniture.getFurnitureId()))
+			.toList();
+		if (toBuy.isEmpty()) {
+			throw new CustomException(ShopErrorCode.THEME_ALREADY_OWNED);
+		}
+
+		int totalPaid = toBuy.stream()
+			.mapToInt(Furniture::getPrice)
+			.sum();
+		UserWallet wallet = userWalletRepository.findByUserIdForUpdate(userId)
+			.orElseThrow(() -> new CustomException(ShopErrorCode.WALLET_NOT_FOUND));
+		wallet.spend(totalPaid);
+
+		List<UserFurniture> savedUserFurnitures;
+		try {
+			savedUserFurnitures = userFurnitureRepository.saveAllAndFlush(toBuy.stream()
+				.map(furniture -> UserFurniture.create(userId, furniture.getFurnitureId()))
+				.toList());
+		} catch (DataIntegrityViolationException e) {
+			throw new CustomException(ShopErrorCode.FURNITURE_ALREADY_OWNED);
+		}
+
+		List<FurniturePurchaseLog> logs = new java.util.ArrayList<>();
+		List<PurchaseThemeFurnitureResp> purchasedFurnitures = new java.util.ArrayList<>();
+		for (int i = 0; i < savedUserFurnitures.size(); i++) {
+			UserFurniture userFurniture = savedUserFurnitures.get(i);
+			Furniture furniture = toBuy.get(i);
+			logs.add(FurniturePurchaseLog.create(
+				userId,
+				userFurniture.getUserFurnitureId(),
+				furniture.getFurnitureId(),
+				furniture.getPrice(),
+				wallet.getBalance()
+			));
+			purchasedFurnitures.add(PurchaseThemeFurnitureResp.from(userFurniture, furniture));
+		}
+		furniturePurchaseLogRepository.saveAll(logs);
+
+		return new PurchaseThemeResp(
+			theme.getThemeCode(),
+			theme.getThemeName(),
+			savedUserFurnitures.size(),
+			themeFurnitures.size() - toBuy.size(),
+			totalPaid,
+			wallet.getBalance(),
+			purchasedFurnitures
+		);
+	}
+
+	@Override
 	@Transactional(readOnly = true)
 	public UserFurnitureResp listMyFurnitures(Long userId) {
 		List<UserFurnitureItemResp> items = userFurnitureRepository.findAllByUserIdOrderByUserFurnitureIdAsc(userId)
@@ -126,6 +222,45 @@ public class ShopServiceImpl implements ShopService {
 		List<RoomFurniturePlacementResp> previewItems = new java.util.ArrayList<>(items);
 		previewItems.add(RoomFurniturePlacementResp.preview(previewFurniture));
 		return new RoomResp(previewItems);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public RoomResp previewThemeRoom(Long userId, String themeCode) {
+		String normalizedThemeCode = themeCode.trim().toUpperCase(Locale.ROOT);
+		furnitureThemeRepository.findByThemeCodeAndIsActiveTrue(normalizedThemeCode)
+			.orElseThrow(() -> new CustomException(ShopErrorCode.THEME_NOT_FOUND));
+		List<Furniture> themeFurnitures = furnitureRepository
+			.findAllByThemeCodeAndIsDeletedFalseOrderByZIndexAscFurnitureIdAsc(normalizedThemeCode);
+		if (themeFurnitures.isEmpty()) {
+			throw new CustomException(ShopErrorCode.THEME_NOT_FOUND);
+		}
+		validateUniqueCategories(themeFurnitures);
+
+		Set<String> themeCategories = themeFurnitures.stream()
+			.map(Furniture::getCategory)
+			.collect(Collectors.toSet());
+		List<RoomFurniturePlacementResp> items = roomFurniturePlacementRepository
+			.findAllByUserIdOrderByZIndexAscPlacementIdAsc(userId)
+			.stream()
+			.map(this::toRoomResp)
+			.filter(item -> !themeCategories.contains(item.category()))
+			.toList();
+
+		List<RoomFurniturePlacementResp> previewItems = new java.util.ArrayList<>(items);
+		themeFurnitures.stream()
+			.map(RoomFurniturePlacementResp::preview)
+			.forEach(previewItems::add);
+		return new RoomResp(previewItems);
+	}
+
+	private void validateUniqueCategories(List<Furniture> furnitures) {
+		Set<String> categories = new HashSet<>();
+		for (Furniture furniture : furnitures) {
+			if (!categories.add(furniture.getCategory())) {
+				throw new CustomException(ShopErrorCode.THEME_CATEGORY_DUPLICATED);
+			}
+		}
 	}
 
 	private Set<Long> findPlacedFurnitureIds(Long userId) {

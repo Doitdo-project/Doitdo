@@ -6,6 +6,7 @@ import 'package:doitdo/core/errors/exceptions.dart';
 import 'package:doitdo/domain/entities/user.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
 import 'package:doitdo/presentation/providers/current_user_provider.dart';
+import 'package:doitdo/presentation/pages/tamagochi/character_view_model.dart';
 
 /// 이메일(실제는 username) + 비밀번호 로그인 ViewModel.
 ///
@@ -33,10 +34,11 @@ class LoginViewModel extends AutoDisposeAsyncNotifier<User?> {
         username: username,
         password: password,
       );
-      // 로그인 직후 전역 currentUserProvider 무효화 → 홈 진입 시 최신 프로필 재조회.
-      ref.invalidate(currentUserProvider);
-      // FCM 디바이스 토큰 등록은 푸시 수신을 위해 필요하지만 로그인 성공 흐름을
-      // 막으면 안 되므로 fire-and-forget. (내부에서 예외를 warn 로그로만 남긴다)
+      // 로그인 응답에 포함된 user를 바로 반영해 추가 GET /api/users/me를 피한다.
+      ref.read(currentUserProvider.notifier).replace(user);
+      // 캘린더를 기본화면으로 설정한 경우에도 캐릭터 이미지가 처음부터
+      // 표시되도록 로그인 직후 미리 로드. 라우팅을 막지 않는 fire-and-forget.
+      unawaited(ref.read(characterViewModelProvider.notifier).load());
       unawaited(ref.read(fcmTokenRegistrarProvider).register());
       return user;
     });
@@ -79,5 +81,5 @@ String mapLoginErrorMessage(Object error) {
 
 final loginViewModelProvider =
     AsyncNotifierProvider.autoDispose<LoginViewModel, User?>(
-  LoginViewModel.new,
-);
+      LoginViewModel.new,
+    );

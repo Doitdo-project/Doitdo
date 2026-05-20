@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:doitdo/core/theme/app_colors.dart';
 import 'package:doitdo/core/theme/app_text_styles.dart';
 import 'package:doitdo/core/theme/doitdo_colors.dart';
+import 'package:doitdo/data/models/category_dto.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
 
@@ -37,19 +38,20 @@ class _SlidableTodoItemCardState extends ConsumerState<SlidableTodoItemCard> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final categoryList = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
-    Color getBadgeColor(String categoryName) {
+    final badgeColor = () {
       try {
-        return categoryList.firstWhere((c) => c.categoryName == categoryName).color;
+        return categoryList.firstWhere((c) => c.categoryName == widget.todo.category.name).color;
       } catch (_) {
+        if (widget.todo.colorHex != null) return hexToColor(widget.todo.colorHex!);
         return AppColors.category1;
       }
-    }
+    }();
 
     if (widget.onSnooze == null) {
       return GestureDetector(
         onTap: widget.onTap,
         behavior: HitTestBehavior.opaque,
-        child: _buildCard(colors, getBadgeColor),
+        child: _buildCard(colors, badgeColor),
       );
     }
 
@@ -100,14 +102,14 @@ class _SlidableTodoItemCardState extends ConsumerState<SlidableTodoItemCard> {
               }
             },
             behavior: HitTestBehavior.opaque,
-            child: _buildCard(colors, getBadgeColor),
+            child: _buildCard(colors, badgeColor),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildCard(DoitdoColors colors, Color Function(String) getBadgeColor) {
+  Widget _buildCard(DoitdoColors colors, Color badgeColor) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
       decoration: BoxDecoration(
@@ -135,7 +137,7 @@ class _SlidableTodoItemCardState extends ConsumerState<SlidableTodoItemCard> {
                 SizedBox(height: 4.h),
                 _CategoryBadge(
                   category: widget.todo.category,
-                  bgColor: getBadgeColor(widget.todo.category.name),
+                  bgColor: badgeColor,
                 ),
               ],
             ),

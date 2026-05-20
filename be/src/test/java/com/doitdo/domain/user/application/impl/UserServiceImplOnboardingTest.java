@@ -221,7 +221,7 @@ class UserServiceImplOnboardingTest {
 
         WalletBalanceResp resp = userService.getMyBalance(userId);
 
-        assertThat(resp.balance()).isEqualTo(100);
+        assertThat(resp.balance()).isEqualTo(1000);
 
         userWalletRepository.findByUserId(userId).ifPresent(userWalletRepository::delete);
         userRepository.deleteById(userId);

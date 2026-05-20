@@ -37,6 +37,7 @@ import com.doitdo.domain.tamagotchi.api.dto.resp.CurrentCharacterResp;
 import com.doitdo.domain.tamagotchi.api.dto.resp.UpdateCharacterNameResp;
 import com.doitdo.domain.tamagotchi.entity.CharacterAction;
 import com.doitdo.domain.tamagotchi.entity.Character;
+import com.doitdo.domain.tamagotchi.entity.CharacterActionType;
 import com.doitdo.domain.tamagotchi.entity.CharacterUnlock;
 import com.doitdo.domain.tamagotchi.entity.UserCharacterHistory;
 import com.doitdo.domain.tamagotchi.entity.UserCharacter;
@@ -47,6 +48,7 @@ import com.doitdo.domain.tamagotchi.repository.CharacterUnlockRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterHistoryRepository;
 import com.doitdo.domain.tamagotchi.repository.UserCharacterRepository;
 import com.doitdo.domain.user.application.CreditEarnService;
+import com.doitdo.domain.user.application.dto.EarnResult;
 import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.entity.User;
@@ -188,7 +190,7 @@ class TamagotchiServiceImplTest {
 			.characterId(2L)
 			.species("SLIME")
 			.stage(Character.Stage.BABY)
-			.requiredExp(100)
+			.requiredExp(75)
 			.thumbnailUrl("https://cdn.example.com/slime.png")
 			.build();
 
@@ -203,10 +205,10 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.characterId()).isEqualTo(2L);
 		assertThat(resp.stage()).isEqualTo("BABY");
 		assertThat(resp.thumbnailUrl()).isEqualTo("https://cdn.example.com/slime.png");
-		assertThat(resp.growthPercent()).isEqualTo(20);
+		assertThat(resp.growthPercent()).isEqualTo(27);
 		assertThat(resp.currentExp()).isEqualTo(20);
-		assertThat(resp.requiredExp()).isEqualTo(100);
-		assertThat(resp.canEvolve()).isFalse(); // 20 < 100
+		assertThat(resp.requiredExp()).isEqualTo(75);
+		assertThat(resp.canEvolve()).isFalse(); // 20 < 75
 		assertThat(resp.canFarewell()).isFalse();
 		then(userCharacterRepository).should(never()).save(any(UserCharacter.class));
 	}
@@ -214,22 +216,24 @@ class TamagotchiServiceImplTest {
 	@Test
 	void getCurrentCharacterReturnsCanFarewellFalseWhenFarewellAvailableAtIsFuture() {
 		TamagotchiServiceImpl service = service();
+		LocalDateTime now = LocalDateTime.of(2026, 5, 19, 15, 0);
+		service.setClock(fixedClock(now));
 		Long userId = 1L;
 		UserCharacter userCharacter = UserCharacter.builder()
 			.userCharacterId(10L)
 			.userId(userId)
 			.characterId(4L)
 			.name("rabi")
-			.currentExp(300)
+			.currentExp(125)
 			.isActive(true)
 			.isDeleted(false)
-			.farewellAvailableAt(LocalDateTime.now().plusMinutes(10))
+			.farewellAvailableAt(now.plusMinutes(10))
 			.build();
 		Character adultCharacter = Character.builder()
 			.characterId(4L)
 			.species("SLIME")
 			.stage(Character.Stage.ADULT)
-			.requiredExp(300)
+			.requiredExp(125)
 			.thumbnailUrl("https://cdn.example.com/slime-adult.png")
 			.build();
 
@@ -245,22 +249,24 @@ class TamagotchiServiceImplTest {
 	@Test
 	void getCurrentCharacterReturnsCanFarewellTrueWhenFarewellAvailableAtIsPast() {
 		TamagotchiServiceImpl service = service();
+		LocalDateTime now = LocalDateTime.of(2026, 5, 19, 15, 0);
+		service.setClock(fixedClock(now));
 		Long userId = 1L;
 		UserCharacter userCharacter = UserCharacter.builder()
 			.userCharacterId(10L)
 			.userId(userId)
 			.characterId(4L)
 			.name("rabi")
-			.currentExp(300)
+			.currentExp(125)
 			.isActive(true)
 			.isDeleted(false)
-			.farewellAvailableAt(LocalDateTime.now().minusMinutes(1))
+			.farewellAvailableAt(now.minusMinutes(1))
 			.build();
 		Character adultCharacter = Character.builder()
 			.characterId(4L)
 			.species("SLIME")
 			.stage(Character.Stage.ADULT)
-			.requiredExp(300)
+			.requiredExp(125)
 			.thumbnailUrl("https://cdn.example.com/slime-adult.png")
 			.build();
 
@@ -345,14 +351,14 @@ class TamagotchiServiceImplTest {
 			.willReturn(List.of(first, second));
 		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet(userId, 100)));
 
-		CharacterActionUrlResp resp = service.getMyCharacterActionUrl(userId, "EYE");
+		CharacterActionUrlResp resp = service.getMyCharacterActionUrl(userId, CharacterActionType.EYE);
 
 		assertThat(resp.actionUrl()).isIn("https://cdn.example.com/eye_2.gif", "https://cdn.example.com/eye.gif");
 		assertThat(resp.earnedAmount()).isZero();
 	}
 
 	@Test
-	void getMyCharacterActionUrlIdleEarnsThreeTimesAndSkipsFourthWithActionUrl() {
+	void getMyCharacterActionUrlIdleEarnsTwoTimesAndSkipsThirdWithActionUrl() {
 		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
 		UserCharacter userCharacter = activeUserCharacter(userId);
@@ -366,29 +372,28 @@ class TamagotchiServiceImplTest {
 			.willReturn(Optional.of(userCharacter));
 		given(characterActionRepository.findAllByCharacterIdAndActionType(9L, "IDLE"))
 			.willReturn(List.of(action));
-		given(creditEarnService.tryEarn(userId, WalletEarnSource.PET_TOUCH, 10, 9L, false))
-			.willReturn(10);
+		given(creditEarnService.tryEarn(userId, WalletEarnSource.PET_TOUCH, 50, 9L, false))
+			.willReturn(new EarnResult(50, 130, true));
 		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet(userId, 130)));
 
 		int earnedSum = 0;
-		for (int i = 0; i < 3; i++) {
-			service.setClock(fixedClock(baseTime.plusHours(i)));
-			earnedSum += service.getMyCharacterActionUrl(userId, "IDLE").earnedAmount();
+		for (int i = 0; i < 2; i++) {
+			service.setClock(fixedClock(baseTime.plusHours(i * 2L)));
+			earnedSum += service.getMyCharacterActionUrl(userId, CharacterActionType.IDLE).earnedAmount();
 		}
-		service.setClock(fixedClock(baseTime.plusHours(3)));
-		CharacterActionUrlResp fourth = service.getMyCharacterActionUrl(userId, "IDLE");
+		service.setClock(fixedClock(baseTime.plusHours(4)));
+		CharacterActionUrlResp third = service.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
 
-		assertThat(earnedSum).isEqualTo(30);
-		assertThat(fourth.actionUrl()).isEqualTo("https://cdn.example.com/idle.gif");
-		assertThat(fourth.earnedAmount()).isZero();
-		assertThat(fourth.dailyTouchCount()).isEqualTo(3);
-		assertThat(fourth.nextAvailableAt()).isEqualTo(today.plusDays(1).atStartOfDay());
-		then(creditEarnService).should(times(3))
-			.tryEarn(userId, WalletEarnSource.PET_TOUCH, 10, 9L, false);
+		assertThat(earnedSum).isEqualTo(100);
+		assertThat(third.actionUrl()).isEqualTo("https://cdn.example.com/idle.gif");
+		assertThat(third.earnedAmount()).isZero();
+		assertThat(userCharacter.getDailyTouchCount()).isEqualTo(2);
+		then(creditEarnService).should(times(2))
+			.tryEarn(userId, WalletEarnSource.PET_TOUCH, 50, 9L, false);
 	}
 
 	@Test
-	void getMyCharacterActionUrlIdleSkipsEarnDuringOneHourCooldown() {
+	void getMyCharacterActionUrlIdleSkipsEarnDuringTwoHourCooldown() {
 		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
 		UserCharacter userCharacter = activeUserCharacter(userId);
@@ -400,22 +405,21 @@ class TamagotchiServiceImplTest {
 			.willReturn(Optional.of(userCharacter));
 		given(characterActionRepository.findAllByCharacterIdAndActionType(9L, "IDLE"))
 			.willReturn(List.of(idleAction()));
-		given(creditEarnService.tryEarn(userId, WalletEarnSource.PET_TOUCH, 10, 9L, false))
-			.willReturn(10);
+		given(creditEarnService.tryEarn(userId, WalletEarnSource.PET_TOUCH, 50, 9L, false))
+			.willReturn(new EarnResult(50, 110, true));
 		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet(userId, 110)));
 
 		service.setClock(fixedClock(baseTime));
-		CharacterActionUrlResp first = service.getMyCharacterActionUrl(userId, "IDLE");
+		CharacterActionUrlResp first = service.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
 		service.setClock(fixedClock(baseTime.plusMinutes(10)));
-		CharacterActionUrlResp second = service.getMyCharacterActionUrl(userId, "IDLE");
+		CharacterActionUrlResp second = service.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
 
-		assertThat(first.earnedAmount()).isEqualTo(10);
+		assertThat(first.earnedAmount()).isEqualTo(50);
 		assertThat(second.actionUrl()).isEqualTo("https://cdn.example.com/idle.gif");
 		assertThat(second.earnedAmount()).isZero();
-		assertThat(second.dailyTouchCount()).isEqualTo(1);
-		assertThat(second.nextAvailableAt()).isEqualTo(baseTime.plusHours(1));
+		assertThat(userCharacter.getDailyTouchCount()).isEqualTo(1);
 		then(creditEarnService).should(times(1))
-			.tryEarn(userId, WalletEarnSource.PET_TOUCH, 10, 9L, false);
+			.tryEarn(userId, WalletEarnSource.PET_TOUCH, 50, 9L, false);
 	}
 
 	@Test
@@ -436,11 +440,10 @@ class TamagotchiServiceImplTest {
 			.willReturn(List.of(action));
 		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet(userId, 100)));
 
-		CharacterActionUrlResp resp = service.getMyCharacterActionUrl(userId, "EYE");
+		CharacterActionUrlResp resp = service.getMyCharacterActionUrl(userId, CharacterActionType.EYE);
 
 		assertThat(resp.actionUrl()).isEqualTo("https://cdn.example.com/eye.gif");
 		assertThat(resp.earnedAmount()).isZero();
-		assertThat(resp.dailyTouchCount()).isZero();
 		then(userCharacterRepository).should(never()).findActiveByUserIdForUpdate(anyLong());
 		then(creditEarnService).should(never()).tryEarn(anyLong(), any(), anyInt(), any(), anyBoolean());
 	}
@@ -461,7 +464,7 @@ class TamagotchiServiceImplTest {
 			.isDeleted(false)
 			.lastTouchedAt(now.minusDays(1))
 			.dailyTouchDate(today.minusDays(1))
-			.dailyTouchCount(3)
+			.dailyTouchCount(2)
 			.build();
 
 		given(userCharacterRepository.findFirstByUserIdAndIsActiveTrueAndIsDeletedFalse(userId))
@@ -470,16 +473,15 @@ class TamagotchiServiceImplTest {
 			.willReturn(Optional.of(userCharacter));
 		given(characterActionRepository.findAllByCharacterIdAndActionType(9L, "IDLE"))
 			.willReturn(List.of(idleAction()));
-		given(creditEarnService.tryEarn(userId, WalletEarnSource.PET_TOUCH, 10, 9L, false))
-			.willReturn(10);
+		given(creditEarnService.tryEarn(userId, WalletEarnSource.PET_TOUCH, 50, 9L, false))
+			.willReturn(new EarnResult(50, 140, true));
 		given(userWalletRepository.findByUserId(userId)).willReturn(Optional.of(wallet(userId, 140)));
 
 		service.setClock(fixedClock(now));
-		CharacterActionUrlResp resp = service.getMyCharacterActionUrl(userId, "IDLE");
+		CharacterActionUrlResp resp = service.getMyCharacterActionUrl(userId, CharacterActionType.IDLE);
 
-		assertThat(resp.earnedAmount()).isEqualTo(10);
-		assertThat(resp.dailyTouchCount()).isEqualTo(1);
-		assertThat(resp.nextAvailableAt()).isEqualTo(now.plusHours(1));
+		assertThat(resp.earnedAmount()).isEqualTo(50);
+		assertThat(userCharacter.getDailyTouchCount()).isEqualTo(1);
 	}
 
 	@Test
@@ -492,7 +494,7 @@ class TamagotchiServiceImplTest {
 			.species("SLIME")
 			.name("슬라임")
 			.stage(Character.Stage.BABY)
-			.requiredExp(100)
+			.requiredExp(75)
 			.thumbnailUrl("https://cdn.example.com/slime.png")
 			.build();
 		Character rabbit = Character.builder()
@@ -500,7 +502,7 @@ class TamagotchiServiceImplTest {
 			.species("RABBIT")
 			.name("토끼")
 			.stage(Character.Stage.TEEN)
-			.requiredExp(200)
+			.requiredExp(100)
 			.thumbnailUrl("https://cdn.example.com/rabbit.png")
 			.build();
 		Character dragon = Character.builder()
@@ -508,7 +510,7 @@ class TamagotchiServiceImplTest {
 			.species("DRAGON")
 			.name("드래곤")
 			.stage(Character.Stage.ADULT)
-			.requiredExp(300)
+			.requiredExp(125)
 			.thumbnailUrl("https://cdn.example.com/dragon.png")
 			.build();
 		CharacterUnlock unlock = CharacterUnlock.builder()
@@ -554,7 +556,7 @@ class TamagotchiServiceImplTest {
 			.characterId(2L)
 			.species("SLIME")
 			.stage(Character.Stage.BABY)
-			.requiredExp(100)
+			.requiredExp(75)
 			.thumbnailUrl("https://cdn.example.com/slime.png")
 			.build();
 
@@ -592,7 +594,7 @@ class TamagotchiServiceImplTest {
 			.characterId(1L)
 			.species("SLIME")
 			.stage(Character.Stage.BABY)
-			.requiredExp(100)
+			.requiredExp(75)
 			.thumbnailUrl("https://cdn.example.com/slime.png")
 			.build();
 
@@ -649,13 +651,13 @@ class TamagotchiServiceImplTest {
 	void evolveUpdatesBabyToTeenAndReturnsEvolutionResp() {
 		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
-		// currentExp=100 ??곗쨮 BABY requiredExp=100 ??苑???筌욊쑵??揶쎛??
+		// BABY requiredExp=75 를 충족하면 TEEN 으로 진화한다.
 		UserCharacter userCharacter = UserCharacter.builder()
 			.userCharacterId(20L)
 			.userId(userId)
 			.characterId(2L)
 			.name("rabi")
-			.currentExp(100)
+			.currentExp(75)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
@@ -663,15 +665,15 @@ class TamagotchiServiceImplTest {
 			.characterId(2L)
 			.species("SLIME")
 			.stage(Character.Stage.BABY)
-			.requiredExp(100)
+			.requiredExp(75)
 			.thumbnailUrl("https://cdn.example.com/slime-baby.png")
 			.build();
-		// TEEN ??requiredExp=200
+		// TEEN requiredExp=100
 		Character teenCharacter = Character.builder()
 			.characterId(3L)
 			.species("SLIME")
 			.stage(Character.Stage.TEEN)
-			.requiredExp(200)
+			.requiredExp(100)
 			.thumbnailUrl("https://cdn.example.com/slime-teen.png")
 			.build();
 
@@ -688,8 +690,8 @@ class TamagotchiServiceImplTest {
 		assertThat(resp.tamagotchiId()).isEqualTo(20L);
 		assertThat(resp.beforeStage()).isEqualTo("BABY");
 		assertThat(resp.afterStage()).isEqualTo("TEEN");
-		assertThat(resp.currentExp()).isEqualTo(0); // 筌욊쑵??筌욊낱???귐딅?
-		assertThat(resp.requiredExp()).isEqualTo(200); // TEEN requiredExp
+		assertThat(resp.currentExp()).isEqualTo(0);
+		assertThat(resp.requiredExp()).isEqualTo(100); // TEEN requiredExp
 		assertThat(resp.animationUrl()).isEqualTo(
 			"https://doitdo-s3.s3.ap-northeast-2.amazonaws.com/evolution/evolution.gif");
 		assertThat(resp.characterImageUrl()).isEqualTo("https://cdn.example.com/slime-teen.png");
@@ -707,7 +709,7 @@ class TamagotchiServiceImplTest {
 			.userId(userId)
 			.characterId(3L)
 			.name("rabi")
-			.currentExp(200)
+			.currentExp(100)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
@@ -715,21 +717,21 @@ class TamagotchiServiceImplTest {
 			.characterId(3L)
 			.species("SLIME")
 			.stage(Character.Stage.TEEN)
-			.requiredExp(200)
+			.requiredExp(100)
 			.thumbnailUrl("https://cdn.example.com/slime-teen.png")
 			.build();
 		Character adultCharacter = Character.builder()
 			.characterId(4L)
 			.species("SLIME")
 			.stage(Character.Stage.ADULT)
-			.requiredExp(300)
+			.requiredExp(125)
 			.thumbnailUrl("https://cdn.example.com/slime-adult.png")
 			.build();
 		Character babyCharacter = Character.builder()
 			.characterId(2L)
 			.species("SLIME")
 			.stage(Character.Stage.BABY)
-			.requiredExp(100)
+			.requiredExp(75)
 			.thumbnailUrl("https://cdn.example.com/slime-baby.png")
 			.build();
 
@@ -766,13 +768,13 @@ class TamagotchiServiceImplTest {
 	void evolveFailsWhenExpInsufficient() {
 		TamagotchiServiceImpl service = service();
 		Long userId = 1L;
-		// currentExp=50 < requiredExp=100 ??M05_006
+		// currentExp=74 < requiredExp=75 이면 M05_006
 		UserCharacter userCharacter = UserCharacter.builder()
 			.userCharacterId(20L)
 			.userId(userId)
 			.characterId(2L)
 			.name("rabi")
-			.currentExp(50)
+			.currentExp(74)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
@@ -780,7 +782,7 @@ class TamagotchiServiceImplTest {
 			.characterId(2L)
 			.species("SLIME")
 			.stage(Character.Stage.BABY)
-			.requiredExp(100)
+			.requiredExp(75)
 			.thumbnailUrl("https://cdn.example.com/slime-baby.png")
 			.build();
 
@@ -807,7 +809,7 @@ class TamagotchiServiceImplTest {
 			.userId(userId)
 			.characterId(2L)
 			.name("rabi")
-			.currentExp(100)
+			.currentExp(75)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
@@ -834,22 +836,24 @@ class TamagotchiServiceImplTest {
 	@Test
 	void approveIndependenceUpdatesAdultToEggAndReturnsFarewellResp() {
 		TamagotchiServiceImpl service = service();
+		LocalDateTime now = LocalDateTime.of(2026, 5, 19, 15, 0);
+		service.setClock(fixedClock(now));
 		Long userId = 1L;
 		UserCharacter adultUserCharacter = UserCharacter.builder()
 			.userCharacterId(30L)
 			.userId(userId)
 			.characterId(4L)
 			.name("rabi")
-			.currentExp(300)
+			.currentExp(125)
 			.isActive(true)
 			.isDeleted(false)
-			.farewellAvailableAt(LocalDateTime.now().minusMinutes(1))
+			.farewellAvailableAt(now.minusMinutes(1))
 			.build();
 		Character adultCharacter = Character.builder()
 			.characterId(4L)
 			.species("SLIME")
 			.stage(Character.Stage.ADULT)
-			.requiredExp(300)
+			.requiredExp(125)
 			.thumbnailUrl("https://cdn.example.com/slime-adult.png")
 			.build();
 		Character eggCharacter = Character.builder()
@@ -891,7 +895,7 @@ class TamagotchiServiceImplTest {
 			.userId(userId)
 			.characterId(4L)
 			.name("rabi")
-			.currentExp(300)
+			.currentExp(125)
 			.isActive(true)
 			.isDeleted(false)
 			.build();
@@ -899,7 +903,7 @@ class TamagotchiServiceImplTest {
 			.characterId(4L)
 			.species("SLIME")
 			.stage(Character.Stage.ADULT)
-			.requiredExp(300)
+			.requiredExp(125)
 			.thumbnailUrl("https://cdn.example.com/slime-adult.png")
 			.build();
 
@@ -919,22 +923,24 @@ class TamagotchiServiceImplTest {
 	@Test
 	void approveIndependenceRejectsWhenFarewellAvailableAtIsFuture() {
 		TamagotchiServiceImpl service = service();
+		LocalDateTime now = LocalDateTime.of(2026, 5, 19, 15, 0);
+		service.setClock(fixedClock(now));
 		Long userId = 1L;
 		UserCharacter adultUserCharacter = UserCharacter.builder()
 			.userCharacterId(30L)
 			.userId(userId)
 			.characterId(4L)
 			.name("rabi")
-			.currentExp(300)
+			.currentExp(125)
 			.isActive(true)
 			.isDeleted(false)
-			.farewellAvailableAt(LocalDateTime.now().plusMinutes(10))
+			.farewellAvailableAt(now.plusMinutes(10))
 			.build();
 		Character adultCharacter = Character.builder()
 			.characterId(4L)
 			.species("SLIME")
 			.stage(Character.Stage.ADULT)
-			.requiredExp(300)
+			.requiredExp(125)
 			.thumbnailUrl("https://cdn.example.com/slime-adult.png")
 			.build();
 
@@ -1002,7 +1008,7 @@ class TamagotchiServiceImplTest {
 			.characterId(1L)
 			.species("SLIME")
 			.stage(Character.Stage.TEEN)
-			.requiredExp(200)
+			.requiredExp(100)
 			.thumbnailUrl("https://cdn.example.com/slime-teen.png")
 			.build();
 

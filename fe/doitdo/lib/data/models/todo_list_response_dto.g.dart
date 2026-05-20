@@ -26,14 +26,24 @@ _$TodoListItemDtoImpl _$$TodoListItemDtoImplFromJson(
   status: json['status'] as String,
   content: json['content'] as String?,
   priority: (json['priority'] as num?)?.toInt(),
+  categoryId: (json['categoryId'] as num?)?.toInt(),
   category: json['category'] as String?,
+  colorHex: json['colorHex'] as String?,
   type: json['type'] as String?,
   startDate: json['startDate'] as String?,
   endDate: json['endDate'] as String?,
-  alarmTime: json['alarmTime'] as String?,
+  alarmTime: json['alertTime'] as String?,
   daysOfWeek: (json['daysOfWeek'] as List<dynamic>?)
       ?.map((e) => e as String)
       .toList(),
+  excludedDates:
+      (json['excludedDates'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const <String>[],
+  masterTodoId: (json['masterTodoId'] as num?)?.toInt(),
+  recurrenceGroupId: (json['recurrenceGroupId'] as num?)?.toInt(),
+  occurrenceDate: json['occurrenceDate'] as String?,
 );
 
 Map<String, dynamic> _$$TodoListItemDtoImplToJson(
@@ -44,10 +54,16 @@ Map<String, dynamic> _$$TodoListItemDtoImplToJson(
   'status': instance.status,
   'content': instance.content,
   'priority': instance.priority,
+  'categoryId': instance.categoryId,
   'category': instance.category,
+  'colorHex': instance.colorHex,
   'type': instance.type,
   'startDate': instance.startDate,
   'endDate': instance.endDate,
-  'alarmTime': instance.alarmTime,
+  'alertTime': instance.alarmTime,
   'daysOfWeek': instance.daysOfWeek,
+  'excludedDates': instance.excludedDates,
+  'masterTodoId': instance.masterTodoId,
+  'recurrenceGroupId': instance.recurrenceGroupId,
+  'occurrenceDate': instance.occurrenceDate,
 };

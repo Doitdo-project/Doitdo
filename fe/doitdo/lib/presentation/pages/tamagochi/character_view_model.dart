@@ -1,11 +1,10 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:doitdo/core/errors/exceptions.dart';
 import 'package:doitdo/core/utils/app_logger.dart';
 import 'package:doitdo/domain/entities/character.dart';
 import 'package:doitdo/domain/entities/evolution.dart';
 import 'package:doitdo/domain/repositories/character_repository.dart';
 import 'package:doitdo/presentation/providers/app_data_providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// 현재 사용자의 캐릭터 상태.
 ///
@@ -19,20 +18,32 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
 
   final CharacterRepository _repository;
 
-  /// 현재 캐릭터 조회.
-  ///
-  /// 서버가 "미수령" 상태를 어떤 에러 코드로 내려줄지 명세가 확정되지 않아,
-  /// 여기서는 [ServerException] 전체를 "미수령" 으로 해석한다. 추후 404 코드가
-  /// 확정되면 `e.statusCode == 404` 만 미수령으로 좁히는 게 바람직하다.
-  /// [UnauthorizedException] / 네트워크 타임아웃 등은 진짜 에러로 올린다.
-  ///
-  /// `copyWithPrevious` 로 직전 값을 유지한 채 isLoading 만 true 로 돌리므로,
-  /// UI 는 이전 캐릭터 정보를 계속 표시하면서 위에 작은 로딩 인디케이터만 얹으면
-  /// 된다 (진화/부화/독립 중 chrome 이 통째로 사라지는 깜빡임 방지).
-  Future<void> load() async {
+  // 진행 중인 API 요청을 추적하기 위한 변수
+  Future<void>? _loadInFlight;
+  Future<Character?>? _fetchInFlight;
+  bool _hasLoadedCharacter = false;
+
+  /// 외부에서 호출하는 안전한 load 메서드
+  Future<void> load({bool force = false}) {
+    if (!force && _hasLoadedCharacter && state.hasValue) {
+      return Future<void>.value();
+    }
+
+    // force가 아닐 때만 기존 진행 중인 요청을 재사용
+    if (!force && _loadInFlight != null) return _loadInFlight!;
+
+    _loadInFlight = _doLoad(force: force).whenComplete(() {
+      _loadInFlight = null;
+    });
+
+    return _loadInFlight!;
+  }
+
+  /// 실제 API 통신 및 상태 갱신을 담당하는 내부 메서드
+  Future<void> _doLoad({bool force = false}) async {
     state = const AsyncValue<Character?>.loading().copyWithPrevious(state);
     try {
-      final character = await _repository.getMyCharacter();
+      final character = await _fetchCharacter(force: force);
       state = AsyncValue.data(character);
     } on ServerException catch (e) {
       appLogger.d('character not yet received (server ${e.statusCode})');
@@ -46,9 +57,11 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
   /// data 로 갱신한다. todo 완료 후 exp 반영 체크처럼 사용자에게 로딩 스피너를
   /// 보일 필요가 없는 백그라운드 리프레시에 사용. 실패 시 기존 상태를 유지하고
   /// 로그만 남긴다.
-  Future<void> refresh() async {
+  Future<void> refresh({bool force = false}) async {
+    if (!force && _hasLoadedCharacter && state.hasValue) return;
+
     try {
-      final character = await _repository.getMyCharacter();
+      final character = await _fetchCharacter(force: force);
       state = AsyncValue.data(character);
     } on ServerException catch (e) {
       appLogger.d('character refresh: server ${e.statusCode} (silent)');
@@ -62,6 +75,7 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
     state = const AsyncValue<Character?>.loading().copyWithPrevious(state);
     try {
       final character = await _repository.receiveEgg();
+      _hasLoadedCharacter = true;
       state = AsyncValue.data(character);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -70,7 +84,15 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
 
   /// 로그인 직후 호출. GET → 미수령이면 POST 로 자동 수령.
   /// 이미 받은 사용자든 신규든 한 번 부르면 캐릭터가 채워진 상태가 된다.
+  ///
+  /// splash 단계에서 prime 으로 이미 캐릭터 데이터가 있는 경우, 또 GET 을 날리지
+  /// 않는다 — 페이지 진입 시 중복 네트워크 왕복을 막아 즉시 그려지게 한다.
+  /// 진화/부화 등 명시적 갱신은 [load] / [refresh] 를 직접 호출하면 된다.
   Future<void> ensureCharacter() async {
+    final cached = state.valueOrNull;
+    if (cached != null) {
+      return; // 이미 prime 된 상태 — 추가 fetch 생략.
+    }
     await load();
     final current = state;
     final hasNoCharacter =
@@ -89,7 +111,7 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
   Future<bool> hatchEgg() async {
     try {
       await _repository.hatchEgg();
-      await load();
+      await load(force: true);
       return true;
     } catch (e, st) {
       appLogger.e('hatch failed', error: e, stackTrace: st);
@@ -105,7 +127,7 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
   Future<bool> renameCharacter(String name) async {
     try {
       await _repository.renameCharacter(name);
-      await load();
+      await load(force: true);
       return true;
     } catch (e, st) {
       appLogger.e('rename failed', error: e, stackTrace: st);
@@ -124,6 +146,7 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
   ///
   /// 실패 시 null 을 반환하고 이전 캐릭터 상태를 유지한다.
   bool _evolving = false;
+
   Future<Evolution?> evolve(int userCharacterId) async {
     if (_evolving) return null;
     _evolving = true;
@@ -139,19 +162,40 @@ class CharacterViewModel extends StateNotifier<AsyncValue<Character?>> {
 
   /// ADULT + canFarewell 상태에서 사용자가 독립을 승인했을 때 호출.
   /// 서버가 다음 알을 자동 배정하므로 [load] 로 새 캐릭터 상태를 당겨온다.
-  Future<bool> farewell() async {
+  Future<bool> farewell({bool refreshAfter = true}) async {
     try {
       await _repository.approveFarewell(approved: true);
-      await load();
+      if (refreshAfter) {
+        await load(force: true);
+      }
       return true;
     } catch (e, st) {
       appLogger.e('farewell failed', error: e, stackTrace: st);
       return false;
     }
   }
+
+  Future<Character?> _fetchCharacter({bool force = false}) {
+    if (!force) {
+      final inFlight = _fetchInFlight;
+      if (inFlight != null) return inFlight;
+    }
+
+    final future = _repository
+        .getMyCharacter()
+        .then((character) {
+          _hasLoadedCharacter = true;
+          return character;
+        })
+        .whenComplete(() {
+          _fetchInFlight = null;
+        });
+    _fetchInFlight = future;
+    return future;
+  }
 }
 
 final characterViewModelProvider =
     StateNotifierProvider<CharacterViewModel, AsyncValue<Character?>>(
-  (ref) => CharacterViewModel(ref.watch(characterRepositoryProvider)),
-);
+      (ref) => CharacterViewModel(ref.watch(characterRepositoryProvider)),
+    );

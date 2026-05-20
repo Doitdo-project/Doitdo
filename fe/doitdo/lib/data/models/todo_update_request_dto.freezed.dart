@@ -22,14 +22,17 @@ TodoUpdateRequestDto _$TodoUpdateRequestDtoFromJson(Map<String, dynamic> json) {
 /// @nodoc
 mixin _$TodoUpdateRequestDto {
   String get title => throw _privateConstructorUsedError;
-  String? get content => throw _privateConstructorUsedError;
-  String? get category => throw _privateConstructorUsedError;
+  String? get content =>
+      throw _privateConstructorUsedError; // 서버는 카테고리 이름(String)이 아닌 categoryId(int)를 요구 — T04-005 방지.
+  // null 이면 JSON 에서 생략 → 서버 기존 카테고리 유지.
+  @JsonKey(name: 'categoryId', includeIfNull: false)
+  int? get categoryId => throw _privateConstructorUsedError;
   String get type =>
       throw _privateConstructorUsedError; // NORMAL, RECURRING, PERIOD
   String? get startDate => throw _privateConstructorUsedError; // YYYY-MM-DD 형식
   String? get endDate => throw _privateConstructorUsedError; // YYYY-MM-DD 형식
-  Set<String>? get daysOfWeek =>
-      throw _privateConstructorUsedError; // ✏️ period → daysOfWeek (서버 변경 반영)
+  @JsonKey(includeIfNull: false)
+  Set<String>? get daysOfWeek => throw _privateConstructorUsedError;
   @JsonKey(name: 'alertTime')
   String? get alarmTime => throw _privateConstructorUsedError;
   @JsonKey(name: 'clearAlertTime', includeIfNull: false)
@@ -55,11 +58,11 @@ abstract class $TodoUpdateRequestDtoCopyWith<$Res> {
   $Res call({
     String title,
     String? content,
-    String? category,
+    @JsonKey(name: 'categoryId', includeIfNull: false) int? categoryId,
     String type,
     String? startDate,
     String? endDate,
-    Set<String>? daysOfWeek,
+    @JsonKey(includeIfNull: false) Set<String>? daysOfWeek,
     @JsonKey(name: 'alertTime') String? alarmTime,
     @JsonKey(name: 'clearAlertTime', includeIfNull: false) bool? clearAlertTime,
   });
@@ -85,7 +88,7 @@ class _$TodoUpdateRequestDtoCopyWithImpl<
   $Res call({
     Object? title = null,
     Object? content = freezed,
-    Object? category = freezed,
+    Object? categoryId = freezed,
     Object? type = null,
     Object? startDate = freezed,
     Object? endDate = freezed,
@@ -103,10 +106,10 @@ class _$TodoUpdateRequestDtoCopyWithImpl<
                 ? _value.content
                 : content // ignore: cast_nullable_to_non_nullable
                       as String?,
-            category: freezed == category
-                ? _value.category
-                : category // ignore: cast_nullable_to_non_nullable
-                      as String?,
+            categoryId: freezed == categoryId
+                ? _value.categoryId
+                : categoryId // ignore: cast_nullable_to_non_nullable
+                      as int?,
             type: null == type
                 ? _value.type
                 : type // ignore: cast_nullable_to_non_nullable
@@ -149,11 +152,11 @@ abstract class _$$TodoUpdateRequestDtoImplCopyWith<$Res>
   $Res call({
     String title,
     String? content,
-    String? category,
+    @JsonKey(name: 'categoryId', includeIfNull: false) int? categoryId,
     String type,
     String? startDate,
     String? endDate,
-    Set<String>? daysOfWeek,
+    @JsonKey(includeIfNull: false) Set<String>? daysOfWeek,
     @JsonKey(name: 'alertTime') String? alarmTime,
     @JsonKey(name: 'clearAlertTime', includeIfNull: false) bool? clearAlertTime,
   });
@@ -175,7 +178,7 @@ class __$$TodoUpdateRequestDtoImplCopyWithImpl<$Res>
   $Res call({
     Object? title = null,
     Object? content = freezed,
-    Object? category = freezed,
+    Object? categoryId = freezed,
     Object? type = null,
     Object? startDate = freezed,
     Object? endDate = freezed,
@@ -193,10 +196,10 @@ class __$$TodoUpdateRequestDtoImplCopyWithImpl<$Res>
             ? _value.content
             : content // ignore: cast_nullable_to_non_nullable
                   as String?,
-        category: freezed == category
-            ? _value.category
-            : category // ignore: cast_nullable_to_non_nullable
-                  as String?,
+        categoryId: freezed == categoryId
+            ? _value.categoryId
+            : categoryId // ignore: cast_nullable_to_non_nullable
+                  as int?,
         type: null == type
             ? _value.type
             : type // ignore: cast_nullable_to_non_nullable
@@ -232,11 +235,11 @@ class _$TodoUpdateRequestDtoImpl implements _TodoUpdateRequestDto {
   const _$TodoUpdateRequestDtoImpl({
     required this.title,
     this.content,
-    this.category,
+    @JsonKey(name: 'categoryId', includeIfNull: false) this.categoryId,
     required this.type,
     required this.startDate,
     this.endDate,
-    final Set<String>? daysOfWeek,
+    @JsonKey(includeIfNull: false) final Set<String>? daysOfWeek,
     @JsonKey(name: 'alertTime') this.alarmTime,
     @JsonKey(name: 'clearAlertTime', includeIfNull: false) this.clearAlertTime,
   }) : _daysOfWeek = daysOfWeek;
@@ -248,8 +251,11 @@ class _$TodoUpdateRequestDtoImpl implements _TodoUpdateRequestDto {
   final String title;
   @override
   final String? content;
+  // 서버는 카테고리 이름(String)이 아닌 categoryId(int)를 요구 — T04-005 방지.
+  // null 이면 JSON 에서 생략 → 서버 기존 카테고리 유지.
   @override
-  final String? category;
+  @JsonKey(name: 'categoryId', includeIfNull: false)
+  final int? categoryId;
   @override
   final String type;
   // NORMAL, RECURRING, PERIOD
@@ -262,6 +268,7 @@ class _$TodoUpdateRequestDtoImpl implements _TodoUpdateRequestDto {
   final Set<String>? _daysOfWeek;
   // YYYY-MM-DD 형식
   @override
+  @JsonKey(includeIfNull: false)
   Set<String>? get daysOfWeek {
     final value = _daysOfWeek;
     if (value == null) return null;
@@ -270,7 +277,6 @@ class _$TodoUpdateRequestDtoImpl implements _TodoUpdateRequestDto {
     return EqualUnmodifiableSetView(value);
   }
 
-  // ✏️ period → daysOfWeek (서버 변경 반영)
   @override
   @JsonKey(name: 'alertTime')
   final String? alarmTime;
@@ -280,7 +286,7 @@ class _$TodoUpdateRequestDtoImpl implements _TodoUpdateRequestDto {
 
   @override
   String toString() {
-    return 'TodoUpdateRequestDto(title: $title, content: $content, category: $category, type: $type, startDate: $startDate, endDate: $endDate, daysOfWeek: $daysOfWeek, alarmTime: $alarmTime, clearAlertTime: $clearAlertTime)';
+    return 'TodoUpdateRequestDto(title: $title, content: $content, categoryId: $categoryId, type: $type, startDate: $startDate, endDate: $endDate, daysOfWeek: $daysOfWeek, alarmTime: $alarmTime, clearAlertTime: $clearAlertTime)';
   }
 
   @override
@@ -290,8 +296,8 @@ class _$TodoUpdateRequestDtoImpl implements _TodoUpdateRequestDto {
             other is _$TodoUpdateRequestDtoImpl &&
             (identical(other.title, title) || other.title == title) &&
             (identical(other.content, content) || other.content == content) &&
-            (identical(other.category, category) ||
-                other.category == category) &&
+            (identical(other.categoryId, categoryId) ||
+                other.categoryId == categoryId) &&
             (identical(other.type, type) || other.type == type) &&
             (identical(other.startDate, startDate) ||
                 other.startDate == startDate) &&
@@ -312,7 +318,7 @@ class _$TodoUpdateRequestDtoImpl implements _TodoUpdateRequestDto {
     runtimeType,
     title,
     content,
-    category,
+    categoryId,
     type,
     startDate,
     endDate,
@@ -343,11 +349,11 @@ abstract class _TodoUpdateRequestDto implements TodoUpdateRequestDto {
   const factory _TodoUpdateRequestDto({
     required final String title,
     final String? content,
-    final String? category,
+    @JsonKey(name: 'categoryId', includeIfNull: false) final int? categoryId,
     required final String type,
     required final String? startDate,
     final String? endDate,
-    final Set<String>? daysOfWeek,
+    @JsonKey(includeIfNull: false) final Set<String>? daysOfWeek,
     @JsonKey(name: 'alertTime') final String? alarmTime,
     @JsonKey(name: 'clearAlertTime', includeIfNull: false)
     final bool? clearAlertTime,
@@ -359,9 +365,11 @@ abstract class _TodoUpdateRequestDto implements TodoUpdateRequestDto {
   @override
   String get title;
   @override
-  String? get content;
+  String? get content; // 서버는 카테고리 이름(String)이 아닌 categoryId(int)를 요구 — T04-005 방지.
+  // null 이면 JSON 에서 생략 → 서버 기존 카테고리 유지.
   @override
-  String? get category;
+  @JsonKey(name: 'categoryId', includeIfNull: false)
+  int? get categoryId;
   @override
   String get type; // NORMAL, RECURRING, PERIOD
   @override
@@ -369,7 +377,8 @@ abstract class _TodoUpdateRequestDto implements TodoUpdateRequestDto {
   @override
   String? get endDate; // YYYY-MM-DD 형식
   @override
-  Set<String>? get daysOfWeek; // ✏️ period → daysOfWeek (서버 변경 반영)
+  @JsonKey(includeIfNull: false)
+  Set<String>? get daysOfWeek;
   @override
   @JsonKey(name: 'alertTime')
   String? get alarmTime;

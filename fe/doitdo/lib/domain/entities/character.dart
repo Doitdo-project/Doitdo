@@ -67,6 +67,7 @@ class Character {
     required this.canEvolve,
     required this.canFarewell,
     this.equippedUserItemId,
+    this.poop = false,
   });
 
   /// 캐릭터 종 ID (도감 기준).
@@ -104,6 +105,9 @@ class Character {
   /// 장착 중인 아이템 ID. 없으면 null.
   final int? equippedUserItemId;
 
+  /// 방 안에 똥이 있는지. true 면 캐릭터 카드에 `poop.png` 가 노출된다.
+  final bool poop;
+
   bool get isEgg => stage == CharacterStage.egg;
 }
 
@@ -114,13 +118,24 @@ class Character {
 ///
 /// 현재 홈 캐릭터 탭에서는 [idle] 과 [eye] 만 번갈아 호출한다. 나머지(eat/sleep/
 /// happy/sad)는 향후 다마고치 인게임 인터랙션이 추가될 때 사용하기 위해 미리 선언.
+/// [poop] 은 방 안 똥을 탭해 치울 때 호출 — 서버가 위생 상태를 false 로 토글한다.
 enum CharacterAction {
   idle,
   eye,
   eat,
   sleep,
   happy,
-  sad;
+  sad,
+  poop;
+
+  static CharacterAction? tryParseServerValue(String raw) {
+    final normalized = raw.trim().toLowerCase();
+    if (normalized.isEmpty) return null;
+    for (final action in CharacterAction.values) {
+      if (action.name == normalized) return action;
+    }
+    return null;
+  }
 
   /// 서버 path param 직렬화 값. enum 그대로 대문자.
   String get serverValue => name.toUpperCase();

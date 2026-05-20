@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 
@@ -10,9 +11,13 @@ import 'package:doitdo/core/theme/doitdo_colors.dart';
 import 'package:doitdo/presentation/models/todo.dart';
 import 'package:doitdo/presentation/navigation/app_router.dart';
 import 'package:doitdo/presentation/pages/notification/notification_view_model.dart';
-import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart'; // ✅ 추가
+import 'package:doitdo/data/models/category_dto.dart';
+import 'package:doitdo/presentation/pages/setting/category/category_view_model.dart';
+import 'package:doitdo/presentation/pages/setting/notice/notice_popup_launcher.dart';
 import 'package:doitdo/presentation/pages/todo/todo_add_notifier.dart';
 import 'package:doitdo/presentation/pages/todo/todo_view_model.dart';
+import 'package:doitdo/presentation/providers/default_screen_provider.dart';
+import 'package:doitdo/presentation/widgets/common/character_mascot_image.dart';
 import 'package:doitdo/presentation/widgets/common/todo_item_card.dart';
 import 'package:doitdo/presentation/providers/home_scroll_provider.dart';
 import 'package:doitdo/presentation/widgets/layouts/doitdo_scaffold.dart';
@@ -28,6 +33,17 @@ class TodoPage extends ConsumerStatefulWidget {
 
 class _TodoPageState extends ConsumerState<TodoPage> {
   final _todoScrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    // 사용자의 기본 화면이 "캘린더(TodoPage)" 일 때만 세션 1회 공지 팝업 시도.
+    // post-frame 으로 미뤄 첫 build 가 끝난 다음에 띄움 (Riverpod 안전).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      maybeShowNoticePopup(context, ref, forScreen: DefaultScreen.calendar);
+    });
+  }
 
   @override
   void dispose() {
@@ -49,6 +65,99 @@ class _TodoPageState extends ConsumerState<TodoPage> {
     } else if (velocity > 0 && format != CalendarFormat.month) {
       vm.onFormatChanged(CalendarFormat.month);
     }
+  }
+
+  void _showYearMonthPicker(BuildContext context, DateTime focused) {
+    final colors = context.colors;
+    int pickerYear = focused.year;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          return Padding(
+            padding: EdgeInsets.fromLTRB(24.w, 20.h, 24.w, 32.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 년도 선택 row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      onPressed: () => setSheetState(() => pickerYear--),
+                      icon: Icon(Icons.chevron_left, color: colors.textPrimary),
+                    ),
+                    SizedBox(width: 8.w),
+                    Text('$pickerYear년',
+                        style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary)),
+                    SizedBox(width: 8.w),
+                    IconButton(
+                      onPressed: () => setSheetState(() => pickerYear++),
+                      icon: Icon(Icons.chevron_right, color: colors.textPrimary),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12.h),
+                // 월 3×4 그리드
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    childAspectRatio: 1.8,
+                  ),
+                  itemCount: 12,
+                  itemBuilder: (_, i) {
+                    final month = i + 1;
+                    final isSelected = pickerYear == focused.year && month == focused.month;
+                    final isCurrentMonth = pickerYear == DateTime.now().year &&
+                        month == DateTime.now().month;
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        final target = DateTime(pickerYear, month, 1);
+                        ref.read(todoViewModelProvider.notifier)
+                            .onDaySelected(target, target);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.calendarPoint : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8.r),
+                          border: isCurrentMonth && !isSelected
+                              ? Border.all(color: AppColors.calendarPoint, width: 1)
+                              : null,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '$month월',
+                          style: AppTextStyles.labelMedium.copyWith(
+                            color: isSelected
+                                ? Colors.white
+                                : isCurrentMonth
+                                    ? AppColors.calendarPoint
+                                    : colors.textPrimary,
+                            fontWeight: isSelected || isCurrentMonth
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
   void _showFormatDropdown(BuildContext context, CalendarFormat current) {
@@ -228,15 +337,13 @@ class _TodoPageState extends ConsumerState<TodoPage> {
     final vm     = ref.read(todoViewModelProvider.notifier);
     final colors = context.colors;
 
-    // ✅ 서버 카테고리 목록 구독 (실제 colorId 기반 색상 사용)
     final categoryList = ref.watch(categoryViewModelProvider).valueOrNull ?? [];
-
-    // ✅ 카테고리 이름으로 실제 Color를 찾는 헬퍼
-    Color getDotColor(String categoryName) {
+    Color getDotColor(Todo t) {
       try {
-        return categoryList.firstWhere((c) => c.categoryName == categoryName).color;
+        return categoryList.firstWhere((c) => c.categoryName == t.category.name).color;
       } catch (_) {
-        return AppColors.category1; // detail sheet와 동일한 fallback
+        if (t.colorHex != null) return hexToColor(t.colorHex!);
+        return AppColors.category1;
       }
     }
 
@@ -267,9 +374,22 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text('${state.focusedDay.month}월',
-                                style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary)),
-                            const SizedBox(width: 12),
+                            GestureDetector(
+                              onTap: () => _showYearMonthPicker(context, state.focusedDay),
+                              behavior: HitTestBehavior.opaque,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    '${state.focusedDay.year}년 ${state.focusedDay.month}월',
+                                    style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Icon(Icons.expand_more, size: 18, color: colors.textPrimary),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 10),
                             GestureDetector(
                               key: _formatBtnKey,
                               onTap: () => _showFormatDropdown(context, state.calendarFormat),
@@ -289,6 +409,19 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                         ),
                         Row(
                           children: [
+                            if (!isToday) ...[
+                              GestureDetector(
+                                onTap: () => vm.resetToToday(),
+                                behavior: HitTestBehavior.opaque,
+                                child: Text(
+                                  '오늘',
+                                  style: AppTextStyles.labelMedium.copyWith(
+                                    color: AppColors.calendarPoint,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                            ],
                             GestureDetector(
                               key: _filterBtnKey,
                               onTap: () => _showFilterMenu(context, state.currentFilter),
@@ -330,7 +463,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                                                   fontSize: 8,
                                                   fontWeight: FontWeight.w700,
                                                   color: Colors.white,
-                                                  fontFamily: 'GmarketSansMedium',
+                                                  // fontFamily 미명시 — ThemeData 따라감
                                                 ),
                                               ),
                                             ),
@@ -349,8 +482,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                   ),
 
                   TableCalendar(
-                    // ✅ 카테고리 목록이 로드되면 마커를 강제로 다시 렌더링
-                    key: ValueKey(categoryList.map((c) => '${c.categoryName}:${c.color.value}').join()),
+                    key: const ValueKey('calendar'),
                     firstDay: DateTime.utc(2020, 1, 1),
                     lastDay: DateTime.utc(2030, 12, 31),
                     focusedDay: state.focusedDay,
@@ -426,14 +558,22 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                         }
                         if (todos.isEmpty) return const SizedBox.shrink();
 
-                        // ✅ 2. 카테고리별로 DOT 중복 제거 (같은 카테고리는 1개만)
+                        // ✅ 2. 카테고리별 개수 집계 후 많은 순 정렬, 카테고리당 1개 DOT
+                        final countByCategory = <String, int>{};
+                        for (final t in todos) {
+                          countByCategory[t.category.name] = (countByCategory[t.category.name] ?? 0) + 1;
+                        }
+                        final sortedTodos = todos.toList()
+                          ..sort((a, b) => (countByCategory[b.category.name] ?? 0)
+                              .compareTo(countByCategory[a.category.name] ?? 0));
                         final seen = <String>{};
-                        final uniqueTodos = todos.where((t) {
-                          final name = t.category.name;
-                          if (seen.contains(name)) return false;
-                          seen.add(name);
-                          return true;
-                        }).take(6).toList();
+                        final uniqueTodos = <Todo>[];
+                        for (final t in sortedTodos) {
+                          if (seen.add(t.category.name)) {
+                            uniqueTodos.add(t);
+                            if (uniqueTodos.length >= 6) break;
+                          }
+                        }
 
                         final row1 = uniqueTodos.take(3).toList();
                         final row2 = uniqueTodos.length > 3 ? uniqueTodos.sublist(3) : <Todo>[];
@@ -447,7 +587,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
                             // 좌우로 1픽셀씩 마진을 줍니다. (점 사이 간격은 여전히 2픽셀이 됩니다)
                             margin: const EdgeInsets.symmetric(horizontal: 1),
                             decoration: BoxDecoration(
-                              color: getDotColor(t.category.name)
+                              color: getDotColor(t)
                                   .withOpacity(isOutside ? 0.3 : 1.0),
                               shape: BoxShape.circle,
                             ),
@@ -503,7 +643,7 @@ class _TodoPageState extends ConsumerState<TodoPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Image.asset('assets/images/Dooit.png', width: 26, height: 26, filterQuality: FilterQuality.high),
+                const CharacterMascotImage(size: 36),
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -783,15 +923,15 @@ class _CrossSectionTodoListState extends ConsumerState<_CrossSectionTodoList> {
           ],
         ),
         const SizedBox(height: 12),
-        if (totalCount == 0)
+        if (widget.todayTodos.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Center(
               child: Text('할 일을 추가해보세요!',
                   style: AppTextStyles.bodySmall.copyWith(color: colors.textHint)),
             ),
-          )
-        else
+          ),
+        if (totalCount > 0)
         // ✅ Listener로 드래그 중 포인터 위치 감지 → 자동 스크롤
           Listener(
             onPointerMove: (event) {
@@ -808,6 +948,14 @@ class _CrossSectionTodoListState extends ConsumerState<_CrossSectionTodoList> {
               proxyDecorator: (child, index, animation) =>
                   Material(color: Colors.transparent, elevation: 0, child: child),
               itemBuilder: buildItem,
+            ),
+          ),
+        if (widget.showSomeday && widget.somedayTodos.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: Text('할 일을 추가해보세요!',
+                  style: AppTextStyles.bodySmall.copyWith(color: colors.textHint)),
             ),
           ),
       ],

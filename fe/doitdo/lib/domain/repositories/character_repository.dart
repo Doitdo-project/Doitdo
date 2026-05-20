@@ -28,10 +28,22 @@ abstract class CharacterRepository {
   /// 당겨 동기화한다.
   Future<Evolution> evolveCharacter(int userCharacterId);
 
-  /// 캐릭터 상호작용 액션. 홈 화면 캐릭터 탭에서 IDLE/EYE 를 번갈아 호출.
-  /// 응답으로 그 액션의 동작 gif URL 을 반환한다 — 호출자는 이걸 캐릭터 썸네일
-  /// 자리에 swap 해 동작을 재생하면 된다. 빈 문자열이면 swap 없이 정적 썸네일 유지.
-  Future<String> triggerAction(CharacterAction action);
+  /// 캐릭터 상호작용 액션. 홈 화면 캐릭터 탭에서 IDLE 등을 호출한다.
+  ///
+  /// 반환:
+  ///   - [url] 동작 gif URL. 호출자는 이걸 캐릭터 썸네일 자리에 잠시 swap 해
+  ///     동작을 재생한다. 빈 문자열이면 swap 없이 정적 썸네일 유지.
+  ///   - [earnedAmount] 이번 탭으로 지급된 코인량. 0 이면 일일 한도 초과 등으로
+  ///     보상 미지급 — 호출자는 floating "+N" 시각화를 띄우지 않는다.
+  Future<({String url, int earnedAmount})> triggerAction(
+    CharacterAction action,
+  );
+
+  /// 서버 actionType 문자열을 그대로 호출한다.
+  ///
+  /// FE enum 업데이트보다 BE actionType 이 먼저 배포되는 경우에도 호출 경로를
+  /// 유지하기 위한 escape hatch 이다. 호출자는 빈 문자열만 피하면 된다.
+  Future<({String url, int earnedAmount})> triggerActionType(String actionType);
 
   /// 도감 목록. 미해금 항목은 species/thumbnailUrl 은 들어와도 UI 에서 가린다.
   Future<List<CollectionEntry>> getEncyclopedia();

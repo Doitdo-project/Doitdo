@@ -48,7 +48,10 @@ public record TodoCompletedEvent(Todo todo) {} // 엔티티 직접 포함 금지
 
 ```
 todo.event.TodoCompletedEvent   ← tamagotchi.application.listener.TodoCompletionExpListener
+todo.event.TodoCompletedEvent   ← notification.application.listener.TodoCompletedNotificationListener
 ```
+
+현재 뚜레딧 적립은 `TodoCompletedEvent` 를 구독하지 않는다. `TodoServiceImpl.changeStatus()` 가 `CreditEarnService.tryEarn(...)` 를 직접 호출해 완료 응답에 적립 결과를 담는다.
 
 ---
 
@@ -113,7 +116,7 @@ public class XxxServiceImpl {
 ## 8. 과거 Todo 보상 제외 정책 (S14P31D107-475)
 
 `TodoCompletionExpListener` 는 `expGranted` 멱등성 체크 직후, UC 조회 전에 **과거 기준일 가드**를 수행한다.
-`TodoCompletionCreditListener` 는 같은 기준일 규칙으로 오늘 완료 카운트에서 과거 Todo 를 제외한다.
+뚜레딧 적립은 `TodoServiceImpl.changeStatus()` 에서 같은 기준일 규칙을 적용한 뒤 직접 호출한다.
 
 ### 기준일 결정 규칙
 
@@ -124,7 +127,7 @@ public class XxxServiceImpl {
 | `NORMAL` / 그 외 | `startDate` |
 
 - 경험치: `criteriaDate.isBefore(today)` 이면 `return` (skip). `expGranted` 마킹 없음.
-- 뚜레딧: `criteriaDate.isBefore(today)` 인 Todo 는 `firstCompletedDate=today` 여도 3개당 10 뚜레딧 카운트에서 제외.
+- 뚜레딧: `criteriaDate.isBefore(today)` 인 Todo 는 `firstCompletedDate=today` 여도 적립하지 않는다. 기준일을 통과한 최초 DONE 전이에만 완료당 20 뚜레딧 적립을 시도한다.
 - `today` = `LocalDate.now(ZoneId.of("Asia/Seoul"))` (KST 기준)
 
 ### 설계 의도

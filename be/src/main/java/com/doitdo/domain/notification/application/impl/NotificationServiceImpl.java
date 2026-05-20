@@ -115,6 +115,27 @@ public class NotificationServiceImpl implements NotificationService {
 	}
 
 	@Override
+	public void sendStreakTodoEmptyReminder(Long userId, LocalTime now) {
+		LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+		boolean alreadySent = notificationRepository.existsByUserIdAndTypeAndCreatedAtBetweenAndIsDeletedFalse(
+				userId,
+				NotificationType.REMINDER_STREAK_TODO_EMPTY,
+				today.atStartOfDay(),
+				today.plusDays(1).atStartOfDay());
+		if (alreadySent) {
+			return;
+		}
+
+		String title = "오늘 할 일이 비어 있어요";
+		String body  = "스트릭을 이어가려면 오늘 할 일을 하나 추가해봐요.";
+
+		notificationRepository.save(Notification.of(
+				userId, NotificationType.REMINDER_STREAK_TODO_EMPTY, title, body, null));
+
+		dispatchFcm(userId, now, title, body, "[streak-todo-empty-reminder]");
+	}
+
+	@Override
 	public void sendTodoDone(Long userId, Long todoId, String todoTitle) {
 		String title = "할 일 완료!";
 		String body  = "\"%s\" 완료를 기록했어요. 잘 했어요!".formatted(todoTitle);
@@ -152,6 +173,11 @@ public class NotificationServiceImpl implements NotificationService {
 
 	@Override
 	public void sendTamagotchiFarewell(Long userId, Long userCharacterId, String characterName) {
+		if (!isTamagotchiNotificationEnabled(userId)) {
+			log.debug("[farewell-available] tamagotchi notification disabled user={}", userId);
+			return;
+		}
+
 		String title = "독립 준비 완료";
 		String body  = "\"%s\"이(가) 독립할 준비가 되었어요!".formatted(characterName);
 
@@ -164,6 +190,11 @@ public class NotificationServiceImpl implements NotificationService {
 
 	@Override
 	public void sendTamagotchiGrowth(Long userId, Long userCharacterId, String characterName, String afterStage) {
+		if (!isTamagotchiNotificationEnabled(userId)) {
+			log.debug("[tamagotchi-growth] tamagotchi notification disabled user={}", userId);
+			return;
+		}
+
 		String title = "BABY".equals(afterStage) ? "알이 부화했어요!" : "다마고치가 성장했어요!";
 		String body  = "\"%s\"이(가) %s 단계로 성장했어요.".formatted(characterName, afterStage);
 
@@ -210,6 +241,12 @@ public class NotificationServiceImpl implements NotificationService {
 		} catch (Exception ex) {
 			log.warn("[test-notification] fcm failed user={}", userId, ex);
 		}
+	}
+
+	private boolean isTamagotchiNotificationEnabled(Long userId) {
+		return userSettingRepository.findByUserId(userId)
+				.map(setting -> !Boolean.FALSE.equals(setting.getTamagotchiNotificationEnabled()))
+				.orElse(true);
 	}
 
 	private boolean isInDnd(UserSetting s, LocalTime now) {

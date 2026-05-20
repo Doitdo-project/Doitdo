@@ -60,10 +60,16 @@ class CategoryViewModel extends AsyncNotifier<List<CategoryResp>> {
   /// 활성 팔레트 변경 — 모든 카테고리의 색을 [newPaletteId] 의 같은 인덱스 색으로 PATCH.
   ///
   /// 매핑 정책:
-  ///   - 각 카테고리의 현재 colorId 가 어느 팔레트의 K번째 색인지 역추론
-  ///   - 새 팔레트의 K번째 colorId 로 변경
+  ///   - 각 카테고리의 현재 colorHex 가 어느 팔레트의 K번째 색인지 hex 매칭으로 찾기
+  ///   - 새 팔레트의 K번째 색의 colorId 로 변경 (BE 가 직접 내려준 실제 colorId 사용)
   ///   - 새 팔레트의 색 수가 더 적으면 마지막 색으로 폴백 (보통 동일하지만 방어)
+  ///   - 어느 팔레트에도 안 맞는 카테고리(외부에서 변경된 색)는 새 팔레트 0번째로 폴백
   ///   - 이미 새 팔레트의 같은 colorId 를 쓰고 있는 카테고리는 PATCH 생략 (네트워크 절약)
+  ///
+  /// 이전 구현은 "DB 의 colorId 가 1부터 displayOrder 순으로 연속 부여" 라는 가정에
+  /// 의존해 colorId 를 추측 계산했지만, BE MR(`be/fix/palette-resp-color-id`) 로
+  /// `PaletteColorResp.colorId` 가 응답에 포함되어 추측이 사라졌다.
+  /// → "팔레트 변경 시 새 색이 잠깐 떴다가 옛 색으로 돌아가는" 버그가 해결된다.
   ///
   /// 부분 실패 처리: 카테고리 N개 PATCH 중 일부 실패해도 성공한 것까지는 state 갱신,
   /// 실패한 카테고리는 기존 색 유지. 첫 에러는 rethrow 해서 View 가 SnackBar 띄울 수 있게.
@@ -77,31 +83,25 @@ class CategoryViewModel extends AsyncNotifier<List<CategoryResp>> {
       orElse: () => throw StateError('palette $newPaletteId not found'),
     );
 
-    // 팔레트별 baseColorId (1-based 누적). colorId = baseId + index.
-    final baseIdByPaletteId = <int, int>{};
-    int base = 1;
-    for (final p in palettes) {
-      baseIdByPaletteId[p.paletteId] = base;
-      base += p.colors.length;
-    }
-    final newBaseId = baseIdByPaletteId[newPaletteId]!;
-
     final repo = ref.read(categoryRepositoryProvider);
     final cats = state.requireValue;
 
-    // 각 카테고리의 새 colorId·colorHex 미리 계산
+    // 각 카테고리의 새 colorId·color 미리 계산.
+    // - colorHex 매칭으로 기존 색의 팔레트 내 인덱스를 찾아 새 팔레트 같은 위치로 옮긴다.
+    // - 매칭이 안 되는 케이스(외부 변경 등)는 새 팔레트 0번째로 폴백.
     final targets = cats.map((c) {
       int? indexInOld;
       for (final p in palettes) {
-        final pBase = baseIdByPaletteId[p.paletteId]!;
-        if (c.colorId >= pBase && c.colorId < pBase + p.colors.length) {
-          indexInOld = c.colorId - pBase;
+        final idx = p.colors.indexWhere((pc) => pc.color == c.colorHex);
+        if (idx >= 0) {
+          indexInOld = idx;
           break;
         }
       }
-      final idx     = indexInOld ?? 0;
-      final newIdx  = idx.clamp(0, newPalette.colors.length - 1);
-      return (cat: c, newColorId: newBaseId + newIdx, newHex: newPalette.colors[newIdx]);
+      final idx = indexInOld ?? 0;
+      final newIdx = idx.clamp(0, newPalette.colors.length - 1);
+      final newColor = newPalette.colors[newIdx];
+      return (cat: c, newColorId: newColor.colorId, newHex: newColor.color);
     }).toList();
 
     // 낙관적 업데이트 — 서버 응답 전에 UI 즉시 반영

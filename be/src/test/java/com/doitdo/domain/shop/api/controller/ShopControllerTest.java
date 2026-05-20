@@ -15,6 +15,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.doitdo.domain.auth.application.CustomUserDetails;
 import com.doitdo.domain.shop.api.dto.req.UpdateRoomFurniturePlacementReq;
 import com.doitdo.domain.shop.api.dto.resp.FurnitureShopResp;
+import com.doitdo.domain.shop.api.dto.resp.FurnitureThemeListResp;
+import com.doitdo.domain.shop.api.dto.resp.FurnitureThemeResp;
+import com.doitdo.domain.shop.api.dto.resp.PlaceThemeResp;
+import com.doitdo.domain.shop.api.dto.resp.PurchaseThemeResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomFurniturePlacementResp;
 import com.doitdo.domain.shop.api.dto.resp.RoomResp;
 import com.doitdo.domain.shop.api.dto.resp.ShopEntryResp;
@@ -130,5 +134,64 @@ class ShopControllerTest {
 
 		assertThat(response.getStatus()).isEqualTo(200);
 		assertThat(response.getData().items().get(0).preview()).isTrue();
+	}
+
+	@Test
+	void listThemes_returnsFurnitureThemes() {
+		FurnitureThemeListResp resp = new FurnitureThemeListResp(List.of(
+			new FurnitureThemeResp("AUTUMN", "가을", "https://cdn.example.com/autumn.png", 1, 0, 300, 300, false,
+				List.of())
+		));
+		given(shopService.listThemes(1L)).willReturn(resp);
+
+		GlobalApiResponse<FurnitureThemeListResp> response = controller.listThemes(userDetails);
+
+		assertThat(response.getStatus()).isEqualTo(200);
+		assertThat(response.getData().items()).hasSize(1);
+		assertThat(response.getData().items().get(0).themeCode()).isEqualTo("AUTUMN");
+	}
+
+	@Test
+	void previewThemeRoom_returnsPreviewRoom() {
+		RoomResp resp = new RoomResp(List.of(
+			new RoomFurniturePlacementResp(null, null, 2L, "가을 침대", "BED",
+				"https://cdn.example.com/bed.png", 80, 90, 5, 0, true)
+		));
+		given(shopService.previewThemeRoom(1L, "AUTUMN")).willReturn(resp);
+
+		GlobalApiResponse<RoomResp> response = controller.previewThemeRoom(userDetails, "AUTUMN");
+
+		assertThat(response.getStatus()).isEqualTo(200);
+		assertThat(response.getData().items().get(0).preview()).isTrue();
+	}
+
+	@Test
+	void purchaseTheme_returnsPurchaseResult() {
+		PurchaseThemeResp resp = new PurchaseThemeResp("MOON", "달빛", 1, 1, 300, 700, List.of());
+		given(shopService.purchaseTheme(1L, "MOON")).willReturn(resp);
+
+		GlobalApiResponse<PurchaseThemeResp> response = controller.purchaseTheme(userDetails, "MOON");
+
+		assertThat(response.getStatus()).isEqualTo(200);
+		assertThat(response.getMessage()).isEqualTo("테마 구매 완료");
+		assertThat(response.getData().themeCode()).isEqualTo("MOON");
+		assertThat(response.getData().totalPaid()).isEqualTo(300);
+	}
+
+	@Test
+	void placeTheme_returnsPlacementResult() {
+		PlaceThemeResp resp = new PlaceThemeResp("MOON", "달빛", 1, List.of(
+			new RoomFurniturePlacementResp(3L, 10L, 1L, "달빛 침대", "BED",
+				"https://cdn.example.com/bed.png", 80, 90, 5, 0, false)
+		));
+		given(roomFurniturePlacementService.placeTheme(1L, "MOON")).willReturn(resp);
+
+		GlobalApiResponse<PlaceThemeResp> response = controller.placeTheme(userDetails, "MOON");
+
+		assertThat(response.getStatus()).isEqualTo(200);
+		assertThat(response.getMessage()).isEqualTo("테마 배치 완료");
+		assertThat(response.getData().themeCode()).isEqualTo("MOON");
+		assertThat(response.getData().themeName()).isEqualTo("달빛");
+		assertThat(response.getData().placedCount()).isEqualTo(1);
 	}
 }

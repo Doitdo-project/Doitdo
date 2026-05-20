@@ -1,5 +1,6 @@
 package com.doitdo.domain.user.application.impl;
 
+import com.doitdo.domain.auth.application.cache.AuthUserCacheEvictHelper;
 import com.doitdo.domain.auth.entity.AutoProvider;
 import com.doitdo.domain.auth.entity.OAuthProvider;
 import com.doitdo.domain.auth.repository.AutoProviderRepository;
@@ -21,16 +22,20 @@ import com.doitdo.domain.user.api.dto.req.WithdrawReq;
 import com.doitdo.domain.user.api.dto.resp.CheckDuplicateResp;
 import com.doitdo.domain.user.api.dto.resp.UserInfoResp;
 import com.doitdo.domain.user.api.dto.resp.WalletBalanceResp;
+import com.doitdo.domain.user.application.CreditEarnService;
 import com.doitdo.domain.user.application.UserService;
 import com.doitdo.domain.user.entity.User;
+import com.doitdo.domain.user.entity.WalletEarnSource;
 import com.doitdo.domain.user.repository.UserRepository;
 import com.doitdo.domain.user.repository.UserWalletRepository;
+import com.doitdo.domain.user.repository.WalletEarnLogRepository;
 import com.doitdo.global.client.AppleOAuthClient;
 import com.doitdo.global.exception.CustomException;
 import com.doitdo.global.exception.UserErrorCode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
+import java.time.ZoneId;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +49,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
+	private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+	private static final int MINIMUM_AGE = 14;
+	private static final int DAILY_ATTENDANCE_REWARD = 100;
+
 	private final UserRepository userRepository;
 	private final RefreshTokenRepository refreshTokenRepository;
 	private final AutoProviderRepository autoProviderRepository;
@@ -56,16 +65,17 @@ public class UserServiceImpl implements UserService {
 	private final CategoryRepository categoryRepository;
 	private final UserItemRepository userItemRepository;
 	private final UserWalletRepository userWalletRepository;
+	private final WalletEarnLogRepository walletEarnLogRepository;
 	private final UserSettingRepository userSettingRepository;
 	private final CharacterUnlockRepository characterUnlockRepository;
+	private final CreditEarnService creditEarnService;
 	private final PasswordEncoder passwordEncoder;
 	private final AppleOAuthClient appleOAuthClient;
 	private final UserHardDeleteService userHardDeleteService;
+	private final AuthUserCacheEvictHelper authUserCacheEvictHelper;
 
 	@Value("${app.terms.version}")
 	private String appTermsVersion;
-
-	private static final int MINIMUM_AGE = 14;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -82,11 +92,23 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	@Transactional(readOnly = true)
+	@Transactional
 	public UserInfoResp getMyInfo(Long userId) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new CustomException(UserErrorCode.U01_002));
-		return UserInfoResp.from(user);
+
+		boolean alreadyClaimed = isAttendanceClaimedToday(userId);
+		if (!alreadyClaimed && userWalletRepository.findByUserId(userId).isPresent()) {
+			creditEarnService.tryEarn(
+					userId,
+					WalletEarnSource.DAILY_ATTENDANCE,
+					DAILY_ATTENDANCE_REWARD,
+					null,
+					true
+			);
+		}
+
+		return UserInfoResp.from(user, alreadyClaimed);
 	}
 
 	@Override
@@ -117,6 +139,7 @@ public class UserServiceImpl implements UserService {
 
 		// 보안: 기존 refresh token 전부 무효화 → 재로그인 강제
 		refreshTokenRepository.deleteByUserId(userId);
+		authUserCacheEvictHelper.evictAfterCommit(userId);
 	}
 
 	@Override
@@ -169,6 +192,7 @@ public class UserServiceImpl implements UserService {
 		//       dirty-checking 만으로는 변경이 flush 되지 않으므로 saveAndFlush 로 merge + 즉시 flush.
 		user.withdraw();
 		userRepository.saveAndFlush(user);
+		authUserCacheEvictHelper.evictAfterCommit(userId);
 	}
 
 	/**
@@ -193,7 +217,8 @@ public class UserServiceImpl implements UserService {
 
 		user.registerBirthDate(birthDate);
 		userRepository.saveAndFlush(user);
-		return UserInfoResp.from(user);
+		authUserCacheEvictHelper.evictAfterCommit(userId);
+		return UserInfoResp.from(user, isAttendanceClaimedToday(userId));
 	}
 
 	/**
@@ -215,7 +240,20 @@ public class UserServiceImpl implements UserService {
 		LocalDateTime now = LocalDateTime.now();
 		user.registerAgreements(now, req.marketingAgreed(), appTermsVersion);
 		userRepository.saveAndFlush(user);
-		return UserInfoResp.from(user);
+		authUserCacheEvictHelper.evictAfterCommit(userId);
+		return UserInfoResp.from(user, isAttendanceClaimedToday(userId));
+	}
+
+	private boolean isAttendanceClaimedToday(Long userId) {
+		LocalDate today = LocalDate.now(SEOUL);
+		LocalDateTime startOfDay = today.atStartOfDay();
+		LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
+		return walletEarnLogRepository.sumAmountByUserIdAndSourceAndDate(
+				userId,
+				WalletEarnSource.DAILY_ATTENDANCE,
+				startOfDay,
+				endOfDay
+		) > 0;
 	}
 
 	/**
