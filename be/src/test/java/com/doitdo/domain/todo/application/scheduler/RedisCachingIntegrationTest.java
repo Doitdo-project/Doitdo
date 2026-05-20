@@ -27,7 +27,9 @@ import com.doitdo.domain.todo.entity.Todo.TodoType;
 import com.doitdo.domain.todo.repository.CategoryRepository;
 import com.doitdo.domain.todo.repository.TodoRepository;
 import com.doitdo.domain.user.entity.User;
+import com.doitdo.domain.user.entity.UserWallet;
 import com.doitdo.domain.user.repository.UserRepository;
+import com.doitdo.domain.user.repository.UserWalletRepository;
 import com.redis.testcontainers.RedisContainer;
 import jakarta.persistence.EntityManagerFactory;
 import java.time.LocalDate;
@@ -89,6 +91,9 @@ class RedisCachingIntegrationTest {
 	private UserRepository userRepository;
 
 	@Autowired
+	private UserWalletRepository userWalletRepository;
+
+	@Autowired
 	private CharacterRepository characterRepository;
 
 	@Autowired
@@ -110,7 +115,7 @@ class RedisCachingIntegrationTest {
 		statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
 		statistics.setStatisticsEnabled(true);
 		flushRedis();
-		deleteRows("streak_reward_logs", "user_streaks", "snooze_history", "todos", "categories",
+		deleteRows("wallet_earn_logs", "user_wallets", "streak_reward_logs", "user_streaks", "snooze_history", "todos", "categories",
 				"user_character_history", "character_unlocks", "user_character", "characters", "users");
 		statistics.clear();
 	}
@@ -273,6 +278,7 @@ class RedisCachingIntegrationTest {
 				"redis-cache-" + suffix + "@example.com",
 				"encoded-password",
 				"redis-cache-" + suffix));
+		userWalletRepository.saveAndFlush(UserWallet.createEmpty(user.getUserId()));
 		return user.getUserId();
 	}
 
