@@ -48,6 +48,7 @@ class CharacterCard extends StatelessWidget {
     this.onTapCollection,
     this.onEggTap,
     this.onCharacterTap,
+    this.onWalkPhaseChanged,
     this.onPoopTap,
     this.isCleaningPoop = false,
     this.suppressPoop = false,
@@ -102,6 +103,7 @@ class CharacterCard extends StatelessWidget {
   /// 부화 이후 캐릭터 본체를 탭했을 때 호출. 인자는 사용자가 탭한 글로벌 좌표로,
   /// 호출자(page) 가 그 위치에서 floating "+코인" 위젯을 띄우는 데 사용한다.
   final ValueChanged<Offset>? onCharacterTap;
+  final ValueChanged<bool>? onWalkPhaseChanged;
 
   /// 방 안 똥을 탭했을 때 호출. 인자는 사용자가 탭한 글로벌 좌표(손가락 위치).
   /// 페이지가 brush.gif 오버레이 2초 + POOP action 호출을 함께 처리하고, 응답의
@@ -249,6 +251,7 @@ class CharacterCard extends StatelessWidget {
                           walkStartDelay: _walkStartDelay,
                           walkRestartDelay: _walkRestartDelay,
                           onCharacterTap: _isGrown ? onCharacterTap : null,
+                          onWalkPhaseChanged: onWalkPhaseChanged,
                           bubble: _speechText != null
                               ? Transform.translate(
                                   offset: Offset(0, 6.h),
@@ -1449,6 +1452,7 @@ class _WalkingSlot extends StatefulWidget {
     required this.characterBuilder,
     this.bubble,
     this.onCharacterTap,
+    this.onWalkPhaseChanged,
   });
 
   /// true 면 캐릭터가 방 안을 자유 보행. false 면 transform 없이 가운데 고정.
@@ -1466,6 +1470,7 @@ class _WalkingSlot extends StatefulWidget {
 
   /// 캐릭터 본체 탭 콜백. 인자는 글로벌 좌표(손가락 위치). null 이면 탭 영역 자체가 비활성.
   final ValueChanged<Offset>? onCharacterTap;
+  final ValueChanged<bool>? onWalkPhaseChanged;
 
   @override
   State<_WalkingSlot> createState() => _WalkingSlotState();
@@ -1544,6 +1549,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
   // 에서 이미 한 번 추첨했으니 이 첫 콜백은 무시한다. 두 번째부터 진짜 화면 전환.
   bool _firstVisibilityCallback = true;
   bool _isVisible = true;
+  bool? _lastReportedWalkPhase;
 
   @override
   void initState() {
@@ -1560,6 +1566,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
       _pickNextWalkTarget();
       _startWalkController(fromStart: true);
     }
+    _notifyWalkPhaseChanged();
   }
 
   @override
@@ -1589,6 +1596,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
       _cancelWalkStartDelayTimer();
       _phase = _WalkPhase.idling;
     }
+    _notifyWalkPhaseChanged();
   }
 
   @override
@@ -1613,6 +1621,15 @@ class _WalkingSlotState extends State<_WalkingSlot>
   void _cancelWalkStartDelayTimer() {
     _walkStartDelayTimer?.cancel();
     _walkStartDelayTimer = null;
+  }
+
+  void _notifyWalkPhaseChanged() {
+    final cb = widget.onWalkPhaseChanged;
+    if (cb == null) return;
+    final isWalking = widget.enableWalk && _phase == _WalkPhase.walking;
+    if (_lastReportedWalkPhase == isWalking) return;
+    _lastReportedWalkPhase = isWalking;
+    cb(isWalking);
   }
 
   void _startWalkController({required bool fromStart}) {
@@ -1687,6 +1704,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
       _walkFrom = _walkTo;
       _phase = _WalkPhase.idling;
     });
+    _notifyWalkPhaseChanged();
     _startIdleTimer();
   }
 
@@ -1734,6 +1752,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
         _phase = _WalkPhase.idling;
       }
     });
+    _notifyWalkPhaseChanged();
   }
 
   void _startPreparedSession() {
@@ -1762,6 +1781,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
         _phase = _WalkPhase.walking;
         _pickNextWalkTarget();
       });
+      _notifyWalkPhaseChanged();
       _startWalkController(fromStart: true);
     });
   }
@@ -1785,6 +1805,7 @@ class _WalkingSlotState extends State<_WalkingSlot>
       _tapPaused = true;
       _phase = _WalkPhase.idling;
     });
+    _notifyWalkPhaseChanged();
     _cancelTapPauseTimer();
     _tapPauseTimer = Timer(_tapPauseTimeout, () {
       if (!mounted || !_tapPaused) return;
@@ -1794,9 +1815,11 @@ class _WalkingSlotState extends State<_WalkingSlot>
           _phase = _WalkPhase.walking;
           _pickNextWalkTarget();
         });
+        _notifyWalkPhaseChanged();
         _startWalkController(fromStart: true);
       } else {
         setState(() {});
+        _notifyWalkPhaseChanged();
       }
     });
     cb(globalPosition);

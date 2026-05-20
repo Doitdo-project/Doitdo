@@ -50,6 +50,8 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
   static final Random _rng = Random();
   bool _passiveSleepEnabled = false;
   bool _passiveActionRunning = false;
+  bool _pendingPassiveSleep = false;
+  bool _walking = false;
   bool _sleeping = false;
   bool _sad = false;
   bool _returnSadChecked = false;
@@ -66,11 +68,32 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
     _passiveSleepEnabled = enabled;
     _passiveSleepTimer?.cancel();
     _passiveSleepTimer = null;
+    if (!enabled) {
+      _pendingPassiveSleep = false;
+    }
     if (!enabled && _isHoldingAction) {
       _clearHoldingAction();
     }
     if (enabled) {
       _schedulePassiveSleep(initial: true);
+    }
+  }
+
+  void setWalking(bool walking) {
+    _walking = walking;
+    if (!walking && _pendingPassiveSleep) {
+      _pendingPassiveSleep = false;
+      Future(() async {
+        if (!mounted || !_passiveSleepEnabled) return;
+        if (_tapping || _cleaningPoop || _passiveActionRunning) return;
+        if (_walking || state.hasActiveActionVisual) return;
+        _passiveActionRunning = true;
+        try {
+          await _triggerActionTypeAsync(_passiveSleepActionType);
+        } finally {
+          _passiveActionRunning = false;
+        }
+      });
     }
   }
 
@@ -322,13 +345,15 @@ class TamagochiViewModel extends StateNotifier<TamagochiState> {
       final chance = _isNight(now) ? 0.70 : 0.12;
       if (_rng.nextDouble() >= chance) return;
 
+      if (_walking) {
+        _pendingPassiveSleep = true;
+        return;
+      }
+
       _passiveActionRunning = true;
       await _triggerActionTypeAsync(_passiveSleepActionType);
     } finally {
       _passiveActionRunning = false;
-      if (mounted && _passiveSleepEnabled) {
-        _schedulePassiveSleep();
-      }
     }
   }
 

@@ -890,6 +890,11 @@ class _TamagochiPageState extends ConsumerState<TamagochiPage> {
                                     context.push(AppRoutes.tamagochiCollection),
                                 onEggTap: _handleEggTap,
                                 onPoopTap: _handlePoopTap,
+                                onWalkPhaseChanged: (isWalking) {
+                                  ref
+                                      .read(tamagochiViewModelProvider.notifier)
+                                      .setWalking(isWalking);
+                                },
                                 isCleaningPoop: _cleaningPoop,
                                 suppressPoop: _suppressLocalPoop,
                                 poopLeftRatio: _poopLeftRatio,
