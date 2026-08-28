@@ -18,7 +18,6 @@
 - [🛠️ 핵심 기술](#️-핵심-기술)
 - [🏗️ 시스템 아키텍처](#️-시스템-아키텍처)
 - [📦 버전 히스토리](#-버전-히스토리)
-- [👥 팀원 소개](#-팀원-소개)
 - [⚙️ 기술 스택](#️-기술-스택)
 
 <br>
@@ -119,9 +118,9 @@
 
 > 아키텍처 이미지 추가 예정
 
-- **Frontend**: Android Native (Kotlin)
-- **Backend**: Spring Boot · MySQL · Redis
-- **Infra**: AWS EC2 · Docker · GitLab CI/CD
+- **Frontend**: Flutter (Dart) · Riverpod
+- **Backend**: Spring Boot · MariaDB · Redis
+- **Infra**: OCI VM · Docker · Jenkins CI/CD
 - **Push**: Firebase Cloud Messaging (FCM)
 
 <br>
@@ -145,34 +144,20 @@
 
 <br>
 
-## 👥 팀원 소개
-
-| 역할 | 이름 | 담당 |
-|------|------|------|
-| Android | 오우택 | 홈 · TODO · 캘린더 · 다마고치 · 상점 화면 구현, 옵티미스틱 UI 설계 |
-| Android | - | - |
-| Backend | - | Spring Boot API 서버 |
-| Backend | - | DB 설계 · 인프라 |
-| Design | - | UI/UX 디자인 · 캐릭터 디자인 |
-| Infra | - | Docker · CI/CD · 모니터링 |
-
-<br>
-
 ## ⚙️ 기술 스택
 
 ### Frontend
-![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
-![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)
+![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
+![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
 ![FCM](https://img.shields.io/badge/Firebase_FCM-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
 
 ### Backend
 ![Spring Boot](https://img.shields.io/badge/Spring_Boot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+![MariaDB](https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-FF4438?style=for-the-badge&logo=redis&logoColor=white)
 
 ### Infra
-![EC2](https://img.shields.io/badge/EC2-FF9900?style=for-the-badge&logo=amazonec2&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![GitLab CI/CD](https://img.shields.io/badge/GitLab_CI%2FCD-FC6D26?style=for-the-badge&logo=gitlab&logoColor=white)
+![Jenkins](https://img.shields.io/badge/Jenkins-D24939?style=for-the-badge&logo=jenkins&logoColor=white)
 ![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?style=for-the-badge&logo=prometheus&logoColor=white)
 ![Grafana](https://img.shields.io/badge/Grafana-F46800?style=for-the-badge&logo=grafana&logoColor=white)
